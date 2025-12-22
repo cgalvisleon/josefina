@@ -84,7 +84,7 @@ help() {
 if [ "$HELP" == true ]; then
   help
 elif [ "$CURRENT_VERSION" == "v0.0.0" ]; then
-  NEW_VERSION="v1.0.0"
+  NEW_VERSION="v0.0.1"
   update_version
 elif [ "$REQUEST" == true ]; then
   build_version
