@@ -1,6 +1,6 @@
 ```
 go mod init github.com/cgalvisleon/josefina
-
+go get github.com/cgalvisleon/et@v1.0.11
 git remote add origin https://github.com/cgalvisleon/josefina.git
 ```
 

@@ -2,7 +2,7 @@ module github.com/cgalvisleon/josefina
 
 go 1.23.0
 
-require github.com/cgalvisleon/et v1.0.10
+require github.com/cgalvisleon/et v1.0.11
 
 require (
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
