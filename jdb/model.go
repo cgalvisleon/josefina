@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
 )
 
@@ -15,41 +16,43 @@ type Trigger struct {
 }
 
 type TriggerFunction func(tx *Tx, old, new et.Json) error
+type DataContext func(tx *Tx, data et.Json)
 
 type Model struct {
-	DB            *DB                `json:"-"`
-	Schema        string             `json:"schema"`
-	Name          string             `json:"name"`
-	Table         string             `json:"table"`
-	Columns       []*Column          `json:"columns"`
-	SourceField   *Column            `json:"source_field"`
-	IndexField    *Column            `json:"index_field"`
-	PrimaryKeys   []string           `json:"primary_keys"`
-	Unique        []string           `json:"unique"`
-	Indexes       []string           `json:"indexes"`
-	Required      []string           `json:"required"`
-	Hidden        []string           `json:"hidden"`
-	Master        map[string]*Detail `json:"master"`
-	Details       map[string]*Detail `json:"details"`
-	Rollups       map[string]*Detail `json:"rollups"`
-	Relations     map[string]*Detail `json:"relations"`
-	BeforeInserts []*Trigger         `json:"before_inserts"`
-	BeforeUpdates []*Trigger         `json:"before_updates"`
-	BeforeDeletes []*Trigger         `json:"before_deletes"`
-	AfterInserts  []*Trigger         `json:"after_inserts"`
-	AfterUpdates  []*Trigger         `json:"after_updates"`
-	AfterDeletes  []*Trigger         `json:"after_deletes"`
-	IsLocked      bool               `json:"is_locked"`
-	Version       int                `json:"version"`
-	IsCore        bool               `json:"is_core"`
-	IsDebug       bool               `json:"-"`
-	isInit        bool               `json:"-"`
-	beforeInserts []TriggerFunction  `json:"-"`
-	beforeUpdates []TriggerFunction  `json:"-"`
-	beforeDeletes []TriggerFunction  `json:"-"`
-	afterInserts  []TriggerFunction  `json:"-"`
-	afterUpdates  []TriggerFunction  `json:"-"`
-	afterDeletes  []TriggerFunction  `json:"-"`
+	DB            *DB                    `json:"-"`
+	Schema        string                 `json:"schema"`
+	Name          string                 `json:"name"`
+	Table         string                 `json:"table"`
+	Columns       []*Column              `json:"columns"`
+	SourceField   *Column                `json:"source_field"`
+	IndexField    *Column                `json:"index_field"`
+	PrimaryKeys   []string               `json:"primary_keys"`
+	Unique        []string               `json:"unique"`
+	Indexes       []string               `json:"indexes"`
+	Required      []string               `json:"required"`
+	Hidden        []string               `json:"hidden"`
+	Master        map[string]*Detail     `json:"master"`
+	Details       map[string]*Detail     `json:"details"`
+	Rollups       map[string]*Detail     `json:"rollups"`
+	Relations     map[string]*Detail     `json:"relations"`
+	BeforeInserts []*Trigger             `json:"before_inserts"`
+	BeforeUpdates []*Trigger             `json:"before_updates"`
+	BeforeDeletes []*Trigger             `json:"before_deletes"`
+	AfterInserts  []*Trigger             `json:"after_inserts"`
+	AfterUpdates  []*Trigger             `json:"after_updates"`
+	AfterDeletes  []*Trigger             `json:"after_deletes"`
+	IsLocked      bool                   `json:"is_locked"`
+	Version       int                    `json:"version"`
+	IsCore        bool                   `json:"is_core"`
+	IsDebug       bool                   `json:"-"`
+	isInit        bool                   `json:"-"`
+	calcs         map[string]DataContext `json:"-"`
+	beforeInserts []TriggerFunction      `json:"-"`
+	beforeUpdates []TriggerFunction      `json:"-"`
+	beforeDeletes []TriggerFunction      `json:"-"`
+	afterInserts  []TriggerFunction      `json:"-"`
+	afterUpdates  []TriggerFunction      `json:"-"`
+	afterDeletes  []TriggerFunction      `json:"-"`
 }
 
 /**
@@ -201,6 +204,15 @@ func (s *Model) FindField(name string) *Field {
 }
 
 /**
+* GetId
+* @param id string
+* @return string
+**/
+func (s *Model) GetId(id string) string {
+	return reg.TagULID(s.Name, id)
+}
+
+/**
 * Insert
 * @param data et.Json
 * @return *Cmd
@@ -271,6 +283,15 @@ func (s *Model) SelectColumns() []string {
 		}
 	}
 	return result
+}
+
+/**
+* Counted
+* @return (int, error)
+**/
+func (s *Model) Counted() (int, error) {
+	result := From(s, "A")
+	return result.Count()
 }
 
 /**

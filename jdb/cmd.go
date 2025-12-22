@@ -197,3 +197,23 @@ func (s *Cmd) WhereByPrimaryKeys(data et.Json) *Cmd {
 
 	return s
 }
+
+/**
+* And
+* @param condition *Condition
+* @return *Cmd
+**/
+func (s *Cmd) And(condition *Condition) *Cmd {
+	s.Wheres.Add(condition)
+	return s
+}
+
+/**
+* Or
+* @param condition *Condition
+* @return *Cmd
+**/
+func (s *Cmd) Or(condition *Condition) *Cmd {
+	s.Wheres.Add(condition)
+	return s
+}

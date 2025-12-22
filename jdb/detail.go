@@ -7,6 +7,8 @@ type Detail struct {
 	Select          []string          `json:"select"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
 	OnUpdateCascade bool              `json:"on_update_cascade"`
+	Page            int               `json:"page"`
+	Rows            int               `json:"rows"`
 }
 
 /**

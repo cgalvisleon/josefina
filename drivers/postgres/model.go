@@ -113,7 +113,6 @@ func (s *Driver) buildTable(model *jdb.Model) (string, error) {
 			jdb.TpDateTime: "TIMESTAMP",
 			jdb.TpBoolean:  "BOOLEAN",
 			jdb.TpGeometry: "JSONB",
-			jdb.TpCalc:     "BYTEA",
 		}
 
 		if t, ok := types[tp]; ok {
@@ -136,7 +135,6 @@ func (s *Driver) buildTable(model *jdb.Model) (string, error) {
 			jdb.TpDateTime: "NOW()",
 			jdb.TpBoolean:  "FALSE",
 			jdb.TpGeometry: "'{}'",
-			jdb.TpCalc:     "''",
 		}
 
 		if t, ok := values[tp]; ok {

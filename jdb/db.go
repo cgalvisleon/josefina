@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
@@ -180,6 +181,7 @@ func (s *DB) newModel(schema, name string, version int) (*Model, error) {
 		AfterUpdates:  make([]*Trigger, 0),
 		AfterDeletes:  make([]*Trigger, 0),
 		Version:       version,
+		calcs:         make(map[string]DataContext),
 		beforeInserts: make([]TriggerFunction, 0),
 		beforeUpdates: make([]TriggerFunction, 0),
 		beforeDeletes: make([]TriggerFunction, 0),
@@ -371,7 +373,23 @@ func (s *DB) Query(query *Ql) (et.Items, error) {
 		return et.Items{}, err
 	}
 
-	return s.SqlTx(query.tx, sql)
+	result, err := s.SqlTx(query.tx, sql)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	wg := &sync.WaitGroup{}
+	for _, item := range result.Result {
+		wg.Add(1)
+		go func(item et.Json) {
+			query.getDetailsTx(query.tx, item)
+			query.getRollupsTx(query.tx, item)
+			query.getCallsTx(query.tx, item)
+		}(item)
+	}
+	wg.Wait()
+
+	return result, nil
 }
 
 /**
@@ -465,11 +483,12 @@ func (s *DB) Define(definition et.Json) (*Model, error) {
 	for name := range details {
 		jkeys := details.Json(name)
 		keys := make(map[string]string, 0)
+		version := details.ValInt(1, "version")
 		for pk := range jkeys {
 			fk := jkeys.Str(pk)
 			keys[pk] = fk
 		}
-		_, err = result.DefineDetail(name, keys)
+		_, err = result.DefineDetail(name, keys, version)
 		if err != nil {
 			return nil, err
 		}

@@ -23,6 +23,7 @@ const (
 	TpAtrib       TypeColumn = "atrib"
 	TpDetail      TypeColumn = "detail"
 	TpRollup      TypeColumn = "rollup"
+	TpCalc        TypeColumn = "calc"
 	TpAggregation TypeColumn = "aggregation"
 )
 
@@ -44,7 +45,6 @@ const (
 	TpDateTime TypeData = "datetime"
 	TpBoolean  TypeData = "boolean"
 	TpGeometry TypeData = "geometry"
-	TpCalc     TypeData = "calc"
 )
 
 type TypeAggregation string

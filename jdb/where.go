@@ -1,6 +1,9 @@
 package jdb
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/strs"
+)
 
 type Operator string
 
@@ -24,6 +27,33 @@ const (
 
 func (s Operator) Str() string {
 	return string(s)
+}
+
+func ToOperator(s string) Operator {
+	values := map[string]Operator{
+		"eq":          OpEq,
+		"neg":         OpNeg,
+		"less":        OpLess,
+		"less_eq":     OpLessEq,
+		"more":        OpMore,
+		"more_eq":     OpMoreEq,
+		"like":        OpLike,
+		"in":          OpIn,
+		"not_in":      OpNotIn,
+		"is":          OpIs,
+		"is_not":      OpIsNot,
+		"null":        OpNull,
+		"not_null":    OpNotNull,
+		"between":     OpBetween,
+		"not_between": OpNotBetween,
+	}
+
+	result, ok := values[s]
+	if !ok {
+		return OpEq
+	}
+
+	return result
 }
 
 type Connector string
@@ -128,6 +158,61 @@ func (s *Wheres) Add(condition *Condition) {
 func (s *Wheres) Or(condition *Condition) {
 	condition.Connector = Or
 	s.Add(condition)
+}
+
+/**
+* ByJson
+* @param jsons []et.Json
+* @return void
+**/
+func (s *Wheres) ByJson(jsons []et.Json) {
+	getCondition := func(json et.Json) *Condition {
+		for fld := range json {
+			cond := json.Json(fld)
+			for cnd := range cond {
+				val := cond[cnd]
+				return condition(fld, val, ToOperator(cnd))
+			}
+		}
+		return nil
+	}
+
+	and := func(jsons []et.Json) {
+		for _, json := range jsons {
+			for k := range json {
+				def := json.Json(k)
+				condition := getCondition(def)
+				s.Add(condition)
+			}
+		}
+	}
+
+	or := func(jsons []et.Json) {
+		for _, json := range jsons {
+			for k := range json {
+				def := json.Json(k)
+				condition := getCondition(def)
+				s.Or(condition)
+			}
+		}
+	}
+
+	for _, where := range jsons {
+		for k := range where {
+			if strs.Lowcase(k) == "and" {
+				def := where.ArrayJson(k)
+				and(def)
+			} else if strs.Lowcase(k) == "or" {
+				def := where.ArrayJson(k)
+				or(def)
+			} else {
+				condition := getCondition(where)
+				if condition != nil {
+					s.Add(condition)
+				}
+			}
+		}
+	}
 }
 
 /**

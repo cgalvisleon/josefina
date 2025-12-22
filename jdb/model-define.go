@@ -68,7 +68,7 @@ func (s *Model) DefineIndex(names ...string) error {
 * @return *Column
 **/
 func (s *Model) DefineColumn(name string, tpData TypeData) (*Column, error) {
-	return s.defineColumn(name, TpColumn, tpData, false, nil, nil)
+	return s.defineColumn(name, TpColumn, tpData, false, nil, []byte{})
 }
 
 /**
@@ -77,7 +77,7 @@ func (s *Model) DefineColumn(name string, tpData TypeData) (*Column, error) {
 * @return error
 **/
 func (s *Model) DefineSourceField(name string) error {
-	col, err := s.defineColumn(name, TpColumn, TpJson, false, nil, nil)
+	col, err := s.defineColumn(name, TpColumn, TpJson, false, nil, []byte{})
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (s *Model) DefineSourceField(name string) error {
 * @return error
 **/
 func (s *Model) DefineIndexField(name string) error {
-	col, err := s.defineColumn(name, TpColumn, TpJson, false, nil, nil)
+	col, err := s.defineColumn(name, TpColumn, TpJson, false, nil, []byte{})
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (s *Model) DefineAttribute(name string, tpData TypeData, defaultValue inter
 	if s.SourceField == nil {
 		s.DefineSourceField(SOURCE)
 	}
-	return s.defineColumn(name, TpAtrib, tpData, false, defaultValue, nil)
+	return s.defineColumn(name, TpAtrib, tpData, false, defaultValue, []byte{})
 }
 
 /**
@@ -205,24 +205,24 @@ func (s *Model) DefineHidden(names ...string) {
 * @param name string, to *Model, keys map[string]string
 * @return *Column
 **/
-func (s *Model) DefineDetail(name string, keys map[string]string) (*Model, error) {
-	_, err := s.defineColumn(name, TpDetail, TpJson, false, []et.Json{}, nil)
+func (s *Model) DefineDetail(name string, keys map[string]string, version int) (*Model, error) {
+	_, err := s.defineColumn(name, TpDetail, TpJson, false, []et.Json{}, []byte{})
 	if err != nil {
 		return nil, err
 	}
 
-	to, err := s.DB.NewModel(s.Schema, fmt.Sprintf("%s_%s", s.Name, name), 1)
+	to, err := s.DB.NewModel(s.Schema, fmt.Sprintf("%s_%s", s.Name, name), version)
 	if err != nil {
 		return nil, err
 	}
 
 	for pk, fk := range keys {
-		_, err = s.defineColumn(pk, TpColumn, TpKey, false, "", nil)
+		_, err = s.defineColumn(pk, TpColumn, TpKey, false, "", []byte{})
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = to.defineColumn(fk, TpColumn, TpKey, false, "", nil)
+		_, err = to.defineColumn(fk, TpColumn, TpKey, false, "", []byte{})
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (s *Model) DefineDetail(name string, keys map[string]string) (*Model, error
 * @return *Model
 **/
 func (s *Model) DefineRollup(name, from string, keys map[string]string, selects []string) error {
-	_, err := s.defineColumn(name, TpRollup, TpJson, false, []et.Json{}, nil)
+	_, err := s.defineColumn(name, TpRollup, TpJson, false, []et.Json{}, []byte{})
 	if err != nil {
 		return err
 	}
@@ -272,6 +272,21 @@ func (s *Model) DefineRelation(from string, keys map[string]string) error {
 
 	detail := newDetail(to, "", keys, []string{}, false, false)
 	s.Relations[to.Name] = detail
+	return nil
+}
+
+/**
+* DefineCalc
+* @param name string, fn DataContext
+* @return error
+**/
+func (s *Model) DefineCalc(name string, fn DataContext) error {
+	_, err := s.defineColumn(name, TpCalc, TpAny, false, nil, []byte{})
+	if err != nil {
+		return err
+	}
+
+	s.calcs[name] = fn
 	return nil
 }
 

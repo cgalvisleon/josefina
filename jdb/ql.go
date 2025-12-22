@@ -17,24 +17,25 @@ const (
 )
 
 type Ql struct {
-	DB           *DB       `json:"-"`
-	Type         TypeQuery `json:"type"`
-	Froms        []*Froms  `json:"froms"`
-	Wheres       *Wheres   `json:"wheres"`
-	Selects      []*Field  `json:"select"`
-	Hidden       []string  `json:"hidden"`
-	Details      []*Field  `json:"details"`
-	Rollups      []*Field  `json:"rollups"`
-	Joins        []*Detail `json:"joins"`
-	GroupsBy     []*Field  `json:"group_by"`
-	Havings      *Wheres   `json:"having"`
-	OrdersByAsc  []*Field  `json:"order_by_asc"`
-	OrdersByDesc []*Field  `json:"order_by_desc"`
-	Page         int       `json:"page"`
-	Rows         int       `json:"rows"`
-	MaxRows      int       `json:"max_rows"`
-	IsDebug      bool      `json:"is_debug"`
-	tx           *Tx       `json:"-"`
+	DB           *DB                    `json:"-"`
+	Type         TypeQuery              `json:"type"`
+	Froms        []*Froms               `json:"froms"`
+	Wheres       *Wheres                `json:"wheres"`
+	Selects      []*Field               `json:"select"`
+	Hidden       []string               `json:"hidden"`
+	Details      map[string]*Detail     `json:"details"`
+	Rollups      map[string]*Detail     `json:"rollups"`
+	Calcs        map[string]DataContext `json:"calcs"`
+	Joins        []*Detail              `json:"joins"`
+	GroupsBy     []*Field               `json:"group_by"`
+	Havings      *Wheres                `json:"having"`
+	OrdersByAsc  []*Field               `json:"order_by_asc"`
+	OrdersByDesc []*Field               `json:"order_by_desc"`
+	Page         int                    `json:"page"`
+	Rows         int                    `json:"rows"`
+	MaxRows      int                    `json:"max_rows"`
+	IsDebug      bool                   `json:"is_debug"`
+	tx           *Tx                    `json:"-"`
 }
 
 /**
@@ -53,8 +54,9 @@ func newQuery(model *Model, as string, tp TypeQuery) *Ql {
 		Froms:        []*Froms{newFrom(model, as)},
 		Selects:      make([]*Field, 0),
 		Hidden:       make([]string, 0),
-		Details:      make([]*Field, 0),
-		Rollups:      make([]*Field, 0),
+		Details:      make(map[string]*Detail),
+		Rollups:      make(map[string]*Detail),
+		Calcs:        make(map[string]DataContext),
 		Joins:        make([]*Detail, 0),
 		GroupsBy:     make([]*Field, 0),
 		OrdersByAsc:  make([]*Field, 0),
@@ -168,9 +170,25 @@ func (s *Ql) Select(fields ...string) *Ql {
 			case TpAtrib:
 				s.Selects = append(s.Selects, fld)
 			case TpDetail:
-				s.Details = append(s.Details, fld)
+				detail, ok := fld.Column.From.Details[fld.Name]
+				if !ok {
+					continue
+				}
+				detail.Page = fld.Page
+				detail.Rows = fld.Rows
+				s.Details[fld.Name] = detail
 			case TpRollup:
-				s.Rollups = append(s.Rollups, fld)
+				detail, ok := fld.Column.From.Rollups[fld.Name]
+				if !ok {
+					continue
+				}
+				s.Rollups[fld.Name] = detail
+			case TpCalc:
+				fn, ok := fld.Column.From.calcs[fld.Name]
+				if !ok {
+					continue
+				}
+				s.Calcs[fld.Name] = fn
 			}
 		}
 	}
@@ -183,6 +201,48 @@ func (s *Ql) Select(fields ...string) *Ql {
 * @return *Ql
 **/
 func (s *Ql) Where(condition *Condition) *Ql {
+	s.Wheres.Add(condition)
+	return s
+}
+
+/**
+* WhereByKeys
+* @param keys map[string]string
+* @return *Ql
+**/
+func (s *Ql) WhereByKeys(keys map[string]string) *Ql {
+	for k, v := range keys {
+		s.Wheres.Add(Eq(k, v))
+	}
+	return s
+}
+
+/**
+* WhereByJson
+* @param jsons []et.Json
+* @return *Ql
+**/
+func (s *Ql) WhereByJson(jsons []et.Json) *Ql {
+	s.Wheres.ByJson(jsons)
+	return s
+}
+
+/**
+* And
+* @param condition *Condition
+* @return *Ql
+**/
+func (s *Ql) And(condition *Condition) *Ql {
+	s.Wheres.Add(condition)
+	return s
+}
+
+/**
+* Or
+* @param condition *Condition
+* @return *Ql
+**/
+func (s *Ql) Or(condition *Condition) *Ql {
 	s.Wheres.Add(condition)
 	return s
 }
@@ -202,6 +262,26 @@ func (s *Ql) AllTx(tx *Tx) (et.Items, error) {
 **/
 func (s *Ql) All() (et.Items, error) {
 	return s.AllTx(nil)
+}
+
+/**
+* LimitTx
+* @param tx *Tx, page, rows int
+* @return *Ql
+**/
+func (s *Ql) LimitTx(tx *Tx, page, rows int) (et.Items, error) {
+	s.Page = page
+	s.Rows = rows
+	return s.AllTx(tx)
+}
+
+/**
+* Limit
+* @param page, rows int
+* @return *Ql
+**/
+func (s *Ql) Limit(page, rows int) (et.Items, error) {
+	return s.LimitTx(nil, page, rows)
 }
 
 /**
@@ -273,13 +353,4 @@ func (s *Ql) CountTx(tx *Tx) (int, error) {
 **/
 func (s *Ql) Count() (int, error) {
 	return s.CountTx(nil)
-}
-
-/**
-* From
-* @param model *Model, as string
-* @return *Ql
-**/
-func From(model *Model, as string) *Ql {
-	return newQuery(model, as, TpSelect)
 }

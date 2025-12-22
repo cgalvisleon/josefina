@@ -10,6 +10,14 @@ import (
 	"github.com/cgalvisleon/et/utility"
 )
 
+var (
+	ErrNotInserted = fmt.Errorf("record not inserted")
+	ErrNotUpdated  = fmt.Errorf("record not updated")
+	ErrNotFound    = fmt.Errorf("record not found")
+	ErrNotUpserted = fmt.Errorf("record not inserted or updated")
+	ErrDuplicate   = fmt.Errorf("record duplicate")
+)
+
 /**
 * ConnectTo
 * @param id, name, driver string, userCore bool, params Connection
@@ -137,6 +145,15 @@ func Query(query et.Json) (et.Items, error) {
 	}
 
 	return db.Select(query)
+}
+
+/**
+* From
+* @param model *Model, as string
+* @return *Ql
+**/
+func From(model *Model, as string) *Ql {
+	return newQuery(model, as, TpSelect)
 }
 
 /**

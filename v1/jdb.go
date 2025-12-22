@@ -24,6 +24,7 @@ const (
 	TpFloat    = jdb.TpFloat
 	TpKey      = jdb.TpKey
 	TpText     = jdb.TpText
+	TpMemo     = jdb.TpMemo
 	TpJson     = jdb.TpJson
 	TpDateTime = jdb.TpDateTime
 	TpBoolean  = jdb.TpBoolean
@@ -46,7 +47,14 @@ const (
 	Rejected  = jdb.Rejected
 )
 
-var ()
+var (
+	// Error
+	ErrDuplicate   = jdb.ErrDuplicate
+	ErrNotInserted = jdb.ErrNotInserted
+	ErrNotUpdated  = jdb.ErrNotUpdated
+	ErrNotFound    = jdb.ErrNotFound
+	ErrNotUpserted = jdb.ErrNotUpserted
+)
 
 type TypeColumn = jdb.TypeColumn
 type TypeData = jdb.TypeData
