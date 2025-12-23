@@ -117,35 +117,41 @@ func (s *Driver) buildSelect(ql *jdb.Ql) (string, error) {
 
 	result := ""
 	if ql.Type == jdb.TpData {
-		selects := map[string]string{}
-		atribs := map[string]string{}
-		for _, fld := range ql.Selects {
-			if fld.TypeField == jdb.TpColumn {
-				selects[fld.As] = fld.AS()
-			} else if fld.TypeField == jdb.TpAtrib {
-				atribs[fld.As] = fld.AS()
+		if len(ql.Selects) == 0 {
+			hiddens := make([]string, 0)
+			for _, fld := range ql.Hidden {
+				as := FieldAs(fld)
+				hiddens = append(hiddens, as)
 			}
-		}
-
-		if len(atribs) == 0 {
-			result = fmt.Sprintf("\n%s", jdb.SOURCE)
-		} else {
-			for k, v := range atribs {
-				def := fmt.Sprintf("\n'%s', %s", k, v)
-				result = strs.Append(result, def, ", ")
-			}
-
-			if result != "" {
-				result = fmt.Sprintf("\n\tjsonb_build_object(%s\n)", result)
-			}
-		}
-
-		if len(selects) == 0 {
-			hidden := ql.Hidden
-			hidden = append(hidden, jdb.SOURCE)
-			def := fmt.Sprintf("to_jsonb(A) - ARRAY[%s]", strings.Join(hidden, ", "))
+			hiddens = append(hiddens, jdb.SOURCE)
+			def := fmt.Sprintf("to_jsonb(A) - ARRAY[%s]", strings.Join(hiddens, ", "))
 			result = strs.Append(result, def, "||")
 		} else {
+			selects := map[string]string{}
+			atribs := map[string]string{}
+			for _, fld := range ql.Selects {
+				if fld.TypeColumn == jdb.TpColumn {
+					as := FieldAs(fld)
+					selects[fld.As] = as
+				} else if fld.TypeColumn == jdb.TpAtrib {
+					as := FieldAs(fld)
+					atribs[fld.As] = as
+				}
+			}
+
+			if len(atribs) == 0 {
+				result = fmt.Sprintf("\n%s", jdb.SOURCE)
+			} else {
+				for k, v := range atribs {
+					def := fmt.Sprintf("\n'%s', %s", k, v)
+					result = strs.Append(result, def, ", ")
+				}
+
+				if result != "" {
+					result = fmt.Sprintf("\n\tjsonb_build_object(%s\n)", result)
+				}
+			}
+
 			sel := ""
 			for k, v := range selects {
 				def := fmt.Sprintf("\n'%s',  %s", k, v)
@@ -164,17 +170,22 @@ func (s *Driver) buildSelect(ql *jdb.Ql) (string, error) {
 	}
 
 	if len(ql.Selects) == 0 {
-		hidden := ql.Hidden
-		if len(hidden) > 0 {
-			result += fmt.Sprintf("to_jsonb(A) - ARRAY[%s]", strings.Join(hidden, ", "))
+		hiddens := make([]string, 0)
+		for _, fld := range ql.Hidden {
+			as := FieldAs(fld)
+			hiddens = append(hiddens, as)
+		}
+		if len(hiddens) > 0 {
+			result += fmt.Sprintf("to_jsonb(A) - ARRAY[%s]", strings.Join(hiddens, ", "))
 		} else {
 			result += "A.*"
 		}
 	} else {
 		selects := map[string]string{}
 		for _, fld := range ql.Selects {
-			if fld.TypeField == jdb.TpColumn {
-				selects[fld.As] = fld.AS()
+			if fld.TypeColumn == jdb.TpColumn {
+				as := FieldAs(fld)
+				selects[fld.As] = as
 			}
 		}
 		for k, v := range selects {
@@ -234,51 +245,67 @@ func (s *Driver) buildJoins(ql *jdb.Ql) (string, error) {
 		def := ""
 		for k, v := range join.Keys {
 			if len(def) == 0 {
-				def = fmt.Sprintf("%s AS %s ON %s = %s", join.To.Table, join.As, k, v)
+				def = fmt.Sprintf("%s AS %s ON %s = %s", join.To.As, join.To.As, k, v)
 			} else {
 				def = fmt.Sprintf("%s AND %s = %s", def, k, v)
 			}
 		}
-		result = strs.Append(result, def, "\nJOIN ")
+
+		if join.Type == jdb.TpLeft {
+			result = strs.Append(result, def, "\nLEFT JOIN ")
+		} else if join.Type == jdb.TpRight {
+			result = strs.Append(result, def, "\nRIGHT JOIN ")
+		} else if join.Type == jdb.TpFull {
+			result = strs.Append(result, def, "\nFULL JOIN ")
+		} else {
+			result = strs.Append(result, def, "\nJOIN ")
+		}
 	}
 
 	return fmt.Sprintf("%s", result), nil
 }
 
+/**
+* buildCondition
+* @param cond *jdb.Condition
+* @return string
+**/
 func (s *Driver) buildCondition(cond *jdb.Condition) string {
+	key := FieldAs(cond.Field)
+	value := jdb.Quoted(cond.Value)
 	switch cond.Operator {
 	case jdb.OpEq:
-		return fmt.Sprintf("%s = %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s = %v", key, value)
 	case jdb.OpNeg:
-		return fmt.Sprintf("%s != %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s != %v", key, value)
 	case jdb.OpLess:
-		return fmt.Sprintf("%s < %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s < %v", key, value)
 	case jdb.OpLessEq:
-		return fmt.Sprintf("%s <= %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s <= %v", key, value)
 	case jdb.OpMore:
-		return fmt.Sprintf("%s > %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s > %v", key, value)
 	case jdb.OpMoreEq:
-		return fmt.Sprintf("%s >= %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s >= %v", key, value)
 	case jdb.OpLike:
-		return fmt.Sprintf("%s LIKE %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s LIKE %v", key, value)
 	case jdb.OpIn:
-		return fmt.Sprintf("%s IN %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s IN %v", key, value)
 	case jdb.OpNotIn:
-		return fmt.Sprintf("%s NOT IN %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s NOT IN %v", key, value)
 	case jdb.OpIs:
-		return fmt.Sprintf("%s IS %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s IS %v", key, value)
 	case jdb.OpIsNot:
-		return fmt.Sprintf("%s IS NOT %v", cond.Field.AS(), jdb.Quoted(cond.Value))
+		return fmt.Sprintf("%s IS NOT %v", key, value)
 	case jdb.OpNull:
-		return fmt.Sprintf("%s IS NULL", cond.Field.AS())
+		return fmt.Sprintf("%s IS NULL", key)
 	case jdb.OpNotNull:
-		return fmt.Sprintf("%s IS NOT NULL", cond.Field.AS())
+		return fmt.Sprintf("%s IS NOT NULL", key)
 	case jdb.OpBetween:
 		vals := cond.Value.([]interface{})
-		return fmt.Sprintf("%s BETWEEN %v AND %v", cond.Field.AS(), jdb.Quoted(vals[0]), jdb.Quoted(vals[1]))
+		return fmt.Sprintf("%s BETWEEN %v AND %v", key, jdb.Quoted(vals[0]), jdb.Quoted(vals[1]))
 	case jdb.OpNotBetween:
 		vals := cond.Value.([]interface{})
-		return fmt.Sprintf("%s NOT BETWEEN %v AND %v", cond.Field.AS(), jdb.Quoted(vals[0]), jdb.Quoted(vals[1]))
+		return fmt.Sprintf("%s NOT BETWEEN %v AND %v", key, jdb.Quoted(vals[0]), jdb.Quoted(vals[1]))
 	}
 
 	return ""
@@ -318,7 +345,8 @@ func (s *Driver) buildGroupBy(ql *jdb.Ql) (string, error) {
 	}
 
 	for _, v := range ql.GroupsBy {
-		def := fmt.Sprintf("%s", v.AS())
+		as := FieldAs(v)
+		def := fmt.Sprintf("%s", as)
 		result = strs.Append(result, def, ", ")
 	}
 
@@ -331,21 +359,24 @@ func (s *Driver) buildGroupBy(ql *jdb.Ql) (string, error) {
 * @return (string, error)
 **/
 func (s *Driver) buildOrderBy(ql *jdb.Ql) (string, error) {
+	asc := ""
+	desc := ""
+	for _, order := range ql.OrdersBy {
+		as := FieldAs(order.Field)
+		if order.Asc {
+			asc = strs.Append(asc, as, ", ")
+		} else {
+			desc = strs.Append(desc, as, ", ")
+		}
+	}
+
 	result := ""
-	for _, fld := range ql.OrdersByAsc {
-		result = strs.Append(result, fld.AS(), ", ")
+	if asc != "" {
+		result = fmt.Sprintf(`%s ASC`, asc)
 	}
 
-	if result != "" {
-		result = fmt.Sprintf(`%s ASC`, result)
-	}
-
-	for _, fld := range ql.OrdersByDesc {
-		result = strs.Append(result, fld.AS(), ", ")
-	}
-
-	if result != "" {
-		result = fmt.Sprintf(`%s DESC`, result)
+	if desc != "" {
+		result = fmt.Sprintf(`%s DESC`, desc)
 	}
 
 	return result, nil
@@ -361,6 +392,8 @@ func (s *Driver) buildLimit(ql *jdb.Ql) (string, error) {
 
 	if ql.Rows > ql.MaxRows {
 		ql.Rows = ql.MaxRows
+	} else if ql.Rows == 0 {
+		ql.Rows = 1
 	}
 
 	if ql.Page == 0 {
