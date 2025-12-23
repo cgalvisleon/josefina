@@ -11,6 +11,10 @@ type Froms struct {
 * @return *Froms
 **/
 func newFrom(model *Model, as string) *Froms {
+	if as == "" {
+		as = model.Name
+	}
+
 	return &Froms{
 		Model: model,
 		As:    as,

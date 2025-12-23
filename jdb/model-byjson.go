@@ -40,6 +40,10 @@ func (s *Model) UpdateByJson(query et.Json) (et.Items, error) {
 	return et.Items{}, nil
 }
 
+func (s *Model) UpsertByJson(query et.Json) (et.Items, error) {
+	return et.Items{}, nil
+}
+
 /**
 * DeleteByJson
 * @param query et.Json
@@ -54,6 +58,26 @@ func (s *Model) DeleteByJson(query et.Json) (et.Items, error) {
 * @param query et.Json
 * @return (et.Items, error)
 **/
-func (s *Model) Query(query et.Json) (et.Items, error) {
-	return et.Items{}, nil
+func (s *Model) QueryByJson(query et.Json) (et.Items, error) {
+	insert := query.Json("insert")
+	if !insert.IsEmpty() {
+		return s.InsertByJson(query)
+	}
+
+	update := query.Json("update")
+	if !update.IsEmpty() {
+		return s.UpdateByJson(query)
+	}
+
+	delete := query.Json("delete")
+	if !delete.IsEmpty() {
+		return s.DeleteByJson(query)
+	}
+
+	upsert := query.Json("upsert")
+	if !upsert.IsEmpty() {
+		return s.UpsertByJson(query)
+	}
+
+	return s.SelectByJson(query)
 }

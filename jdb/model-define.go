@@ -216,7 +216,7 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		return nil, err
 	}
 
-	for pk, fk := range keys {
+	for fk, pk := range keys {
 		_, err = s.defineColumn(pk, TpColumn, TpKey, false, "", []byte{})
 		if err != nil {
 			return nil, err
@@ -228,13 +228,13 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		}
 	}
 
-	detail := newDetail(to, "", keys, []string{}, true, true)
+	detail := newDetail(to, keys, []string{}, true, true)
 	s.Details[name] = detail
 	fkeys := map[string]string{}
 	for k, v := range keys {
 		fkeys[v] = k
 	}
-	to.Master[s.Name] = newDetail(s, "", fkeys, []string{}, true, true)
+	to.Master[s.Name] = newDetail(s, fkeys, []string{}, true, true)
 	return to, nil
 }
 
@@ -254,7 +254,7 @@ func (s *Model) DefineRollup(name, from string, keys map[string]string, selects 
 		return err
 	}
 
-	detail := newDetail(to, "", keys, selects, false, false)
+	detail := newDetail(to, keys, selects, false, false)
 	s.Rollups[name] = detail
 	return nil
 }
@@ -270,7 +270,7 @@ func (s *Model) DefineRelation(from string, keys map[string]string) error {
 		return err
 	}
 
-	detail := newDetail(to, "", keys, []string{}, false, false)
+	detail := newDetail(to, keys, []string{}, false, false)
 	s.Relations[to.Name] = detail
 	return nil
 }

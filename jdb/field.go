@@ -8,16 +8,19 @@ import (
 )
 
 type Field struct {
-	TypeField   TypeColumn      `json:"type_field"`
-	From        *Froms          `json:"from"`
-	Column      *Column         `json:"column"`
-	Name        string          `json:"name"`
-	As          string          `json:"as"`
-	Aggregation TypeAggregation `json:"agregation"`
-	Expression  string          `json:"expression"`
-	Detail      *Detail         `json:"detail"`
-	Page        int             `json:"page"`
-	Rows        int             `json:"rows"`
+	TypeColumn  TypeColumn        `json:"type_column"`
+	From        *Froms            `json:"from"`
+	Column      *Column           `json:"column"`
+	SourceField *Column           `json:"source_field"`
+	Name        string            `json:"name"`
+	As          string            `json:"as"`
+	Aggregation TypeAggregation   `json:"agregation"`
+	Expression  string            `json:"expression"`
+	To          *Model            `json:"to"`
+	Keys        map[string]string `json:"keys"`
+	Select      []string          `json:"select"`
+	Page        int               `json:"page"`
+	Rows        int               `json:"rows"`
 }
 
 /**
@@ -25,6 +28,10 @@ type Field struct {
 * @return string
  */
 func (s *Field) AS() string {
+	if s.From == nil {
+		return fmt.Sprintf("%s.%s", s.Column.From.Name, s.As)
+	}
+
 	return fmt.Sprintf("%s.%s", s.From.As, s.As)
 }
 
@@ -49,8 +56,8 @@ func (s *Field) Levels() []string {
 func FindField(froms []*Froms, name string) *Field {
 	pattern1 := regexp.MustCompile(`^([A-Za-z0-9]+)\.([A-Za-z0-9]+):([A-Za-z0-9]+)$`) // from.name:as
 	pattern2 := regexp.MustCompile(`^([A-Za-z0-9]+)\.([A-Za-z0-9]+)$`)                // from.name
-	pattern3 := regexp.MustCompile(`^([A-Za-z]+)\((.+)\):([A-Za-z0-9]+)$`)            // args(name):as
-	pattern4 := regexp.MustCompile(`^([A-Za-z]+)\((.+)\)`)                            // args(name)
+	pattern3 := regexp.MustCompile(`^([A-Za-z]+)\((.+)\):([A-Za-z0-9]+)$`)            // args(field):as
+	pattern4 := regexp.MustCompile(`^([A-Za-z]+)\((.+)\)`)                            // args(field)
 	pattern5 := regexp.MustCompile(`^(\d+)\|(\d+)$`)                                  // page:rows
 
 	split := strings.Split(name, "|")
@@ -125,7 +132,7 @@ func FindField(froms []*Froms, name string) *Field {
 			as := matches[3]
 			result := FindField(froms, name)
 			if result != nil {
-				result.TypeField = TpAggregation
+				result.TypeColumn = TpAggregation
 				result.Aggregation = GetAggregation(aggregation)
 				result.As = as
 				return result
@@ -138,7 +145,7 @@ func FindField(froms []*Froms, name string) *Field {
 			name = matches[2]
 			result := FindField(froms, name)
 			if result != nil {
-				result.TypeField = TpAggregation
+				result.TypeColumn = TpAggregation
 				result.Aggregation = GetAggregation(aggregation)
 				result.As = aggregation
 				return result

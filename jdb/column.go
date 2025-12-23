@@ -1,5 +1,7 @@
 package jdb
 
+import "github.com/cgalvisleon/et/envar"
+
 const (
 	SOURCE     string = "source"
 	KEY        string = "id"
@@ -106,15 +108,21 @@ type Column struct {
 	Definition []byte      `json:"definition"`
 }
 
+/**
+* Field
+* @return *Field
+**/
 func (s *Column) Field() *Field {
 	result := &Field{
-		TypeField: s.TypeColumn,
-		Column:    s,
-		Name:      s.Name,
-		As:        s.Name,
+		TypeColumn: s.TypeColumn,
+		Column:     s,
+		Name:       s.Name,
+		As:         s.Name,
 	}
 
-	if s.TypeColumn == TpDetail {
+	if result.TypeColumn == TpAtrib {
+		result.SourceField = s.From.SourceField
+	} else if result.TypeColumn == TpDetail {
 		if s.From == nil {
 			return result
 		}
@@ -128,7 +136,29 @@ func (s *Column) Field() *Field {
 			return result
 		}
 
-		result.Detail = detail
+		rows := envar.GetInt("rows", 30)
+		result.To = detail.To
+		result.Keys = detail.Keys
+		result.Select = detail.Select
+		result.Page = 1
+		result.Rows = rows
+	} else if result.TypeColumn == TpRollup {
+		if s.From == nil {
+			return result
+		}
+
+		if s.From.Rollups == nil {
+			return result
+		}
+
+		detail := s.From.Rollups[s.Name]
+		if detail == nil {
+			return result
+		}
+
+		result.To = detail.To
+		result.Keys = detail.Keys
+		result.Select = detail.Select
 	}
 
 	return result

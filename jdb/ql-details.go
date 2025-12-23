@@ -13,9 +13,10 @@ import (
 func (s *Ql) getDetailsTx(tx *Tx, data et.Json) {
 	for name, detail := range s.Details {
 		to := detail.To
+		conditions := WhereByKeys(data, detail.Keys)
 		items, err := From(to, "A").
 			Select(detail.Select...).
-			WhereByKeys(detail.Keys).
+			WhereByConditions(conditions).
 			LimitTx(tx, detail.Page, detail.Rows)
 		if err != nil {
 			logs.Error(err)
@@ -34,9 +35,10 @@ func (s *Ql) getDetailsTx(tx *Tx, data et.Json) {
 func (s *Ql) getRollupsTx(tx *Tx, data et.Json) {
 	for name, rollup := range s.Rollups {
 		to := rollup.To
+		conditions := WhereByKeys(data, rollup.Keys)
 		items, err := From(to, "A").
 			Select(rollup.Select...).
-			WhereByKeys(rollup.Keys).
+			WhereByConditions(conditions).
 			LimitTx(tx, rollup.Page, rollup.Rows)
 		if err != nil {
 			logs.Error(err)
