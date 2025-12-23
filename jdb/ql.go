@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
@@ -216,7 +217,21 @@ func (s *Ql) FullJoin(model *Model, as string, keys map[string]string) *Ql {
 * @return *Ql
 **/
 func (s *Ql) Select(fields ...string) *Ql {
+	if len(s.Froms) == 0 {
+		return s
+	}
+
 	for _, field := range fields {
+		if field == "*" {
+			for _, col := range s.Froms[0].Model.Columns {
+				fld := col.Field()
+				if fld.TypeColumn == TpColumn {
+					s.Selects = append(s.Selects, fld)
+				}
+			}
+			continue
+		}
+
 		fld := FindField(s.Froms, field)
 		if fld != nil {
 			switch fld.TypeColumn {
@@ -399,11 +414,28 @@ func (s *Ql) Hiddens(fields ...string) *Ql {
 }
 
 /**
+* prepare
+**/
+func (s *Ql) prepare() {
+	if len(s.Selects) == 0 {
+		return
+	}
+
+	for _, hidden := range s.Hidden {
+		idx := slices.IndexFunc(s.Selects, func(fld *Field) bool { return fld.AS() == hidden.AS() })
+		if idx != -1 {
+			s.Selects = append(s.Selects[:idx], s.Selects[idx+1:]...)
+		}
+	}
+}
+
+/**
 * AllTx
 * @param tx *Tx
 * @return et.Items, error
 **/
 func (s *Ql) AllTx(tx *Tx) (et.Items, error) {
+	s.prepare()
 	return s.DB.Query(s)
 }
 
