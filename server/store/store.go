@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -32,8 +35,12 @@ type FileStore struct {
 	writeMu sync.Mutex   // SOLO WAL append
 	indexMu sync.RWMutex // índice en memoria
 
-	dir        string
-	maxSegment int64
+	name         string
+	dir          string
+	dir_segments string
+	dir_snapshot string
+	dir_compact  string
+	maxSegment   int64
 
 	segments []*segment
 	active   *segment
@@ -53,24 +60,58 @@ type recordRef struct {
 }
 
 /**
+* normalize
+* @param input string
+* @return string
+**/
+func normalize(input string) string {
+	// 1. Quitar espacios al inicio y final
+	s := strings.TrimSpace(input)
+
+	// 2. Reemplazar uno o más espacios por _
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
+
+	// 3. Eliminar todo lo que no sea letra, número o _
+	s = regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(s, "")
+
+	// 4. Garantizar que no empiece con número
+	s = regexp.MustCompile(`^[0-9]+`).ReplaceAllString(s, "")
+
+	return s
+}
+
+/**
 * Open
 * @param dir string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
 * @return *FileStore, error
 **/
-func Open(dir string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
-	if err := os.MkdirAll(filepath.Join(dir, "segments"), 0755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "snapshot"), 0755); err != nil {
-		return nil, err
+func Open(dir, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
+	if maxSegmentBytes < 1 {
+		return nil, errors.New(MSG_MAX_SEGMENT_BYTES)
 	}
 
+	maxSegmentBytes = maxSegmentBytes * 1024 * 1024
+	name = normalize(name)
 	fs := &FileStore{
+		name:          name,
 		dir:           dir,
+		dir_segments:  filepath.Join(dir, name, "segments"),
+		dir_snapshot:  filepath.Join(dir, name, "snapshot"),
+		dir_compact:   filepath.Join(dir, name, "compact"),
 		maxSegment:    maxSegmentBytes,
 		syncOnWrite:   syncOnWrite,
 		index:         make(map[string]recordRef),
 		snapshotEvery: snapshotEvery,
+	}
+
+	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(fs.dir_snapshot, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(fs.dir_compact, 0755); err != nil {
+		return nil, err
 	}
 
 	if err := fs.loadSegments(); err != nil {
@@ -89,62 +130,11 @@ func Open(dir string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uin
 }
 
 /**
-* appendRecord
-* @param id string, data []byte, status byte
-* @return recordRef, error
-**/
-func (s *FileStore) appendRecord(id string, data []byte, status byte) (recordRef, error) {
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
-
-	recordSize := int64(25 + len(data))
-	if s.active.size+recordSize > s.maxSegment {
-		if err := s.newSegment(); err != nil {
-			return recordRef{}, err
-		}
-	}
-
-	header := make([]byte, 25)
-	binary.BigEndian.PutUint32(header[0:4], uint32(len(data)))
-	binary.BigEndian.PutUint32(header[4:8], checksum(data))
-
-	copy(header[8:24], []byte(id)) // luego lo mejoramos
-	header[24] = status
-
-	offset := s.active.size
-
-	if _, err := s.active.file.Write(header); err != nil {
-		return recordRef{}, err
-	}
-	if len(data) > 0 {
-		if _, err := s.active.file.Write(data); err != nil {
-			return recordRef{}, err
-		}
-	}
-
-	s.active.size += int64(len(header) + len(data))
-
-	if s.syncOnWrite {
-		if err := s.active.file.Sync(); err != nil {
-			return recordRef{}, err
-		}
-	}
-
-	return recordRef{
-		segment: len(s.segments) - 1,
-		offset:  offset,
-		length:  uint32(len(data)),
-	}, nil
-}
-
-/**
 * loadSegments
 * @return error
 **/
 func (s *FileStore) loadSegments() error {
-	segDir := filepath.Join(s.dir, "segments")
-
-	files, err := os.ReadDir(segDir)
+	files, err := os.ReadDir(s.dir_segments)
 	if err != nil {
 		return err
 	}
@@ -154,7 +144,7 @@ func (s *FileStore) loadSegments() error {
 	})
 
 	for _, f := range files {
-		path := filepath.Join(segDir, f.Name())
+		path := filepath.Join(s.dir_segments, f.Name())
 		st, _ := os.Stat(path)
 
 		fd, err := os.OpenFile(path, os.O_RDWR, 0644)
@@ -180,77 +170,12 @@ func (s *FileStore) loadSegments() error {
 }
 
 /**
-* rebuildIndex
-* @return error
-**/
-func (s *FileStore) rebuildIndex() error {
-	s.index = make(map[string]recordRef)
-
-	for segIndex, seg := range s.segments {
-		offset := int64(0)
-
-		for {
-			header := make([]byte, 25)
-
-			n, err := seg.file.ReadAt(header, offset)
-			if err != nil {
-				if errors.Is(err, io.EOF) || n == 0 {
-					break // finished segment
-				}
-
-				// archivo pudo quedar truncado → parar seguro
-				if n < len(header) {
-					break
-				}
-
-				return err
-			}
-
-			length := binary.BigEndian.Uint32(header[0:4])
-			crcStored := binary.BigEndian.Uint32(header[4:8])
-
-			var id string
-			id = string(header[8:24])
-
-			status := header[24]
-
-			// leer payload
-			data := make([]byte, length)
-			n, err = seg.file.ReadAt(data, offset+25)
-			if err != nil {
-				break // truncado → paramos seguro
-			}
-
-			// validar CRC
-			if checksum(data) != crcStored {
-				// registro dañado -> lo ignoramos y paramos
-				break
-			}
-
-			if status == Active {
-				s.index[id] = recordRef{
-					segment: segIndex,
-					offset:  offset,
-					length:  length,
-				}
-			} else {
-				delete(s.index, id)
-			}
-
-			offset += int64(25 + length)
-		}
-	}
-
-	return nil
-}
-
-/**
 * newSegment
 * @return error
 **/
 func (s *FileStore) newSegment() error {
 	name := fmt.Sprintf("segment-%06d.dat", len(s.segments)+1)
-	path := filepath.Join(s.dir, "segments", name)
+	path := filepath.Join(s.dir_segments, name)
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
@@ -265,6 +190,207 @@ func (s *FileStore) newSegment() error {
 
 	s.segments = append(s.segments, seg)
 	s.active = seg
+	return nil
+}
+
+/*
+*
+* appendRecord
+* @param id string, data []byte, status byte
+* @return recordRef, error
+
+┌────────────┬────────────┬────────────┬───────────┬───────────┐
+│ dataLen(4) │ crc(4)     │ idLen(2)   │ idBytes   │ status(1) │
+│ uint32     │ uint32     │ uint16     │ N bytes   │ byte      │
+├────────────┴────────────┴────────────┴───────────┴───────────┤
+│ payload (dataLen bytes)                                      │
+└──────────────────────────────────────────────────────────────┘
+*
+*/
+func (s *FileStore) appendRecord(id string, data []byte, status byte) (recordRef, error) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	idBytes := []byte(id)
+	idLen := uint16(len(idBytes))
+
+	if idLen == 0 || idLen > 65535 {
+		return recordRef{}, errors.New(MSG_INVALID_ID_LENGTH)
+	}
+
+	dataLen := uint32(len(data))
+	if dataLen > math.MaxUint32 {
+		return recordRef{}, errors.New(MSG_DATA_TOO_LARGE)
+	}
+
+	headerLen := 11 + idLen
+	recordSize := int64(headerLen + uint16(dataLen))
+
+	if s.active.size+recordSize > s.maxSegment {
+		if err := s.newSegment(); err != nil {
+			return recordRef{}, err
+		}
+	}
+
+	offset := s.active.size
+
+	// header = dataLen(4) + crc(4) + idLen(2)
+	header := make([]byte, headerLen)
+	binary.BigEndian.PutUint32(header[0:4], dataLen)
+	binary.BigEndian.PutUint32(header[4:8], checksum(data))
+	binary.BigEndian.PutUint16(header[8:10], idLen)
+	copy(header[10:], idBytes)
+	header[10+idLen] = status
+
+	if _, err := s.active.file.Write(header); err != nil {
+		return recordRef{}, err
+	}
+	if len(data) > 0 {
+		if _, err := s.active.file.Write(data); err != nil {
+			return recordRef{}, err
+		}
+	}
+
+	s.active.size += recordSize
+
+	if s.syncOnWrite {
+		if err := s.active.file.Sync(); err != nil {
+			return recordRef{}, err
+		}
+	}
+
+	return recordRef{
+		segment: len(s.segments) - 1,
+		offset:  offset,
+		length:  dataLen,
+	}, nil
+}
+
+/**
+* rebuildIndex
+* @return error
+**/
+func (s *FileStore) rebuildIndex() error {
+	if len(s.index) == 0 {
+		s.index = make(map[string]recordRef)
+	}
+
+	for segIndex, seg := range s.segments {
+		offset := int64(0)
+
+		for {
+			// Leer header mínimo
+			fixed := make([]byte, 11)
+			n, err := seg.file.ReadAt(fixed, offset)
+			if err != nil {
+				if errors.Is(err, io.EOF) || n < len(fixed) {
+					break
+				}
+				return err
+			}
+
+			dataLen := binary.BigEndian.Uint32(fixed[0:4])
+			crcStored := binary.BigEndian.Uint32(fixed[4:8])
+			idLen := binary.BigEndian.Uint16(fixed[8:10])
+			status := fixed[10]
+
+			if idLen == 0 || idLen > 65535 {
+				break // corrupción → paro seguro
+			}
+
+			// Leer ID
+			idBytes := make([]byte, idLen)
+			if _, err := seg.file.ReadAt(idBytes, offset+11); err != nil {
+				break
+			}
+			id := string(idBytes)
+
+			// Leer payload
+			dataOffset := offset + int64(11+idLen)
+			data := make([]byte, dataLen)
+			if dataLen > 0 {
+				if _, err := seg.file.ReadAt(data, dataOffset); err != nil {
+					break
+				}
+				if checksum(data) != crcStored {
+					break
+				}
+			}
+
+			if status == Active {
+				s.index[id] = recordRef{
+					segment: segIndex,
+					offset:  offset,
+					length:  dataLen,
+				}
+			} else if status == Deleted {
+				delete(s.index, id)
+			}
+
+			offset += int64(11) + int64(idLen) + int64(dataLen)
+		}
+	}
+
+	return nil
+}
+
+/**
+* tryLoadSnapshot
+* @return error
+**/
+func (s *FileStore) tryLoadSnapshot() error {
+	path := filepath.Join(s.dir_snapshot, "state.snap")
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewReader(data)
+
+	var version uint16
+	binary.Read(buf, binary.BigEndian, &version)
+
+	var count uint64
+	binary.Read(buf, binary.BigEndian, &count)
+
+	// all but last 4 bytes
+	payload := data[:len(data)-4]
+	storedCRC := binary.BigEndian.Uint32(data[len(data)-4:])
+
+	if checksum(payload) != storedCRC {
+		return errors.New("snapshot corrupted")
+	}
+
+	for i := uint64(0); i < count; i++ {
+		var idBytes [16]byte
+		buf.Read(idBytes[:])
+
+		var seg uint32
+		binary.Read(buf, binary.BigEndian, &seg)
+
+		var offset int64
+		binary.Read(buf, binary.BigEndian, &offset)
+
+		var length uint32
+		binary.Read(buf, binary.BigEndian, &length)
+
+		var id string
+		id = string(idBytes[:])
+
+		s.index[id] = recordRef{
+			segment: int(seg),
+			offset:  offset,
+			length:  length,
+		}
+	}
+
 	return nil
 }
 
@@ -320,66 +446,6 @@ func (s *FileStore) createSnapshot() error {
 
 	// atomic swap
 	return os.Rename(tmp, path)
-}
-
-/**
-* tryLoadSnapshot
-* @return error
-**/
-func (s *FileStore) tryLoadSnapshot() error {
-	path := filepath.Join(s.dir, "snapshot", "state.snap")
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return err
-	}
-
-	buf := bytes.NewReader(data)
-
-	var version uint16
-	binary.Read(buf, binary.BigEndian, &version)
-
-	var count uint64
-	binary.Read(buf, binary.BigEndian, &count)
-
-	// all but last 4 bytes
-	payload := data[:len(data)-4]
-	storedCRC := binary.BigEndian.Uint32(data[len(data)-4:])
-
-	if checksum(payload) != storedCRC {
-		return errors.New("snapshot corrupted")
-	}
-
-	for i := uint64(0); i < count; i++ {
-		var idBytes [16]byte
-		buf.Read(idBytes[:])
-
-		var seg uint32
-		binary.Read(buf, binary.BigEndian, &seg)
-
-		var offset int64
-		binary.Read(buf, binary.BigEndian, &offset)
-
-		var length uint32
-		binary.Read(buf, binary.BigEndian, &length)
-
-		var id string
-		id = string(idBytes[:])
-
-		s.index[id] = recordRef{
-			segment: int(seg),
-			offset:  offset,
-			length:  length,
-		}
-	}
-
-	return nil
 }
 
 /**
@@ -474,4 +540,143 @@ func (s *FileStore) Get(id string, dest any) error {
 	}
 
 	return json.Unmarshal(data, dest)
+}
+
+/**
+* Iterate
+* @param fn func(id string, data []byte) bool
+* @return error
+**/
+func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
+	// snapshot del índice
+	s.indexMu.RLock()
+	indexCopy := make(map[string]recordRef, len(s.index))
+	for k, v := range s.index {
+		indexCopy[k] = v
+	}
+	s.indexMu.RUnlock()
+
+	// orden determinista (opcional)
+	keys := make([]string, 0, len(indexCopy))
+	for k := range indexCopy {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, id := range keys {
+		ref := indexCopy[id]
+		seg := s.segments[ref.segment]
+
+		data := make([]byte, ref.length)
+		if _, err := seg.file.ReadAt(data, ref.offset+25); err != nil {
+			return err
+		}
+
+		if !fn(id, data) {
+			break
+		}
+	}
+
+	return nil
+}
+
+/**
+* Compact
+* @return error
+**/
+func (s *FileStore) Compact() error {
+	// 1. Snapshot índice
+	s.indexMu.RLock()
+	indexCopy := make(map[string]recordRef, len(s.index))
+	for k, v := range s.index {
+		indexCopy[k] = v
+	}
+	s.indexMu.RUnlock()
+
+	// 2. Preparar tmp dir
+	tmpDir := filepath.Join(s.dir, "segments.compact")
+	os.RemoveAll(tmpDir)
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return err
+	}
+
+	// 3. Ordenar keys
+	keys := make([]string, 0, len(indexCopy))
+	for k := range indexCopy {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// 4. Reescribir
+	newIndex := make(map[string]recordRef, len(indexCopy))
+	newSegments := []*segment{}
+	var current *segment
+
+	createSegment := func() error {
+		name := fmt.Sprintf("segment-%06d.dat", len(newSegments)+1)
+		path := filepath.Join(tmpDir, name)
+		fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			return err
+		}
+		current = &segment{file: fd}
+		newSegments = append(newSegments, current)
+		return nil
+	}
+
+	if err := createSegment(); err != nil {
+		return err
+	}
+
+	for _, id := range keys {
+		ref := indexCopy[id]
+		seg := s.segments[ref.segment]
+
+		data := make([]byte, ref.length)
+		if _, err := seg.file.ReadAt(data, ref.offset+25); err != nil {
+			return err
+		}
+
+		recordSize := int64(25 + len(data))
+		if current.size+recordSize > s.maxSegment {
+			if err := createSegment(); err != nil {
+				return err
+			}
+		}
+
+		offset := current.size
+
+		header := make([]byte, 25)
+		binary.BigEndian.PutUint32(header[0:4], uint32(len(data)))
+		binary.BigEndian.PutUint32(header[4:8], checksum(data))
+		copy(header[8:24], []byte(id))
+		header[24] = Active
+
+		current.file.Write(header)
+		current.file.Write(data)
+		current.size += recordSize
+
+		newIndex[id] = recordRef{
+			segment: len(newSegments) - 1,
+			offset:  offset,
+			length:  uint32(len(data)),
+		}
+	}
+
+	// 5. Swap atómico
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	os.RemoveAll(filepath.Join(s.dir, "segments.old"))
+	os.Rename(filepath.Join(s.dir, "segments"), filepath.Join(s.dir, "segments.old"))
+	os.Rename(tmpDir, filepath.Join(s.dir, "segments"))
+
+	// 6. Activar
+	s.indexMu.Lock()
+	s.index = newIndex
+	s.segments = newSegments
+	s.active = newSegments[len(newSegments)-1]
+	s.indexMu.Unlock()
+
+	return nil
 }

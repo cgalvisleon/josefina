@@ -11,6 +11,7 @@ const (
 	// Field names
 	SOURCE     = jdb.SOURCE
 	KEY        = jdb.KEY
+	INDEX      = jdb.INDEX
 	STATUS     = jdb.STATUS
 	VERSION    = jdb.VERSION
 	PROJECT_ID = jdb.PROJECT_ID
