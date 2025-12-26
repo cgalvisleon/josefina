@@ -29,3 +29,37 @@ func checksum(b []byte) uint32 {
 func putUint32(b []byte, v uint32) {
 	binary.BigEndian.PutUint32(b, v)
 }
+
+/**
+* putUint16
+* @param b []byte, v uint16
+* @return void
+**/
+func putUint16(b []byte, v uint16) {
+	binary.BigEndian.PutUint16(b, v)
+}
+
+/**
+* putBytes
+* @param b []byte, v []byte
+* @return void
+**/
+func putBytes(b []byte, v []byte) {
+	copy(b, v)
+}
+
+/**
+* @param b []byte
+* @return uint32
+**/
+func getUint32(b []byte) uint32 {
+	return binary.BigEndian.Uint32(b)
+}
+
+/**
+* @param b []byte
+* @return uint16
+**/
+func getUint16(b []byte) uint16 {
+	return binary.BigEndian.Uint16(b)
+}

@@ -12,12 +12,25 @@ import (
 )
 
 func main() {
-	st, _ := store.Open("./data", "test", 1, true, 100)
+	st, _ := store.Open("./data", "metadata", "models", 1, true, 1)
 
+	putData(st, 1)
+	delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
+	readData(st)
+	compact(st)
+}
+
+/**
+* putData
+* @param st *store.FileStore, limit int64
+* @return
+**/
+func putData(st *store.FileStore, limit int64) {
 	start := time.Now()
-	var count int64
+	var n int64
 
 	// Write
+	n = 0
 	for {
 		id := reg.GetULID("")
 		err := st.Put(id, et.Json{
@@ -28,16 +41,39 @@ func main() {
 			panic(err)
 		}
 
-		count++
-		if count == 10 {
+		n++
+		if n >= limit {
 			break
 		}
 
-		if count%10000 == 0 {
-			fmt.Printf("writes=%d elapsed=%s\n", count, time.Since(start))
+		if n%10000 == 0 {
+			fmt.Printf("writes=%d elapsed=%s\n", n, time.Since(start))
 		}
 	}
+}
 
+/**
+* delete
+* @param st *store.FileStore, id string
+* @return
+**/
+func delete(st *store.FileStore, id string) {
+	err, existed := st.Delete(id)
+	if err != nil {
+		logs.Logf("test", "Error deleting record %s: %v\n", id, err)
+	} else if existed {
+		logs.Logf("test", "Successfully deleted record %s\n", id)
+	} else {
+		logs.Logf("test", "Record %s not found\n", id)
+	}
+}
+
+/**
+* readData
+* @param st *store.FileStore
+* @return
+**/
+func readData(st *store.FileStore) {
 	st.Iterate(func(id string, data []byte) bool {
 		result := et.Json{}
 		err := json.Unmarshal(data, &result)
@@ -48,4 +84,18 @@ func main() {
 		logs.Debug("iterate:", result.ToString())
 		return true
 	})
+}
+
+/**
+* compact
+* @param st *store.FileStore
+* @return
+**/
+func compact(st *store.FileStore) {
+	err := st.Compact()
+	if err != nil {
+		logs.Logf("test", "Error compacting store: %v\n", err)
+	} else {
+		logs.Logf("test", "Successfully compacted store\n")
+	}
 }
