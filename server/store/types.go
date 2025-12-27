@@ -40,15 +40,6 @@ func putUint16(b []byte, v uint16) {
 }
 
 /**
-* putBytes
-* @param b []byte, v []byte
-* @return void
-**/
-func putBytes(b []byte, v []byte) {
-	copy(b, v)
-}
-
-/**
 * @param b []byte
 * @return uint32
 **/

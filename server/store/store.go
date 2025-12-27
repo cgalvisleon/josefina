@@ -998,7 +998,7 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 	fs := &FileStore{
 		database:      database,
 		name:          name,
-		dir:           dir,
+		dir:           filepath.Join(dir, database, name),
 		dir_segments:  filepath.Join(dir, database, name, "segments"),
 		dir_snapshot:  filepath.Join(dir, database, name, "snapshot"),
 		dir_compact:   filepath.Join(dir, database, name, "compact"),
