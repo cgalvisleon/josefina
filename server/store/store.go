@@ -329,8 +329,8 @@ type FileStore struct {
 	active              *segment
 	index               map[string]recordRef
 	syncOnWrite         bool
-	snapshotEvery       uint64
-	writesSinceSnapshot uint64
+	SnapshotEvery       uint64
+	WritesSinceSnapshot uint64
 	wg                  sync.WaitGroup
 	ch                  chan []byte
 }
@@ -341,17 +341,19 @@ type FileStore struct {
 **/
 func (s *FileStore) ToJson() et.Json {
 	return et.Json{
-		"database":      s.Database,
-		"name":          s.Name,
-		"path":          s.Path,
-		"tomb_stones":   s.TombStones,
-		"path_segments": s.PathSegments,
-		"path_snapshot": s.PathSnapshot,
-		"path_compact":  s.PathCompact,
-		"max_segment":   s.MaxSegment,
-		"segments":      len(s.segments),
-		"active":        s.active != nil,
-		"index_size":    len(s.index),
+		"database":              s.Database,
+		"name":                  s.Name,
+		"path":                  s.Path,
+		"tomb_stones":           s.TombStones,
+		"path_segments":         s.PathSegments,
+		"path_snapshot":         s.PathSnapshot,
+		"path_compact":          s.PathCompact,
+		"max_segment":           s.MaxSegment,
+		"snapshot_every":        s.SnapshotEvery,
+		"writes_since_snapshot": s.WritesSinceSnapshot,
+		"segments":              len(s.segments),
+		"active":                s.active != nil,
+		"index_size":            len(s.index),
 	}
 }
 
@@ -630,10 +632,10 @@ func (s *FileStore) createSnapshot() error {
 * @return
 **/
 func (s *FileStore) flushSnapshot() {
-	if s.snapshotEvery > 0 {
-		s.writesSinceSnapshot++
-		if s.writesSinceSnapshot >= s.snapshotEvery {
-			s.writesSinceSnapshot = 0
+	if s.SnapshotEvery > 0 {
+		s.WritesSinceSnapshot++
+		if s.WritesSinceSnapshot >= s.SnapshotEvery {
+			s.WritesSinceSnapshot = 0
 			s.wg.Add(1)
 			go func() {
 				defer s.wg.Done()
@@ -1020,7 +1022,7 @@ func Open(path, database, name string, maxSegmentBytes int64, syncOnWrite bool, 
 		MaxSegment:    maxSegmentBytes,
 		syncOnWrite:   syncOnWrite,
 		index:         make(map[string]recordRef),
-		snapshotEvery: snapshotEvery,
+		SnapshotEvery: snapshotEvery,
 		wg:            sync.WaitGroup{},
 		ch:            make(chan []byte, 0),
 	}

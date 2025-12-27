@@ -12,9 +12,9 @@ import (
 )
 
 func main() {
-	st, _ := store.Open("./data", "metadata", "models", 1, true, 1)
+	st, _ := store.Open("./data", "metadata", "models", 0, true, 10000)
 
-	putData(st, 10)
+	putData(st, 10001)
 	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
 	readData(st)
 	// compact(st)
