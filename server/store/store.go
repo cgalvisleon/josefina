@@ -214,6 +214,36 @@ func (s *segment) ReadObject(ref recordRef, dest any) error {
 	return json.Unmarshal(data, dest)
 }
 
+/**
+* writeRecord
+* @param seg *segment, id string, data []byte, status byte
+* @return recordRef, error
+**/
+func writeRecord(seg *segment, id string, data []byte, status byte) (recordRef, error) {
+	h, header, err := newRecordHeaderAt(id, data, status)
+	if err != nil {
+		return recordRef{}, err
+	}
+
+	offset := seg.size
+
+	if _, err := seg.Write(header); err != nil {
+		return recordRef{}, err
+	}
+	if len(data) > 0 {
+		if _, err := seg.Write(data); err != nil {
+			return recordRef{}, err
+		}
+	}
+
+	seg.size += h.RecordSize()
+
+	return recordRef{
+		offset: offset,
+		length: uint32(len(data)),
+	}, nil
+}
+
 const (
 	packegeName     = "store"
 	maxIdLen        = 65535
@@ -324,81 +354,11 @@ func (s *FileStore) ToJson() et.Json {
 }
 
 /**
-* normalize
-* @param input string
+* String
 * @return string
-**/
-func normalize(input string) string {
-	// 1. Quitar espacios al inicio y final
-	s := strings.TrimSpace(input)
-
-	// 2. Reemplazar uno o más espacios por _
-	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
-
-	// 3. Eliminar todo lo que no sea letra, número o _
-	s = regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(s, "")
-
-	// 4. Garantizar que no empiece con número
-	s = regexp.MustCompile(`^[0-9]+`).ReplaceAllString(s, "")
-
-	return s
-}
-
-/**
-* Open
-* @param dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
-* @return *FileStore, error
-**/
-func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
-	if maxSegmentBytes < 1 {
-		return nil, errors.New(MSG_MAX_SEGMENT_BYTES)
-	}
-
-	maxSegmentBytes = maxSegmentBytes * 1024 * 1024
-	name = normalize(name)
-	fs := &FileStore{
-		database:      database,
-		name:          name,
-		dir:           dir,
-		dir_segments:  filepath.Join(dir, database, name, "segments"),
-		dir_snapshot:  filepath.Join(dir, database, name, "snapshot"),
-		dir_compact:   filepath.Join(dir, database, name, "compact"),
-		maxSegment:    maxSegmentBytes,
-		syncOnWrite:   syncOnWrite,
-		index:         make(map[string]recordRef),
-		snapshotEvery: snapshotEvery,
-		wg:            sync.WaitGroup{},
-		ch:            make(chan []byte, 0),
-	}
-	fs.wg.Add(1)
-	go fs.loop()
-
-	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(fs.dir_snapshot, 0755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(fs.dir_compact, 0755); err != nil {
-		return nil, err
-	}
-
-	if err := fs.loadSegments(); err != nil {
-		return nil, fmt.Errorf("loadSegments: %w", err)
-	}
-
-	loaded, err := fs.tryLoadSnapshot()
-	if err != nil {
-		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
-	}
-
-	if !loaded {
-		if err := fs.rebuildIndex(); err != nil {
-			return nil, fmt.Errorf("rebuildIndex: %w", err)
-		}
-	}
-
-	return fs, nil
+ */
+func (s *FileStore) String() string {
+	return s.ToJson().ToString()
 }
 
 /**
@@ -486,42 +446,10 @@ func (s *FileStore) newSegment() error {
 }
 
 /**
-* writeRecord
-* @param seg *segment, id string, data []byte, status byte
-* @return recordRef, error
-**/
-func writeRecord(seg *segment, id string, data []byte, status byte) (recordRef, error) {
-	h, header, err := newRecordHeaderAt(id, data, status)
-	if err != nil {
-		return recordRef{}, err
-	}
-
-	offset := seg.size
-
-	if _, err := seg.Write(header); err != nil {
-		return recordRef{}, err
-	}
-	if len(data) > 0 {
-		if _, err := seg.Write(data); err != nil {
-			return recordRef{}, err
-		}
-	}
-
-	seg.size += h.RecordSize()
-
-	return recordRef{
-		offset: offset,
-		length: uint32(len(data)),
-	}, nil
-}
-
-/*
-*
 * appendRecord
 * @param id string, data []byte, status byte
 * @return recordRef, error
-*
- */
+**/
 func (s *FileStore) appendRecord(id string, data []byte, status byte) (recordRef, error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
@@ -1032,4 +960,82 @@ func (s *FileStore) Compact() error {
 	s.indexMu.Unlock()
 
 	return nil
+}
+
+/**
+* normalize
+* @param input string
+* @return string
+**/
+func normalize(input string) string {
+	// 1. Quitar espacios al inicio y final
+	s := strings.TrimSpace(input)
+
+	// 2. Reemplazar uno o más espacios por _
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
+
+	// 3. Eliminar todo lo que no sea letra, número o _
+	s = regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(s, "")
+
+	// 4. Garantizar que no empiece con número
+	s = regexp.MustCompile(`^[0-9]+`).ReplaceAllString(s, "")
+
+	return s
+}
+
+/**
+* Open
+* @param dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
+* @return *FileStore, error
+**/
+func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
+	if maxSegmentBytes < 1 {
+		return nil, errors.New(MSG_MAX_SEGMENT_BYTES)
+	}
+
+	maxSegmentBytes = maxSegmentBytes * 1024 * 1024
+	name = normalize(name)
+	fs := &FileStore{
+		database:      database,
+		name:          name,
+		dir:           dir,
+		dir_segments:  filepath.Join(dir, database, name, "segments"),
+		dir_snapshot:  filepath.Join(dir, database, name, "snapshot"),
+		dir_compact:   filepath.Join(dir, database, name, "compact"),
+		maxSegment:    maxSegmentBytes,
+		syncOnWrite:   syncOnWrite,
+		index:         make(map[string]recordRef),
+		snapshotEvery: snapshotEvery,
+		wg:            sync.WaitGroup{},
+		ch:            make(chan []byte, 0),
+	}
+	fs.wg.Add(1)
+	go fs.loop()
+
+	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(fs.dir_snapshot, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(fs.dir_compact, 0755); err != nil {
+		return nil, err
+	}
+
+	if err := fs.loadSegments(); err != nil {
+		return nil, fmt.Errorf("loadSegments: %w", err)
+	}
+
+	loaded, err := fs.tryLoadSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
+	}
+
+	if !loaded {
+		if err := fs.rebuildIndex(); err != nil {
+			return nil, fmt.Errorf("rebuildIndex: %w", err)
+		}
+	}
+
+	return fs, nil
 }
