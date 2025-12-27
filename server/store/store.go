@@ -27,6 +27,44 @@ type Store interface {
 	Close() error
 }
 
+type recordHeader struct {
+	DataLen uint32
+	CRC     uint32
+	IDLen   uint16
+	ID      string
+	Status  byte
+}
+
+/**
+* ToJson
+* @return et.Json
+**/
+func (s *recordHeader) ToJson() et.Json {
+	return et.Json{
+		"data_len": s.DataLen,
+		"crc":      s.CRC,
+		"id_len":   s.IDLen,
+		"id":       s.ID,
+		"status":   s.Status,
+	}
+}
+
+/**
+* ToString
+* @return string
+**/
+func (s *recordHeader) ToString() string {
+	return s.ToJson().ToString()
+}
+
+/**
+* RecordSize
+* @return int64
+**/
+func (s *recordHeader) RecordSize() int64 {
+	return int64(fixedHeaderSize) + int64(s.IDLen) + int64(s.DataLen)
+}
+
 type segment struct {
 	file   *os.File
 	offset int64
@@ -90,26 +128,85 @@ func (s *segment) Sync() error {
 	return s.file.Sync()
 }
 
-const (
-	packegeName     = "store"
-	maxIdLen        = 65535
-	fixedHeaderSize = 11
-)
+/**
+* ReadHeader
+* @param ref recordRef
+* @return recordHeader, error
+**/
+func (s *segment) ReadHeader(ref recordRef) (recordHeader, error) {
+	var header recordHeader
+	buf := make([]byte, fixedHeaderSize)
+	_, err := s.ReadAt(buf, ref.offset)
+	if err != nil {
+		return header, err
+	}
 
-type recordHeader struct {
-	DataLen uint32
-	CRC     uint32
-	IDLen   uint16
-	Status  byte
+	reader := bytes.NewReader(buf)
+	binary.Read(reader, binary.BigEndian, &header.DataLen)
+	binary.Read(reader, binary.BigEndian, &header.CRC)
+	binary.Read(reader, binary.BigEndian, &header.IDLen)
+
+	idBytes := make([]byte, header.IDLen)
+	if _, err := s.ReadAt(idBytes, ref.offset+10); err != nil {
+		return header, err
+	}
+	header.ID = string(idBytes)
+
+	statusLen := int64(1)
+	statusByte := make([]byte, statusLen)
+	if _, err := s.ReadAt(statusByte, ref.offset+10+int64(header.IDLen)); err != nil {
+		return header, err
+	}
+	header.Status = statusByte[0]
+
+	return header, nil
 }
 
 /**
-* RecordSize
-* @return int64
+* ReadData
+* @param ref recordRef
+* @return []byte, error
 **/
-func (h *recordHeader) RecordSize() int64 {
-	return int64(fixedHeaderSize) + int64(h.IDLen) + int64(h.DataLen)
+func (s *segment) ReadData(ref recordRef) ([]byte, error) {
+	header, err := s.ReadHeader(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	headerLen := fixedHeaderSize + int64(header.IDLen)
+	data := make([]byte, header.DataLen)
+	_, err = s.ReadAt(data, ref.offset+headerLen)
+	if err != nil {
+		return nil, err
+	}
+
+	if checksum(data) != header.CRC {
+		return nil, errors.New(MSG_CORRUPTED_RECORD)
+	}
+
+	return data, nil
 }
+
+/**
+* ReadObject
+* @param ref recordRef, dest any
+* @return error
+**/
+func (s *segment) ReadObject(ref recordRef, dest any) error {
+	data, err := s.ReadData(ref)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, dest)
+}
+
+const (
+	packegeName     = "store"
+	keyField        = "id"
+	maxIdLen        = 65535
+	fixedHeaderSize = 11
+)
 
 /**
 * newRecordHeaderAt
@@ -179,6 +276,7 @@ type FileStore struct {
 	database            string
 	name                string
 	dir                 string
+	tombStones          int
 	dir_segments        string
 	dir_snapshot        string
 	dir_compact         string
@@ -189,6 +287,27 @@ type FileStore struct {
 	syncOnWrite         bool
 	snapshotEvery       uint64
 	writesSinceSnapshot uint64
+	wg                  sync.WaitGroup
+}
+
+/**
+* ToJson
+* @return et.Json
+**/
+func (s *FileStore) ToJson() et.Json {
+	return et.Json{
+		"database":     s.database,
+		"name":         s.name,
+		"dir":          s.dir,
+		"tomb_stones":  s.tombStones,
+		"dir_segments": s.dir_segments,
+		"dir_snapshot": s.dir_snapshot,
+		"dir_compact":  s.dir_compact,
+		"max_segment":  s.maxSegment,
+		"segments":     len(s.segments),
+		"active":       s.active != nil,
+		"index_size":   len(s.index),
+	}
 }
 
 /**
@@ -235,6 +354,7 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 		syncOnWrite:   syncOnWrite,
 		index:         make(map[string]recordRef),
 		snapshotEvery: snapshotEvery,
+		wg:            sync.WaitGroup{},
 	}
 
 	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
@@ -251,12 +371,15 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 		return nil, fmt.Errorf("loadSegments: %w", err)
 	}
 
-	if err := fs.tryLoadSnapshot(); err != nil {
+	loaded, err := fs.tryLoadSnapshot()
+	if err != nil {
 		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
 	}
 
-	if err := fs.rebuildIndex(); err != nil {
-		return nil, fmt.Errorf("rebuildIndex: %w", err)
+	if !loaded {
+		if err := fs.rebuildIndex(); err != nil {
+			return nil, fmt.Errorf("rebuildIndex: %w", err)
+		}
 	}
 
 	return fs, nil
@@ -382,48 +505,6 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (recordRef
 
 	ref.segment = len(s.segments) - 1
 
-	// idBytes := []byte(id)
-	// idLen := len(idBytes)
-
-	// if idLen == 0 || idLen > maxIdLen {
-	// 	return recordRef{}, errors.New(MSG_INVALID_ID_LENGTH)
-	// }
-
-	// dataLen := len(data)
-	// if dataLen > math.MaxUint32 {
-	// 	return recordRef{}, errors.New(MSG_DATA_TOO_LARGE)
-	// }
-
-	// headerLen := 11 + idLen
-	// recordSize := int64(headerLen) + int64(dataLen)
-
-	// if s.active.size+recordSize > s.maxSegment {
-	// 	if err := s.newSegment(); err != nil {
-	// 		return recordRef{}, err
-	// 	}
-	// }
-
-	// offset := s.active.size
-
-	// header := make([]byte, headerLen)
-	// putUint32(header[0:4], uint32(dataLen))
-	// putUint32(header[4:8], checksum(data))
-	// putUint16(header[8:10], uint16(idLen))
-	// copy(header[10:10+idLen], idBytes)
-	// header[10+idLen] = status
-
-	// if _, err := s.active.Write(header); err != nil {
-	// 	return recordRef{}, err
-	// }
-
-	// if len(data) > 0 {
-	// 	if _, err := s.active.Write(data); err != nil {
-	// 		return recordRef{}, err
-	// 	}
-	// }
-
-	// s.active.size += recordSize
-
 	if s.syncOnWrite {
 		if err := s.active.Sync(); err != nil {
 			return recordRef{}, err
@@ -431,113 +512,55 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (recordRef
 	}
 
 	return ref, nil
-	// return recordRef{
-	// 	segment: len(s.segments) - 1,
-	// 	offset:  offset,
-	// 	length:  uint32(dataLen),
-	// }, nil
 }
 
 /**
-* rebuildIndex
+* putIndex
+* @param id string, segIndex int, offset int64, dataLen uint32
 * @return error
 **/
-func (s *FileStore) rebuildIndex() error {
-	if len(s.index) == 0 {
-		s.index = make(map[string]recordRef)
+func (s *FileStore) putIndex(id string, segIndex int, offset int64, dataLen uint32) error {
+	ref := recordRef{
+		segment: segIndex,
+		offset:  offset,
+		length:  dataLen,
 	}
-
-	for segIndex, seg := range s.segments {
-		offset := int64(0)
-		i := 0
-
-		for {
-			// Leer header mínimo
-			fixed := make([]byte, 11)
-			n, err := seg.ReadAt(fixed, offset)
-			if err != nil {
-				if errors.Is(err, io.EOF) || n < len(fixed) {
-					break
-				}
-				return err
-			}
-
-			dataLen := getUint32(fixed[0:4])
-			crcStored := getUint32(fixed[4:8])
-			idLen := getUint16(fixed[8:10])
-
-			if idLen == 0 || idLen > maxIdLen {
-				break // corrupción → paro seguro
-			}
-
-			// Leer ID
-			idBytes := make([]byte, idLen)
-			if _, err := seg.ReadAt(idBytes, offset+10); err != nil {
-				break
-			}
-			id := string(idBytes)
-
-			// Leer status
-			statusLen := int64(1)
-			statusByte := make([]byte, statusLen)
-			if _, err := seg.ReadAt(statusByte, offset+10+int64(idLen)); err != nil {
-				break
-			}
-			status := statusByte[0]
-
-			// Leer payload
-			data := make([]byte, dataLen)
-			if dataLen > 0 {
-				if _, err := seg.ReadAt(data, offset+10+int64(idLen)+statusLen); err != nil {
-					break
-				}
-				if checksum(data) != crcStored {
-					break
-				}
-			}
-
-			i++
-			if status == Active {
-				s.index[id] = recordRef{
-					segment: segIndex,
-					offset:  offset,
-					length:  dataLen,
-				}
-
-				logs.Log(packegeName, "rebuildIndex:", i, ":", s.database, ":", s.name, ":ID:", id, ":ref:", s.index[id].ToString())
-			} else if status == Deleted {
-				logs.Log(packegeName, "rebuildIndex:deleted:", i, ":", s.database, ":", s.name, ":ID:", id)
-				delete(s.index, id)
-			}
-
-			offset += int64(11) + int64(idLen) + int64(dataLen)
-		}
-	}
-
+	s.index[id] = ref
+	logs.Log(packegeName, "putIndex:", segIndex, ":", s.database, ":", s.name, ":ID:", id, ":ref:", s.index[id].ToString())
 	return nil
 }
 
 /**
-* tryLoadSnapshot
+* deleteIndex
+* @param id string
 * @return error
 **/
-func (s *FileStore) tryLoadSnapshot() error {
+func (s *FileStore) deleteIndex(id string) {
+	delete(s.index, id)
+	logs.Log(packegeName, "deleteIndex:", s.database, ":", s.name, ":ID:", id)
+}
+
+/**
+* tryLoadSnapshot
+* @return bool, error
+**/
+func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	path := filepath.Join(s.dir_snapshot, "state.snap")
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil // snapshot opcional
+		return false, nil // snapshot opcional
 	}
 
 	if len(data) < 10 {
-		return errors.New("invalid snapshot")
+		return false, errors.New("invalid snapshot")
 	}
 
 	// CRC check
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
-		return errors.New("snapshot corrupted")
+		return false, errors.New("snapshot corrupted")
 	}
 
 	buf := bytes.NewReader(payload)
@@ -546,7 +569,7 @@ func (s *FileStore) tryLoadSnapshot() error {
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
-		return errors.New("invalid snapshot magic")
+		return false, errors.New("invalid snapshot magic")
 	}
 
 	var version uint16
@@ -565,23 +588,19 @@ func (s *FileStore) tryLoadSnapshot() error {
 		idBytes := make([]byte, idLen)
 		buf.Read(idBytes)
 
-		var seg uint32
+		var segIndex uint32
 		var offset int64
-		var length uint32
+		var dataLen uint32
 
-		binary.Read(buf, binary.BigEndian, &seg)
+		binary.Read(buf, binary.BigEndian, &segIndex)
 		binary.Read(buf, binary.BigEndian, &offset)
-		binary.Read(buf, binary.BigEndian, &length)
+		binary.Read(buf, binary.BigEndian, &dataLen)
 
 		id := string(idBytes)
-		s.index[id] = recordRef{
-			segment: int(seg),
-			offset:  offset,
-			length:  length,
-		}
+		s.putIndex(id, int(segIndex), offset, dataLen)
 	}
 
-	return nil
+	return true, nil
 }
 
 /**
@@ -635,39 +654,139 @@ func (s *FileStore) createSnapshot() error {
 }
 
 /**
-* Put
-* @param id string, value any
-* @return error
+* flushSnapshot
+* @return
 **/
-func (s *FileStore) Put(id string, value any) error {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-
-	ref, err := s.appendRecord(id, data, Active)
-	if err != nil {
-		return err
-	}
-
-	// índice: lock corto
-	s.indexMu.Lock()
-	s.index[id] = ref
-	s.indexMu.Unlock()
-	i := len(s.index)
-	logs.Log(packegeName, "put:", i, ":", s.database, ":", s.name, ":ID:", id, ":ref:", ref.ToString())
-
-	// snapshot async-safe
+func (s *FileStore) flushSnapshot() {
 	if s.snapshotEvery > 0 {
 		s.writesSinceSnapshot++
 		if s.writesSinceSnapshot >= s.snapshotEvery {
 			s.writesSinceSnapshot = 0
-			// go
-			s.createSnapshot()
+			s.wg.Add(1)
+			go func() {
+				defer s.wg.Done()
+				s.createSnapshot()
+			}()
+		}
+	}
+
+	n := len(s.index)
+	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
+	if s.tombStones > threshold {
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			s.Compact()
+		}()
+	}
+
+}
+
+/**
+* rebuildIndex
+* @return error
+**/
+func (s *FileStore) rebuildIndex() error {
+	if len(s.index) == 0 {
+		s.index = make(map[string]recordRef)
+	}
+
+	for segIndex, seg := range s.segments {
+		offset := int64(0)
+
+		for {
+			// Leer header mínimo
+			fixed := make([]byte, 11)
+			n, err := seg.ReadAt(fixed, offset)
+			if err != nil {
+				if errors.Is(err, io.EOF) || n < len(fixed) {
+					break
+				}
+				return err
+			}
+
+			dataLen := getUint32(fixed[0:4])
+			crcStored := getUint32(fixed[4:8])
+			idLen := getUint16(fixed[8:10])
+
+			if idLen == 0 || idLen > maxIdLen {
+				break // corrupción → paro seguro
+			}
+
+			// Leer ID
+			idBytes := make([]byte, idLen)
+			if _, err := seg.ReadAt(idBytes, offset+10); err != nil {
+				break
+			}
+			id := string(idBytes)
+
+			// Leer status
+			statusLen := int64(1)
+			statusByte := make([]byte, statusLen)
+			if _, err := seg.ReadAt(statusByte, offset+10+int64(idLen)); err != nil {
+				break
+			}
+			status := statusByte[0]
+
+			// Leer payload
+			data := make([]byte, dataLen)
+			if dataLen > 0 {
+				if _, err := seg.ReadAt(data, offset+10+int64(idLen)+statusLen); err != nil {
+					break
+				}
+				if checksum(data) != crcStored {
+					break
+				}
+			}
+
+			if status == Active {
+				s.putIndex(id, segIndex, offset, dataLen)
+			} else if status == Deleted {
+				s.deleteIndex(id)
+			}
+
+			offset += int64(11) + int64(idLen) + int64(dataLen)
 		}
 	}
 
 	return nil
+}
+
+/**
+* Put
+* @param id string, value any
+* @return string, error
+**/
+func (s *FileStore) Put(id string, value any) (string, error) {
+	if id == "" {
+		return id, fmt.Errorf("id cannot be empty")
+	}
+
+	data, err := json.Marshal(value)
+	if err != nil {
+		return id, err
+	}
+
+	ref, err := s.appendRecord(id, data, Active)
+	if err != nil {
+		return id, err
+	}
+
+	// índice: lock corto
+	s.indexMu.Lock()
+	_, exists := s.index[id]
+	if exists {
+		s.tombStones++
+	}
+	s.index[id] = ref
+	s.indexMu.Unlock()
+	i := len(s.index)
+	logs.Log(packegeName, "putData:", i, ":", s.database, ":", s.name, ":ID:", id, ":ref:", ref.ToString())
+
+	// snapshot async-safe
+	s.flushSnapshot()
+
+	return id, nil
 }
 
 /**
@@ -679,6 +798,9 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	// Verificamos si existe
 	s.indexMu.RLock()
 	_, exists := s.index[id]
+	if exists {
+		s.tombStones++
+	}
 	s.indexMu.RUnlock()
 
 	if !exists {
@@ -698,6 +820,9 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	delete(s.index, id)
 	s.indexMu.Unlock()
 
+	// snapshot async-safe
+	s.flushSnapshot()
+
 	return nil, true
 }
 
@@ -716,22 +841,12 @@ func (s *FileStore) Get(id string, dest any) error {
 	}
 
 	seg := s.segments[ref.segment]
-
-	header := make([]byte, 25)
-	if _, err := seg.ReadAt(header, ref.offset); err != nil {
+	err := seg.ReadObject(ref, dest)
+	if err != nil {
 		return err
 	}
 
-	data := make([]byte, ref.length)
-	if _, err := seg.ReadAt(data, ref.offset+25); err != nil {
-		return err
-	}
-
-	if checksum(data) != getUint32(header[4:8]) {
-		return errors.New("corrupted record")
-	}
-
-	return json.Unmarshal(data, dest)
+	return nil
 }
 
 /**
@@ -759,32 +874,9 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
 		ref := indexResult[id]
 		seg := s.segments[ref.segment]
 
-		// Leer header mínimo
-		fixed := make([]byte, 11)
-		if _, err := seg.ReadAt(fixed, ref.offset); err != nil {
+		data, err := seg.ReadData(ref)
+		if err != nil {
 			return err
-		}
-
-		dataLen := getUint32(fixed[0:4])
-		crcStored := getUint32(fixed[4:8])
-		idLen := getUint16(fixed[8:10])
-		// status := fixed[10] // no lo necesitas aquí
-
-		// Validación básica
-		if idLen == 0 {
-			return errors.New("invalid record: zero idLen")
-		}
-
-		payloadOffset := ref.offset + int64(11+idLen)
-
-		data := make([]byte, dataLen)
-		if dataLen > 0 {
-			if _, err := seg.ReadAt(data, payloadOffset); err != nil {
-				return err
-			}
-			if checksum(data) != crcStored {
-				return errors.New("corrupted record during iterate")
-			}
 		}
 
 		if !fn(id, data) {
@@ -885,6 +977,7 @@ func (s *FileStore) Compact() error {
 		}
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
+		logs.Log(packegeName, "compacted:", s.database, ":", s.name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 	}
 
 	// Swap atómico
@@ -910,6 +1003,7 @@ func (s *FileStore) Compact() error {
 	s.index = newIndex
 	s.segments = newSegments
 	s.active = newSegments[len(newSegments)-1]
+	s.tombStones = 0
 	s.indexMu.Unlock()
 
 	return nil

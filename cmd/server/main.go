@@ -7,7 +7,6 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/server/store"
 )
 
@@ -15,9 +14,27 @@ func main() {
 	st, _ := store.Open("./data", "metadata", "models", 1, true, 1)
 
 	putData(st, 1)
-	delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
+	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
 	readData(st)
-	compact(st)
+	// compact(st)
+	// getData(st, "01KDEB4086CEGVD1G3FA69CMBB")
+}
+
+/**
+* getData
+* @param st *store.FileStore, id string
+* @return et.Json
+**/
+func getData(st *store.FileStore, id string) et.Json {
+	var result et.Json
+	err := st.Get(id, &result)
+	if err != nil {
+		logs.Logf("test", "Error getting record %s: %v\n", id, err)
+	} else {
+		logs.Logf("test", "Retrieved record %s: %v\n", id, result.ToString())
+	}
+
+	return result
 }
 
 /**
@@ -32,8 +49,8 @@ func putData(st *store.FileStore, limit int64) {
 	// Write
 	n = 0
 	for {
-		id := reg.GetULID("")
-		err := st.Put(id, et.Json{
+		id := fmt.Sprintf("record_%d", n)
+		_, err := st.Put(id, et.Json{
 			"id": id,
 			"ts": time.Now().UnixNano(),
 		})
