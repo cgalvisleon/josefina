@@ -18,6 +18,7 @@ func main() {
 	readData(st)
 	// compact(st)
 	// getData(st, "01KDEB4086CEGVD1G3FA69CMBB")
+	st.Close()
 }
 
 /**

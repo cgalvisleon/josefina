@@ -66,22 +66,35 @@ func (s *recordHeader) RecordSize() int64 {
 }
 
 type segment struct {
-	file   *os.File
-	offset int64
-	size   int64
-	name   string
+	file *os.File
+	size int64
+	name string
+}
+
+/**
+* newSegment
+* @param file *os.File, size int64, name string
+* @return *segment
+**/
+func newSegment(file *os.File, size int64, name string) *segment {
+	result := &segment{
+		file: file,
+		size: size,
+		name: name,
+	}
+
+	return result
 }
 
 /**
 * ToJson
 * @return et.Json
 **/
-func (s segment) ToJson() et.Json {
+func (s *segment) ToJson() et.Json {
 	return et.Json{
-		"file":   s.file.Name(),
-		"offset": s.offset,
-		"size":   s.size,
-		"name":   s.name,
+		"file": s.file.Name(),
+		"size": s.size,
+		"name": s.name,
 	}
 }
 
@@ -89,7 +102,7 @@ func (s segment) ToJson() et.Json {
 * ToString
 * @return string
  */
-func (s segment) ToString() string {
+func (s *segment) ToString() string {
 	return s.ToJson().ToString()
 }
 
@@ -203,7 +216,6 @@ func (s *segment) ReadObject(ref recordRef, dest any) error {
 
 const (
 	packegeName     = "store"
-	keyField        = "id"
 	maxIdLen        = 65535
 	fixedHeaderSize = 11
 )
@@ -288,6 +300,7 @@ type FileStore struct {
 	snapshotEvery       uint64
 	writesSinceSnapshot uint64
 	wg                  sync.WaitGroup
+	ch                  chan []byte
 }
 
 /**
@@ -355,7 +368,10 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 		index:         make(map[string]recordRef),
 		snapshotEvery: snapshotEvery,
 		wg:            sync.WaitGroup{},
+		ch:            make(chan []byte, 0),
 	}
+	fs.wg.Add(1)
+	go fs.loop()
 
 	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
 		return nil, err
@@ -383,6 +399,28 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 	}
 
 	return fs, nil
+}
+
+/**
+* loop processes the write queue
+* @return void
+ */
+func (s *FileStore) loop() {
+	defer s.wg.Done()
+	for data := range s.ch {
+		logs.Logf("store", "Processing data from queue: %v", len(data))
+		// TODO: Implement actual processing logic
+		_ = data
+	}
+}
+
+/**
+* Close
+* @return void
+**/
+func (s *FileStore) Close() {
+	close(s.ch)
+	s.wg.Wait()
 }
 
 /**
@@ -414,12 +452,7 @@ func (s *FileStore) loadSegments() error {
 			return err
 		}
 
-		seg := &segment{
-			file: fd,
-			size: size,
-			name: name,
-		}
-
+		seg := newSegment(fd, size, name)
 		logs.Log(packegeName, "loadSegments:", s.database, ":", s.name, ":", seg.ToString())
 		s.segments = append(s.segments, seg)
 	}
@@ -445,12 +478,7 @@ func (s *FileStore) newSegment() error {
 		return err
 	}
 
-	seg := &segment{
-		file: fd,
-		size: 0,
-		name: name,
-	}
-
+	seg := newSegment(fd, 0, name)
 	logs.Log(packegeName, "newSegment:", s.database, ":", s.name, ":", seg.ToString())
 	s.segments = append(s.segments, seg)
 	s.active = seg
@@ -635,6 +663,7 @@ func (s *FileStore) createSnapshot() error {
 		binary.Write(buf, binary.BigEndian, uint32(ref.segment))
 		binary.Write(buf, binary.BigEndian, ref.offset)
 		binary.Write(buf, binary.BigEndian, ref.length)
+		logs.Log(packegeName, "snapshot:", s.database, ":", s.name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 	}
 
 	// ---- CRC ----
@@ -928,11 +957,7 @@ func (s *FileStore) Compact() error {
 			return err
 		}
 
-		current = &segment{
-			file: fd,
-			size: 0,
-			name: name,
-		}
+		current = newSegment(fd, 0, name)
 		newSegments = append(newSegments, current)
 		return nil
 	}
