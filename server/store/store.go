@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -248,6 +249,7 @@ const (
 	packegeName     = "store"
 	maxIdLen        = 65535
 	fixedHeaderSize = 11
+	SizeSegment     = 128
 )
 
 /**
@@ -315,14 +317,14 @@ func (s recordRef) ToString() string {
 type FileStore struct {
 	writeMu             sync.Mutex   // SOLO WAL append
 	indexMu             sync.RWMutex // índice en memoria
-	database            string
-	name                string
-	dir                 string
-	tombStones          int
-	dir_segments        string
-	dir_snapshot        string
-	dir_compact         string
-	maxSegment          int64
+	Database            string
+	Name                string
+	Path                string
+	TombStones          int
+	PathSegments        string
+	PathSnapshot        string
+	PathCompact         string
+	MaxSegment          int64
 	segments            []*segment
 	active              *segment
 	index               map[string]recordRef
@@ -339,17 +341,17 @@ type FileStore struct {
 **/
 func (s *FileStore) ToJson() et.Json {
 	return et.Json{
-		"database":     s.database,
-		"name":         s.name,
-		"dir":          s.dir,
-		"tomb_stones":  s.tombStones,
-		"dir_segments": s.dir_segments,
-		"dir_snapshot": s.dir_snapshot,
-		"dir_compact":  s.dir_compact,
-		"max_segment":  s.maxSegment,
-		"segments":     len(s.segments),
-		"active":       s.active != nil,
-		"index_size":   len(s.index),
+		"database":      s.Database,
+		"name":          s.Name,
+		"path":          s.Path,
+		"tomb_stones":   s.TombStones,
+		"path_segments": s.PathSegments,
+		"path_snapshot": s.PathSnapshot,
+		"path_compact":  s.PathCompact,
+		"max_segment":   s.MaxSegment,
+		"segments":      len(s.segments),
+		"active":        s.active != nil,
+		"index_size":    len(s.index),
 	}
 }
 
@@ -384,11 +386,24 @@ func (s *FileStore) Close() {
 }
 
 /**
+* UseMemory
+* @return float64
+ */
+func (s *FileStore) UseMemory() float64 {
+	// TODO: Implement index loading logic
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	// Aproximación: heap usado
+	return float64(m.HeapAlloc) / 1024 / 1024
+}
+
+/**
 * loadSegments
 * @return error
 **/
 func (s *FileStore) loadSegments() error {
-	files, err := os.ReadDir(s.dir_segments)
+	files, err := os.ReadDir(s.PathSegments)
 	if err != nil {
 		return err
 	}
@@ -399,7 +414,7 @@ func (s *FileStore) loadSegments() error {
 
 	for _, f := range files {
 		name := f.Name()
-		path := filepath.Join(s.dir_segments, name)
+		path := filepath.Join(s.PathSegments, name)
 		st, _ := os.Stat(path)
 
 		fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
@@ -413,7 +428,7 @@ func (s *FileStore) loadSegments() error {
 		}
 
 		seg := newSegment(fd, size, name)
-		logs.Log(packegeName, "loadSegments:", s.database, ":", s.name, ":", seg.ToString())
+		logs.Log(packegeName, "loadSegments:", s.Database, ":", s.Name, ":", seg.ToString())
 		s.segments = append(s.segments, seg)
 	}
 
@@ -431,7 +446,7 @@ func (s *FileStore) loadSegments() error {
 **/
 func (s *FileStore) newSegment() error {
 	name := fmt.Sprintf("segment-%06d.dat", len(s.segments)+1)
-	path := filepath.Join(s.dir_segments, name)
+	path := filepath.Join(s.PathSegments, name)
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
@@ -439,7 +454,7 @@ func (s *FileStore) newSegment() error {
 	}
 
 	seg := newSegment(fd, 0, name)
-	logs.Log(packegeName, "newSegment:", s.database, ":", s.name, ":", seg.ToString())
+	logs.Log(packegeName, "newSegment:", s.Database, ":", s.Name, ":", seg.ToString())
 	s.segments = append(s.segments, seg)
 	s.active = seg
 	return nil
@@ -482,7 +497,7 @@ func (s *FileStore) putIndex(id string, segIndex int, offset int64, dataLen uint
 		length:  dataLen,
 	}
 	s.index[id] = ref
-	logs.Log(packegeName, "putIndex:", segIndex, ":", s.database, ":", s.name, ":ID:", id, ":ref:", s.index[id].ToString())
+	logs.Log(packegeName, "putIndex:", segIndex, ":", s.Database, ":", s.Name, ":ID:", id, ":ref:", s.index[id].ToString())
 	return nil
 }
 
@@ -493,7 +508,7 @@ func (s *FileStore) putIndex(id string, segIndex int, offset int64, dataLen uint
 **/
 func (s *FileStore) deleteIndex(id string) {
 	delete(s.index, id)
-	logs.Log(packegeName, "deleteIndex:", s.database, ":", s.name, ":ID:", id)
+	logs.Log(packegeName, "deleteIndex:", s.Database, ":", s.Name, ":ID:", id)
 }
 
 /**
@@ -501,7 +516,7 @@ func (s *FileStore) deleteIndex(id string) {
 * @return bool, error
 **/
 func (s *FileStore) tryLoadSnapshot() (bool, error) {
-	path := filepath.Join(s.dir_snapshot, "state.snap")
+	path := filepath.Join(s.PathSnapshot, "state.snap")
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -567,7 +582,7 @@ func (s *FileStore) createSnapshot() error {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
-	path := filepath.Join(s.dir_snapshot, "state.snap")
+	path := filepath.Join(s.PathSnapshot, "state.snap")
 	tmp := path + ".tmp"
 
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
@@ -591,7 +606,7 @@ func (s *FileStore) createSnapshot() error {
 		binary.Write(buf, binary.BigEndian, uint32(ref.segment))
 		binary.Write(buf, binary.BigEndian, ref.offset)
 		binary.Write(buf, binary.BigEndian, ref.length)
-		logs.Log(packegeName, "snapshot:", s.database, ":", s.name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
+		logs.Log(packegeName, "snapshot:", s.Database, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 	}
 
 	// ---- CRC ----
@@ -629,7 +644,7 @@ func (s *FileStore) flushSnapshot() {
 
 	n := len(s.index)
 	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
-	if s.tombStones > threshold {
+	if s.TombStones > threshold {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
@@ -733,12 +748,12 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 	s.indexMu.Lock()
 	_, exists := s.index[id]
 	if exists {
-		s.tombStones++
+		s.TombStones++
 	}
 	s.index[id] = ref
 	s.indexMu.Unlock()
 	i := len(s.index)
-	logs.Log(packegeName, "putData:", i, ":", s.database, ":", s.name, ":ID:", id, ":ref:", ref.ToString())
+	logs.Log(packegeName, "putData:", i, ":", s.Database, ":", s.Name, ":ID:", id, ":ref:", ref.ToString())
 
 	// snapshot async-safe
 	s.flushSnapshot()
@@ -756,7 +771,7 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	s.indexMu.RLock()
 	_, exists := s.index[id]
 	if exists {
-		s.tombStones++
+		s.TombStones++
 	}
 	s.indexMu.RUnlock()
 
@@ -770,7 +785,7 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	}
 
 	// Log the deletion
-	logs.Log(packegeName, "deleted", s.database, ":", s.name, ":ID:", id)
+	logs.Log(packegeName, "deleted", s.Database, ":", s.Name, ":ID:", id)
 
 	// Removemos del índice
 	s.indexMu.Lock()
@@ -865,7 +880,7 @@ func (s *FileStore) Compact() error {
 	sort.Strings(keys)
 
 	// Directorio temporal
-	tmpDir := filepath.Join(s.dir_compact, "segments.tmp")
+	tmpDir := filepath.Join(s.PathCompact, "segments.tmp")
 	os.RemoveAll(tmpDir)
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return err
@@ -918,7 +933,7 @@ func (s *FileStore) Compact() error {
 
 		// Rotar segmento si es necesario
 		recordSize := int64(fixedHeaderSize) + int64(idLen) + int64(len(data))
-		if current.size+recordSize > s.maxSegment {
+		if current.size+recordSize > s.MaxSegment {
 			if err := createSegment(); err != nil {
 				return err
 			}
@@ -930,7 +945,7 @@ func (s *FileStore) Compact() error {
 		}
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
-		logs.Log(packegeName, "compacted:", s.database, ":", s.name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+		logs.Log(packegeName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 	}
 
 	// Swap atómico
@@ -941,13 +956,13 @@ func (s *FileStore) Compact() error {
 		seg.file.Close()
 	}
 
-	oldDir := filepath.Join(s.dir, "segments.old")
+	oldDir := filepath.Join(s.Path, "segments.old")
 	os.RemoveAll(oldDir)
 
-	if err := os.Rename(s.dir_segments, oldDir); err != nil {
+	if err := os.Rename(s.PathSegments, oldDir); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpDir, s.dir_segments); err != nil {
+	if err := os.Rename(tmpDir, s.PathSegments); err != nil {
 		return err
 	}
 
@@ -956,7 +971,7 @@ func (s *FileStore) Compact() error {
 	s.index = newIndex
 	s.segments = newSegments
 	s.active = newSegments[len(newSegments)-1]
-	s.tombStones = 0
+	s.TombStones = 0
 	s.indexMu.Unlock()
 
 	return nil
@@ -985,24 +1000,24 @@ func normalize(input string) string {
 
 /**
 * Open
-* @param dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
+* @param path, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
 * @return *FileStore, error
 **/
-func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
+func Open(path, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
 	if maxSegmentBytes < 1 {
-		return nil, errors.New(MSG_MAX_SEGMENT_BYTES)
+		maxSegmentBytes = SizeSegment
 	}
 
 	maxSegmentBytes = maxSegmentBytes * 1024 * 1024
 	name = normalize(name)
 	fs := &FileStore{
-		database:      database,
-		name:          name,
-		dir:           filepath.Join(dir, database, name),
-		dir_segments:  filepath.Join(dir, database, name, "segments"),
-		dir_snapshot:  filepath.Join(dir, database, name, "snapshot"),
-		dir_compact:   filepath.Join(dir, database, name, "compact"),
-		maxSegment:    maxSegmentBytes,
+		Database:      database,
+		Name:          name,
+		Path:          filepath.Join(path, database, name),
+		PathSegments:  filepath.Join(path, database, name, "segments"),
+		PathSnapshot:  filepath.Join(path, database, name, "snapshot"),
+		PathCompact:   filepath.Join(path, database, name, "compact"),
+		MaxSegment:    maxSegmentBytes,
 		syncOnWrite:   syncOnWrite,
 		index:         make(map[string]recordRef),
 		snapshotEvery: snapshotEvery,
@@ -1012,13 +1027,13 @@ func Open(dir, database, name string, maxSegmentBytes int64, syncOnWrite bool, s
 	fs.wg.Add(1)
 	go fs.loop()
 
-	if err := os.MkdirAll(fs.dir_segments, 0755); err != nil {
+	if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(fs.dir_snapshot, 0755); err != nil {
+	if err := os.MkdirAll(fs.PathSnapshot, 0755); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(fs.dir_compact, 0755); err != nil {
+	if err := os.MkdirAll(fs.PathCompact, 0755); err != nil {
 		return nil, err
 	}
 

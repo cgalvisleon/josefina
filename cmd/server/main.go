@@ -7,17 +7,19 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/server/store"
 )
 
 func main() {
 	st, _ := store.Open("./data", "metadata", "models", 1, true, 1)
 
-	putData(st, 1)
+	putData(st, 10)
 	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
 	readData(st)
 	// compact(st)
 	// getData(st, "01KDEB4086CEGVD1G3FA69CMBB")
+	logs.Logf("test", "Memory usage: %.2f MB", st.UseMemory())
 	st.Close()
 }
 
@@ -50,7 +52,7 @@ func putData(st *store.FileStore, limit int64) {
 	// Write
 	n = 0
 	for {
-		id := fmt.Sprintf("record_%d", n)
+		id := reg.GenULID(st.Name) //fmt.Sprintf("record_%d", n)
 		_, err := st.Put(id, et.Json{
 			"id": id,
 			"ts": time.Now().UnixNano(),
