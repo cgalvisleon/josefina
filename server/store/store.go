@@ -14,11 +14,13 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/timezone"
 )
 
 type Store interface {
@@ -570,8 +572,7 @@ func (s *FileStore) Get(id string, dest any) error {
 * @return error
 **/
 func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
-	atomic.AddUint64(storeCallsMap["iterate"], 1)
-
+	start := timezone.NowTime()
 	s.indexMu.RLock()
 	indexResult := make(map[string]*recordRef, len(s.index))
 	for k, v := range s.index {
@@ -586,20 +587,55 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
 	}
 	sort.Strings(keys)
 
-	// 3. Iterar registros vivos
-	for _, id := range keys {
-		ref := indexResult[id]
-		seg := s.segments[ref.segment]
+	parts := chunkKeys(keys, 10) // 5 workers para paralelizar
+	var wg sync.WaitGroup
 
-		data, err := seg.read(ref)
-		if err != nil {
-			return err
-		}
+	n := 0
+	for _, part := range parts {
+		wg.Add(1)
 
-		if !fn(id, data) {
-			break
-		}
+		go func(keys []string) {
+			defer wg.Done()
+
+			for _, id := range keys {
+				ref := indexResult[id]
+				seg := s.segments[ref.segment]
+
+				data, err := seg.read(ref)
+				if err != nil {
+					return
+				}
+
+				if !fn(id, data) {
+					break
+				}
+
+				n++
+			}
+		}(part)
 	}
+
+	wg.Wait()
+
+	// 3. Iterar registros vivos
+	// n := 0
+	// for _, id := range keys {
+	// 	ref := indexResult[id]
+	// 	seg := s.segments[ref.segment]
+
+	// 	data, err := seg.read(ref)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	if !fn(id, data) {
+	// 		break
+	// 	}
+	// 	n++
+	// }
+
+	duration := time.Since(start)
+	logs.Logf(packegeName, "iterate:%s:%s:total:%d:duration:%s", s.Database, s.Name, n, duration.String())
 
 	return nil
 }

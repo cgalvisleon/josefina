@@ -54,3 +54,22 @@ func getUint32(b []byte) uint32 {
 func getUint16(b []byte) uint16 {
 	return binary.BigEndian.Uint16(b)
 }
+
+/**
+* chunkKeys
+* @param keys []string - the slice of keys to chunk
+* @param workers int - number of worker goroutines
+* @return [][]string - chunked keys
+**/
+func chunkKeys(keys []string, workers int) [][]string {
+	if workers <= 0 {
+		return nil
+	}
+
+	chunks := make([][]string, workers)
+	for i, k := range keys {
+		idx := i % workers
+		chunks[idx] = append(chunks[idx], k)
+	}
+	return chunks
+}
