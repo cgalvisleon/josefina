@@ -207,7 +207,7 @@ func (s *FileStore) save() error {
 	}
 
 	if s.IsDebug {
-		logs.Log(packageName, "saved metadata to", path)
+		logs.Log(packageName, "saved:metadata:", path)
 	}
 
 	return nil
