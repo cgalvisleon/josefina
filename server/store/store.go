@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -158,10 +157,16 @@ func (s *FileStore) Debug() {
 * @return float64
  */
 func (s *FileStore) UseMemory() float64 {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
+	s.indexMu.RLock()
+	n := len(s.index)
+	s.indexMu.RUnlock()
 
-	return float64(m.HeapAlloc) / 1024 / 1024
+	result := float64(n) * 96 // estimación simple
+	if result < 1024 {
+		return 0.001 // evitar valores muy pequeños
+	}
+
+	return result / 1024 / 1024 // devolver en MB
 }
 
 /**

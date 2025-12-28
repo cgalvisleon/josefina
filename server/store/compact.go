@@ -14,7 +14,6 @@ import (
 * @return error
 **/
 func (s *FileStore) Compact() error {
-	// Snapshot estable del índice
 	s.indexMu.RLock()
 	indexCopy := make(map[string]*recordRef, len(s.index))
 	for k, v := range s.index {
