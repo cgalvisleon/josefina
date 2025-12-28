@@ -736,7 +736,7 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
 	}
 	if err := fs.buildIndex(); err != nil {
-		return nil, fmt.Errorf("rebuildIndex: %w", err)
+		return nil, fmt.Errorf("buildIndex: %w", err)
 	}
 
 	fs.metricEnd(tag, fmt.Sprintf("total:%d:completed", len(fs.index)))
