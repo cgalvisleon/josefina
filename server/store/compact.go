@@ -95,7 +95,9 @@ func (s *FileStore) Compact() error {
 		}
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
-		logs.Log(packegeName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+		if s.IsDebug {
+			logs.Log(packegeName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+		}
 	}
 
 	// Swap atómico

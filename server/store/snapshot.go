@@ -80,14 +80,14 @@ func (s *FileStore) tryLoadSnapshot() error {
 	}
 
 	if len(data) < 10 {
-		return errors.New("invalid snapshot")
+		return errors.New(MSG_INVALID_SNAPSHOT)
 	}
 
 	// CRC check
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
-		return errors.New("snapshot corrupted")
+		return errors.New(MSG_SNAPSHOT_CORRUPTED)
 	}
 
 	buf := bytes.NewReader(payload)
@@ -96,7 +96,7 @@ func (s *FileStore) tryLoadSnapshot() error {
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
-		return errors.New("invalid snapshot magic")
+		return errors.New(MSG_INVALID_SNAPSHOT_MAGIC)
 	}
 
 	var version uint16
@@ -107,7 +107,6 @@ func (s *FileStore) tryLoadSnapshot() error {
 
 	// ---- Entries ----
 	s.index = make(map[string]*recordRef, count)
-
 	for i := uint64(0); i < count; i++ {
 		var idLen uint16
 		binary.Read(buf, binary.BigEndian, &idLen)

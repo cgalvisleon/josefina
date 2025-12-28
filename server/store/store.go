@@ -84,6 +84,7 @@ type FileStore struct {
 	MaxSegment          int64                 `json:"max_segment"`
 	SyncOnWrite         bool                  `json:"sync_on_write"`
 	WritesSinceSnapshot uint64                `json:"writes_since_snapshot"`
+	Metrics             map[string]int64      `json:"metrics"`
 	IsDebug             bool                  `json:"-"`
 	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu             sync.RWMutex          `json:"-"` // índice en memoria
@@ -125,10 +126,10 @@ func (s *FileStore) ToJson() et.Json {
 }
 
 /**
-* String
+* ToString
 * @return string
  */
-func (s *FileStore) String() string {
+func (s *FileStore) ToString() string {
 	return s.ToJson().ToString()
 }
 
@@ -325,8 +326,13 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 		go s.Compact()
 	}
 
-	recordSize := int64(len(id)) + int64(len(data)) + 11 // header size
-	if s.active.size+recordSize > s.MaxSegment {
+	recordSize := int64(len(id)) + int64(len(data)) + 11
+	currentSize := s.active.size
+	totalSize := currentSize + recordSize
+	if s.IsDebug {
+		logs.Log(packegeName, "appendRecord:", s.Database, ":", s.Name, "recordSize:", recordSize, "currentSize:", currentSize, "totalSize:", totalSize, "maxSegment:", s.MaxSegment)
+	}
+	if totalSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
 			return nil, err
 		}
@@ -393,7 +399,6 @@ func (s *FileStore) rebuildIndex() error {
 	segIndex := len(s.segments) - 1
 	seg := s.segments[segIndex]
 	offset := int64(0)
-
 	for {
 		// Leer header mínimo
 		fixed := make([]byte, 11)
@@ -617,10 +622,10 @@ func Normalize(input string) string {
 
 /**
 * Open
-* @param path, database, name string, syncOnWrite bool
+* @param path, database, name string, debug bool
 * @return *FileStore, error
 **/
-func Open(path, database, name string, syncOnWrite bool) (*FileStore, error) {
+func Open(path, database, name string, debug bool) (*FileStore, error) {
 	fs := &FileStore{
 		Path: filepath.Join(path, database, name),
 	}
@@ -641,13 +646,16 @@ func Open(path, database, name string, syncOnWrite bool) (*FileStore, error) {
 			PathSnapshot: filepath.Join(path, database, name, "snapshot"),
 			PathCompact:  filepath.Join(path, database, name, "compact"),
 			MaxSegment:   maxSegmentMG,
-			SyncOnWrite:  syncOnWrite,
+			Metrics:      make(map[string]int64),
 		}
 
 		fs.save()
 	}
 
+	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
 	fs.index = make(map[string]*recordRef)
+	fs.IsDebug = debug
+	fs.SyncOnWrite = syncOnWrite
 
 	if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
 		return nil, err
@@ -671,7 +679,7 @@ func Open(path, database, name string, syncOnWrite bool) (*FileStore, error) {
 		return nil, fmt.Errorf("rebuildIndex: %w", err)
 	}
 
-	go logMetrics()
+	go fs.logMetrics()
 
 	return fs, nil
 }

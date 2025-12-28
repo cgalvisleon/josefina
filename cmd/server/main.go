@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	st, _ := store.Open("./data", "metadata", "models", true)
+	st, _ := store.Open("./data", "metadata", "models", false)
 
 	putData(st, 10001)
 	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
@@ -21,6 +21,7 @@ func main() {
 	// getData(st, "01KDEB4086CEGVD1G3FA69CMBB")
 	logs.Logf("test", "Memory usage: %.2f MB", st.UseMemory())
 	st.Close()
+	logs.Log("test", "Finished:", st.ToString())
 }
 
 /**

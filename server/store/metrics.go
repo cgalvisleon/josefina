@@ -4,7 +4,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/timezone"
 )
 
 var storeCallsMap = map[string]*uint64{
@@ -14,14 +17,22 @@ var storeCallsMap = map[string]*uint64{
 	"iterate": new(uint64),
 }
 
-func logMetrics() {
+func (s *FileStore) logMetrics() {
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
 
 	for range t.C {
 		for tag, ptr := range storeCallsMap {
 			calls := atomic.SwapUint64(ptr, 0)
-			logs.Logf("metrics", "tag:%s calls/sec: %d", tag, calls)
+			s.Metrics[tag] = int64(calls)
+			event.Emiter("store_metrics", et.Json{
+				"timestamp": timezone.NowTime(),
+				"database":  s.Database,
+				"model":     s.Name,
+				"tag":       tag,
+				"calls":     calls,
+			})
+			logs.Logf("metrics", "database:%s:model:%s:tag:%s:calls:%d:per/sec", s.Database, s.Name, tag, calls)
 		}
 	}
 }
