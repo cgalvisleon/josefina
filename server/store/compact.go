@@ -15,21 +15,23 @@ import (
 **/
 func (s *FileStore) Compact() error {
 	s.indexMu.RLock()
+	keys := make([]string, 0)
 	indexCopy := make(map[string]*recordRef, len(s.index))
 	for k, v := range s.index {
+		keys = append(keys, k)
 		indexCopy[k] = v
 	}
 	s.indexMu.RUnlock()
+
 	tag := "compact"
+	msg := ""
 	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
+	defer s.metricEnd(tag, msg)
 
 	// Orden determinista
-	keys := make([]string, 0, len(indexCopy))
-	for k := range indexCopy {
-		keys = append(keys, k)
-	}
+	s.metricSegment(tag, "load")
 	sort.Strings(keys)
+	s.metricSegment(tag, "sort")
 
 	// Directorio temporal
 	tmpDir := filepath.Join(s.PathCompact, "segments.tmp")
@@ -63,6 +65,7 @@ func (s *FileStore) Compact() error {
 
 	newIndex := make(map[string]*recordRef, len(indexCopy))
 
+	n := 0
 	for _, id := range keys {
 		ref := indexCopy[id]
 		oldSeg := s.segments[ref.segment]
@@ -100,6 +103,8 @@ func (s *FileStore) Compact() error {
 		if s.IsDebug {
 			logs.Log(packageName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
+
+		n++
 	}
 
 	// Swap atómico
@@ -127,6 +132,8 @@ func (s *FileStore) Compact() error {
 	s.active = newSegments[len(newSegments)-1]
 	s.TombStones = 0
 	s.indexMu.Unlock()
+
+	msg = fmt.Sprintf("completed:total%d", n)
 
 	return nil
 }

@@ -79,8 +79,7 @@ func newSegment(file *os.File, size int64, name string) *segment {
 		file: file,
 		size: size,
 		name: name,
-
-		ch: make(chan []byte, 100),
+		ch:   make(chan []byte),
 	}
 
 	result.wg.Add(1)

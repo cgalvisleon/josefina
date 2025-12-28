@@ -84,6 +84,7 @@ type FileStore struct {
 	SyncOnWrite         bool                  `json:"sync_on_write"`
 	WritesSinceSnapshot uint64                `json:"writes_since_snapshot"`
 	Metrics             map[string]int64      `json:"metrics"`
+	Workers             int                   `json:"workers"`
 	IsDebug             bool                  `json:"-"`
 	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu             sync.RWMutex          `json:"-"` // índice en memoria
@@ -334,9 +335,6 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 	recordSize := int64(len(id)) + int64(len(data)) + 11
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
-	if s.IsDebug {
-		logs.Log(packageName, "appendRecord:", s.Database, ":", s.Name, "recordSize:", recordSize, "currentSize:", currentSize, "totalSize:", totalSize, "maxSegment:", s.MaxSegment)
-	}
 	if totalSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
 			return nil, err
@@ -375,9 +373,6 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 		length:  dataLen,
 	}
 	s.index[id] = ref
-	if s.IsDebug {
-		logs.Log(packageName, "setIndex:", s.Database, ":", s.Name, ":ID:", id, ":ref:", ref.ToString())
-	}
 	return nil
 }
 
@@ -387,9 +382,6 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 **/
 func (s *FileStore) deleteIndex(id string) {
 	delete(s.index, id)
-	if s.IsDebug {
-		logs.Log(packageName, "deleteIndex:", s.Database, ":", s.Name, ":ID:", id)
-	}
 }
 
 /**
@@ -468,6 +460,28 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 func (s *FileStore) buildIndex() error {
 	idx := len(s.segments) - 1
 	return s.rebuildIndex(idx)
+}
+
+/**
+* RebuildIndexes
+* @return error
+**/
+func (s *FileStore) RebuildIndexes() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+
+	tag := "rebuild_indexes"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
+
+	s.index = make(map[string]*recordRef)
+	for i := range s.segments {
+		if err := s.rebuildIndex(i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /**
@@ -589,14 +603,13 @@ func (s *FileStore) Get(id string, dest any) error {
 **/
 func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) error {
 	tag := "iterate"
-	msg := ""
 	s.metricStart(tag)
-	defer s.metricEnd(tag, msg)
 
 	// 1. Seleccionar todos los IDs
 	keys := make([]string, 0)
 	indexResult := make(map[string]*recordRef, len(s.index))
 	s.indexMu.RLock()
+	s.Workers = workers
 	for k, v := range s.index {
 		keys = append(keys, k)
 		indexResult[k] = v
@@ -608,7 +621,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	sort.Strings(keys)
 	s.metricSegment(tag, "sort")
 
-	parts := chunkKeys(keys, workers) // workers workers para paralelizar
+	parts := chunkKeys(keys, s.Workers) // workers workers para paralelizar
 	s.metricSegment(tag, "chunk")
 
 	// 3. Procesar en paralelo
@@ -639,28 +652,9 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	}
 
 	wg.Wait()
-	msg = fmt.Sprintf("end:total%d", n)
-
-	return nil
-}
-
-/**
-* RebuildIndexes
-* @return error
-**/
-func (s *FileStore) RebuildIndexes() error {
-	s.indexMu.Lock()
-	defer s.indexMu.Unlock()
-
-	tag := "rebuild_indexes"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
-	for i := range s.segments {
-		if err := s.rebuildIndex(i); err != nil {
-			return err
-		}
-	}
+	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, s.Workers)
+	s.metricEnd(tag, msg)
+	go s.save()
 
 	return nil
 }
@@ -715,7 +709,7 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 			Metrics:      make(map[string]int64),
 		}
 
-		fs.save()
+		go fs.save()
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
@@ -738,17 +732,14 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 	if err := fs.loadSegments(); err != nil {
 		return nil, fmt.Errorf("loadSegments: %w", err)
 	}
-
 	if err := fs.tryLoadSnapshot(); err != nil {
 		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
 	}
-
 	if err := fs.buildIndex(); err != nil {
 		return nil, fmt.Errorf("rebuildIndex: %w", err)
 	}
 
-	fs.metricEnd(tag, "completed")
+	fs.metricEnd(tag, fmt.Sprintf("total:%d:completed", len(fs.index)))
 	go fs.logMetrics()
-
 	return fs, nil
 }

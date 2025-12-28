@@ -6,9 +6,12 @@ func (s *FileStore) Prune() error {
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
-	// TODO: implement prune logic
-	// For now, just trigger a compaction to clean up tombstones
 	err := s.Compact()
+	if err != nil {
+		return err
+	}
+
+	err = s.RebuildIndexes()
 	if err != nil {
 		return err
 	}

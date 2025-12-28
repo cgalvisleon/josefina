@@ -81,7 +81,6 @@ func (s *FileStore) tryLoadSnapshot() error {
 	defer s.metricEnd(tag, "completed")
 
 	path := filepath.Join(s.PathSnapshot, "state.snap")
-
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil // snapshot opcional

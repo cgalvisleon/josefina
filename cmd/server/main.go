@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	st, _ := store.Open("./data", "metadata", "models", false)
+	st, _ := store.Open("./data", "metadata", "models", true)
 
 	// putData(st, 10001)
 	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
