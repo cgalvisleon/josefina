@@ -14,13 +14,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/et/timezone"
 )
 
 type Store interface {
@@ -32,7 +30,7 @@ type Store interface {
 }
 
 const (
-	packegeName     = "store"
+	packageName     = "store"
 	maxIdLen        = 65535
 	fixedHeaderSize = 11
 )
@@ -208,7 +206,7 @@ func (s *FileStore) save() error {
 	}
 
 	if s.IsDebug {
-		logs.Log(packegeName, "saved metadata to", path)
+		logs.Log(packageName, "saved metadata to", path)
 	}
 
 	return nil
@@ -284,7 +282,7 @@ func (s *FileStore) loadSegments() error {
 
 		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
-		logs.Log(packegeName, "loadSegments:", s.Database, ":", s.Name, ":", seg.ToString())
+		logs.Log(packageName, "loadSegments:", s.Database, ":", s.Name, ":", seg.ToString())
 	}
 
 	if len(s.segments) == 0 {
@@ -314,7 +312,7 @@ func (s *FileStore) newSegment() error {
 		s.active.Close()
 	}
 	s.active = seg
-	logs.Log(packegeName, "newSegment:", s.Database, ":", s.Name, ":", seg.ToString())
+	logs.Log(packageName, "newSegment:", s.Database, ":", s.Name, ":", seg.ToString())
 	return nil
 }
 
@@ -337,7 +335,7 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
 	if s.IsDebug {
-		logs.Log(packegeName, "appendRecord:", s.Database, ":", s.Name, "recordSize:", recordSize, "currentSize:", currentSize, "totalSize:", totalSize, "maxSegment:", s.MaxSegment)
+		logs.Log(packageName, "appendRecord:", s.Database, ":", s.Name, "recordSize:", recordSize, "currentSize:", currentSize, "totalSize:", totalSize, "maxSegment:", s.MaxSegment)
 	}
 	if totalSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
@@ -378,7 +376,7 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 	}
 	s.index[id] = ref
 	if s.IsDebug {
-		logs.Log(packegeName, "setIndex:", s.Database, ":", s.Name, ":ID:", id, ":ref:", ref.ToString())
+		logs.Log(packageName, "setIndex:", s.Database, ":", s.Name, ":ID:", id, ":ref:", ref.ToString())
 	}
 	return nil
 }
@@ -390,20 +388,20 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 func (s *FileStore) deleteIndex(id string) {
 	delete(s.index, id)
 	if s.IsDebug {
-		logs.Log(packegeName, "deleteIndex:", s.Database, ":", s.Name, ":ID:", id)
+		logs.Log(packageName, "deleteIndex:", s.Database, ":", s.Name, ":ID:", id)
 	}
 }
 
 /**
 * rebuildIndex
+* @param segIndex int
 * @return error
 **/
-func (s *FileStore) rebuildIndex() error {
+func (s *FileStore) rebuildIndex(segIndex int) error {
 	if len(s.index) == 0 {
 		s.index = make(map[string]*recordRef)
 	}
 
-	segIndex := len(s.segments) - 1
 	seg := s.segments[segIndex]
 	offset := int64(0)
 	for {
@@ -464,12 +462,24 @@ func (s *FileStore) rebuildIndex() error {
 }
 
 /**
+* buildIndex
+* @return error
+**/
+func (s *FileStore) buildIndex() error {
+	idx := len(s.segments) - 1
+	return s.rebuildIndex(idx)
+}
+
+/**
 * Put
 * @param id string, value any
 * @return string, error
 **/
 func (s *FileStore) Put(id string, value any) (string, error) {
 	atomic.AddUint64(storeCallsMap["put"], 1)
+	tag := "put"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
 
 	if id == "" {
 		id = reg.GenULID(s.Name)
@@ -498,7 +508,7 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 
 	if s.IsDebug {
 		i := len(s.index)
-		logs.Log(packegeName, "put:", s.Database, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
+		logs.Log(packageName, "put:", s.Database, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
 	return id, nil
@@ -511,6 +521,9 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 **/
 func (s *FileStore) Delete(id string) (error, bool) {
 	atomic.AddUint64(storeCallsMap["delete"], 1)
+	tag := "delete"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
 
 	s.indexMu.RLock()
 	_, exists := s.index[id]
@@ -535,7 +548,7 @@ func (s *FileStore) Delete(id string) (error, bool) {
 
 	if s.IsDebug {
 		i := len(s.index)
-		logs.Log(packegeName, "deleted", s.Database, ":", s.Name, ":total:", i, ":ID:", id)
+		logs.Log(packageName, "deleted", s.Database, ":", s.Name, ":total:", i, ":ID:", id)
 	}
 
 	return nil, true
@@ -548,6 +561,9 @@ func (s *FileStore) Delete(id string) (error, bool) {
 **/
 func (s *FileStore) Get(id string, dest any) error {
 	atomic.AddUint64(storeCallsMap["get"], 1)
+	tag := "get"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
 
 	s.indexMu.RLock()
 	ref, ok := s.index[id]
@@ -568,29 +584,36 @@ func (s *FileStore) Get(id string, dest any) error {
 
 /**
 * Iterate
-* @param fn func(id string, data []byte) bool
+* @param fn func(id string, data []byte) bool, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
-	start := timezone.NowTime()
-	s.indexMu.RLock()
+func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) error {
+	tag := "iterate"
+	msg := ""
+	s.metricStart(tag)
+	defer s.metricEnd(tag, msg)
+
+	// 1. Seleccionar todos los IDs
+	keys := make([]string, 0)
 	indexResult := make(map[string]*recordRef, len(s.index))
+	s.indexMu.RLock()
 	for k, v := range s.index {
+		keys = append(keys, k)
 		indexResult[k] = v
 	}
 	s.indexMu.RUnlock()
 
 	// 2. Orden determinista (opcional pero recomendado)
-	keys := make([]string, 0, len(indexResult))
-	for k := range indexResult {
-		keys = append(keys, k)
-	}
+	s.metricSegment(tag, "load")
 	sort.Strings(keys)
+	s.metricSegment(tag, "sort")
 
-	parts := chunkKeys(keys, 10) // 5 workers para paralelizar
-	var wg sync.WaitGroup
+	parts := chunkKeys(keys, workers) // workers workers para paralelizar
+	s.metricSegment(tag, "chunk")
 
+	// 3. Procesar en paralelo
 	n := 0
+	var wg sync.WaitGroup
 	for _, part := range parts {
 		wg.Add(1)
 
@@ -616,26 +639,28 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
 	}
 
 	wg.Wait()
+	msg = fmt.Sprintf("end:total%d", n)
 
-	// 3. Iterar registros vivos
-	// n := 0
-	// for _, id := range keys {
-	// 	ref := indexResult[id]
-	// 	seg := s.segments[ref.segment]
+	return nil
+}
 
-	// 	data, err := seg.read(ref)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+/**
+* RebuildIndexes
+* @return error
+**/
+func (s *FileStore) RebuildIndexes() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
 
-	// 	if !fn(id, data) {
-	// 		break
-	// 	}
-	// 	n++
-	// }
+	tag := "rebuild_indexes"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
 
-	duration := time.Since(start)
-	logs.Logf(packegeName, "iterate:%s:%s:total:%d:duration:%s", s.Database, s.Name, n, duration.String())
+	for i := range s.segments {
+		if err := s.rebuildIndex(i); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -697,6 +722,8 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 	fs.index = make(map[string]*recordRef)
 	fs.IsDebug = debug
 	fs.SyncOnWrite = syncOnWrite
+	tag := "store_open"
+	fs.metricStart(tag)
 
 	if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
 		return nil, err
@@ -716,10 +743,11 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
 	}
 
-	if err := fs.rebuildIndex(); err != nil {
+	if err := fs.buildIndex(); err != nil {
 		return nil, fmt.Errorf("rebuildIndex: %w", err)
 	}
 
+	fs.metricEnd(tag, "completed")
 	go fs.logMetrics()
 
 	return fs, nil

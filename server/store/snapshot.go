@@ -18,6 +18,10 @@ func (s *FileStore) CreateSnapshot() error {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
+	tag := "snapshot_create"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
+
 	path := filepath.Join(s.PathSnapshot, "state.snap")
 	tmp := path + ".tmp"
 
@@ -47,7 +51,7 @@ func (s *FileStore) CreateSnapshot() error {
 		binary.Write(buf, binary.BigEndian, ref.offset)
 		binary.Write(buf, binary.BigEndian, ref.length)
 		if s.IsDebug {
-			logs.Log(packegeName, "snapshot:", s.Database, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
+			logs.Log(packageName, "snapshot:", s.Database, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}
 
@@ -72,6 +76,10 @@ func (s *FileStore) CreateSnapshot() error {
 * @return error
 **/
 func (s *FileStore) tryLoadSnapshot() error {
+	tag := "snapshot_load"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
+
 	path := filepath.Join(s.PathSnapshot, "state.snap")
 
 	data, err := os.ReadFile(path)

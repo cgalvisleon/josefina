@@ -20,6 +20,9 @@ func (s *FileStore) Compact() error {
 		indexCopy[k] = v
 	}
 	s.indexMu.RUnlock()
+	tag := "compact"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
 
 	// Orden determinista
 	keys := make([]string, 0, len(indexCopy))
@@ -95,7 +98,7 @@ func (s *FileStore) Compact() error {
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
 		if s.IsDebug {
-			logs.Log(packegeName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+			logs.Log(packageName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 	}
 

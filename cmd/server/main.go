@@ -102,9 +102,9 @@ func readData(st *store.FileStore) {
 			panic(err)
 		}
 
-		logs.Debug("iterate:", result.ToString())
+		// logs.Debug("iterate:", result.ToString())
 		return true
-	})
+	}, 2)
 }
 
 /**
