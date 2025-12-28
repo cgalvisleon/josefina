@@ -16,8 +16,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/reg"
 )
 
 type Store interface {
@@ -32,7 +34,6 @@ const (
 	packegeName     = "store"
 	maxIdLen        = 65535
 	fixedHeaderSize = 11
-	SizeSegment     = 128
 )
 
 /**
@@ -82,7 +83,6 @@ type FileStore struct {
 	PathCompact         string                `json:"path_compact"`
 	MaxSegment          int64                 `json:"max_segment"`
 	SyncOnWrite         bool                  `json:"sync_on_write"`
-	SnapshotEvery       uint64                `json:"snapshot_every"`
 	WritesSinceSnapshot uint64                `json:"writes_since_snapshot"`
 	IsDebug             bool                  `json:"-"`
 	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
@@ -302,6 +302,9 @@ func (s *FileStore) newSegment() error {
 
 	seg := newSegment(fd, 0, name)
 	s.segments = append(s.segments, seg)
+	if s.active != nil {
+		s.active.Close()
+	}
 	s.active = seg
 	logs.Log(packegeName, "newSegment:", s.Database, ":", s.Name, ":", seg.ToString())
 	return nil
@@ -315,6 +318,23 @@ func (s *FileStore) newSegment() error {
 func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRef, error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
+
+	n := len(s.index)
+	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
+	if s.TombStones > threshold {
+		go s.Compact()
+	}
+
+	recordSize := int64(len(id)) + int64(len(data)) + 11 // header size
+	if s.active.size+recordSize > s.MaxSegment {
+		if err := s.newSegment(); err != nil {
+			return nil, err
+		}
+
+		if err := s.CreateSnapshot(); err != nil {
+			return nil, err
+		}
+	}
 
 	ref, err := s.active.WriteRecord(id, data, status)
 	if err != nil {
@@ -370,62 +390,62 @@ func (s *FileStore) rebuildIndex() error {
 		s.index = make(map[string]*recordRef)
 	}
 
-	for segIndex, seg := range s.segments {
-		offset := int64(0)
+	segIndex := len(s.segments) - 1
+	seg := s.segments[segIndex]
+	offset := int64(0)
 
-		for {
-			// Leer header mínimo
-			fixed := make([]byte, 11)
-			n, err := seg.ReadAt(fixed, offset)
-			if err != nil {
-				if errors.Is(err, io.EOF) || n < len(fixed) {
-					break
-				}
-				return err
-			}
-
-			dataLen := getUint32(fixed[0:4])
-			crcStored := getUint32(fixed[4:8])
-			idLen := getUint16(fixed[8:10])
-
-			if idLen == 0 || idLen > maxIdLen {
-				break // corrupción → paro seguro
-			}
-
-			// Leer ID
-			idBytes := make([]byte, idLen)
-			if _, err := seg.ReadAt(idBytes, offset+10); err != nil {
+	for {
+		// Leer header mínimo
+		fixed := make([]byte, 11)
+		n, err := seg.ReadAt(fixed, offset)
+		if err != nil {
+			if errors.Is(err, io.EOF) || n < len(fixed) {
 				break
 			}
-			id := string(idBytes)
-
-			// Leer status
-			statusLen := int64(1)
-			statusByte := make([]byte, statusLen)
-			if _, err := seg.ReadAt(statusByte, offset+10+int64(idLen)); err != nil {
-				break
-			}
-			status := statusByte[0]
-
-			// Leer payload
-			data := make([]byte, dataLen)
-			if dataLen > 0 {
-				if _, err := seg.ReadAt(data, offset+10+int64(idLen)+statusLen); err != nil {
-					break
-				}
-				if checksum(data) != crcStored {
-					break
-				}
-			}
-
-			if status == Active {
-				s.setIndex(id, segIndex, offset, dataLen)
-			} else if status == Deleted {
-				s.deleteIndex(id)
-			}
-
-			offset += int64(11) + int64(idLen) + int64(dataLen)
+			return err
 		}
+
+		dataLen := getUint32(fixed[0:4])
+		crcStored := getUint32(fixed[4:8])
+		idLen := getUint16(fixed[8:10])
+
+		if idLen == 0 || idLen > maxIdLen {
+			break // corrupción → paro seguro
+		}
+
+		// Leer ID
+		idBytes := make([]byte, idLen)
+		if _, err := seg.ReadAt(idBytes, offset+10); err != nil {
+			break
+		}
+		id := string(idBytes)
+
+		// Leer status
+		statusLen := int64(1)
+		statusByte := make([]byte, statusLen)
+		if _, err := seg.ReadAt(statusByte, offset+10+int64(idLen)); err != nil {
+			break
+		}
+		status := statusByte[0]
+
+		// Leer payload
+		data := make([]byte, dataLen)
+		if dataLen > 0 {
+			if _, err := seg.ReadAt(data, offset+10+int64(idLen)+statusLen); err != nil {
+				break
+			}
+			if checksum(data) != crcStored {
+				break
+			}
+		}
+
+		if status == Active {
+			s.setIndex(id, segIndex, offset, dataLen)
+		} else if status == Deleted {
+			s.deleteIndex(id)
+		}
+
+		offset += int64(11) + int64(idLen) + int64(dataLen)
 	}
 
 	return nil
@@ -437,11 +457,11 @@ func (s *FileStore) rebuildIndex() error {
 * @return string, error
 **/
 func (s *FileStore) Put(id string, value any) (string, error) {
-	if id == "" {
-		return id, fmt.Errorf("id cannot be empty")
-	}
-
 	atomic.AddUint64(storeCallsMap["put"], 1)
+
+	if id == "" {
+		id = reg.GenULID(s.Name)
+	}
 
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -466,7 +486,7 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 
 	if s.IsDebug {
 		i := len(s.index)
-		logs.Log(packegeName, "put:", i, ":", s.Database, ":", s.Name, ":ID:", id, ":ref:", ref.ToString())
+		logs.Log(packegeName, "put:", s.Database, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
 	return id, nil
@@ -502,7 +522,8 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	s.indexMu.Unlock()
 
 	if s.IsDebug {
-		logs.Log(packegeName, "deleted", s.Database, ":", s.Name, ":ID:", id)
+		i := len(s.index)
+		logs.Log(packegeName, "deleted", s.Database, ":", s.Name, ":total:", i, ":ID:", id)
 	}
 
 	return nil, true
@@ -574,129 +595,11 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool) error {
 }
 
 /**
-* Compact
-* @return error
-**/
-func (s *FileStore) Compact() error {
-	// Snapshot estable del índice
-	s.indexMu.RLock()
-	indexCopy := make(map[string]*recordRef, len(s.index))
-	for k, v := range s.index {
-		indexCopy[k] = v
-	}
-	s.indexMu.RUnlock()
-
-	// Orden determinista
-	keys := make([]string, 0, len(indexCopy))
-	for k := range indexCopy {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// Directorio temporal
-	tmpDir := filepath.Join(s.PathCompact, "segments.tmp")
-	os.RemoveAll(tmpDir)
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		return err
-	}
-
-	var (
-		newSegments []*segment
-		current     *segment
-	)
-
-	createSegment := func() error {
-		name := fmt.Sprintf("segment-%06d.dat", len(newSegments)+1)
-		path := filepath.Join(tmpDir, name)
-
-		fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
-		if err != nil {
-			return err
-		}
-
-		current = newSegment(fd, 0, name)
-		newSegments = append(newSegments, current)
-		return nil
-	}
-
-	if err := createSegment(); err != nil {
-		return err
-	}
-
-	newIndex := make(map[string]*recordRef, len(indexCopy))
-
-	for _, id := range keys {
-		ref := indexCopy[id]
-		oldSeg := s.segments[ref.segment]
-
-		// Leer header real
-		fixed := make([]byte, fixedHeaderSize)
-		if _, err := oldSeg.ReadAt(fixed, ref.offset); err != nil {
-			return err
-		}
-
-		idLen := getUint16(fixed[8:10])
-		payloadOffset := ref.offset + int64(fixedHeaderSize+idLen)
-
-		data := make([]byte, ref.length)
-		if ref.length > 0 {
-			if _, err := oldSeg.ReadAt(data, payloadOffset); err != nil {
-				return err
-			}
-		}
-
-		// Rotar segmento si es necesario
-		recordSize := int64(fixedHeaderSize) + int64(idLen) + int64(len(data))
-		if current.size+recordSize > s.MaxSegment {
-			if err := createSegment(); err != nil {
-				return err
-			}
-		}
-
-		newRef, err := current.WriteRecord(id, data, Active)
-		if err != nil {
-			return err
-		}
-		newRef.segment = len(newSegments) - 1
-		newIndex[id] = newRef
-		logs.Log(packegeName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
-	}
-
-	// Swap atómico
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
-
-	for _, seg := range s.segments {
-		seg.file.Close()
-	}
-
-	oldDir := filepath.Join(s.Path, "segments.old")
-	os.RemoveAll(oldDir)
-
-	if err := os.Rename(s.PathSegments, oldDir); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpDir, s.PathSegments); err != nil {
-		return err
-	}
-
-	// Activar nuevos segmentos
-	s.indexMu.Lock()
-	s.index = newIndex
-	s.segments = newSegments
-	s.active = newSegments[len(newSegments)-1]
-	s.TombStones = 0
-	s.indexMu.Unlock()
-
-	return nil
-}
-
-/**
-* normalize
+* Normalize
 * @param input string
 * @return string
 **/
-func normalize(input string) string {
+func Normalize(input string) string {
 	// 1. Quitar espacios al inicio y final
 	s := strings.TrimSpace(input)
 
@@ -714,10 +617,10 @@ func normalize(input string) string {
 
 /**
 * Open
-* @param path, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64
+* @param path, database, name string, syncOnWrite bool
 * @return *FileStore, error
 **/
-func Open(path, database, name string, maxSegmentBytes int64, syncOnWrite bool, snapshotEvery uint64) (*FileStore, error) {
+func Open(path, database, name string, syncOnWrite bool) (*FileStore, error) {
 	fs := &FileStore{
 		Path: filepath.Join(path, database, name),
 	}
@@ -727,22 +630,18 @@ func Open(path, database, name string, maxSegmentBytes int64, syncOnWrite bool, 
 	}
 
 	if !existed {
-		if maxSegmentBytes < 1 {
-			maxSegmentBytes = SizeSegment
-		}
-
-		maxSegmentBytes = maxSegmentBytes * 1024 * 1024
-		name = normalize(name)
+		maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
+		maxSegmentMG = maxSegmentMG * 1024 * 1024
+		name = Normalize(name)
 		fs = &FileStore{
-			Database:      database,
-			Name:          name,
-			Path:          filepath.Join(path, database, name),
-			PathSegments:  filepath.Join(path, database, name, "segments"),
-			PathSnapshot:  filepath.Join(path, database, name, "snapshot"),
-			PathCompact:   filepath.Join(path, database, name, "compact"),
-			MaxSegment:    maxSegmentBytes,
-			SyncOnWrite:   syncOnWrite,
-			SnapshotEvery: snapshotEvery,
+			Database:     database,
+			Name:         name,
+			Path:         filepath.Join(path, database, name),
+			PathSegments: filepath.Join(path, database, name, "segments"),
+			PathSnapshot: filepath.Join(path, database, name, "snapshot"),
+			PathCompact:  filepath.Join(path, database, name, "compact"),
+			MaxSegment:   maxSegmentMG,
+			SyncOnWrite:  syncOnWrite,
 		}
 
 		fs.save()
@@ -764,15 +663,12 @@ func Open(path, database, name string, maxSegmentBytes int64, syncOnWrite bool, 
 		return nil, fmt.Errorf("loadSegments: %w", err)
 	}
 
-	loaded, err := fs.tryLoadSnapshot()
-	if err != nil {
+	if err := fs.tryLoadSnapshot(); err != nil {
 		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
 	}
 
-	if !loaded {
-		if err := fs.rebuildIndex(); err != nil {
-			return nil, fmt.Errorf("rebuildIndex: %w", err)
-		}
+	if err := fs.rebuildIndex(); err != nil {
+		return nil, fmt.Errorf("rebuildIndex: %w", err)
 	}
 
 	go logMetrics()

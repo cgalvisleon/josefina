@@ -11,10 +11,10 @@ import (
 )
 
 /**
-* createSnapshot
+* CreateSnapshot
 * @return error
 **/
-func (s *FileStore) createSnapshot() error {
+func (s *FileStore) CreateSnapshot() error {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
@@ -35,7 +35,11 @@ func (s *FileStore) createSnapshot() error {
 	binary.Write(buf, binary.BigEndian, uint64(len(s.index)))
 
 	// ---- Entries ----
+	currentSegment := len(s.segments) - 1
 	for id, ref := range s.index {
+		if ref.segment == currentSegment {
+			continue
+		}
 		idBytes := []byte(id)
 		binary.Write(buf, binary.BigEndian, uint16(len(idBytes)))
 		buf.Write(idBytes)
@@ -64,50 +68,26 @@ func (s *FileStore) createSnapshot() error {
 }
 
 /**
-* FlushSnapshot
-* @return
-**/
-func (s *FileStore) FlushSnapshot() {
-	if s.SnapshotEvery > 0 {
-		s.WritesSinceSnapshot++
-		if s.WritesSinceSnapshot >= s.SnapshotEvery {
-			s.WritesSinceSnapshot = 0
-			go func() {
-				s.createSnapshot()
-			}()
-		}
-	}
-
-	n := len(s.index)
-	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
-	if s.TombStones > threshold {
-		go func() {
-			s.Compact()
-		}()
-	}
-}
-
-/**
 * tryLoadSnapshot
-* @return bool, error
+* @return error
 **/
-func (s *FileStore) tryLoadSnapshot() (bool, error) {
+func (s *FileStore) tryLoadSnapshot() error {
 	path := filepath.Join(s.PathSnapshot, "state.snap")
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false, nil // snapshot opcional
+		return nil // snapshot opcional
 	}
 
 	if len(data) < 10 {
-		return false, errors.New("invalid snapshot")
+		return errors.New("invalid snapshot")
 	}
 
 	// CRC check
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
-		return false, errors.New("snapshot corrupted")
+		return errors.New("snapshot corrupted")
 	}
 
 	buf := bytes.NewReader(payload)
@@ -116,7 +96,7 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
-		return false, errors.New("invalid snapshot magic")
+		return errors.New("invalid snapshot magic")
 	}
 
 	var version uint16
@@ -147,5 +127,5 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		s.setIndex(id, int(segIndex), offset, dataLen)
 	}
 
-	return true, nil
+	return nil
 }
