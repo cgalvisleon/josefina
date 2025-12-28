@@ -72,25 +72,24 @@ func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byt
 }
 
 type FileStore struct {
-	Database            string                `json:"database"`
-	Name                string                `json:"name"`
-	Path                string                `json:"path"`
-	WAL                 uint64                `json:"wal"` // Write-ahead log counter
-	TombStones          int                   `json:"tomb_stones"`
-	PathSegments        string                `json:"path_segments"`
-	PathSnapshot        string                `json:"path_snapshot"`
-	PathCompact         string                `json:"path_compact"`
-	MaxSegment          int64                 `json:"max_segment"`
-	SyncOnWrite         bool                  `json:"sync_on_write"`
-	WritesSinceSnapshot uint64                `json:"writes_since_snapshot"`
-	Metrics             map[string]int64      `json:"metrics"`
-	Workers             int                   `json:"workers"`
-	IsDebug             bool                  `json:"-"`
-	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
-	indexMu             sync.RWMutex          `json:"-"` // índice en memoria
-	segments            []*segment            `json:"-"` // segmentos de datos
-	active              *segment              `json:"-"` // segmento activo para escritura
-	index               map[string]*recordRef `json:"-"` // índice en memoria
+	Database     string                `json:"database"`
+	Name         string                `json:"name"`
+	Path         string                `json:"path"`
+	WAL          uint64                `json:"wal"` // Write-ahead log counter
+	TombStones   int                   `json:"tomb_stones"`
+	PathSegments string                `json:"path_segments"`
+	PathSnapshot string                `json:"path_snapshot"`
+	PathCompact  string                `json:"path_compact"`
+	MaxSegment   int64                 `json:"max_segment"`
+	SyncOnWrite  bool                  `json:"sync_on_write"`
+	Metrics      map[string]int64      `json:"metrics"`
+	Workers      int                   `json:"workers"`
+	IsDebug      bool                  `json:"-"`
+	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
+	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
+	segments     []*segment            `json:"-"` // segmentos de datos
+	active       *segment              `json:"-"` // segmento activo para escritura
+	index        map[string]*recordRef `json:"-"` // índice en memoria
 }
 
 /**
@@ -283,7 +282,7 @@ func (s *FileStore) loadSegments() error {
 
 		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
-		logs.Log(packageName, "loadSegments:", s.Database, ":", s.Name, ":", seg.ToString())
+		logs.Log(packageName, "load:segments:", s.Database, ":", s.Name, ":", seg.ToString())
 	}
 
 	if len(s.segments) == 0 {
@@ -313,7 +312,7 @@ func (s *FileStore) newSegment() error {
 		s.active.Close()
 	}
 	s.active = seg
-	logs.Log(packageName, "newSegment:", s.Database, ":", s.Name, ":", seg.ToString())
+	logs.Log(packageName, "new:segment:", s.Database, ":", s.Name, ":", seg.ToString())
 	return nil
 }
 
