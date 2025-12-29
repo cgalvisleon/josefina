@@ -508,7 +508,6 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 		return id, err
 	}
 
-	// índice: lock corto
 	s.indexMu.Lock()
 	_, exists := s.index[id]
 	if exists {
@@ -549,12 +548,10 @@ func (s *FileStore) Delete(id string) (error, bool) {
 		return nil, false
 	}
 
-	// Tombstone en WAL
 	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
 		return logs.Error(err), true
 	}
 
-	// Removemos del índice
 	s.indexMu.Lock()
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
@@ -579,10 +576,10 @@ func (s *FileStore) Get(id string, dest any) error {
 	defer s.metricEnd(tag, "completed")
 
 	s.indexMu.RLock()
-	ref, ok := s.index[id]
+	ref, existed := s.index[id]
 	s.indexMu.RUnlock()
 
-	if !ok {
+	if !existed {
 		return errors.New("not found")
 	}
 
