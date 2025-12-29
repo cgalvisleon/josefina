@@ -22,11 +22,15 @@ import (
 )
 
 type Store interface {
-	Put(id string, value any) error
+	Put(id string, value any) (string, error)
 	Get(id string, dest any) error
-	Delete(id string) error
-	Sync() error
+	Delete(id string) (bool, error)
+	Iterate(fn func(id string, data []byte) error, workers int) error
 	Close() error
+	Prune() error
+	CreateSnapshot() error
+	Compact() error
+	ToJson() et.Json
 }
 
 const (
@@ -529,9 +533,9 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 /**
 * Delete
 * @param id string
-* @return error, bool
+* @return bool, error
 **/
-func (s *FileStore) Delete(id string) (error, bool) {
+func (s *FileStore) Delete(id string) (bool, error) {
 	atomic.AddUint64(storeCallsMap["delete"], 1)
 	tag := "delete"
 	s.metricStart(tag)
@@ -545,11 +549,11 @@ func (s *FileStore) Delete(id string) (error, bool) {
 	s.indexMu.RUnlock()
 
 	if !exists {
-		return nil, false
+		return false, nil
 	}
 
 	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
-		return logs.Error(err), true
+		return false, logs.Error(err)
 	}
 
 	s.indexMu.Lock()
@@ -561,7 +565,7 @@ func (s *FileStore) Delete(id string) (error, bool) {
 		logs.Log(packageName, "deleted", s.Database, ":", s.Name, ":total:", i, ":ID:", id)
 	}
 
-	return nil, true
+	return true, nil
 }
 
 /**

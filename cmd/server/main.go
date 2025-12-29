@@ -79,7 +79,7 @@ func putData(st *store.FileStore, limit int64) {
 * @return
 **/
 func delete(st *store.FileStore, id string) {
-	err, existed := st.Delete(id)
+	existed, err := st.Delete(id)
 	if err != nil {
 		logs.Logf("test", "Error deleting record %s: %v\n", id, err)
 	} else if existed {

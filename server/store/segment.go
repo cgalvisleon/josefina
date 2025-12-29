@@ -12,11 +12,11 @@ import (
 )
 
 type recordHeader struct {
-	DataLen uint32
-	CRC     uint32
-	IDLen   uint16
-	ID      string
-	Status  byte
+	DataLen uint32 `json:"data_len"`
+	CRC     uint32 `json:"crc"`
+	IDLen   uint16 `json:"id_len"`
+	ID      string `json:"id"`
+	Status  byte   `json:"status"`
 }
 
 /**
@@ -214,11 +214,11 @@ func (s *segment) WriteRecord(id string, data []byte, status byte) (*recordRef, 
 }
 
 /**
-* readHeader
+* ReadHeader
 * @param ref *recordRef
 * @return recordHeader, error
 **/
-func (s *segment) readHeader(ref *recordRef) (recordHeader, error) {
+func (s *segment) ReadHeader(ref *recordRef) (recordHeader, error) {
 	var header recordHeader
 	buf := make([]byte, fixedHeaderSize)
 	_, err := s.ReadAt(buf, ref.offset)
@@ -248,12 +248,12 @@ func (s *segment) readHeader(ref *recordRef) (recordHeader, error) {
 }
 
 /**
-* read
+* Read
 * @param ref *recordRef
 * @return []byte, error
 **/
 func (s *segment) read(ref *recordRef) ([]byte, error) {
-	header, err := s.readHeader(ref)
+	header, err := s.ReadHeader(ref)
 	if err != nil {
 		return nil, err
 	}
