@@ -19,6 +19,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/josefina/server/msg"
 )
 
 type Store interface {
@@ -49,12 +50,12 @@ func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byt
 	idLen := len(idBytes)
 
 	if idLen == 0 || idLen > maxIdLen {
-		return recordHeader{}, nil, errors.New(MSG_INVALID_ID_LENGTH)
+		return recordHeader{}, nil, errors.New(msg.MSG_INVALID_ID_LENGTH)
 	}
 
 	dataLen := len(data)
 	if dataLen > math.MaxUint32 {
-		return recordHeader{}, nil, errors.New(MSG_DATA_TOO_LARGE)
+		return recordHeader{}, nil, errors.New(msg.MSG_DATA_TOO_LARGE)
 	}
 
 	headerLen := fixedHeaderSize + idLen

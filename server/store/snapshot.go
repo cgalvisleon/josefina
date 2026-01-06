@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/josefina/server/msg"
 )
 
 /**
@@ -87,14 +88,14 @@ func (s *FileStore) tryLoadSnapshot() error {
 	}
 
 	if len(data) < 10 {
-		return errors.New(MSG_INVALID_SNAPSHOT)
+		return errors.New(msg.MSG_INVALID_SNAPSHOT)
 	}
 
 	// CRC check
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
-		return errors.New(MSG_SNAPSHOT_CORRUPTED)
+		return errors.New(msg.MSG_SNAPSHOT_CORRUPTED)
 	}
 
 	buf := bytes.NewReader(payload)
@@ -103,7 +104,7 @@ func (s *FileStore) tryLoadSnapshot() error {
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
-		return errors.New(MSG_INVALID_SNAPSHOT_MAGIC)
+		return errors.New(msg.MSG_INVALID_SNAPSHOT_MAGIC)
 	}
 
 	var version uint16

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/server/msg"
 )
 
 type recordHeader struct {
@@ -104,7 +105,7 @@ func (s *segment) loop() {
 **/
 func (s *segment) Sync() error {
 	if s.file == nil {
-		return errors.New(MSG_FILE_IS_NIL)
+		return errors.New(msg.MSG_FILE_IS_NIL)
 	}
 	return s.file.Sync()
 }
@@ -150,7 +151,7 @@ func (s *segment) ToString() string {
 **/
 func (s *segment) ReadAt(b []byte, off int64) (int, error) {
 	if s.file == nil {
-		return 0, errors.New(MSG_FILE_IS_NIL)
+		return 0, errors.New(msg.MSG_FILE_IS_NIL)
 	}
 	return s.file.ReadAt(b, off)
 }
@@ -266,7 +267,7 @@ func (s *segment) read(ref *recordRef) ([]byte, error) {
 	}
 
 	if checksum(data) != header.CRC {
-		return nil, errors.New(MSG_CORRUPTED_RECORD)
+		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
 	}
 
 	return data, nil
