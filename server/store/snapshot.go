@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -23,7 +24,8 @@ func (s *FileStore) CreateSnapshot() error {
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
-	path := filepath.Join(s.PathSnapshot, "state.snap")
+	name := fmt.Sprintf("state-%s.snap", s.Name)
+	path := filepath.Join(s.PathSnapshot, name)
 	tmp := path + ".tmp"
 
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
@@ -52,7 +54,7 @@ func (s *FileStore) CreateSnapshot() error {
 		binary.Write(buf, binary.BigEndian, ref.offset)
 		binary.Write(buf, binary.BigEndian, ref.length)
 		if s.IsDebug {
-			logs.Log(packageName, "snapshot:", s.Database, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
+			logs.Log(packageName, "snapshot:", s.Path, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}
 
@@ -81,7 +83,8 @@ func (s *FileStore) tryLoadSnapshot() error {
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
-	path := filepath.Join(s.PathSnapshot, "state.snap")
+	name := fmt.Sprintf("state-%s.snap", s.Name)
+	path := filepath.Join(s.PathSnapshot, name)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil // snapshot opcional

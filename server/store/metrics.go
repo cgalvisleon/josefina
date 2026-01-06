@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/iterate"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/timezone"
 )
 
@@ -28,13 +29,14 @@ func (s *FileStore) logMetrics() {
 			s.Metrics[tag] = int64(calls)
 			event.Emiter("store_metrics", et.Json{
 				"timestamp": timezone.NowTime(),
-				"database":  s.Database,
+				"path":      s.Path,
 				"model":     s.Name,
 				"tag":       tag,
 				"calls":     calls,
 			})
 			if s.IsDebug {
-				logs.Logf("metrics", "database:%s:model:%s:tag:%s:calls:%d:per/sec", s.Database, s.Name, tag, calls)
+				path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
+				logs.Logf("metrics", "path:%s:model:%s:tag:%s:calls:%d:per/sec", path, s.Name, tag, calls)
 			}
 		}
 	}
@@ -45,10 +47,11 @@ func (s *FileStore) logMetrics() {
 * @param tag string
 **/
 func (s *FileStore) metricStart(tag string) {
-	tag = fmt.Sprintf("%s:%s:%s", s.Database, s.Name, tag)
+	path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
+	tag = fmt.Sprintf("%s:%s:%s", path, s.Name, tag)
 	event.Emiter("store_metrics", et.Json{
 		"timestamp": timezone.NowTime(),
-		"database":  s.Database,
+		"path":      s.Path,
 		"model":     s.Name,
 		"tag":       tag,
 	})
@@ -61,13 +64,14 @@ func (s *FileStore) metricStart(tag string) {
 * @return map[string]int64
 **/
 func (s *FileStore) metricSegment(tag, msg string) {
-	tag = fmt.Sprintf("%s:%s:%s", s.Database, s.Name, tag)
+	path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
+	tag = fmt.Sprintf("%s:%s:%s", path, s.Name, tag)
 	duration := iterate.Segment(tag, msg, s.IsDebug)
 	value := int64(duration.Milliseconds())
 	s.Metrics[tag] = value
 	event.Emiter("store_metrics", et.Json{
 		"timestamp":    timezone.NowTime(),
-		"database":     s.Database,
+		"path":         s.Path,
 		"model":        s.Name,
 		"tag":          tag,
 		"milliseconds": value,
@@ -75,13 +79,14 @@ func (s *FileStore) metricSegment(tag, msg string) {
 }
 
 func (s *FileStore) metricEnd(tag, msg string) {
-	tag = fmt.Sprintf("%s:%s:%s", s.Database, s.Name, tag)
+	path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
+	tag = fmt.Sprintf("%s:%s:%s", path, s.Name, tag)
 	duration := iterate.End(tag, msg, s.IsDebug)
 	value := int64(duration.Milliseconds())
 	s.Metrics[tag] = value
 	event.Emiter("store_metrics", et.Json{
 		"timestamp": timezone.NowTime(),
-		"database":  s.Database,
+		"path":      s.Path,
 		"model":     s.Name,
 		"tag":       tag,
 		"metrics":   s.Metrics,

@@ -77,7 +77,6 @@ func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byt
 }
 
 type FileStore struct {
-	Database     string                `json:"database"`
 	Name         string                `json:"name"`
 	Path         string                `json:"path"`
 	WAL          uint64                `json:"wal"` // Write-ahead log counter
@@ -287,7 +286,7 @@ func (s *FileStore) loadSegments() error {
 
 		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
-		logs.Log(packageName, "load:segments:", s.Database, ":", s.Name, ":", seg.ToString())
+		logs.Log(packageName, "load:segments:", s.Path, ":", s.Name, ":", seg.ToString())
 	}
 
 	if len(s.segments) == 0 {
@@ -317,7 +316,7 @@ func (s *FileStore) newSegment() error {
 		s.active.Close()
 	}
 	s.active = seg
-	logs.Log(packageName, "new:segment:", s.Database, ":", s.Name, ":", seg.ToString())
+	logs.Log(packageName, "new:segment:", s.Path, ":", s.Name, ":", seg.ToString())
 	return nil
 }
 
@@ -525,7 +524,7 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 
 	if s.IsDebug {
 		i := len(s.index)
-		logs.Log(packageName, "put:", s.Database, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
+		logs.Log(packageName, "put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
 	return id, nil
@@ -563,7 +562,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 
 	if s.IsDebug {
 		i := len(s.index)
-		logs.Log(packageName, "deleted", s.Database, ":", s.Name, ":total:", i, ":ID:", id)
+		logs.Log(packageName, "deleted", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
 	}
 
 	return true, nil
@@ -683,12 +682,12 @@ func Normalize(input string) string {
 
 /**
 * Open
-* @param path, database, name string, debug bool
+* @param path, name string, debug bool
 * @return *FileStore, error
 **/
-func Open(path, database, name string, debug bool) (*FileStore, error) {
+func Open(path, name string, debug bool) (*FileStore, error) {
 	fs := &FileStore{
-		Path: filepath.Join(path, database, name),
+		Path: filepath.Join(path, name),
 	}
 	existed, err := fs.load()
 	if err != nil {
@@ -700,12 +699,11 @@ func Open(path, database, name string, debug bool) (*FileStore, error) {
 		maxSegmentMG = maxSegmentMG * 1024 * 1024
 		name = Normalize(name)
 		fs = &FileStore{
-			Database:     database,
 			Name:         name,
-			Path:         filepath.Join(path, database, name),
-			PathSegments: filepath.Join(path, database, name, "segments"),
-			PathSnapshot: filepath.Join(path, database, name, "snapshot"),
-			PathCompact:  filepath.Join(path, database, name, "compact"),
+			Path:         filepath.Join(path, name),
+			PathSegments: filepath.Join(path, name, "segments"),
+			PathSnapshot: filepath.Join(path, name, "snapshot"),
+			PathCompact:  filepath.Join(path, name, "compact"),
 			MaxSegment:   maxSegmentMG,
 			Metrics:      make(map[string]int64),
 		}

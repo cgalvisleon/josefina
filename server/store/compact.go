@@ -34,7 +34,8 @@ func (s *FileStore) Compact() error {
 	s.metricSegment(tag, "sort")
 
 	// Directorio temporal
-	tmpDir := filepath.Join(s.PathCompact, "segments.tmp")
+	name := fmt.Sprintf("segments-%s.tmp", s.Name)
+	tmpDir := filepath.Join(s.PathCompact, name)
 	os.RemoveAll(tmpDir)
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return err
@@ -101,7 +102,7 @@ func (s *FileStore) Compact() error {
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
 		if s.IsDebug {
-			logs.Log(packageName, "compacted:", s.Database, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+			logs.Log(packageName, "compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 
 		n++
