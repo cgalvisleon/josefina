@@ -1,9 +1,9 @@
 package db
 
 import (
-	"errors"
+	"fmt"
 
-	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/server/msg"
 )
 
@@ -27,12 +27,7 @@ type DB struct {
 * @return *Schema, error
 **/
 func (s *DB) getSchema(name string) (*Schema, error) {
-	result, ok := s.Schemas[name]
-	if !ok {
-		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
-	}
-
-	return result, nil
+	return s.newSchema(name)
 }
 
 /**
@@ -50,78 +45,40 @@ func (s *DB) getModel(schema, name string) (*Model, error) {
 }
 
 /**
-* GetModel: Returns a model by database, schema and name
-* @param database string, schema string, model string
-* @return *Model, error
+* newSchema: Creates a new schema
+* @param name string
+* @return *Schema, error
 **/
-func GetModel(database, schema, model string) (*Model, error) {
-	db, ok := dbs[database]
-	if !ok {
-		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+func (s *DB) newSchema(name string) (*Schema, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	return db.getModel(schema, model)
+	result, ok := s.Schemas[name]
+	if ok {
+		return result, nil
+	}
+
+	result = &Schema{
+		Database: s.Name,
+		Name:     name,
+		Models:   make(map[string]*Model, 0),
+	}
+
+	s.Schemas[name] = result
+	return result, nil
 }
 
 /**
-* Select: Returns a records that complies with the query
-* @param query et.Json
-* @return et.Items, error
+* newModel: Creates a new model
+* @param schema string, name string
+* @return *Model, error
 **/
-func Select(query et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
+func (s *DB) newModel(schema, name string, version int) (*Model, error) {
+	sch, err := s.newSchema(schema)
+	if err != nil {
+		return nil, err
+	}
 
-/**
-* Insert: Inserts a record
-* @param model string, data []et.Json
-* @return et.Items, error
-**/
-func Insert(model string, data []et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
-
-/**
-* Update: Updates a record
-* @param model string, data et.Json, where et.Json
-* @return et.Items, error
-**/
-func Update(model string, data et.Json, where et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
-
-/**
-* Delete: Deletes a record
-* @param model string, where et.Json
-* @return et.Items, error
-**/
-func Delete(model string, where et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
-
-/**
-* Upsert: Upserts a record
-* @param model string, data et.Json, where et.Json
-* @return et.Items, error
-**/
-func Upsert(model string, data et.Json, where et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
-
-/**
-* Define: Defines a model
-* @param define et.Json
-* @return et.Items, error
-**/
-func Define(define et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
-
-/**
-* Query: Returns a records that complies with the query
-* @param query et.Json
-* @return et.Items, error
-**/
-func Query(query et.Json) (et.Items, error) {
-	return et.Items{}, nil
+	return sch.newModel(name, version)
 }

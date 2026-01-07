@@ -68,9 +68,8 @@ func (s *From) getPath() (string, error) {
 
 type Model struct {
 	*From         `json:"from"`
-	Data          *store.FileStore            `json:"data"`
-	Fields        []*Field                    `json:"fields"`
-	Indexes       map[string]*store.FileStore `json:"indexes"`
+	Fields        map[string]*Field           `json:"fields"`
+	Indexes       []string                    `json:"indexes"`
 	PrimaryKeys   []string                    `json:"primary_keys"`
 	Unique        []string                    `json:"unique"`
 	Required      []string                    `json:"required"`
@@ -88,10 +87,11 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
 	IsStrict      bool                        `json:"is_strict"`
 	Version       int                         `json:"version"`
-	Host          string                      `json:"-"`
 	IsCore        bool                        `json:"is_core"`
 	IsDebug       bool                        `json:"-"`
 	isInit        bool                        `json:"-"`
+	data          *store.FileStore            `json:"-"`
+	indexes       map[string]*store.FileStore `json:"-"`
 	vm            *Vm                         `json:"-"`
 }
 
@@ -125,9 +125,17 @@ func (s *Model) init() error {
 	if err != nil {
 		return err
 	}
-	s.Data, err = store.Open(path, s.Name, s.IsDebug)
+	s.data, err = store.Open(path, s.Name, s.IsDebug)
 	if err != nil {
 		return err
+	}
+
+	for _, name := range s.Indexes {
+		fStore, err := store.Open(path, name, s.IsDebug)
+		if err != nil {
+			return err
+		}
+		s.indexes[name] = fStore
 	}
 
 	s.isInit = true
