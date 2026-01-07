@@ -138,6 +138,7 @@ func (s *Model) init() error {
 		s.indexes[name] = fStore
 	}
 
+	s.vm = newVm()
 	s.isInit = true
 	return nil
 }

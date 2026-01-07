@@ -14,7 +14,7 @@ type Vm struct {
 * New
 * Create a new vm
 **/
-func New() *Vm {
+func newVm() *Vm {
 	result := &Vm{
 		Runtime: goja.New(),
 		ctx:     et.Json{},
