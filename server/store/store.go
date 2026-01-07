@@ -327,10 +327,6 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
-	if id == "" {
-		return nil, errors.New(msg.MSG_ID_IS_REQUIRED)
-	}
-
 	recordSize := int64(len(id)) + int64(len(data)) + 11
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
@@ -499,6 +495,10 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 	tag := "put"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
+
+	if id == "" {
+		return id, errors.New(msg.MSG_ID_IS_REQUIRED)
+	}
 
 	data, err := json.Marshal(value)
 	if err != nil {

@@ -12,18 +12,18 @@ const (
 	UPDATED_AT string = "updated_at"
 )
 
-type TypeColumn string
+type TypeField string
 
-func (s TypeColumn) Str() string {
+func (s TypeField) Str() string {
 	return string(s)
 }
 
 const (
-	TpAtrib       TypeColumn = "atrib"
-	TpDetail      TypeColumn = "detail"
-	TpRollup      TypeColumn = "rollup"
-	TpCalc        TypeColumn = "calc"
-	TpAggregation TypeColumn = "aggregation"
+	TpAtrib       TypeField = "atrib"
+	TpDetail      TypeField = "detail"
+	TpRollup      TypeField = "rollup"
+	TpCalc        TypeField = "calc"
+	TpAggregation TypeField = "aggregation"
 )
 
 type TypeData string
@@ -99,7 +99,7 @@ const (
 type Field struct {
 	From         *From       `json:"from"`
 	Name         string      `json:"name"`
-	TypeColumn   TypeColumn  `json:"type_column"`
+	TypeField    TypeField   `json:"type_field"`
 	TypeData     TypeData    `json:"type_data"`
 	DefaultValue interface{} `json:"default_value"`
 	Definition   []byte      `json:"definition"`
