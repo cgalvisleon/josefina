@@ -4,12 +4,16 @@ import (
 	"github.com/cgalvisleon/josefina/server/store"
 )
 
+type From struct {
+	Database string `json:"database"`
+	Schema   string `json:"schema"`
+	Name     string `json:"name"`
+}
+
 type Model struct {
-	Database      string                      `json:"database"`
-	Schema        string                      `json:"schema"`
-	Name          string                      `json:"name"`
+	From          *From                       `json:"from"`
 	Data          *store.FileStore            `json:"data"`
-	Columns       []*Column                   `json:"columns"`
+	Fields        []*Field                    `json:"fields"`
 	Indexes       map[string]*store.FileStore `json:"indexes"`
 	PrimaryKeys   []string                    `json:"primary_keys"`
 	Unique        []string                    `json:"unique"`
@@ -26,9 +30,19 @@ type Model struct {
 	AfterInserts  []*Trigger                  `json:"after_inserts"`
 	AfterUpdates  []*Trigger                  `json:"after_updates"`
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
-	IsLocked      bool                        `json:"is_locked"`
+	IsStrict      bool                        `json:"is_strict"`
 	Version       int                         `json:"version"`
+	Host          string                      `json:"-"`
 	IsCore        bool                        `json:"is_core"`
 	IsDebug       bool                        `json:"-"`
 	isInit        bool                        `json:"-"`
+}
+
+func (s *Model) Init() error {
+	if s.isInit {
+		return nil
+	}
+
+	s.isInit = true
+	return nil
 }

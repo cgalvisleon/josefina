@@ -19,7 +19,6 @@ func (s TypeColumn) Str() string {
 }
 
 const (
-	TpColumn      TypeColumn = "column"
 	TpAtrib       TypeColumn = "atrib"
 	TpDetail      TypeColumn = "detail"
 	TpRollup      TypeColumn = "rollup"
@@ -97,11 +96,11 @@ const (
 	Rejected  Status = "rejected"
 )
 
-type Column struct {
-	From       *Model      `json:"from"`
-	Name       string      `json:"name"`
-	TypeColumn TypeColumn  `json:"type_column"`
-	TypeData   TypeData    `json:"type_data"`
-	Default    interface{} `json:"default"`
-	Definition []byte      `json:"definition"`
+type Field struct {
+	From         *From       `json:"from"`
+	Name         string      `json:"name"`
+	TypeColumn   TypeColumn  `json:"type_column"`
+	TypeData     TypeData    `json:"type_data"`
+	DefaultValue interface{} `json:"default_value"`
+	Definition   []byte      `json:"definition"`
 }

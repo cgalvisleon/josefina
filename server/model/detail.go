@@ -1,8 +1,8 @@
 package model
 
 type Detail struct {
-	From            *Model            `json:"from"`
-	To              *Model            `json:"to"`
+	From            *From             `json:"from"`
+	To              *From             `json:"to"`
 	Keys            map[string]string `json:"keys"`
 	Select          []string          `json:"select"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
@@ -16,8 +16,8 @@ type Detail struct {
 **/
 func newDetail(from, to *Model, keys map[string]string, selecs []string, onDeleteCascade, onUpdateCascade bool) *Detail {
 	return &Detail{
-		From:            from,
-		To:              to,
+		From:            from.From,
+		To:              to.From,
 		Keys:            keys,
 		Select:          selecs,
 		OnDeleteCascade: onDeleteCascade,
@@ -26,7 +26,7 @@ func newDetail(from, to *Model, keys map[string]string, selecs []string, onDelet
 }
 
 type Master struct {
-	To   *Model            `json:"from"`
+	To   *From             `json:"from"`
 	Keys map[string]string `json:"keys"`
 }
 
@@ -37,7 +37,7 @@ type Master struct {
 **/
 func newMaster(to *Model, keys map[string]string) *Master {
 	return &Master{
-		To:   to,
+		To:   to.From,
 		Keys: keys,
 	}
 }

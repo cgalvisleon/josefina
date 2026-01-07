@@ -12,6 +12,8 @@ var (
 	MSG_SNAPSHOT_CORRUPTED     = "snapshot corrupted"
 	MSG_INVALID_SNAPSHOT_MAGIC = "invalid snapshot magic"
 	MSG_ID_IS_REQUIRED         = "id is required"
+	MSG_SCHEMA_NOT_FOUND       = "schema not found"
+	MSG_MODEL_NOT_FOUND        = "model not found"
 )
 
 func init() {
@@ -27,5 +29,7 @@ func init() {
 		MSG_SNAPSHOT_CORRUPTED = "snapshot corrupto"
 		MSG_INVALID_SNAPSHOT_MAGIC = "magic del snapshot inválido"
 		MSG_ID_IS_REQUIRED = "id es requerido"
+		MSG_SCHEMA_NOT_FOUND = "schema no encontrado"
+		MSG_MODEL_NOT_FOUND = "model no encontrado"
 	}
 }
