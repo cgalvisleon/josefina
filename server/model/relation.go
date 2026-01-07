@@ -1,4 +1,4 @@
-package server
+package model
 
 type Relation struct {
 	Key    string `json:"key"`
