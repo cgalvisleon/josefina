@@ -14,6 +14,8 @@ var (
 	MSG_ID_IS_REQUIRED         = "id is required"
 	MSG_SCHEMA_NOT_FOUND       = "schema not found"
 	MSG_MODEL_NOT_FOUND        = "model not found"
+	MSG_DB_NOT_FOUND           = "database not found"
+	MSG_ARG_REQUIRED           = "argument required (%s)"
 )
 
 func init() {
@@ -31,5 +33,7 @@ func init() {
 		MSG_ID_IS_REQUIRED = "id es requerido"
 		MSG_SCHEMA_NOT_FOUND = "schema no encontrado"
 		MSG_MODEL_NOT_FOUND = "model no encontrado"
+		MSG_DB_NOT_FOUND = "database no encontrado"
+		MSG_ARG_REQUIRED = "argumento requerido (%s)"
 	}
 }

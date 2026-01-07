@@ -1,4 +1,4 @@
-package model
+package db
 
 const (
 	SOURCE     string = "source"

@@ -9,9 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -19,6 +17,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/server/msg"
+	"github.com/cgalvisleon/josefina/server/utilities"
 )
 
 type Store interface {
@@ -659,27 +658,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 }
 
 /**
-* Normalize
-* @param input string
-* @return string
-**/
-func Normalize(input string) string {
-	// 1. Quitar espacios al inicio y final
-	s := strings.TrimSpace(input)
-
-	// 2. Reemplazar uno o más espacios por _
-	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
-
-	// 3. Eliminar todo lo que no sea letra, número o _
-	s = regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(s, "")
-
-	// 4. Garantizar que no empiece con número
-	s = regexp.MustCompile(`^[0-9]+`).ReplaceAllString(s, "")
-
-	return s
-}
-
-/**
 * Open
 * @param path, name string, debug bool
 * @return *FileStore, error
@@ -696,7 +674,7 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 	if !existed {
 		maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 		maxSegmentMG = maxSegmentMG * 1024 * 1024
-		name = Normalize(name)
+		name = utilities.Normalize(name)
 		fs = &FileStore{
 			Name:         name,
 			Path:         filepath.Join(path),

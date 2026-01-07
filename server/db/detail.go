@@ -1,4 +1,4 @@
-package model
+package db
 
 type Detail struct {
 	From            *From             `json:"from"`

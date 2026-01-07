@@ -1,4 +1,4 @@
-package model
+package db
 
 type Tx struct {
 	Database string `json:"database"`

@@ -1,6 +1,10 @@
-package model
+package db
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/cgalvisleon/josefina/server/msg"
 	"github.com/cgalvisleon/josefina/server/store"
 )
 
@@ -10,8 +14,60 @@ type From struct {
 	Name     string `json:"name"`
 }
 
+/**
+* getDb: Returns the database
+* @return *DB
+**/
+func (s *From) getDb() (*DB, error) {
+	result, ok := dbs[s.Database]
+	if !ok {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	return result, nil
+}
+
+/**
+* getSchema: Returns the schema
+* @return *Schema, error
+**/
+func (s *From) getSchema() (*Schema, error) {
+	db, err := s.getDb()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.getSchema(s.Schema)
+}
+
+/**
+* getModel: Returns the model
+* @return *Model, error
+**/
+func (s *From) getModel() (*Model, error) {
+	schema, err := s.getSchema()
+	if err != nil {
+		return nil, err
+	}
+
+	return schema.getModel(s.Name)
+}
+
+/**
+* getPath: Returns the path
+* @return string, error
+**/
+func (s *From) getPath() (string, error) {
+	db, err := s.getDb()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/%s/%s", db.Path, s.Database, s.Schema), nil
+}
+
 type Model struct {
-	From          *From                       `json:"from"`
+	*From         `json:"from"`
 	Data          *store.FileStore            `json:"data"`
 	Fields        []*Field                    `json:"fields"`
 	Indexes       map[string]*store.FileStore `json:"indexes"`
@@ -36,11 +92,42 @@ type Model struct {
 	IsCore        bool                        `json:"is_core"`
 	IsDebug       bool                        `json:"-"`
 	isInit        bool                        `json:"-"`
+	vm            *Vm                         `json:"-"`
 }
 
-func (s *Model) Init() error {
+/**
+* prepared: Prepares the model
+* @return error
+**/
+func (s *Model) prepared() error {
+	if len(s.Fields) == 0 {
+		s.defineKeyField()
+	}
+
+	return nil
+}
+
+/**
+* init: Initializes the model
+* @return error
+**/
+func (s *Model) init() error {
 	if s.isInit {
 		return nil
+	}
+
+	err := s.prepared()
+	if err != nil {
+		return err
+	}
+
+	path, err := s.getPath()
+	if err != nil {
+		return err
+	}
+	s.Data, err = store.Open(path, s.Name, s.IsDebug)
+	if err != nil {
+		return err
 	}
 
 	s.isInit = true
