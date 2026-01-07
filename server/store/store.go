@@ -329,12 +329,6 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
-	n := len(s.index)
-	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
-	if s.TombStones > threshold {
-		go s.Compact()
-	}
-
 	recordSize := int64(len(id)) + int64(len(data)) + 11
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
@@ -359,6 +353,12 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 		if err := s.active.Sync(); err != nil {
 			return nil, err
 		}
+	}
+
+	n := len(s.index)
+	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
+	if s.TombStones > threshold {
+		go s.Compact()
 	}
 
 	return ref, nil
@@ -687,7 +687,7 @@ func Normalize(input string) string {
 **/
 func Open(path, name string, debug bool) (*FileStore, error) {
 	fs := &FileStore{
-		Path: filepath.Join(path, name),
+		Path: filepath.Join(path),
 	}
 	existed, err := fs.load()
 	if err != nil {
@@ -700,7 +700,7 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 		name = Normalize(name)
 		fs = &FileStore{
 			Name:         name,
-			Path:         filepath.Join(path, name),
+			Path:         filepath.Join(path),
 			PathSegments: filepath.Join(path, name, "segments"),
 			PathSnapshot: filepath.Join(path, name, "snapshot"),
 			PathCompact:  filepath.Join(path, name, "compact"),

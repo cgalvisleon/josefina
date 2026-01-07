@@ -3,13 +3,13 @@ package msg
 import "github.com/cgalvisleon/et/envar"
 
 var (
-	MSG_MAX_SEGMENT_BYTES = "maxSegmentBytes must be at least 1 MB"
-	MSG_INVALID_ID_LENGTH = "invalid id length"
-	MSG_DATA_TOO_LARGE    = "data too large"
-	MSG_FILE_IS_NIL       = "file is nil"
-	MSG_CORRUPTED_RECORD  = "corrupted record"
-	MSG_INVALID_SNAPSHOT  = "invalid snapshot"
-	MSG_SNAPSHOT_CORRUPTED = "snapshot corrupted"
+	MSG_MAX_SEGMENT_BYTES      = "maxSegmentBytes must be at least 1 MB"
+	MSG_INVALID_ID_LENGTH      = "invalid id length"
+	MSG_DATA_TOO_LARGE         = "data too large"
+	MSG_FILE_IS_NIL            = "file is nil"
+	MSG_CORRUPTED_RECORD       = "corrupted record"
+	MSG_INVALID_SNAPSHOT       = "invalid snapshot"
+	MSG_SNAPSHOT_CORRUPTED     = "snapshot corrupted"
 	MSG_INVALID_SNAPSHOT_MAGIC = "invalid snapshot magic"
 )
 

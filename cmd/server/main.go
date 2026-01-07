@@ -12,11 +12,11 @@ import (
 )
 
 func main() {
-	st, _ := store.Open("./data/metadata", "metadata", true)
+	st, _ := store.Open("./data/metadata/core", "test", true)
 
-	// putData(st, 10001)
+	putData(st, 10000)
 	// delete(st, "01KDE96HC1AMV2HZA8AEJZ9K72")
-	readData(st)
+	// readData(st)
 	// compact(st)
 	// getData(st, "01KDEB4086CEGVD1G3FA69CMBB")
 	logs.Logf("test", "Memory usage: %.2f MB", st.UseMemory())

@@ -5,12 +5,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/iterate"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/strs"
-	"github.com/cgalvisleon/et/timezone"
 )
 
 var storeCallsMap = map[string]*uint64{
@@ -27,13 +24,6 @@ func (s *FileStore) logMetrics() {
 		for tag, ptr := range storeCallsMap {
 			calls := atomic.SwapUint64(ptr, 0)
 			s.Metrics[tag] = int64(calls)
-			event.Emiter("store_metrics", et.Json{
-				"timestamp": timezone.NowTime(),
-				"path":      s.Path,
-				"model":     s.Name,
-				"tag":       tag,
-				"calls":     calls,
-			})
 			if s.IsDebug {
 				path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
 				logs.Logf("metrics", "path:%s:model:%s:tag:%s:calls:%d:per/sec", path, s.Name, tag, calls)
@@ -49,12 +39,6 @@ func (s *FileStore) logMetrics() {
 func (s *FileStore) metricStart(tag string) {
 	path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
 	tag = fmt.Sprintf("%s:%s:%s", path, s.Name, tag)
-	event.Emiter("store_metrics", et.Json{
-		"timestamp": timezone.NowTime(),
-		"path":      s.Path,
-		"model":     s.Name,
-		"tag":       tag,
-	})
 	iterate.Start(tag)
 }
 
@@ -69,13 +53,6 @@ func (s *FileStore) metricSegment(tag, msg string) {
 	duration := iterate.Segment(tag, msg, s.IsDebug)
 	value := int64(duration.Milliseconds())
 	s.Metrics[tag] = value
-	event.Emiter("store_metrics", et.Json{
-		"timestamp":    timezone.NowTime(),
-		"path":         s.Path,
-		"model":        s.Name,
-		"tag":          tag,
-		"milliseconds": value,
-	})
 }
 
 func (s *FileStore) metricEnd(tag, msg string) {
@@ -84,11 +61,4 @@ func (s *FileStore) metricEnd(tag, msg string) {
 	duration := iterate.End(tag, msg, s.IsDebug)
 	value := int64(duration.Milliseconds())
 	s.Metrics[tag] = value
-	event.Emiter("store_metrics", et.Json{
-		"timestamp": timezone.NowTime(),
-		"path":      s.Path,
-		"model":     s.Name,
-		"tag":       tag,
-		"metrics":   s.Metrics,
-	})
 }
