@@ -16,6 +16,7 @@ var (
 	MSG_MODEL_NOT_FOUND        = "model not found"
 	MSG_DB_NOT_FOUND           = "database not found"
 	MSG_ARG_REQUIRED           = "argument required (%s)"
+	MSG_TENNANT_NOT_FOUND      = "tennant not found"
 )
 
 func init() {
@@ -35,5 +36,6 @@ func init() {
 		MSG_MODEL_NOT_FOUND = "model no encontrado"
 		MSG_DB_NOT_FOUND = "database no encontrado"
 		MSG_ARG_REQUIRED = "argumento requerido (%s)"
+		MSG_TENNANT_NOT_FOUND = "tennant no encontrado"
 	}
 }

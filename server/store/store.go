@@ -98,7 +98,7 @@ type FileStore struct {
 * Serialize
 * @return []byte, error
 **/
-func (s *FileStore) Serialize() ([]byte, error) {
+func (s *FileStore) serialize() ([]byte, error) {
 	bt, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (s *FileStore) Serialize() ([]byte, error) {
 * @return et.Json
 **/
 func (s *FileStore) ToJson() et.Json {
-	bt, err := s.Serialize()
+	bt, err := s.serialize()
 	if err != nil {
 		return et.Json{}
 	}
@@ -177,7 +177,7 @@ func (s *FileStore) UseMemory() float64 {
 * @return error
  */
 func (s *FileStore) save() error {
-	src, err := s.Serialize()
+	src, err := s.serialize()
 	if err != nil {
 		return err
 	}

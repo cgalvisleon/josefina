@@ -14,6 +14,10 @@ import (
 * @return *DB, error
 **/
 func NewDatabase(name string, version int, release int) (*DB, error) {
+	if tennant == nil {
+		return nil, fmt.Errorf(msg.MSG_TENNANT_NOT_FOUND)
+	}
+
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
