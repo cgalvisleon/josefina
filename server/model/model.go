@@ -1,16 +1,8 @@
 package model
 
 import (
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/server/store"
 )
-
-type Trigger struct {
-	Name       string `json:"name"`
-	Definition []byte `json:"definition"`
-}
-
-type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 type Model struct {
 	Database      string                      `json:"database"`
