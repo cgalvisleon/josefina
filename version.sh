@@ -5,7 +5,7 @@ set -e                                                        # Detener la ejecu
 HELP=false
 MAYOR=false
 MINOR=false
-REQUEST=false
+RELEASE=false
 INDEX=2
 CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0") # Obtener la versión actual de Git
 NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0") # Obtener la versión actual de Git
@@ -13,13 +13,24 @@ NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0") # Obt
 # Parsear opciones
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --h | --help) HELP=true ;;                             # Activar la bandera si se proporciona --help
-        --m | --major) MAYOR=true ;;                          # Activar la bandera si se proporciona --major
-        --n | --minor) MINOR=true ;;                          # Activar la bandera si se proporciona --minor
-        --r | --request) REQUEST=true ;;                            # Activar la bandera si se proporciona --push
+        --h|--help)
+        HELP=true
+        shift
+        ;;                             # Activar la bandera si se proporciona --help
+        --m|--major)
+        MAYOR=true
+        shift
+        ;;                          # Activar la bandera si se proporciona --major
+        --n|--minor)
+        MINOR=true
+        shift
+        ;;                          # Activar la bandera si se proporciona --minor
+        --r|--request)
+        RELEASE=true
+        shift
+        ;;                            # Activar la bandera si se proporciona --push
         *) echo "Opción desconocida: $1"; exit 1 ;;
     esac
-    shift
 done
 
 # Mostrar las opciones elegidas
@@ -77,7 +88,7 @@ help() {
   echo "  --h, --help     Muestra este mensaje de ayuda"
   echo "  --m, --major    Incrementa la versión mayor"
   echo "  --n, --minor    Incrementa la versión menor"
-  echo "  --r, --request  Incrementa la versión de la revisión"
+  echo "  --r, --release  Incrementa la versión de la revisión"
   exit 0
 }
 
@@ -86,7 +97,7 @@ if [ "$HELP" == true ]; then
 elif [ "$CURRENT_VERSION" == "v0.0.0" ]; then
   NEW_VERSION="v0.0.1"
   update_version
-elif [ "$REQUEST" == true ]; then
+elif [ "$RELEASE" == true ]; then
   build_version
   update_version
 else

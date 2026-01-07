@@ -13,6 +13,11 @@ import (
 	"github.com/cgalvisleon/josefina/server/msg"
 )
 
+const (
+	packageName = "josefina"
+	fileName    = "tennant.dat"
+)
+
 type Tennant struct {
 	Name string         `json:"name"`
 	Path string         `json:"path"`
@@ -43,7 +48,7 @@ func (s *Tennant) save() error {
 		return err
 	}
 
-	path := filepath.Join(s.Path, "tennant.dat")
+	path := filepath.Join(s.Path, fileName)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
@@ -68,7 +73,7 @@ func (s *Tennant) save() error {
 		return err
 	}
 
-	logs.Log("tennant", "saved:", path)
+	logs.Log(packageName, "saved:tennant:", path)
 
 	return nil
 }

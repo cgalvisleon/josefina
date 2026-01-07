@@ -658,6 +658,40 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 }
 
 /**
+* Prune
+* @return error
+**/
+func (s *FileStore) Prune() error {
+	tag := "prune"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
+
+	err := s.Compact()
+	if err != nil {
+		return err
+	}
+
+	err = s.RebuildIndexes()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Empty
+* @return error
+**/
+func (s *FileStore) Empty() error {
+	s.index = make(map[string]*recordRef)
+	s.WAL = 0
+	s.TombStones = 0
+
+	return nil
+}
+
+/**
 * Open
 * @param path, name string, debug bool
 * @return *FileStore, error
