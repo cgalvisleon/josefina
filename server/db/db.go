@@ -59,6 +59,7 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 		return result, nil
 	}
 
+	name = utility.Normalize(name)
 	result = &Schema{
 		Database: s.Name,
 		Name:     name,

@@ -16,8 +16,8 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/server/msg"
-	"github.com/cgalvisleon/josefina/server/utilities"
 )
 
 type Store interface {
@@ -674,7 +674,7 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 	if !existed {
 		maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 		maxSegmentMG = maxSegmentMG * 1024 * 1024
-		name = utilities.Normalize(name)
+		name = utility.Normalize(name)
 		fs = &FileStore{
 			Name:         name,
 			Path:         filepath.Join(path),

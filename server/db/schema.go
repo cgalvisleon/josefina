@@ -28,6 +28,7 @@ func (s *Schema) newModel(name string, version int) (*Model, error) {
 		return result, nil
 	}
 
+	name = utility.Normalize(name)
 	result = &Model{
 		From: &From{
 			Database: s.Database,
@@ -53,6 +54,7 @@ func (s *Schema) newModel(name string, version int) (*Model, error) {
 		Version:       version,
 	}
 
+	s.Models[name] = result
 	return result, nil
 }
 
