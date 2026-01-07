@@ -1,10 +1,8 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/cgalvisleon/josefina/server/msg"
 	"github.com/cgalvisleon/josefina/server/store"
 )
 
@@ -19,9 +17,9 @@ type From struct {
 * @return *DB
 **/
 func (s *From) getDb() (*DB, error) {
-	result, ok := dbs[s.Database]
-	if !ok {
-		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	result, err := GetDB(s.Database)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -63,7 +61,7 @@ func (s *From) getPath() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s/%s/%s", db.Path, s.Database, s.Schema), nil
+	return fmt.Sprintf("%s/%s", db.Path, s.Schema), nil
 }
 
 type Model struct {

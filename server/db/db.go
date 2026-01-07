@@ -7,12 +7,6 @@ import (
 	"github.com/cgalvisleon/josefina/server/msg"
 )
 
-var dbs map[string]*DB
-
-func init() {
-	dbs = make(map[string]*DB)
-}
-
 type DB struct {
 	Name    string             `json:"name"`
 	Version int                `json:"version"`
@@ -54,12 +48,12 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
+	name = utility.Normalize(name)
 	result, ok := s.Schemas[name]
 	if ok {
 		return result, nil
 	}
 
-	name = utility.Normalize(name)
 	result = &Schema{
 		Database: s.Name,
 		Name:     name,
