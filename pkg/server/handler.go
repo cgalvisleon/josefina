@@ -1,21 +1,25 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/response"
 )
 
 /**
 * version
-* @return et.Json, error
+* @param w http.ResponseWriter, r *http.Request
+* @return error
 **/
-func version() (et.Json, error) {
-	service := et.Json{
-		"version": Version,
+func (s *Router) version(w http.ResponseWriter, r *http.Request) {
+	version := et.Json{
 		"service": PackageName,
+		"version": Version,
 		"host":    Hostname,
 		"company": "",
 		"web":     "",
 	}
 
-	return service, nil
+	response.JSON(w, r, http.StatusOK, version)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/middleware"
-	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
 	"github.com/cgalvisleon/et/strs"
 	"github.com/go-chi/chi/v5"
@@ -33,21 +32,6 @@ func NewRouter() *Router {
 	return &Router{
 		ctx: context.Background(),
 	}
-}
-
-/**
-* version
-* @param w http.ResponseWriter, r *http.Request
-* @return error
-**/
-func (s *Router) version(w http.ResponseWriter, r *http.Request) {
-	result, err := version()
-	if err != nil {
-		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	response.JSON(w, r, http.StatusOK, result)
 }
 
 /**
