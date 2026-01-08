@@ -84,7 +84,7 @@ func (s *Tennant) save() error {
 * @return bool, error
  */
 func (s *Tennant) load() (bool, error) {
-	path := filepath.Join(s.Path, "tennant.dat")
+	path := filepath.Join(s.Path, fileName)
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -115,6 +115,24 @@ func (s *Tennant) load() (bool, error) {
 	}
 
 	return true, nil
+}
+
+/**
+* init
+* Initialize the store
+* @return error
+ */
+func (s *Tennant) init() error {
+	exist, err := s.load()
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		return s.save()
+	}
+
+	return nil
 }
 
 /**
