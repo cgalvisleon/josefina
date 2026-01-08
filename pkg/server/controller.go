@@ -1,4 +1,4 @@
-package v1
+package server
 
 import (
 	"context"
@@ -7,15 +7,12 @@ import (
 	"github.com/cgalvisleon/et/et"
 )
 
-type Controller struct {
-}
-
 /**
-* Version
+* version
 * @param ctx context.Context
 * @return et.Json, error
 **/
-func (c *Controller) Version(ctx context.Context) (et.Json, error) {
+func (s *Router) version(ctx context.Context) (et.Json, error) {
 	service := et.Json{
 		"version": config.App.Version,
 		"service": PackageName,
@@ -28,17 +25,9 @@ func (c *Controller) Version(ctx context.Context) (et.Json, error) {
 }
 
 /**
-* Init
+* init
 * @param ctx context.Context
 **/
-func (c *Controller) Init(ctx context.Context) {
-	initCore()
-}
+func (s *Router) init(ctx context.Context) {
 
-/**
-* Repository
-**/
-type Repository interface {
-	Version(ctx context.Context) (et.Json, error)
-	Init(ctx context.Context)
 }

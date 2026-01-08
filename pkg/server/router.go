@@ -1,4 +1,4 @@
-package v1
+package server
 
 import (
 	"context"
@@ -15,7 +15,6 @@ var PackageName = "apps"
 var PathApi = envar.GetStr("PATH_API", "/api")
 
 type Router struct {
-	Repository Repository
 }
 
 func (s *Router) Routes() http.Handler {
@@ -25,7 +24,7 @@ func (s *Router) Routes() http.Handler {
 	r := chi.NewRouter()
 
 	ctx := context.Background()
-	s.Repository.Init(ctx)
+	s.init(ctx)
 	middleware.SetServiceName(PackageName)
 
 	logs.Logf(PackageName, "Router version:%s", config.App.Version)

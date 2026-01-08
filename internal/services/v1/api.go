@@ -8,26 +8,31 @@ import (
 	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
+	pkg "github.com/cgalvisleon/josefina/pkg/server"
 	"github.com/go-chi/chi"
 )
 
+/**
+* New
+* @return http.Handler
+**/
 func New() http.Handler {
 	r := chi.NewRouter()
 
-	err := initCore()
+	err := pkg.InitCore()
 	if err != nil {
-		logs.Log(PackageName, err)
+		logs.Log(pkg.PackageName, err)
 	}
 
-	_pkg := &Router{
-		Repository: &Controller{},
-	}
-
-	r.Mount(config.App.PathApi, _pkg.Routes())
+	server := &pkg.Router{}
+	r.Mount(config.App.PathApi, server.Routes())
 
 	return r
 }
 
+/**
+* Close
+**/
 func Close() {
 	jrpc.Close()
 	cache.Close()
