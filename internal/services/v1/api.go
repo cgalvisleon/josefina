@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/cgalvisleon/et/cache"
@@ -24,7 +25,9 @@ func New() http.Handler {
 		logs.Log(pkg.PackageName, err)
 	}
 
-	server := &pkg.Router{}
+	server := &pkg.Router{
+		Ctx: context.Background(),
+	}
 	r.Mount(config.App.PathApi, server.Routes())
 
 	return r
