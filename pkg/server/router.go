@@ -2,10 +2,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/cgalvisleon/et/config"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/middleware"
@@ -19,18 +20,20 @@ const (
 	PackageName = "josefina"
 )
 
-var (
-	PackagePath = envar.GetStr("PATH_API", "/josefina")
-	Hostname, _ = os.Hostname()
-)
-
 type Router struct {
-	ctx context.Context
+	ctx         context.Context
+	RootPath    string
+	PackagePath string
+	Hostname    string
 }
 
 func NewRouter() *Router {
+	hostname, _ := os.Hostname()
 	return &Router{
-		ctx: context.Background(),
+		ctx:         context.Background(),
+		RootPath:    envar.GetStr("PATH_ROOT", "/api"),
+		PackagePath: envar.GetStr("PATH_API", "/josefina"),
+		Hostname:    hostname,
 	}
 }
 
@@ -43,10 +46,12 @@ func (s *Router) Routes() http.Handler {
 	host = strs.Format("%s:%d", host, envar.GetInt("PORT", 3300))
 
 	r := chi.NewRouter()
-	router.Public(r, router.Get, "/version", s.version, PackageName, PackagePath, host)
+	router.Public(r, router.Get, "/version", s.version, PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(PackageName)
-	logs.Logf(PackageName, "Router version:%s", config.App.Version)
+	path := fmt.Sprintf("%s/%s/%s", host, s.RootPath, s.PackagePath)
+	path = strings.ReplaceAll(path, "//", "/")
+	logs.Logf(PackageName, "Router version:%s url:%s host:%s", Version, path, s.Hostname)
 
 	return r
 }

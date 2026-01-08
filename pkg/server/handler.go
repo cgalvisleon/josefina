@@ -16,7 +16,7 @@ func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 	version := et.Json{
 		"service": PackageName,
 		"version": Version,
-		"host":    Hostname,
+		"host":    s.Hostname,
 		"company": "",
 		"web":     "",
 	}

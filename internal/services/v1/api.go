@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/et/config"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	pkg "github.com/cgalvisleon/josefina/pkg/server"
@@ -23,7 +22,7 @@ func New() http.Handler {
 	}
 
 	server := pkg.NewRouter()
-	r.Mount(config.App.PathApi, server.Routes())
+	r.Mount(server.RootPath, server.Routes())
 
 	return r
 }
