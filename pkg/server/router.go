@@ -26,7 +26,13 @@ var (
 )
 
 type Router struct {
-	Ctx context.Context
+	ctx context.Context
+}
+
+func NewRouter() *Router {
+	return &Router{
+		ctx: context.Background(),
+	}
 }
 
 /**
@@ -35,7 +41,7 @@ type Router struct {
 * @return error
 **/
 func (s *Router) version(w http.ResponseWriter, r *http.Request) {
-	result, err := version(s.Ctx)
+	result, err := version()
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
