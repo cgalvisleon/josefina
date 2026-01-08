@@ -8,7 +8,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/josefina/server/store"
+	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 func main() {

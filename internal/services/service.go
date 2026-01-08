@@ -2,7 +2,7 @@ package http
 
 import (
 	"github.com/cgalvisleon/et/server"
-	v1 "github.com/cgalvisleon/josefina/server/http/v1"
+	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
 )
 
 func New() (*server.Ettp, error) {

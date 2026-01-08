@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/server/msg"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type DB struct {

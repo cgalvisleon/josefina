@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 
-	"github.com/cgalvisleon/josefina/server/store"
+	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type From struct {

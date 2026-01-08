@@ -10,7 +10,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/server/msg"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 const (
