@@ -16,7 +16,7 @@ import (
 
 const (
 	Version     = "1.0.0"
-	PackageName = "apps"
+	PackageName = "josefina"
 )
 
 var (
