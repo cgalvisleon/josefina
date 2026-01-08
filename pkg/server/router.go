@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
@@ -22,7 +21,6 @@ const (
 
 type Router struct {
 	ctx         context.Context
-	RootPath    string
 	PackagePath string
 	Hostname    string
 }
@@ -31,8 +29,7 @@ func NewRouter() *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
-		RootPath:    envar.GetStr("PATH_ROOT", "/api"),
-		PackagePath: envar.GetStr("PATH_API", "/josefina"),
+		PackagePath: envar.GetStr("PATH_API", "/api/josefina"),
 		Hostname:    hostname,
 	}
 }
@@ -49,8 +46,7 @@ func (s *Router) Routes() http.Handler {
 	router.Public(r, router.Get, "/version", s.version, PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(PackageName)
-	path := fmt.Sprintf("%s/%s/%s", host, s.RootPath, s.PackagePath)
-	path = strings.ReplaceAll(path, "//", "/")
+	path := fmt.Sprintf("%s%s", host, s.PackagePath)
 	logs.Logf(PackageName, "Router version:%s url:%s host:%s", Version, path, s.Hostname)
 
 	return r

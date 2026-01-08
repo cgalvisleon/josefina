@@ -22,7 +22,7 @@ func New() http.Handler {
 	}
 
 	server := pkg.NewRouter()
-	r.Mount(server.RootPath, server.Routes())
+	r.Mount(server.PackagePath, server.Routes())
 
 	return r
 }
