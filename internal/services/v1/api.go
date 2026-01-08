@@ -3,9 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/et/cache"
 	"github.com/cgalvisleon/et/config"
-	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	pkg "github.com/cgalvisleon/josefina/pkg/server"
@@ -35,6 +33,4 @@ func New() http.Handler {
 **/
 func Close() {
 	jrpc.Close()
-	cache.Close()
-	event.Close()
 }
