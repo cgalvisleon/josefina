@@ -6,7 +6,7 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	pkg "github.com/cgalvisleon/josefina/pkg/server"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 /**

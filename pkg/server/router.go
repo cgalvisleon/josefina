@@ -2,12 +2,10 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/middleware"
 	"github.com/cgalvisleon/et/router"
 	"github.com/cgalvisleon/et/strs"
@@ -29,7 +27,7 @@ func NewRouter() *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
-		PackagePath: envar.GetStr("PATH_API", "/api/josefina"),
+		PackagePath: envar.GetStr("PATH_URL", "/api/josefina"),
 		Hostname:    hostname,
 	}
 }
@@ -46,8 +44,5 @@ func (s *Router) Routes() http.Handler {
 	router.Public(r, router.Get, "/version", s.version, PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(PackageName)
-	path := fmt.Sprintf("%s%s", host, s.PackagePath)
-	logs.Logf(PackageName, "Router version:%s url:%s host:%s", Version, path, s.Hostname)
-
 	return r
 }
