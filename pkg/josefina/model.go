@@ -87,6 +87,7 @@ type Model struct {
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
 	IsDebug       bool                        `json:"-"`
+	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
 	data          *store.FileStore            `json:"-"`
 	indexes       map[string]*store.FileStore `json:"-"`

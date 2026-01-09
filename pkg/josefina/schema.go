@@ -3,6 +3,7 @@ package josefina
 import (
 	"errors"
 
+	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -11,6 +12,7 @@ type Schema struct {
 	Database string            `json:"database"`
 	Name     string            `json:"name"`
 	Models   map[string]*Model `json:"models"`
+	db       *DB               `json:"-"`
 }
 
 /**
@@ -52,9 +54,12 @@ func (s *Schema) newModel(name string, version int) (*Model, error) {
 		AfterUpdates:  make([]*Trigger, 0),
 		AfterDeletes:  make([]*Trigger, 0),
 		Version:       version,
+		db:            s.db,
 	}
 
 	s.Models[name] = result
+	name = strs.Append(s.Name, name, ".")
+	s.db.Models[name] = result
 	return result, nil
 }
 

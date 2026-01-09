@@ -40,7 +40,10 @@ func loadTennant(path, name, version string) (*Tennant, error) {
 		Path:    path,
 		Dbs:     make(map[string]*DB),
 	}
-	result.getDatabase(packageName)
+	err := result.loadCore()
+	if err != nil {
+		return nil, err
+	}
 
 	return result, nil
 }
@@ -139,11 +142,11 @@ func (s *Tennant) load() (bool, error) {
 }
 
 /**
-* getDatabase
+* getDb
 * @param name string
 * @return *DB, error
 **/
-func (s *Tennant) getDatabase(name string) (*DB, error) {
+func (s *Tennant) getDb(name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -171,7 +174,7 @@ func (s *Tennant) getDatabase(name string) (*DB, error) {
 * @return *Model, error
 **/
 func (s *Tennant) getModel(database, schema, name string) (*Model, error) {
-	db, err := s.getDatabase(database)
+	db, err := s.getDb(database)
 	if err != nil {
 		return nil, err
 	}

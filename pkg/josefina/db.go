@@ -1,10 +1,7 @@
 package josefina
 
 import (
-	"fmt"
-
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type DB struct {
@@ -12,6 +9,7 @@ type DB struct {
 	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
+	Models  map[string]*Model  `json:"models"`
 }
 
 /**
@@ -43,10 +41,6 @@ func (s *DB) getModel(schema, name string) (*Model, error) {
 * @return *Schema, error
 **/
 func (s *DB) newSchema(name string) (*Schema, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
 	name = utility.Normalize(name)
 	result, ok := s.Schemas[name]
 	if ok {
@@ -57,6 +51,7 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 		Database: s.Name,
 		Name:     name,
 		Models:   make(map[string]*Model, 0),
+		db:       s,
 	}
 
 	s.Schemas[name] = result

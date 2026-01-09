@@ -31,7 +31,7 @@ func Init(version string) error {
 * @return *DB, error
 **/
 func GetDB(name string) (*DB, error) {
-	result, err := tennant.getDatabase(name)
+	result, err := tennant.getDb(name)
 	if err != nil {
 		return nil, err
 	}
