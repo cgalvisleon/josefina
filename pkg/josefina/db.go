@@ -9,8 +9,7 @@ import (
 
 type DB struct {
 	Name    string             `json:"name"`
-	Version int                `json:"version"`
-	Release int                `json:"release"`
+	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
 }

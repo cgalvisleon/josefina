@@ -17,7 +17,7 @@ var (
 * @return error
 **/
 func InitJosefina() (http.Handler, error) {
-	err := josefina.Init()
+	err := josefina.Init(Version)
 	if err != nil {
 		return nil, err
 	}

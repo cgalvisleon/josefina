@@ -18,26 +18,31 @@ const (
 )
 
 type Tennant struct {
-	Name string         `json:"name"`
-	Path string         `json:"path"`
-	Dbs  map[string]*DB `json:"dbs"`
+	Name    string         `json:"name"`
+	Version string         `json:"version"`
+	Path    string         `json:"path"`
+	Dbs     map[string]*DB `json:"dbs"`
 }
 
 /**
-* newTennant
+* loadTennant
 * @param name string
 * @return *Tennant, error
 **/
-func newTennant(path, name string) (*Tennant, error) {
+func loadTennant(path, name, version string) (*Tennant, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	return &Tennant{
-		Name: name,
-		Path: path,
-		Dbs:  make(map[string]*DB),
-	}, nil
+	result := &Tennant{
+		Name:    name,
+		Version: version,
+		Path:    path,
+		Dbs:     make(map[string]*DB),
+	}
+	result.getDatabase(packageName)
+
+	return result, nil
 }
 
 /**
@@ -134,19 +139,42 @@ func (s *Tennant) load() (bool, error) {
 }
 
 /**
-* init
-* Initialize the store
-* @return error
- */
-func (s *Tennant) init() error {
-	exist, err := s.load()
+* getDatabase
+* @param name string
+* @return *DB, error
+**/
+func (s *Tennant) getDatabase(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	result, ok := s.Dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	result = &DB{
+		Name:    name,
+		Version: s.Version,
+		Path:    fmt.Sprintf("%s/%s", s.Path, name),
+		Schemas: make(map[string]*Schema),
+	}
+	s.Dbs[name] = result
+
+	return result, nil
+}
+
+/**
+* getModel
+* @param database string, schema string, model string
+* @return *Model, error
+**/
+func (s *Tennant) getModel(database, schema, name string) (*Model, error) {
+	db, err := s.getDatabase(database)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if !exist {
-		return s.save()
-	}
-
-	return nil
+	return db.getModel(schema, name)
 }

@@ -1,12 +1,8 @@
 package josefina
 
 import (
-	"fmt"
-
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var tennant *Tennant
@@ -16,12 +12,12 @@ var tennant *Tennant
 * @return error
 **/
 
-func Init() error {
+func Init(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "/data")
 	name := envar.GetStr("TENNANT_NAME", "josefina")
 
 	var err error
-	tennant, err = newTennant(path, name)
+	tennant, err = loadTennant(path, name, version)
 	if err != nil {
 		return err
 	}
@@ -30,44 +26,12 @@ func Init() error {
 }
 
 /**
-* NewDatabase: Creates a new database
-* @param name string, version int, release int
-* @return *DB, error
-**/
-func NewDatabase(name string, version int, release int) (*DB, error) {
-	if tennant == nil {
-		return nil, fmt.Errorf(msg.MSG_TENNANT_NOT_FOUND)
-	}
-
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
-	result, ok := tennant.Dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	result = &DB{
-		Name:    name,
-		Version: version,
-		Release: release,
-		Path:    fmt.Sprintf("%s/%s", tennant.Path, name),
-		Schemas: make(map[string]*Schema),
-	}
-	tennant.Dbs[name] = result
-
-	return result, nil
-}
-
-/**
 * GetDB: Returns a database by name
 * @param name string
 * @return *DB, error
 **/
 func GetDB(name string) (*DB, error) {
-	result, err := NewDatabase(name, 1, 0)
+	result, err := tennant.getDatabase(name)
 	if err != nil {
 		return nil, err
 	}
