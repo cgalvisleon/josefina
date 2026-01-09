@@ -17,10 +17,10 @@ type Schema struct {
 
 /**
 * newModel: Returns a new model
-* @param name string, version int
+* @param name string, isCore bool, version int
 * @return *Model
 **/
-func (s *Schema) newModel(name string, version int) (*Model, error) {
+func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -54,12 +54,18 @@ func (s *Schema) newModel(name string, version int) (*Model, error) {
 		AfterUpdates:  make([]*Trigger, 0),
 		AfterDeletes:  make([]*Trigger, 0),
 		Version:       version,
+		IsCore:        isCore,
 		db:            s.db,
 	}
 
 	s.Models[name] = result
 	name = strs.Append(s.Name, name, ".")
 	s.db.Models[name] = result
+	err := s.db.save()
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -69,5 +75,5 @@ func (s *Schema) newModel(name string, version int) (*Model, error) {
 * @return *Model
 **/
 func (s *Schema) getModel(name string) (*Model, error) {
-	return s.newModel(name, 1)
+	return s.newModel(name, false, 1)
 }

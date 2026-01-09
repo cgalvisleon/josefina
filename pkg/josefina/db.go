@@ -1,7 +1,10 @@
 package josefina
 
 import (
+	"errors"
+
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type DB struct {
@@ -10,6 +13,15 @@ type DB struct {
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
 	Models  map[string]*Model  `json:"models"`
+	tennant *Tennant           `json:"-"`
+}
+
+func (s *DB) save() error {
+	if s.tennant == nil {
+		return errors.New(msg.MSG_TENNANT_NOT_FOUND)
+	}
+
+	return s.tennant.save()
 }
 
 /**
@@ -55,19 +67,24 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 	}
 
 	s.Schemas[name] = result
+	err := s.save()
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
 /**
 * newModel: Creates a new model
-* @param schema string, name string
+* @param schema string, name string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) newModel(schema, name string, version int) (*Model, error) {
+func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch, err := s.newSchema(schema)
 	if err != nil {
 		return nil, err
 	}
 
-	return sch.newModel(name, version)
+	return sch.newModel(name, isCore, version)
 }

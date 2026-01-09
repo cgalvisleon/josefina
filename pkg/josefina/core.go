@@ -6,13 +6,13 @@ func (s *Tennant) loadCore() error {
 		return err
 	}
 
-	db.newModel("", "databases", 1)
-	db.newModel("", "schemas", 1)
-	db.newModel("", "models", 1)
-	db.newModel("", "records", 1)
-	db.newModel("", "references", 1)
-	db.newModel("", "series", 1)
-	db.newModel("", "users", 1)
+	db.newModel("", "databases", false, 1)
+	db.newModel("", "schemas", false, 1)
+	db.newModel("", "models", false, 1)
+	db.newModel("", "records", false, 1)
+	db.newModel("", "references", false, 1)
+	db.newModel("", "series", false, 1)
+	db.newModel("", "users", false, 1)
 
 	return nil
 }

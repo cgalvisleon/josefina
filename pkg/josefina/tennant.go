@@ -57,6 +57,14 @@ func (s *Tennant) serialize() ([]byte, error) {
 }
 
 /**
+* save
+* @return error
+**/
+func (s *Tennant) save() error {
+	return nil
+}
+
+/**
 * getDb
 * @param name string
 * @return *DB, error
@@ -78,8 +86,10 @@ func (s *Tennant) getDb(name string) (*DB, error) {
 		Path:    fmt.Sprintf("%s/%s", s.Path, name),
 		Schemas: make(map[string]*Schema),
 		Models:  make(map[string]*Model),
+		tennant: s,
 	}
 	s.Dbs[name] = result
+	s.save()
 
 	return result, nil
 }
