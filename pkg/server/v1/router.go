@@ -20,7 +20,7 @@ type Router struct {
 	Hostname    string
 }
 
-func NewRouter(name, version string) *Router {
+func newRouter(name, version string) *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),

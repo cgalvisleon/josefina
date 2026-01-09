@@ -35,7 +35,7 @@ func newTennant(path, name string) (*Tennant, error) {
 
 	return &Tennant{
 		Name: name,
-		Path: fmt.Sprintf("%s/%s", path, name),
+		Path: path,
 		Dbs:  make(map[string]*DB),
 	}, nil
 }

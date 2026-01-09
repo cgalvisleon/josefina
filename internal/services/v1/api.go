@@ -6,30 +6,21 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	pkg "github.com/cgalvisleon/josefina/pkg/server/v1"
-	"github.com/go-chi/chi/v5"
 )
 
-var (
-	PackageName = "josefina"
-	Version     = "1.0.0"
-)
+var PackageName = pkg.PackageName
 
 /**
 * New
 * @return http.Handler
 **/
 func New() http.Handler {
-	r := chi.NewRouter()
-
-	err := pkg.InitJosefina()
+	result, err := pkg.InitJosefina()
 	if err != nil {
-		logs.Log(PackageName, err)
+		logs.Log(pkg.PackageName, err)
 	}
 
-	server := pkg.NewRouter(PackageName, Version)
-	r.Mount(server.PackagePath, server.Routes())
-
-	return r
+	return result
 }
 
 /**

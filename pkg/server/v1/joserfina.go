@@ -1,13 +1,30 @@
 package v1
 
-import "github.com/cgalvisleon/josefina/pkg/josefina"
+import (
+	"net/http"
+
+	"github.com/cgalvisleon/josefina/pkg/josefina"
+	"github.com/go-chi/chi/v5"
+)
+
+var (
+	PackageName = "josefina"
+	Version     = "1.0.0"
+)
 
 /**
 * InitJosefina
 * @return error
 **/
-func InitJosefina() error {
-	josefina.Init()
+func InitJosefina() (http.Handler, error) {
+	err := josefina.Init()
+	if err != nil {
+		return nil, err
+	}
 
-	return nil
+	r := chi.NewRouter()
+	server := newRouter(PackageName, Version)
+	r.Mount(server.PackagePath, server.Routes())
+
+	return r, nil
 }
