@@ -1,4 +1,4 @@
-package db
+package josefina
 
 type Detail struct {
 	From            *From             `json:"from"`

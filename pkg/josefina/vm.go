@@ -1,4 +1,4 @@
-package db
+package josefina
 
 import (
 	"github.com/cgalvisleon/et/et"

@@ -1,4 +1,4 @@
-package db
+package josefina
 
 /**
 * defineKeyField: Defines the key field

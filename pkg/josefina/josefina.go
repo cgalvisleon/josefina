@@ -1,12 +1,33 @@
-package db
+package josefina
 
 import (
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
+
+var tennant *Tennant
+
+/**
+* Init: Initializes the josefina
+* @return error
+**/
+
+func Init() error {
+	path := envar.GetStr("TENNANT_PATH_DATA", "/data")
+	name := envar.GetStr("TENNANT_NAME", "josefina")
+
+	var err error
+	tennant, err = newTennant(path, name)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 /**
 * NewDatabase: Creates a new database

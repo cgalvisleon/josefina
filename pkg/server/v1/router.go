@@ -1,4 +1,4 @@
-package server
+package v1
 
 import (
 	"context"
@@ -12,21 +12,20 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const (
-	Version     = "1.0.0"
-	PackageName = "josefina"
-)
-
 type Router struct {
 	ctx         context.Context
+	Version     string
+	PackageName string
 	PackagePath string
 	Hostname    string
 }
 
-func NewRouter() *Router {
+func NewRouter(name, version string) *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
+		Version:     version,
+		PackageName: name,
 		PackagePath: envar.GetStr("PATH_URL", "/api/josefina"),
 		Hostname:    hostname,
 	}
@@ -41,8 +40,8 @@ func (s *Router) Routes() http.Handler {
 	host = strs.Format("%s:%d", host, envar.GetInt("PORT", 3300))
 
 	r := chi.NewRouter()
-	router.Public(r, router.Get, "/version", s.version, PackageName, s.PackagePath, host)
+	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 
-	middleware.SetServiceName(PackageName)
+	middleware.SetServiceName(s.PackageName)
 	return r
 }

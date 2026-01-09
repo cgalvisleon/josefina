@@ -1,4 +1,4 @@
-package server
+package v1
 
 import (
 	"net/http"
@@ -14,8 +14,8 @@ import (
 **/
 func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 	version := et.Json{
-		"service": PackageName,
-		"version": Version,
+		"service": s.PackageName,
+		"version": s.Version,
 		"host":    s.Hostname,
 		"company": "",
 		"web":     "",

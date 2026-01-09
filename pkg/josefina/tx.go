@@ -1,4 +1,4 @@
-package db
+package josefina
 
 type Tx struct {
 	Database string `json:"database"`

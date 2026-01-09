@@ -1,4 +1,4 @@
-package db
+package josefina
 
 type Relation struct {
 	Key    string `json:"key"`
