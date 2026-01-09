@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,18 +18,6 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
-
-type Store interface {
-	Put(id string, value any) (string, error)
-	Get(id string, dest any) error
-	Delete(id string) (bool, error)
-	Iterate(fn func(id string, data []byte) error, workers int) error
-	Close() error
-	Prune() error
-	CreateSnapshot() error
-	Compact() error
-	ToJson() et.Json
-}
 
 const (
 	packageName     = "store"
@@ -142,8 +129,6 @@ func (s *FileStore) Close() {
 	if s.active != nil {
 		s.active.Close()
 	}
-
-	s.save()
 }
 
 /**
@@ -169,88 +154,6 @@ func (s *FileStore) UseMemory() float64 {
 	}
 
 	return result / 1024 / 1024 // devolver en MB
-}
-
-/**
-* Save
-* Save the current state of the store
-* @return error
- */
-func (s *FileStore) save() error {
-	src, err := s.serialize()
-	if err != nil {
-		return err
-	}
-
-	path := filepath.Join(s.Path, "metadata.dat")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, uint32(len(src)))
-
-	_, err = f.Write(buf)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(src)
-	if err != nil {
-		return err
-	}
-
-	err = f.Sync()
-	if err != nil {
-		return err
-	}
-
-	if s.IsDebug {
-		logs.Log(packageName, "saved:metadata:", path)
-	}
-
-	return nil
-}
-
-/**
-* load
-* Load the store state from disk
-* @return bool, error
- */
-func (s *FileStore) load() (bool, error) {
-	path := filepath.Join(s.Path, "metadata.dat")
-	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	defer f.Close()
-
-	// Read the length prefix
-	buf := make([]byte, 4)
-	_, err = f.Read(buf)
-	if err != nil {
-		return false, err
-	}
-
-	length := binary.BigEndian.Uint32(buf)
-	data := make([]byte, length)
-
-	_, err = f.Read(data)
-	if err != nil {
-		return false, err
-	}
-
-	err = json.Unmarshal(data, s)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 /**
@@ -652,7 +555,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	wg.Wait()
 	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, s.Workers)
 	s.metricEnd(tag, msg)
-	go s.save()
 
 	return nil
 }
@@ -697,29 +599,17 @@ func (s *FileStore) Empty() error {
 * @return *FileStore, error
 **/
 func Open(path, name string, debug bool) (*FileStore, error) {
+	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
+	maxSegmentMG = maxSegmentMG * 1024 * 1024
+	name = utility.Normalize(name)
 	fs := &FileStore{
-		Path: filepath.Join(path),
-	}
-	existed, err := fs.load()
-	if err != nil {
-		return nil, err
-	}
-
-	if !existed {
-		maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
-		maxSegmentMG = maxSegmentMG * 1024 * 1024
-		name = utility.Normalize(name)
-		fs = &FileStore{
-			Name:         name,
-			Path:         filepath.Join(path),
-			PathSegments: filepath.Join(path, name, "segments"),
-			PathSnapshot: filepath.Join(path, name, "snapshot"),
-			PathCompact:  filepath.Join(path, name, "compact"),
-			MaxSegment:   maxSegmentMG,
-			Metrics:      make(map[string]int64),
-		}
-
-		go fs.save()
+		Name:         name,
+		Path:         filepath.Join(path),
+		PathSegments: filepath.Join(path, name, "segments"),
+		PathSnapshot: filepath.Join(path, name, "snapshot"),
+		PathCompact:  filepath.Join(path, name, "compact"),
+		MaxSegment:   maxSegmentMG,
+		Metrics:      make(map[string]int64),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
