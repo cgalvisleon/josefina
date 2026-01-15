@@ -1,9 +1,11 @@
 package josefina
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -140,40 +142,58 @@ func (s *Model) init() error {
 
 /**
 * save: Saves the model
+* @param data et.Json
 * @return error
 **/
-func (s *Model) save() error {
+func (s *Model) save(data et.Json) error {
 	return nil
+}
+
+/**
+* count: Counts the model
+* @return int, error
+**/
+func (s *Model) count() (int, error) {
+	source, ok := s.data[INDEX]
+	if !ok {
+		return 0, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	}
+
+	return source.Count(), nil
 }
 
 /**
 * insert: Inserts the model
-* @return error
+* @param data et.Json
+* @return et.Items, error
 **/
-func (s *Model) insert(data et.Json) error {
-	return nil
+func (s *Model) insert(data et.Json) (et.Items, error) {
+	return et.Items{}, nil
 }
 
 /**
 * update: Updates the model
-* @return error
+* @param data et.Json, where et.Json
+* @return et.Items, error
 **/
-func (s *Model) update(data et.Json) error {
-	return nil
+func (s *Model) update(data et.Json, where et.Json) (et.Items, error) {
+	return et.Items{}, nil
 }
 
 /**
 * delete: Deletes the model
-* @return error
+* @param where et.Json
+* @return et.Items, error
 **/
-func (s *Model) delete(data et.Json) error {
-	return nil
+func (s *Model) delete(where et.Json) (et.Items, error) {
+	return et.Items{}, nil
 }
 
 /**
 * selects: Selects the model
-* @return error
+* @param query et.Json
+* @return et.Items, error
 **/
-func (s *Model) selects(data et.Json) error {
-	return nil
+func (s *Model) selects(query et.Json) (et.Items, error) {
+	return et.Items{}, nil
 }

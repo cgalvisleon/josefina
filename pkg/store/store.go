@@ -141,6 +141,14 @@ func (s *FileStore) Debug() {
 }
 
 /**
+* Count
+* @return int
+**/
+func (s *FileStore) Count() int {
+	return len(s.index)
+}
+
+/**
 * loadSegments
 * @return error
 **/

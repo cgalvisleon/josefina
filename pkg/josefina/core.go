@@ -1,5 +1,10 @@
 package josefina
 
+import (
+	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/et"
+)
+
 var (
 	users      *Model
 	series     *Model
@@ -54,6 +59,13 @@ func initUsers(db *DB) error {
 	if err := users.init(); err != nil {
 		return err
 	}
+
+	useranme := envar.GetStr("USERNAME", "admin")
+	password := envar.GetStr("PASSWORD", "admin")
+	users.insert(et.Json{
+		"username": useranme,
+		"password": password,
+	})
 
 	return nil
 }
