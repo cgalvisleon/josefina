@@ -6,6 +6,7 @@ import (
 	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type Schema struct {
@@ -58,7 +59,8 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		Version:       version,
 		IsCore:        isCore,
 		db:            s.db,
-		triggers:      make(map[string]*Vm),
+		data:          make(map[string]*store.FileStore, 0),
+		triggers:      make(map[string]*Vm, 0),
 	}
 	result.defineIndexField()
 	s.Models[name] = result

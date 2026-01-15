@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
@@ -140,7 +141,9 @@ func (s *Model) getPath() (string, error) {
 		return "", errors.New(msg.MSG_DB_NOT_FOUND)
 	}
 
-	return fmt.Sprintf("%s/%s", s.db.Path, s.Schema), nil
+	result := strs.Append(s.db.Path, s.Schema, "/")
+	result = fmt.Sprintf("%s/%s", result, s.Name)
+	return result, nil
 }
 
 /**

@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
-	"sync/atomic"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
@@ -388,7 +387,6 @@ func (s *FileStore) RebuildIndexes() error {
 * @return string, error
 **/
 func (s *FileStore) Put(id string, value any) (string, error) {
-	atomic.AddUint64(storeCallsMap["put"], 1)
 	tag := "put"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
@@ -431,7 +429,6 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 * @return bool, error
 **/
 func (s *FileStore) Delete(id string) (bool, error) {
-	atomic.AddUint64(storeCallsMap["delete"], 1)
 	tag := "delete"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
@@ -469,8 +466,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 * @return bool
 **/
 func (s *FileStore) IsExist(id string) bool {
-	atomic.AddUint64(storeCallsMap["exits"], 1)
-	tag := "get"
+	tag := "isExist"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
@@ -487,7 +483,6 @@ func (s *FileStore) IsExist(id string) bool {
 * @return bool, error
 **/
 func (s *FileStore) Get(id string, dest any) (bool, error) {
-	atomic.AddUint64(storeCallsMap["get"], 1)
 	tag := "get"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
@@ -652,6 +647,5 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 	}
 
 	fs.metricEnd(tag, fmt.Sprintf("total:%d:completed", len(fs.index)))
-	go fs.logMetrics()
 	return fs, nil
 }

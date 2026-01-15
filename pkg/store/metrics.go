@@ -2,11 +2,8 @@ package store
 
 import (
 	"fmt"
-	"sync/atomic"
-	"time"
 
 	"github.com/cgalvisleon/et/iterate"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/strs"
 )
 
@@ -14,22 +11,6 @@ var storeCallsMap = map[string]*uint64{
 	"put":    new(uint64),
 	"get":    new(uint64),
 	"delete": new(uint64),
-}
-
-func (s *FileStore) logMetrics() {
-	t := time.NewTicker(time.Second)
-	defer t.Stop()
-
-	for range t.C {
-		for tag, ptr := range storeCallsMap {
-			calls := atomic.SwapUint64(ptr, 0)
-			s.Metrics[tag] = int64(calls)
-			if s.IsDebug {
-				path := strs.ReplaceAll(s.Path, []string{"/"}, ":")
-				logs.Logf("metrics", "path:%s:model:%s:tag:%s:calls:%d:per/sec", path, s.Name, tag, calls)
-			}
-		}
-	}
 }
 
 /**
