@@ -21,6 +21,7 @@ var (
 	MSG_TENNANT_NOT_FOUND      = "tennant not found"
 	MSG_INDEX_NOT_FOUND        = "index not found"
 	MSG_RECORD_EXISTS          = "record exists"
+	MSG_RECORD_NOT_FOUND       = "record not found"
 )
 
 func init() {
@@ -45,5 +46,6 @@ func init() {
 		MSG_TENNANT_NOT_FOUND = "tennant no encontrado"
 		MSG_INDEX_NOT_FOUND = "index no encontrado"
 		MSG_RECORD_EXISTS = "record exists"
+		MSG_RECORD_NOT_FOUND = "record no encontrado"
 	}
 }

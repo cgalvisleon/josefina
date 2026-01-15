@@ -1,12 +1,17 @@
 package josefina
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
+)
+
+var (
+	errorRecordNotFound = errors.New(msg.MSG_RECORD_NOT_FOUND)
 )
 
 type From struct {
@@ -255,9 +260,9 @@ func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
 
 		idx, ok := new[INDEX]
 		if !ok {
-			idx = s.getJid()
-			new[INDEX] = idx
+			return result, errorRecordNotFound
 		}
+
 		// Run before update triggers
 		for _, trigger := range s.BeforeUpdates {
 			err := s.runTrigger(trigger, ctx, old, new)
