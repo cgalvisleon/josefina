@@ -186,7 +186,7 @@ func (s *Model) insert(data et.Json) (et.Items, error) {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 		source := s.data[name]
-		key := data[name]
+		key := fmt.Sprintf("%v", data[name])
 		if source.IsExist(key) {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
