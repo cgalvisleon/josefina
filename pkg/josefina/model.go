@@ -253,14 +253,16 @@ func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
 	}
 
 	for _, old := range selects.Result {
+		// Get index
+		idx, ok := old[INDEX]
+		if !ok {
+			return result, errorRecordNotFound
+		}
+
+		// Update data
 		new := old.Clone()
 		for k, v := range data {
 			new[k] = v
-		}
-
-		idx, ok := new[INDEX]
-		if !ok {
-			return result, errorRecordNotFound
 		}
 
 		// Run before update triggers
@@ -295,6 +297,7 @@ func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
 
 		result.Add(new)
 	}
+
 	return result, nil
 }
 
@@ -304,7 +307,52 @@ func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
-	return et.Items{}, nil
+	result := et.Items{}
+	selects, err := s.selects(ctx, where)
+	if err != nil {
+		return result, err
+	}
+
+	for _, old := range selects.Result {
+		// Get index
+		_, ok := old[INDEX]
+		if !ok {
+			return result, errorRecordNotFound
+		}
+
+		// Delete data
+		new := et.Json{}
+
+		// Run before delete triggers
+		for _, trigger := range s.BeforeDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		// Delete data from indexes
+		for _, name := range s.Indexes {
+			source := s.data[name]
+			key := fmt.Sprintf("%v", new[name])
+			if key == "" {
+				continue
+			}
+			source.Delete(key)
+		}
+
+		// Run after delete triggers
+		for _, trigger := range s.AfterDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		result.Add(new)
+	}
+
+	return result, nil
 }
 
 /**
