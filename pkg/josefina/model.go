@@ -137,6 +137,14 @@ func (s *From) getField(name string) *Field {
 	}
 }
 
+/**
+* getJid: Gets the jid
+* @return string
+**/
+func (s *From) getJid() string {
+	return reg.GenULID(s.Name)
+}
+
 type Model struct {
 	*From         `json:"from"`
 	Indexes       []string                    `json:"indexes"`
@@ -227,12 +235,4 @@ func (s *Model) count() int {
 	}
 
 	return data.Count()
-}
-
-/**
-* getJid: Gets the jid
-* @return string
-**/
-func (s *Model) getJid() string {
-	return reg.GenULID(s.Name)
 }

@@ -17,7 +17,7 @@ const (
 )
 
 type Cmd struct {
-	*Model
+	model         *Model     `json:"-"`
 	command       Command    `json:"-"`
 	beforeInserts []*Trigger `json:"-"`
 	beforeUpdates []*Trigger `json:"-"`
@@ -33,8 +33,8 @@ type Cmd struct {
 * @return *Cmd
 **/
 func newCmd(model *Model, command Command) *Cmd {
-	return &Cmd{
-		Model:         model,
+	result := &Cmd{
+		model:         model,
 		command:       command,
 		beforeInserts: make([]*Trigger, 0),
 		beforeUpdates: make([]*Trigger, 0),
@@ -43,6 +43,26 @@ func newCmd(model *Model, command Command) *Cmd {
 		afterUpdates:  make([]*Trigger, 0),
 		afterDeletes:  make([]*Trigger, 0),
 	}
+	for _, trigger := range model.BeforeInserts {
+		result.beforeInserts = append(result.beforeInserts, trigger)
+	}
+	for _, trigger := range model.AfterInserts {
+		result.afterInserts = append(result.afterInserts, trigger)
+	}
+	for _, trigger := range model.BeforeUpdates {
+		result.beforeUpdates = append(result.beforeUpdates, trigger)
+	}
+	for _, trigger := range model.AfterUpdates {
+		result.afterUpdates = append(result.afterUpdates, trigger)
+	}
+	for _, trigger := range model.BeforeDeletes {
+		result.beforeDeletes = append(result.beforeDeletes, trigger)
+	}
+	for _, trigger := range model.AfterDeletes {
+		result.afterDeletes = append(result.afterDeletes, trigger)
+	}
+
+	return result
 }
 
 /**
@@ -51,25 +71,26 @@ func newCmd(model *Model, command Command) *Cmd {
 * @return et.Items, error
 **/
 func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
+	model := s.model
 	idx, ok := new[INDEX]
 	if !ok {
-		idx = s.getJid()
+		idx = model.getJid()
 		new[INDEX] = idx
 	}
 
 	// Validate required fields
-	for _, name := range s.Required {
+	for _, name := range model.Required {
 		if _, ok := new[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 	}
 
 	// Validate unique fields
-	for _, name := range s.Unique {
+	for _, name := range model.Unique {
 		if _, ok := new[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
-		source := s.data[name]
+		source := model.data[name]
 		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
 			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
@@ -77,16 +98,16 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	// Run before insert triggers
-	for _, trigger := range s.BeforeInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, new)
+	for _, trigger := range model.BeforeInserts {
+		err := model.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
 	}
 
 	// Insert data into indexes
-	for _, name := range s.Indexes {
-		source := s.data[name]
+	for _, name := range model.Indexes {
+		source := model.data[name]
 		key := fmt.Sprintf("%v", new[name])
 		if key == "" {
 			continue
@@ -99,8 +120,8 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	// Run after insert triggers
-	for _, trigger := range s.AfterInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, new)
+	for _, trigger := range model.AfterInserts {
+		err := model.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
@@ -136,17 +157,20 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 			new[k] = v
 		}
 
+		// Get model
+		model := s.model
+
 		// Run before update triggers
-		for _, trigger := range s.BeforeUpdates {
-			err := s.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range model.BeforeUpdates {
+			err := model.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
 		}
 
 		// Insert data into indexes
-		for _, name := range s.Indexes {
-			source := s.data[name]
+		for _, name := range model.Indexes {
+			source := model.data[name]
 			key := fmt.Sprintf("%v", new[name])
 			if key == "" {
 				continue
@@ -159,8 +183,8 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 		}
 
 		// Run after insert triggers
-		for _, trigger := range s.AfterInserts {
-			err := s.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range model.AfterInserts {
+			err := model.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
@@ -194,17 +218,20 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 		// Delete data
 		new := et.Json{}
 
+		// Get model
+		model := s.model
+
 		// Run before delete triggers
-		for _, trigger := range s.BeforeDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range model.BeforeDeletes {
+			err := model.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
 		}
 
 		// Delete data from indexes
-		for _, name := range s.Indexes {
-			source := s.data[name]
+		for _, name := range model.Indexes {
+			source := model.data[name]
 			key := fmt.Sprintf("%v", new[name])
 			if key == "" {
 				continue
@@ -213,8 +240,8 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 		}
 
 		// Run after delete triggers
-		for _, trigger := range s.AfterDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range model.AfterDeletes {
+			err := model.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
@@ -232,10 +259,11 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
+	model := s.model
+	where := newWhere(model.From)
 	exists := true
-	where := newWhere(s.From)
-	for _, name := range s.PrimaryKeys {
-		source, ok := s.data[name]
+	for _, name := range model.PrimaryKeys {
+		source, ok := model.data[name]
 		if !ok {
 			return et.Items{}, errorPrimaryKeysNotFound
 		}
