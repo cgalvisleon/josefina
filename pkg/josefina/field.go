@@ -1,7 +1,6 @@
 package josefina
 
 const (
-	SOURCE     string = "source"
 	KEY        string = "id"
 	INDEX      string = "index"
 	STATUS     string = "status"
