@@ -87,7 +87,6 @@ func (s *Model) defineHidden(names ...string) {
 		idx := slices.Index(s.Hidden, name)
 		if idx == -1 {
 			s.Hidden = append(s.Hidden, name)
-			s.defineIndexes(name)
 		}
 	}
 }
