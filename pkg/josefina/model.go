@@ -171,19 +171,22 @@ func (s *Model) getJid() string {
 
 /**
 * insert: Inserts the model
-* @param data et.Json
+* @param ctx *Tx, data et.Json
 * @return et.Items, error
 **/
-func (s *Model) insert(data et.Json) (et.Items, error) {
-	_, ok := data[INDEX]
+func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
+	idx, ok := data[INDEX]
 	if !ok {
-		data[INDEX] = s.getJid()
+		idx = s.getJid()
+		data[INDEX] = idx
 	}
+
 	for _, name := range s.Required {
 		if _, ok := data[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 	}
+
 	for _, name := range s.Unique {
 		if _, ok := data[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
@@ -192,6 +195,33 @@ func (s *Model) insert(data et.Json) (et.Items, error) {
 		key := fmt.Sprintf("%v", data[name])
 		if source.IsExist(key) {
 			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
+		}
+	}
+
+	for _, trigger := range s.BeforeInserts {
+		err := s.runTrigger(trigger, ctx, et.Json{}, data)
+		if err != nil {
+			return et.Items{}, err
+		}
+	}
+
+	for _, name := range s.Indexes {
+		source := s.data[name]
+		key := fmt.Sprintf("%v", data[name])
+		if key == "" {
+			continue
+		}
+		if name == INDEX {
+			source.Put(key, data)
+		} else {
+			source.Put(key, idx)
+		}
+	}
+
+	for _, trigger := range s.AfterInserts {
+		err := s.runTrigger(trigger, ctx, et.Json{}, data)
+		if err != nil {
+			return et.Items{}, err
 		}
 	}
 
