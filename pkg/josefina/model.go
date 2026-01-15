@@ -92,14 +92,8 @@ type Model struct {
 	IsDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
-	vm            *Vm                         `json:"-"`
 	data          map[string]*store.FileStore `json:"-"`
-	beforeInserts []TriggerFunction           `json:"-"`
-	beforeUpdates []TriggerFunction           `json:"-"`
-	beforeDeletes []TriggerFunction           `json:"-"`
-	afterInserts  []TriggerFunction           `json:"-"`
-	afterUpdates  []TriggerFunction           `json:"-"`
-	afterDeletes  []TriggerFunction           `json:"-"`
+	triggers      map[string]*Vm              `json:"-"`
 }
 
 /**
@@ -141,7 +135,6 @@ func (s *Model) init() error {
 		s.data[name] = fStore
 	}
 
-	s.vm = newVm()
 	s.isInit = true
 	return nil
 }
