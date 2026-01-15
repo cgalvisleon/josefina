@@ -26,7 +26,6 @@ func newVm() *Vm {
 	wrapperToString(result)
 	wrapperModel(result)
 	wrapperSelect(result)
-	wrapperQuery(result)
 	return result
 }
 

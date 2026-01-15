@@ -106,12 +106,3 @@ func Upsert(model string, data et.Json, where et.Json) (et.Items, error) {
 func Define(define et.Json) (et.Items, error) {
 	return et.Items{}, nil
 }
-
-/**
-* Query: Returns a records that complies with the query
-* @param query et.Json
-* @return et.Items, error
-**/
-func Query(query et.Json) (et.Items, error) {
-	return et.Items{}, nil
-}
