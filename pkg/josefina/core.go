@@ -60,7 +60,9 @@ func initTransactions(db *DB) error {
 	if err != nil {
 		return err
 	}
-	if err := series.init(); err != nil {
+	transactions.defineAtrib(KEY, TpKey, "")
+	transactions.definePrimaryKeys(KEY)
+	if err := transactions.init(); err != nil {
 		return err
 	}
 

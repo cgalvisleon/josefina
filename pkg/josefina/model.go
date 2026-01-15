@@ -60,58 +60,6 @@ func (s *From) As() string {
 }
 
 /**
-* getDb: Returns the database
-* @return *DB
-**/
-func (s *From) getDb() (*DB, error) {
-	result, err := GetDB(s.Database)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-/**
-* getSchema: Returns the schema
-* @return *Schema, error
-**/
-func (s *From) getSchema() (*Schema, error) {
-	db, err := s.getDb()
-	if err != nil {
-		return nil, err
-	}
-
-	return db.getSchema(s.Schema), nil
-}
-
-/**
-* getModel: Returns the model
-* @return *Model, error
-**/
-func (s *From) getModel() (*Model, error) {
-	schema, err := s.getSchema()
-	if err != nil {
-		return nil, err
-	}
-
-	return schema.getModel(s.Name)
-}
-
-/**
-* getPath: Returns the path
-* @return string, error
-**/
-func (s *From) getPath() (string, error) {
-	db, err := s.getDb()
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s/%s", db.Path, s.Schema), nil
-}
-
-/**
 * getField
 * @param name string
 * @return *Field
@@ -184,6 +132,18 @@ func (s *Model) prepared() error {
 }
 
 /**
+* getPath: Returns the path
+* @return string, error
+**/
+func (s *Model) getPath() (string, error) {
+	if s.db == nil {
+		return "", errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	return fmt.Sprintf("%s/%s", s.db.Path, s.Schema), nil
+}
+
+/**
 * init: Initializes the model
 * @return error
 **/
@@ -221,6 +181,14 @@ func (s *Model) init() error {
 **/
 func (s *Model) save(data et.Json) error {
 	return nil
+}
+
+/**
+* Stricted: Sets the model to strict
+* @return void
+**/
+func (s *Model) Stricted() {
+	s.IsStrict = true
 }
 
 /**
