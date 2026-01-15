@@ -92,8 +92,14 @@ type Model struct {
 	IsDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
-	data          map[string]*store.FileStore `json:"-"`
 	vm            *Vm                         `json:"-"`
+	data          map[string]*store.FileStore `json:"-"`
+	beforeInserts []TriggerFunction           `json:"-"`
+	beforeUpdates []TriggerFunction           `json:"-"`
+	beforeDeletes []TriggerFunction           `json:"-"`
+	afterInserts  []TriggerFunction           `json:"-"`
+	afterUpdates  []TriggerFunction           `json:"-"`
+	afterDeletes  []TriggerFunction           `json:"-"`
 }
 
 /**
@@ -176,6 +182,10 @@ func (s *Model) getJid() string {
 * @return et.Items, error
 **/
 func (s *Model) insert(data et.Json) (et.Items, error) {
+	_, ok := data[INDEX]
+	if !ok {
+		data[INDEX] = s.getJid()
+	}
 	for _, name := range s.Required {
 		if _, ok := data[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
@@ -191,8 +201,10 @@ func (s *Model) insert(data et.Json) (et.Items, error) {
 			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
 		}
 	}
-	data[INDEX] = s.getJid()
-	return et.Items{}, nil
+
+	result := et.Items{}
+	result.Add(data)
+	return result, nil
 }
 
 /**

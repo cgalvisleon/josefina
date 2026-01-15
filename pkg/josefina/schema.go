@@ -56,8 +56,19 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		Version:       version,
 		IsCore:        isCore,
 		db:            s.db,
+		beforeInserts: make([]TriggerFunction, 0),
+		beforeUpdates: make([]TriggerFunction, 0),
+		beforeDeletes: make([]TriggerFunction, 0),
+		afterInserts:  make([]TriggerFunction, 0),
+		afterUpdates:  make([]TriggerFunction, 0),
+		afterDeletes:  make([]TriggerFunction, 0),
 	}
-
+	result.addBeforeInsert("defaultBeforeInsert", defaultBeforeInsert)
+	result.addBeforeUpdate("defaultBeforeUpdate", defaultBeforeUpdate)
+	result.addBeforeDelete("defaultBeforeDelete", defaultBeforeDelete)
+	result.addAfterInsert("defaultAfterInsert", defaultAfterInsert)
+	result.addAfterUpdate("defaultAfterUpdate", defaultAfterUpdate)
+	result.addAfterDelete("defaultAfterDelete", defaultAfterDelete)
 	s.Models[name] = result
 	name = strs.Append(s.Name, name, ".")
 	s.db.Models[name] = result
