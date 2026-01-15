@@ -1,6 +1,13 @@
 package josefina
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
 
 /**
 * existsField: Checks if the field exists
@@ -15,12 +22,16 @@ func (s *Model) existsField(name string) bool {
 /**
 * defineFields: Defines the fields
 * @param name string, tpField TypeField, tpData TypeData, defaultValue interface{}
-* @return *Field
+* @return *Field, error
 **/
-func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) *Field {
+func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, name)
+	}
+
 	result, ok := s.Fields[name]
 	if ok {
-		return result
+		return result, nil
 	}
 
 	result = &Field{
@@ -33,7 +44,7 @@ func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, de
 	}
 	s.Fields[name] = result
 
-	return result
+	return result, nil
 }
 
 /**
@@ -122,11 +133,36 @@ func (s *Model) definePrimaryKeys(names ...string) {
 
 /**
 * defineIndexField: Defines the index field
-* @return *Field
+* @return *Field, error
 **/
-func (s *Model) defineIndexField() *Field {
-	result := s.defineFields(INDEX, TpAtrib, TpKey, "")
-	s.definePrimaryKeys(INDEX)
+func (s *Model) defineIndexField() (*Field, error) {
+	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
+	if err != nil {
+		return nil, err
+	}
 	s.defineHidden(INDEX)
-	return result
+	return result, nil
+}
+
+/**
+* defineAtrib: Defines the field
+* @param name string, tpData TypeData, defaultValue interface{}
+* @return *Field, error
+**/
+func (s *Model) defineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	return s.defineFields(name, TpAtrib, tpData, defaultValue)
+}
+
+/**
+* defineDetail: Defines the detail
+* @param name string, keys map[string]string, version int
+* @return *Model, error
+**/
+func (s *Model) defineDetail(name string, keys map[string]string, version int) (*Model, error) {
+	_, err := s.defineFields(name, TpDetail, TpAny, []et.Json{})
+	if err != nil {
+		return nil, err
+	}
+
+	to, err := new
 }

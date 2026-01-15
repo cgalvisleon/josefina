@@ -24,20 +24,3 @@ func newDetail(from, to *Model, keys map[string]string, selecs []string, onDelet
 		OnUpdateCascade: onUpdateCascade,
 	}
 }
-
-type Master struct {
-	To   *From             `json:"from"`
-	Keys map[string]string `json:"keys"`
-}
-
-/**
-* newMaster
-* @param to *Model, keys map[string]string
-* @return *Master
-**/
-func newMaster(to *Model, keys map[string]string) *Master {
-	return &Master{
-		To:   to.From,
-		Keys: keys,
-	}
-}

@@ -78,6 +78,7 @@ func initUsers(db *DB) error {
 	if err != nil {
 		return err
 	}
+	users.defineAtrib("username", TpText, "")
 	if err := users.init(); err != nil {
 		return err
 	}

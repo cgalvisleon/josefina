@@ -153,7 +153,7 @@ type Model struct {
 	Required      []string                    `json:"required"`
 	Hidden        []string                    `json:"hidden"`
 	References    []string                    `json:"references"`
-	Master        map[string]*Master          `json:"master"`
+	Master        map[string]*Detail          `json:"master"`
 	Details       map[string]*Detail          `json:"details"`
 	Rollups       map[string]*Detail          `json:"rollups"`
 	Relations     map[string]*Detail          `json:"relations"`
@@ -179,6 +179,7 @@ type Model struct {
 func (s *Model) prepared() error {
 	if len(s.Fields) == 0 {
 		s.defineIndexField()
+		s.definePrimaryKeys(INDEX)
 	}
 
 	return nil
