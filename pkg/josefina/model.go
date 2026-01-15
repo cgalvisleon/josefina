@@ -100,7 +100,7 @@ type Model struct {
 **/
 func (s *Model) prepared() error {
 	if len(s.Fields) == 0 {
-		s.defineKeyField()
+		s.defineIndexField()
 	}
 
 	return nil

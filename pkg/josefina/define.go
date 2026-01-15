@@ -3,6 +3,16 @@ package josefina
 import "slices"
 
 /**
+* existsField: Checks if the field exists
+* @param name string
+* @return bool
+**/
+func (s *Model) existsField(name string) bool {
+	_, ok := s.Fields[name]
+	return ok
+}
+
+/**
 * defineFields: Defines the fields
 * @param name string, tpField TypeField, tpData TypeData, defaultValue interface{}
 * @return *Field
