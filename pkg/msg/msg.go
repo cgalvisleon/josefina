@@ -22,6 +22,7 @@ var (
 	MSG_INDEX_NOT_FOUND        = "index not found"
 	MSG_RECORD_EXISTS          = "record exists"
 	MSG_RECORD_NOT_FOUND       = "record not found"
+	MSG_PRIMARY_KEYS_NOT_FOUND = "primary key not found"
 )
 
 func init() {
@@ -47,5 +48,6 @@ func init() {
 		MSG_INDEX_NOT_FOUND = "index no encontrado"
 		MSG_RECORD_EXISTS = "record exists"
 		MSG_RECORD_NOT_FOUND = "record no encontrado"
+		MSG_PRIMARY_KEYS_NOT_FOUND = "primary key no encontrado"
 	}
 }

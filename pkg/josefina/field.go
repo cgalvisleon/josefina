@@ -1,5 +1,7 @@
 package josefina
 
+import "fmt"
+
 const (
 	KEY        string = "id"
 	INDEX      string = "jid"
@@ -102,4 +104,38 @@ type Field struct {
 	TypeData     TypeData    `json:"type_data"`
 	DefaultValue interface{} `json:"default_value"`
 	Definition   []byte      `json:"definition"`
+	as           string      `json:"-"`
+}
+
+/**
+* clone: Clones the field
+* @return *Field
+**/
+func (s *Field) clone() *Field {
+	return &Field{
+		From:         s.From,
+		Name:         s.Name,
+		TypeField:    s.TypeField,
+		TypeData:     s.TypeData,
+		DefaultValue: s.DefaultValue,
+		Definition:   s.Definition,
+		as:           s.Name,
+	}
+}
+
+/**
+* setAs
+* @param as string
+* @return void
+**/
+func (s *Field) setAs(as string) {
+	s.as = as
+}
+
+/**
+* As
+* @return string
+**/
+func (s *Field) As() string {
+	return fmt.Sprintf("%s.%s", s.From.As(), s.Name)
 }

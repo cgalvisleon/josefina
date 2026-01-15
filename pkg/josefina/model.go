@@ -11,13 +11,48 @@ import (
 )
 
 var (
-	errorRecordNotFound = errors.New(msg.MSG_RECORD_NOT_FOUND)
+	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
+	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 )
 
 type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
+	as       string `json:"-"`
+}
+
+/**
+* clone: Clones the from
+* @return *From
+**/
+func (s *From) clone() *From {
+	return &From{
+		Database: s.Database,
+		Schema:   s.Schema,
+		Name:     s.Name,
+		as:       s.Name,
+	}
+}
+
+/**
+* setAs
+* @param as string
+* @return void
+**/
+func (s *From) setAs(as string) {
+	s.as = as
+}
+
+/**
+* As
+* @return string
+**/
+func (s *From) As() string {
+	if s.Schema == "" {
+		return s.Name
+	}
+	return fmt.Sprintf("%s.%s", s.Schema, s.Name)
 }
 
 /**
@@ -242,12 +277,15 @@ func (s *Model) insert(ctx *Tx, new et.Json) (et.Items, error) {
 
 /**
 * update: Updates the model
-* @param ctx *Tx, data et.Json, where et.Json
+* @param ctx *Tx, data et.Json, where *Wheres
 * @return et.Items, error
 **/
-func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
+func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selects(ctx, where)
+	selects, err := s.selects(ctx, et.Json{
+		"selects": et.Json{},
+		"wheres":  where.ToJson(),
+	})
 	if err != nil {
 		return result, err
 	}
@@ -349,7 +387,7 @@ func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
 			}
 		}
 
-		result.Add(new)
+		result.Add(old)
 	}
 
 	return result, nil
@@ -357,11 +395,33 @@ func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
 
 /**
 * upsert: Upserts the model
-* @param ctx *Tx, data et.Json
-* @return et.Item, error
+* @param ctx *Tx, new et.Json
+* @return et.Items, error
 **/
-func (s *Model) upsert(ctx *Tx, data et.Json) (et.Item, error) {
-	return et.Item{}, nil
+func (s *Model) upsert(ctx *Tx, new et.Json) (et.Items, error) {
+	exists := true
+	where := newWhere(s)
+	for _, name := range s.PrimaryKeys {
+		source, ok := s.data[name]
+		if !ok {
+			return et.Items{}, errorPrimaryKeysNotFound
+		}
+		key := fmt.Sprintf("%v", new[name])
+		if key == "" {
+			return et.Items{}, errorPrimaryKeysNotFound
+		}
+		if !source.IsExist(key) {
+			exists = false
+			break
+		}
+		where.Add(Eq(name, key))
+	}
+
+	if !exists {
+		return s.insert(ctx, new)
+	}
+
+	return s.update(ctx, new, where)
 }
 
 /**
