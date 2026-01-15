@@ -171,30 +171,30 @@ func (s *Model) getJid() string {
 
 /**
 * insert: Inserts the model
-* @param ctx *Tx, data et.Json
+* @param ctx *Tx, new et.Json
 * @return et.Items, error
 **/
-func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
-	idx, ok := data[INDEX]
+func (s *Model) insert(ctx *Tx, new et.Json) (et.Items, error) {
+	idx, ok := new[INDEX]
 	if !ok {
 		idx = s.getJid()
-		data[INDEX] = idx
+		new[INDEX] = idx
 	}
 
 	// Validate required fields
 	for _, name := range s.Required {
-		if _, ok := data[name]; !ok {
+		if _, ok := new[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 	}
 
 	// Validate unique fields
 	for _, name := range s.Unique {
-		if _, ok := data[name]; !ok {
+		if _, ok := new[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 		source := s.data[name]
-		key := fmt.Sprintf("%v", data[name])
+		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
 			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
 		}
@@ -202,7 +202,7 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 
 	// Run before insert triggers
 	for _, trigger := range s.BeforeInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, data)
+		err := s.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
@@ -211,12 +211,12 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 	// Insert data into indexes
 	for _, name := range s.Indexes {
 		source := s.data[name]
-		key := fmt.Sprintf("%v", data[name])
+		key := fmt.Sprintf("%v", new[name])
 		if key == "" {
 			continue
 		}
 		if name == INDEX {
-			source.Put(key, data)
+			source.Put(key, new)
 		} else {
 			source.Put(key, idx)
 		}
@@ -224,14 +224,14 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 
 	// Run after insert triggers
 	for _, trigger := range s.AfterInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, data)
+		err := s.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
 	}
 
 	result := et.Items{}
-	result.Add(data)
+	result.Add(new)
 	return result, nil
 }
 
@@ -241,7 +241,56 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
-	return et.Items{}, nil
+	result := et.Items{}
+	selects, err := s.selects(ctx, where)
+	if err != nil {
+		return result, err
+	}
+
+	for _, old := range selects.Result {
+		new := old.Clone()
+		for k, v := range data {
+			new[k] = v
+		}
+
+		idx, ok := new[INDEX]
+		if !ok {
+			idx = s.getJid()
+			new[INDEX] = idx
+		}
+		// Run before update triggers
+		for _, trigger := range s.BeforeUpdates {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		// Insert data into indexes
+		for _, name := range s.Indexes {
+			source := s.data[name]
+			key := fmt.Sprintf("%v", new[name])
+			if key == "" {
+				continue
+			}
+			if name == INDEX {
+				source.Put(key, new)
+			} else {
+				source.Put(key, idx)
+			}
+		}
+
+		// Run after insert triggers
+		for _, trigger := range s.AfterInserts {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		result.Add(new)
+	}
+	return result, nil
 }
 
 /**
