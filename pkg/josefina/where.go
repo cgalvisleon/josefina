@@ -82,7 +82,7 @@ type Condition struct {
 func (s *Condition) ToJson() et.Json {
 	if s.Connector == NaC {
 		return et.Json{
-			s.Field.AS(): et.Json{
+			s.Field.As(): et.Json{
 				s.Operator.Str(): s.Value,
 			},
 		}
@@ -90,7 +90,7 @@ func (s *Condition) ToJson() et.Json {
 
 	return et.Json{
 		s.Connector.Str(): et.Json{
-			s.Field.AS(): et.Json{
+			s.Field.As(): et.Json{
 				s.Operator.Str(): s.Value,
 			},
 		},
@@ -322,8 +322,8 @@ func OR(condition *Condition) *Condition {
 * Wheres
 **/
 type Wheres struct {
-	Owner      *From        `json:"-"`
-	Conditions []*Condition `json:"conditions"`
+	owner      *From        `json:"-"`
+	conditions []*Condition `json:"-"`
 }
 
 /**
@@ -332,7 +332,7 @@ type Wheres struct {
 **/
 func (s *Wheres) ToJson() []et.Json {
 	result := []et.Json{}
-	for _, condition := range s.Conditions {
+	for _, condition := range s.conditions {
 		result = append(result, condition.ToJson())
 	}
 
@@ -341,13 +341,13 @@ func (s *Wheres) ToJson() []et.Json {
 
 /**
 * newWhere
-* @param owner interface{}
+* @param owner *From
 * @return *Wheres
 **/
-func newWhere(owner interface{}) *Wheres {
+func newWhere(owner *From) *Wheres {
 	return &Wheres{
-		Owner:      owner,
-		Conditions: make([]*Condition, 0),
+		owner:      owner,
+		conditions: make([]*Condition, 0),
 	}
 }
 
@@ -357,18 +357,17 @@ func newWhere(owner interface{}) *Wheres {
 * @return void
 **/
 func (s *Wheres) Add(condition *Condition) {
-	switch v := s.Owner.(type) {
-	case *Cmd:
-		condition.Field = v.Model.FindField(condition.Field.Name)
-	case *Ql:
-		condition.Field = FindField(v.Froms, condition.Field.Name)
+	fld := s.owner.getField(condition.Field.Name)
+	if fld == nil {
+		return
 	}
 
-	if len(s.Conditions) > 0 && condition.Connector == NaC {
+	condition.Field = fld.clone()
+	if len(s.conditions) > 0 && condition.Connector == NaC {
 		condition.Connector = And
 	}
 
-	s.Conditions = append(s.Conditions, condition)
+	s.conditions = append(s.conditions, condition)
 }
 
 /**

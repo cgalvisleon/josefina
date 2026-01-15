@@ -16,10 +16,12 @@ var (
 )
 
 type From struct {
-	Database string `json:"database"`
-	Schema   string `json:"schema"`
-	Name     string `json:"name"`
-	as       string `json:"-"`
+	Database string            `json:"database"`
+	Schema   string            `json:"schema"`
+	Name     string            `json:"name"`
+	Fields   map[string]*Field `json:"fields"`
+	IsStrict bool              `json:"is_strict"`
+	as       string            `json:"-"`
 }
 
 /**
@@ -31,6 +33,8 @@ func (s *From) clone() *From {
 		Database: s.Database,
 		Schema:   s.Schema,
 		Name:     s.Name,
+		Fields:   s.Fields,
+		IsStrict: s.IsStrict,
 		as:       s.Name,
 	}
 }
@@ -107,9 +111,34 @@ func (s *From) getPath() (string, error) {
 	return fmt.Sprintf("%s/%s", db.Path, s.Schema), nil
 }
 
+/**
+* getField
+* @param name string
+* @return *Field
+**/
+func (s *From) getField(name string) *Field {
+	result, ok := s.Fields[name]
+	if ok {
+		return result
+	}
+
+	if s.IsStrict {
+		return nil
+	}
+
+	return &Field{
+		From:         s,
+		Name:         name,
+		TypeField:    TpAtrib,
+		TypeData:     TpAny,
+		DefaultValue: "",
+		Definition:   []byte{},
+		as:           name,
+	}
+}
+
 type Model struct {
 	*From         `json:"from"`
-	Fields        map[string]*Field           `json:"fields"`
 	Indexes       []string                    `json:"indexes"`
 	PrimaryKeys   []string                    `json:"primary_keys"`
 	Unique        []string                    `json:"unique"`
@@ -126,7 +155,6 @@ type Model struct {
 	AfterInserts  []*Trigger                  `json:"after_inserts"`
 	AfterUpdates  []*Trigger                  `json:"after_updates"`
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
-	IsStrict      bool                        `json:"is_strict"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
 	IsDebug       bool                        `json:"-"`
@@ -341,12 +369,15 @@ func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 
 /**
 * delete: Deletes the model
-* @param ctx *Tx, where et.Json
+* @param ctx *Tx, where *Wheres
 * @return et.Items, error
 **/
-func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
+func (s *Model) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selects(ctx, where)
+	selects, err := s.selects(ctx, et.Json{
+		"selects": et.Json{},
+		"wheres":  where.ToJson(),
+	})
 	if err != nil {
 		return result, err
 	}
@@ -400,7 +431,7 @@ func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
 **/
 func (s *Model) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 	exists := true
-	where := newWhere(s)
+	where := newWhere(s.From)
 	for _, name := range s.PrimaryKeys {
 		source, ok := s.data[name]
 		if !ok {
