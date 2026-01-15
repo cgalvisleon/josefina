@@ -152,12 +152,12 @@ func (s *Model) save(data et.Json) error {
 * @return int
 **/
 func (s *Model) count() int {
-	source, ok := s.data[INDEX]
+	data, ok := s.data[INDEX]
 	if !ok {
 		return 0
 	}
 
-	return source.Count()
+	return data.Count()
 }
 
 /**
