@@ -310,10 +310,7 @@ func (s *Model) insert(ctx *Tx, new et.Json) (et.Items, error) {
 **/
 func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selects(ctx, et.Json{
-		"selects": et.Json{},
-		"wheres":  where.ToJson(),
-	})
+	selects, err := s.selectByWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -374,10 +371,7 @@ func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 **/
 func (s *Model) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selects(ctx, et.Json{
-		"selects": et.Json{},
-		"wheres":  where.ToJson(),
-	})
+	selects, err := s.selectByWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -441,11 +435,11 @@ func (s *Model) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 		if key == "" {
 			return et.Items{}, errorPrimaryKeysNotFound
 		}
+		where.Add(Eq(name, key))
 		if !source.IsExist(key) {
 			exists = false
 			break
 		}
-		where.Add(Eq(name, key))
 	}
 
 	if !exists {
@@ -456,10 +450,10 @@ func (s *Model) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 }
 
 /**
-* selects: Selects the model
-* @param ctx *Tx, query et.Json
+* selectByWhere: Selects the model by where
+* @param ctx *Tx, where *Wheres
 * @return et.Items, error
 **/
-func (s *Model) selects(ctx *Tx, query et.Json) (et.Items, error) {
+func (s *Model) selectByWhere(ctx *Tx, where *Wheres) (et.Items, error) {
 	return et.Items{}, nil
 }
