@@ -5,6 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -175,6 +176,21 @@ func (s *Model) getJid() string {
 * @return et.Items, error
 **/
 func (s *Model) insert(data et.Json) (et.Items, error) {
+	for _, name := range s.Required {
+		if _, ok := data[name]; !ok {
+			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+		}
+	}
+	for _, name := range s.Unique {
+		if _, ok := data[name]; !ok {
+			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+		}
+		source := s.data[name]
+		key := data[name]
+		if source.IsExist(key) {
+			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+		}
+	}
 	data[INDEX] = s.getJid()
 	return et.Items{}, nil
 }

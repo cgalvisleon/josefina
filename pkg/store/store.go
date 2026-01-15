@@ -464,6 +464,24 @@ func (s *FileStore) Delete(id string) (bool, error) {
 }
 
 /**
+* IsExist
+* @param id string
+* @return bool
+**/
+func (s *FileStore) IsExist(id string) bool {
+	atomic.AddUint64(storeCallsMap["exits"], 1)
+	tag := "get"
+	s.metricStart(tag)
+	defer s.metricEnd(tag, "completed")
+
+	s.indexMu.RLock()
+	_, existed := s.index[id]
+	s.indexMu.RUnlock()
+
+	return existed
+}
+
+/**
 * Get
 * @param id string, dest any
 * @return bool, error
