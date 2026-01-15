@@ -35,12 +35,33 @@ func newVm() *Vm {
 * @param script string
 * @return goja.Value, error
 **/
-func (v *Vm) Run(script string) (goja.Value, error) {
+func (s *Vm) Run(script string) (goja.Value, error) {
 	if script == "" {
 		return nil, nil
 	}
 
-	result, err := v.RunString(script)
+	result, err := s.RunString(script)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/**
+* RunTrigger
+* @param script string, old et.Json, new et.Json
+* @return goja.Value, error
+**/
+func (s *Vm) RunTrigger(script string, old, new et.Json) (goja.Value, error) {
+	if script == "" {
+		return nil, nil
+	}
+
+	s.Set("old", old)
+	s.Set("new", new)
+
+	result, err := s.RunString(script)
 	if err != nil {
 		return nil, err
 	}
