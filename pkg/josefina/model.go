@@ -3,6 +3,7 @@ package josefina
 import (
 	"fmt"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -134,5 +135,45 @@ func (s *Model) init() error {
 
 	s.vm = newVm()
 	s.isInit = true
+	return nil
+}
+
+/**
+* save: Saves the model
+* @return error
+**/
+func (s *Model) save() error {
+	return nil
+}
+
+/**
+* insert: Inserts the model
+* @return error
+**/
+func (s *Model) insert(data et.Json) error {
+	return nil
+}
+
+/**
+* update: Updates the model
+* @return error
+**/
+func (s *Model) update(data et.Json) error {
+	return nil
+}
+
+/**
+* delete: Deletes the model
+* @return error
+**/
+func (s *Model) delete(data et.Json) error {
+	return nil
+}
+
+/**
+* selects: Selects the model
+* @return error
+**/
+func (s *Model) selects(data et.Json) error {
 	return nil
 }
