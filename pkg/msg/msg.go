@@ -20,6 +20,7 @@ var (
 	MSG_FIELD_REQUIRED         = "field required (%s)"
 	MSG_TENNANT_NOT_FOUND      = "tennant not found"
 	MSG_INDEX_NOT_FOUND        = "index not found"
+	MSG_RECORD_EXISTS          = "record exists"
 )
 
 func init() {
@@ -43,5 +44,6 @@ func init() {
 		MSG_FIELD_REQUIRED = "field requerido (%s)"
 		MSG_TENNANT_NOT_FOUND = "tennant no encontrado"
 		MSG_INDEX_NOT_FOUND = "index no encontrado"
+		MSG_RECORD_EXISTS = "record exists"
 	}
 }

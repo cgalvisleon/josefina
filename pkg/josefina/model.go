@@ -188,7 +188,7 @@ func (s *Model) insert(data et.Json) (et.Items, error) {
 		source := s.data[name]
 		key := fmt.Sprintf("%v", data[name])
 		if source.IsExist(key) {
-			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
 		}
 	}
 	data[INDEX] = s.getJid()
