@@ -1,6 +1,9 @@
 package josefina
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
@@ -13,10 +16,13 @@ var tennant *Tennant
 **/
 
 func Init(version string) error {
-	path := envar.GetStr("TENNANT_PATH_DATA", "/data")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	defaultPath := fmt.Sprintf(`%s/%s`, cwd, "data")
+	path := envar.GetStr("TENNANT_PATH_DATA", defaultPath)
 	name := envar.GetStr("TENNANT_NAME", "josefina")
-
-	var err error
 	tennant, err = loadTennant(path, name, version)
 	if err != nil {
 		return err
