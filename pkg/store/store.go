@@ -424,6 +424,56 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 }
 
 /**
+* PutIndex
+* @param id string, key string
+* @return string, error
+**/
+func (s *FileStore) PutIndex(id string, key any) (string, error) {
+	result := map[string]bool{}
+	_, err := s.Get(id, result)
+	if err != nil {
+		return id, err
+	}
+
+	st := fmt.Sprintf("%v", key)
+	result[st] = true
+	s.Put(id, result)
+
+	return id, nil
+}
+
+/**
+* DeleteIndex
+* @param id string, key string
+* @return bool, error
+**/
+func (s *FileStore) DeleteIndex(id string, key any) (bool, error) {
+	result := map[string]bool{}
+	exists, err := s.Get(id, result)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	st := fmt.Sprintf("%v", key)
+	if _, ok := result[st]; !ok {
+		return false, nil
+	}
+
+	delete(result, st)
+	if len(result) == 0 {
+		s.Delete(id)
+		return true, nil
+	}
+
+	s.Put(id, result)
+	return true, nil
+}
+
+/**
 * Delete
 * @param id string
 * @return bool, error

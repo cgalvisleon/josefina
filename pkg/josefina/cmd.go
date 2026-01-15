@@ -141,7 +141,7 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 		if name == INDEX {
 			source.Put(key, new)
 		} else {
-			source.Put(key, idx)
+			source.PutIndex(key, idx)
 		}
 	}
 
@@ -204,7 +204,7 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 			if name == INDEX {
 				source.Put(key, new)
 			} else {
-				source.Put(key, idx)
+				source.PutIndex(key, idx)
 			}
 		}
 
@@ -236,7 +236,7 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 
 	for _, old := range selects.Result {
 		// Get index
-		_, ok := old[INDEX]
+		idx, ok := old[INDEX]
 		if !ok {
 			return result, errorRecordNotFound
 		}
@@ -262,7 +262,11 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 			if key == "" {
 				continue
 			}
-			source.Delete(key)
+			if name == INDEX {
+				source.Delete(key)
+			} else {
+				source.DeleteIndex(key, idx)
+			}
 		}
 
 		// Run after delete triggers
