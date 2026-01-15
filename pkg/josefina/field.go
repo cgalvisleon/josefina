@@ -2,7 +2,7 @@ package josefina
 
 const (
 	KEY        string = "id"
-	INDEX      string = "idx"
+	INDEX      string = "jid"
 	STATUS     string = "status"
 	VERSION    string = "version"
 	PROJECT_ID string = "project_id"
