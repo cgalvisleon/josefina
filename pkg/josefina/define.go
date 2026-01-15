@@ -40,19 +40,6 @@ func (s *Model) defineIndexes(names ...string) {
 }
 
 /**
-* definePrimaryKeys: Defines the primary keys
-* @param names ...string
-**/
-func (s *Model) definePrimaryKeys(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.PrimaryKeys, name)
-		if idx == -1 {
-			s.PrimaryKeys = append(s.PrimaryKeys, name)
-		}
-	}
-}
-
-/**
 * defineUniques: Defines the uniques
 * @param names ...string
 **/
@@ -61,6 +48,7 @@ func (s *Model) defineUniques(names ...string) {
 		idx := slices.Index(s.Unique, name)
 		if idx == -1 {
 			s.Unique = append(s.Unique, name)
+			s.defineIndexes(name)
 		}
 	}
 }
@@ -74,6 +62,7 @@ func (s *Model) defineRequireds(names ...string) {
 		idx := slices.Index(s.Required, name)
 		if idx == -1 {
 			s.Required = append(s.Required, name)
+			s.defineIndexes(name)
 		}
 	}
 }
@@ -87,6 +76,7 @@ func (s *Model) defineHidden(names ...string) {
 		idx := slices.Index(s.Hidden, name)
 		if idx == -1 {
 			s.Hidden = append(s.Hidden, name)
+			s.defineIndexes(name)
 		}
 	}
 }
@@ -100,6 +90,22 @@ func (s *Model) defineReferences(names ...string) {
 		idx := slices.Index(s.References, name)
 		if idx == -1 {
 			s.References = append(s.References, name)
+			s.defineIndexes(name)
+		}
+	}
+}
+
+/**
+* definePrimaryKeys: Defines the primary keys
+* @param names ...string
+**/
+func (s *Model) definePrimaryKeys(names ...string) {
+	for _, name := range names {
+		idx := slices.Index(s.PrimaryKeys, name)
+		if idx == -1 {
+			s.PrimaryKeys = append(s.PrimaryKeys, name)
+			s.defineRequireds(name)
+			s.defineUniques(name)
 		}
 	}
 }
@@ -109,7 +115,8 @@ func (s *Model) defineReferences(names ...string) {
 * @return *Field
 **/
 func (s *Model) defineKeyField() *Field {
-	result := defineFields(s, KEY, TpAtrib, TpKey, nil)
-
+	result := s.defineFields(KEY, TpAtrib, TpKey, "")
+	s.definePrimaryKeys(KEY)
+	s.defineHidden(KEY)
 	return result
 }
