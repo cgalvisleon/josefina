@@ -141,23 +141,6 @@ func (s *FileStore) Debug() {
 }
 
 /**
-* UseMemory
-* @return float64
- */
-func (s *FileStore) UseMemory() float64 {
-	s.indexMu.RLock()
-	n := len(s.index)
-	s.indexMu.RUnlock()
-
-	result := float64(n) * 96 // estimación simple
-	if result < 1024 {
-		return 0.001 // evitar valores muy pequeños
-	}
-
-	return result / 1024 / 1024 // devolver en MB
-}
-
-/**
 * loadSegments
 * @return error
 **/
@@ -188,6 +171,7 @@ func (s *FileStore) loadSegments() error {
 
 		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
+		s.Size += size
 		logs.Log(packageName, "load:segments:", s.Path, ":", s.Name, ":", seg.ToString())
 	}
 
@@ -234,6 +218,7 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 	recordSize := int64(len(id)) + int64(len(data)) + 11
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
+	s.Size += recordSize
 	if totalSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
 			return nil, err
