@@ -72,6 +72,7 @@ type FileStore struct {
 	MaxSegment   int64                 `json:"max_segment"`
 	SyncOnWrite  bool                  `json:"sync_on_write"`
 	Size         int64                 `json:"size"`
+	Metrics      map[string]int64      `json:"metrics"`
 	Workers      int                   `json:"workers"`
 	IsDebug      bool                  `json:"-"`
 	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
@@ -610,7 +611,6 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 		PathCompact:  filepath.Join(path, name, "compact"),
 		MaxSegment:   maxSegmentMG,
 		Metrics:      make(map[string]int64),
-		Size:         0,
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
