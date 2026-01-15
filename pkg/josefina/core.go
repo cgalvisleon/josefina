@@ -6,18 +6,22 @@ import (
 )
 
 var (
-	users      *Model
-	series     *Model
-	records    *Model
-	databases  *Model
-	schemas    *Model
-	models     *Model
-	references *Model
+	transactions *Model
+	users        *Model
+	series       *Model
+	records      *Model
+	databases    *Model
+	schemas      *Model
+	models       *Model
+	references   *Model
 )
 
 func (s *Tennant) loadCore() error {
 	db, err := s.getDb(packageName)
 	if err != nil {
+		return err
+	}
+	if err := initTransactions(db); err != nil {
 		return err
 	}
 	if err := initUsers(db); err != nil {
@@ -39,6 +43,24 @@ func (s *Tennant) loadCore() error {
 		return err
 	}
 	if err := initReferences(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* initTransactions: Initializes the transactions model
+* @param db *DB
+* @return error
+**/
+func initTransactions(db *DB) error {
+	var err error
+	transactions, err = db.newModel("", "transactions", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := series.init(); err != nil {
 		return err
 	}
 
