@@ -89,8 +89,7 @@ type Model struct {
 	IsDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
-	data          *store.FileStore            `json:"-"`
-	indexes       map[string]*store.FileStore `json:"-"`
+	data          map[string]*store.FileStore `json:"-"`
 	vm            *Vm                         `json:"-"`
 }
 
@@ -124,17 +123,13 @@ func (s *Model) init() error {
 	if err != nil {
 		return err
 	}
-	s.data, err = store.Open(path, s.Name, s.IsDebug)
-	if err != nil {
-		return err
-	}
 
 	for _, name := range s.Indexes {
 		fStore, err := store.Open(path, name, s.IsDebug)
 		if err != nil {
 			return err
 		}
-		s.indexes[name] = fStore
+		s.data[name] = fStore
 	}
 
 	s.vm = newVm()

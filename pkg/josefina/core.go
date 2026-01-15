@@ -15,7 +15,6 @@ func (s *Tennant) loadCore() error {
 	if err != nil {
 		return err
 	}
-
 	if err := initUsers(db); err != nil {
 		return err
 	}
@@ -48,8 +47,11 @@ func (s *Tennant) loadCore() error {
 **/
 func initUsers(db *DB) error {
 	var err error
-	users, err = db.newModel("", "users", false, 1)
+	users, err = db.newModel("", "users", true, 1)
 	if err != nil {
+		return err
+	}
+	if err := users.init(); err != nil {
 		return err
 	}
 
@@ -63,10 +65,14 @@ func initUsers(db *DB) error {
 **/
 func initSeries(db *DB) error {
 	var err error
-	series, err = db.newModel("", "series", false, 1)
+	series, err = db.newModel("", "series", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := series.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -77,10 +83,14 @@ func initSeries(db *DB) error {
 **/
 func initRecords(db *DB) error {
 	var err error
-	records, err = db.newModel("", "records", false, 1)
+	records, err = db.newModel("", "records", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := records.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -91,10 +101,14 @@ func initRecords(db *DB) error {
 **/
 func initDatabases(db *DB) error {
 	var err error
-	databases, err = db.newModel("", "databases", false, 1)
+	databases, err = db.newModel("", "databases", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := databases.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -105,10 +119,14 @@ func initDatabases(db *DB) error {
 **/
 func initSchemas(db *DB) error {
 	var err error
-	schemas, err = db.newModel("", "schemas", false, 1)
+	schemas, err = db.newModel("", "schemas", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := schemas.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -119,10 +137,14 @@ func initSchemas(db *DB) error {
 **/
 func initModels(db *DB) error {
 	var err error
-	models, err = db.newModel("", "models", false, 1)
+	models, err = db.newModel("", "models", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := models.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -133,9 +155,13 @@ func initModels(db *DB) error {
 **/
 func initReferences(db *DB) error {
 	var err error
-	references, err = db.newModel("", "references", false, 1)
+	references, err = db.newModel("", "references", true, 1)
 	if err != nil {
 		return err
 	}
+	if err := references.init(); err != nil {
+		return err
+	}
+
 	return nil
 }
