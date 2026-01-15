@@ -466,9 +466,9 @@ func (s *FileStore) Delete(id string) (bool, error) {
 /**
 * Get
 * @param id string, dest any
-* @return error
+* @return bool, error
 **/
-func (s *FileStore) Get(id string, dest any) error {
+func (s *FileStore) Get(id string, dest any) (bool, error) {
 	atomic.AddUint64(storeCallsMap["get"], 1)
 	tag := "get"
 	s.metricStart(tag)
@@ -479,16 +479,16 @@ func (s *FileStore) Get(id string, dest any) error {
 	s.indexMu.RUnlock()
 
 	if !existed {
-		return errors.New("not found")
+		return false, errors.New(msg.MSG_NOT_FOUND)
 	}
 
 	seg := s.segments[ref.segment]
 	err := seg.Read(ref, dest)
 	if err != nil {
-		return err
+		return existed, err
 	}
 
-	return nil
+	return existed, nil
 }
 
 /**

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -161,11 +162,20 @@ func (s *Model) count() int {
 }
 
 /**
+* getJid: Gets the jid
+* @return string
+**/
+func (s *Model) getJid() string {
+	return reg.GenULID(s.Name)
+}
+
+/**
 * insert: Inserts the model
 * @param data et.Json
 * @return et.Items, error
 **/
 func (s *Model) insert(data et.Json) (et.Items, error) {
+	data[INDEX] = s.getJid()
 	return et.Items{}, nil
 }
 

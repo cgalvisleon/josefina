@@ -3,7 +3,6 @@ package josefina
 import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/reg"
 )
 
 var (
@@ -65,7 +64,6 @@ func initUsers(db *DB) error {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
 		users.insert(et.Json{
-			INDEX:      reg.GenULID(users.Name),
 			"username": useranme,
 			"password": password,
 		})
