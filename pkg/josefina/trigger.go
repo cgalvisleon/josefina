@@ -14,56 +14,27 @@ type Trigger struct {
 type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 /**
-* defaultBeforeInsert
-* @param tx *Tx, old et.Json, new et.Json
+* runTrigger
+* @param trigger *Trigger, tx *Tx, old et.Json, new et.Json
 * @return error
 **/
-func defaultBeforeInsert(tx *Tx, old, new et.Json) error {
-	return nil
-}
+func (s *Model) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
+	vm, ok := s.triggers[trigger.Name]
+	if !ok {
+		vm = newVm()
+		s.triggers[trigger.Name] = vm
+	}
 
-/**
-* defaultAfterInsert
-* @param tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func defaultAfterInsert(tx *Tx, old, new et.Json) error {
-	return nil
-}
+	vm.Set("self", s)
+	vm.Set("tx", tx)
+	vm.Set("old", old)
+	vm.Set("new", new)
+	script := string(trigger.Definition)
+	_, err := vm.Run(script)
+	if err != nil {
+		return err
+	}
 
-/**
-* defaultBeforeUpdate
-* @param tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func defaultBeforeUpdate(tx *Tx, old, new et.Json) error {
-	return nil
-}
-
-/**
-* defaultAfterUpdate
-* @param tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func defaultAfterUpdate(tx *Tx, old, new et.Json) error {
-	return nil
-}
-
-/**
-* defaultBeforeDelete
-* @param tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func defaultBeforeDelete(tx *Tx, old, new et.Json) error {
-	return nil
-}
-
-/**
-* defaultAfterDelete
-* @param tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func defaultAfterDelete(tx *Tx, old, new et.Json) error {
 	return nil
 }
 
