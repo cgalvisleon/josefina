@@ -4,7 +4,7 @@ import "fmt"
 
 const (
 	KEY        string = "id"
-	INDEX      string = "jid"
+	INDEX      string = "_idx"
 	STATUS     string = "status"
 	VERSION    string = "version"
 	PROJECT_ID string = "project_id"

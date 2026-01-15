@@ -58,6 +58,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		db:            s.db,
 		triggers:      make(map[string]*Vm),
 	}
+	result.defineIndexField()
 	s.Models[name] = result
 	name = strs.Append(s.Name, name, ".")
 	s.db.Models[name] = result
