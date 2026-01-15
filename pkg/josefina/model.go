@@ -126,15 +126,12 @@ func (s *From) getField(name string) *Field {
 		return nil
 	}
 
-	return &Field{
-		From:         s,
-		Name:         name,
-		TypeField:    TpAtrib,
-		TypeData:     TpAny,
-		DefaultValue: "",
-		Definition:   []byte{},
-		as:           name,
+	result, err := newField(s, name, TpAtrib, TpAny, "")
+	if err != nil {
+		return nil
 	}
+
+	return result
 }
 
 /**
@@ -157,6 +154,7 @@ type Model struct {
 	Details       map[string]*Detail          `json:"details"`
 	Rollups       map[string]*Detail          `json:"rollups"`
 	Relations     map[string]*Detail          `json:"relations"`
+	Calcs         map[string][]byte           `json:"calcs"`
 	BeforeInserts []*Trigger                  `json:"before_inserts"`
 	BeforeUpdates []*Trigger                  `json:"before_updates"`
 	BeforeDeletes []*Trigger                  `json:"before_deletes"`

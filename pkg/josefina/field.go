@@ -1,6 +1,11 @@
 package josefina
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
 
 const (
 	KEY        string = "id"
@@ -103,8 +108,27 @@ type Field struct {
 	TypeField    TypeField   `json:"type_field"`
 	TypeData     TypeData    `json:"type_data"`
 	DefaultValue interface{} `json:"default_value"`
-	Definition   []byte      `json:"definition"`
 	as           string      `json:"-"`
+}
+
+/**
+* newField: Creates a new field
+* @param from *From, name string, tpField TypeField, tpData TypeData, defaultValue interface{}
+* @return *Field, error
+**/
+func newField(from *From, name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, name)
+	}
+
+	return &Field{
+		From:         from,
+		Name:         name,
+		TypeField:    tpField,
+		TypeData:     tpData,
+		DefaultValue: defaultValue,
+		as:           name,
+	}, nil
 }
 
 /**
@@ -112,15 +136,11 @@ type Field struct {
 * @return *Field
 **/
 func (s *Field) clone() *Field {
-	return &Field{
-		From:         s.From,
-		Name:         s.Name,
-		TypeField:    s.TypeField,
-		TypeData:     s.TypeData,
-		DefaultValue: s.DefaultValue,
-		Definition:   s.Definition,
-		as:           s.Name,
+	result, err := newField(s.From, s.Name, s.TypeField, s.TypeData, s.DefaultValue)
+	if err != nil {
+		return nil
 	}
+	return result
 }
 
 /**

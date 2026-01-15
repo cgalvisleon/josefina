@@ -5,8 +5,6 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 /**
@@ -25,22 +23,14 @@ func (s *Model) existsField(name string) bool {
 * @return *Field, error
 **/
 func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, name)
-	}
-
 	result, ok := s.Fields[name]
 	if ok {
 		return result, nil
 	}
 
-	result = &Field{
-		From:         s.From,
-		Name:         name,
-		TypeField:    tpField,
-		TypeData:     tpData,
-		DefaultValue: defaultValue,
-		Definition:   []byte{},
+	result, err := newField(s.From, name, tpField, tpData, defaultValue)
+	if err != nil {
+		return nil, err
 	}
 	s.Fields[name] = result
 
@@ -164,5 +154,81 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 		return nil, err
 	}
 
-	to, err := new
+	to, err := s.db.newModel(s.Schema, fmt.Sprintf("%s_%s", s.Name, name), false, version)
+	if err != nil {
+		return nil, err
+	}
+
+	for fk, pk := range keys {
+		_, err = s.defineAtrib(pk, TpKey, "")
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = to.defineAtrib(fk, TpKey, "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	detail := newDetail(to, s, keys, []string{}, true, true)
+	s.Details[name] = detail
+	fkeys := map[string]string{}
+	for k, v := range keys {
+		fkeys[v] = k
+	}
+	to.Master[s.Name] = newDetail(s, to, fkeys, []string{}, false, false)
+	return to, nil
+}
+
+/**
+* defineRollup: Defines the rollup
+* @param name string, from string, keys map[string]string, selects []string
+* @return *Model
+**/
+func (s *Model) defineRollup(name, from string, keys map[string]string, selects []string) error {
+	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
+	if err != nil {
+		return err
+	}
+
+	to, err := s.db.getModel(s.Schema, from)
+	if err != nil {
+		return err
+	}
+
+	detail := newDetail(to, s, keys, selects, false, false)
+	s.Rollups[name] = detail
+	return nil
+}
+
+/**
+* defineRelation: Defines the relation
+* @param name string, from string, keys map[string]string
+* @return *Model
+**/
+func (s *Model) defineRelation(from string, keys map[string]string) error {
+	to, err := s.db.getModel(s.Schema, from)
+	if err != nil {
+		return err
+	}
+
+	detail := newDetail(to, s, keys, []string{}, false, false)
+	s.Relations[to.Name] = detail
+	return nil
+}
+
+/**
+* defineCalc: Defines the calc
+* @param name string, definition []byte
+* @return error
+**/
+func (s *Model) defineCalc(name string, definition []byte) error {
+	_, err := s.defineFields(name, TpCalc, TpBytes, nil)
+	if err != nil {
+		return err
+	}
+
+	s.Calcs[name] = definition
+	return nil
 }
