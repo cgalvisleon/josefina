@@ -66,6 +66,32 @@ func newCmd(model *Model, command Command) *Cmd {
 }
 
 /**
+* runTrigger
+* @param trigger *Trigger, tx *Tx, old et.Json, new et.Json
+* @return error
+**/
+func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
+	model := s.model
+	vm, ok := model.triggers[trigger.Name]
+	if !ok {
+		vm = newVm()
+		model.triggers[trigger.Name] = vm
+	}
+
+	vm.Set("self", model)
+	vm.Set("tx", tx)
+	vm.Set("old", old)
+	vm.Set("new", new)
+	script := string(trigger.Definition)
+	_, err := vm.Run(script)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
 * insert: Inserts the model
 * @param ctx *Tx, new et.Json
 * @return et.Items, error
@@ -98,8 +124,8 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	// Run before insert triggers
-	for _, trigger := range model.BeforeInserts {
-		err := model.runTrigger(trigger, ctx, et.Json{}, new)
+	for _, trigger := range s.beforeInserts {
+		err := s.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
@@ -120,8 +146,8 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	// Run after insert triggers
-	for _, trigger := range model.AfterInserts {
-		err := model.runTrigger(trigger, ctx, et.Json{}, new)
+	for _, trigger := range s.afterInserts {
+		err := s.runTrigger(trigger, ctx, et.Json{}, new)
 		if err != nil {
 			return et.Items{}, err
 		}
@@ -139,7 +165,7 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 **/
 func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selectByWhere(ctx, where)
+	selects, err := s.byWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -157,16 +183,16 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 			new[k] = v
 		}
 
-		// Get model
-		model := s.model
-
 		// Run before update triggers
-		for _, trigger := range model.BeforeUpdates {
-			err := model.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range s.beforeUpdates {
+			err := s.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
 		}
+
+		// Get model
+		model := s.model
 
 		// Insert data into indexes
 		for _, name := range model.Indexes {
@@ -182,9 +208,9 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 			}
 		}
 
-		// Run after insert triggers
-		for _, trigger := range model.AfterInserts {
-			err := model.runTrigger(trigger, ctx, old, new)
+		// Run after update triggers
+		for _, trigger := range s.afterUpdates {
+			err := s.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
@@ -203,7 +229,7 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 **/
 func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.selectByWhere(ctx, where)
+	selects, err := s.byWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -218,16 +244,16 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 		// Delete data
 		new := et.Json{}
 
-		// Get model
-		model := s.model
-
 		// Run before delete triggers
-		for _, trigger := range model.BeforeDeletes {
-			err := model.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range s.beforeDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
 		}
+
+		// Get model
+		model := s.model
 
 		// Delete data from indexes
 		for _, name := range model.Indexes {
@@ -240,8 +266,8 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 		}
 
 		// Run after delete triggers
-		for _, trigger := range model.AfterDeletes {
-			err := model.runTrigger(trigger, ctx, old, new)
+		for _, trigger := range s.afterDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
 			if err != nil {
 				return et.Items{}, err
 			}
@@ -286,10 +312,10 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 }
 
 /**
-* selectByWhere: Selects the model by where
+* byWhere: Selects the model by where
 * @param ctx *Tx, where *Wheres
 * @return et.Items, error
 **/
-func (s *Cmd) selectByWhere(ctx *Tx, where *Wheres) (et.Items, error) {
+func (s *Cmd) byWhere(ctx *Tx, where *Wheres) (et.Items, error) {
 	return et.Items{}, nil
 }

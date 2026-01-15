@@ -236,3 +236,39 @@ func (s *Model) count() int {
 
 	return data.Count()
 }
+
+/**
+* insert: Inserts the model
+* @param ctx *Tx, data et.Json
+* @return et.Items, error
+**/
+func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
+	return newCmd(s, insert).insert(ctx, data)
+}
+
+/**
+* update: Updates the model
+* @param ctx *Tx, data et.Json, where *Wheres
+* @return et.Items, error
+**/
+func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
+	return newCmd(s, update).update(ctx, data, where)
+}
+
+/**
+* delete: Deletes the model
+* @param ctx *Tx, where *Wheres
+* @return et.Items, error
+**/
+func (s *Model) delete(ctx *Tx, where *Wheres) (et.Items, error) {
+	return newCmd(s, delete).delete(ctx, where)
+}
+
+/**
+* upsert: Upserts the model
+* @param ctx *Tx, data et.Json
+* @return et.Items, error
+**/
+func (s *Model) upsert(ctx *Tx, data et.Json) (et.Items, error) {
+	return newCmd(s, upsert).upsert(ctx, data)
+}
