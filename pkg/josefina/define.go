@@ -129,6 +129,7 @@ func (s *Model) defineIndexField() (*Field, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.defineIndexes(INDEX)
 	s.defineHidden(INDEX)
 	return result, nil
 }
