@@ -60,12 +60,14 @@ func initUsers(db *DB) error {
 		return err
 	}
 
-	useranme := envar.GetStr("USERNAME", "admin")
-	password := envar.GetStr("PASSWORD", "admin")
-	users.insert(et.Json{
-		"username": useranme,
-		"password": password,
-	})
+	if users.count() == 0 {
+		useranme := envar.GetStr("USERNAME", "admin")
+		password := envar.GetStr("PASSWORD", "admin")
+		users.insert(et.Json{
+			"username": useranme,
+			"password": password,
+		})
+	}
 
 	return nil
 }

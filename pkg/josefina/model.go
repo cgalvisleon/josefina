@@ -1,11 +1,9 @@
 package josefina
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -151,15 +149,15 @@ func (s *Model) save(data et.Json) error {
 
 /**
 * count: Counts the model
-* @return int, error
+* @return int
 **/
-func (s *Model) count() (int, error) {
+func (s *Model) count() int {
 	source, ok := s.data[INDEX]
 	if !ok {
-		return 0, errors.New(msg.MSG_INDEX_NOT_FOUND)
+		return 0
 	}
 
-	return source.Count(), nil
+	return source.Count()
 }
 
 /**

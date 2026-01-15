@@ -111,12 +111,12 @@ func (s *Model) definePrimaryKeys(names ...string) {
 }
 
 /**
-* defineKeyField: Defines the key field
+* defineIndexField: Defines the index field
 * @return *Field
 **/
-func (s *Model) defineKeyField() *Field {
-	result := s.defineFields(KEY, TpAtrib, TpKey, "")
-	s.definePrimaryKeys(KEY)
-	s.defineHidden(KEY)
+func (s *Model) defineIndexField() *Field {
+	result := s.defineFields(INDEX, TpAtrib, TpKey, "")
+	s.definePrimaryKeys(INDEX)
+	s.defineHidden(INDEX)
 	return result
 }
