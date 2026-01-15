@@ -181,12 +181,14 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 		data[INDEX] = idx
 	}
 
+	// Validate required fields
 	for _, name := range s.Required {
 		if _, ok := data[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 	}
 
+	// Validate unique fields
 	for _, name := range s.Unique {
 		if _, ok := data[name]; !ok {
 			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
@@ -198,6 +200,7 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 		}
 	}
 
+	// Run before insert triggers
 	for _, trigger := range s.BeforeInserts {
 		err := s.runTrigger(trigger, ctx, et.Json{}, data)
 		if err != nil {
@@ -205,6 +208,7 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 		}
 	}
 
+	// Insert data into indexes
 	for _, name := range s.Indexes {
 		source := s.data[name]
 		key := fmt.Sprintf("%v", data[name])
@@ -218,6 +222,7 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 		}
 	}
 
+	// Run after insert triggers
 	for _, trigger := range s.AfterInserts {
 		err := s.runTrigger(trigger, ctx, et.Json{}, data)
 		if err != nil {
@@ -232,27 +237,36 @@ func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
 
 /**
 * update: Updates the model
-* @param data et.Json, where et.Json
+* @param ctx *Tx, data et.Json, where et.Json
 * @return et.Items, error
 **/
-func (s *Model) update(data et.Json, where et.Json) (et.Items, error) {
+func (s *Model) update(ctx *Tx, data et.Json, where et.Json) (et.Items, error) {
 	return et.Items{}, nil
 }
 
 /**
 * delete: Deletes the model
-* @param where et.Json
+* @param ctx *Tx, where et.Json
 * @return et.Items, error
 **/
-func (s *Model) delete(where et.Json) (et.Items, error) {
+func (s *Model) delete(ctx *Tx, where et.Json) (et.Items, error) {
 	return et.Items{}, nil
 }
 
 /**
+* upsert: Upserts the model
+* @param ctx *Tx, data et.Json
+* @return et.Item, error
+**/
+func (s *Model) upsert(ctx *Tx, data et.Json) (et.Item, error) {
+	return et.Item{}, nil
+}
+
+/**
 * selects: Selects the model
-* @param query et.Json
+* @param ctx *Tx, query et.Json
 * @return et.Items, error
 **/
-func (s *Model) selects(query et.Json) (et.Items, error) {
+func (s *Model) selects(ctx *Tx, query et.Json) (et.Items, error) {
 	return et.Items{}, nil
 }
