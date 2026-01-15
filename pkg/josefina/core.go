@@ -27,24 +27,24 @@ func (s *Tennant) loadCore() error {
 	if err := initUsers(db); err != nil {
 		return err
 	}
-	if err := initSeries(db); err != nil {
-		return err
-	}
-	if err := initRecords(db); err != nil {
-		return err
-	}
-	if err := initDatabases(db); err != nil {
-		return err
-	}
-	if err := initSchemas(db); err != nil {
-		return err
-	}
-	if err := initModels(db); err != nil {
-		return err
-	}
-	if err := initReferences(db); err != nil {
-		return err
-	}
+	// if err := initSeries(db); err != nil {
+	// 	return err
+	// }
+	// if err := initRecords(db); err != nil {
+	// 	return err
+	// }
+	// if err := initDatabases(db); err != nil {
+	// 	return err
+	// }
+	// if err := initSchemas(db); err != nil {
+	// 	return err
+	// }
+	// if err := initModels(db); err != nil {
+	// 	return err
+	// }
+	// if err := initReferences(db); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -61,7 +61,9 @@ func initTransactions(db *DB) error {
 		return err
 	}
 	transactions.defineAtrib(KEY, TpKey, "")
+	transactions.defineAtrib("type", TpText, "")
 	transactions.definePrimaryKeys(KEY)
+	transactions.defineIndexes("type")
 	if err := transactions.init(); err != nil {
 		return err
 	}
