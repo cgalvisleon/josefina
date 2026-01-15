@@ -27,9 +27,9 @@ func (s *DB) save() error {
 /**
 * getSchema: Returns a schema by name
 * @param name string
-* @return *Schema, error
+* @return *Schema
 **/
-func (s *DB) getSchema(name string) (*Schema, error) {
+func (s *DB) getSchema(name string) *Schema {
 	return s.newSchema(name)
 }
 
@@ -39,24 +39,20 @@ func (s *DB) getSchema(name string) (*Schema, error) {
 * @return *Model, error
 **/
 func (s *DB) getModel(schema, name string) (*Model, error) {
-	sch, err := s.getSchema(schema)
-	if err != nil {
-		return nil, err
-	}
-
+	sch := s.getSchema(schema)
 	return sch.getModel(name)
 }
 
 /**
 * newSchema: Creates a new schema
 * @param name string
-* @return *Schema, error
+* @return *Schema
 **/
-func (s *DB) newSchema(name string) (*Schema, error) {
+func (s *DB) newSchema(name string) *Schema {
 	name = utility.Normalize(name)
 	result, ok := s.Schemas[name]
 	if ok {
-		return result, nil
+		return result
 	}
 
 	result = &Schema{
@@ -67,12 +63,7 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 	}
 
 	s.Schemas[name] = result
-	err := s.save()
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result
 }
 
 /**
@@ -81,10 +72,6 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 * @return *Model, error
 **/
 func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
-	sch, err := s.newSchema(schema)
-	if err != nil {
-		return nil, err
-	}
-
+	sch := s.newSchema(schema)
 	return sch.newModel(name, isCore, version)
 }

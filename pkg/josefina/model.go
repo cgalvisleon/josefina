@@ -82,7 +82,7 @@ func (s *From) getSchema() (*Schema, error) {
 		return nil, err
 	}
 
-	return db.getSchema(s.Schema)
+	return db.getSchema(s.Schema), nil
 }
 
 /**
