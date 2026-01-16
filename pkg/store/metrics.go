@@ -7,12 +7,6 @@ import (
 	"github.com/cgalvisleon/et/strs"
 )
 
-var storeCallsMap = map[string]*uint64{
-	"put":    new(uint64),
-	"get":    new(uint64),
-	"delete": new(uint64),
-}
-
 /**
 * metricStart
 * @param tag string

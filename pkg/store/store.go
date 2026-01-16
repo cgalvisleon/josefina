@@ -72,7 +72,6 @@ type FileStore struct {
 	SyncOnWrite  bool                  `json:"sync_on_write"`
 	Size         int64                 `json:"size"`
 	Metrics      map[string]int64      `json:"metrics"`
-	Workers      int                   `json:"workers"`
 	IsDebug      bool                  `json:"-"`
 	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
@@ -274,14 +273,6 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 }
 
 /**
-* deleteIndex
-* @param id string
-**/
-func (s *FileStore) deleteIndex(id string) {
-	delete(s.index, id)
-}
-
-/**
 * rebuildIndex
 * @param segIndex int
 * @return error
@@ -341,7 +332,7 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 		if status == Active {
 			s.setIndex(id, segIndex, offset, dataLen)
 		} else if status == Deleted {
-			s.deleteIndex(id)
+			delete(s.index, id)
 		}
 
 		offset += int64(11) + int64(idLen) + int64(dataLen)
@@ -357,6 +348,24 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 func (s *FileStore) buildIndex() error {
 	idx := len(s.segments) - 1
 	return s.rebuildIndex(idx)
+}
+
+/**
+* cloneIndex
+* @return map[string]*recordRef, []string
+**/
+func (s *FileStore) cloneIndex() (map[string]*recordRef, []string) {
+	keys := make([]string, 0)
+	indexResult := make(map[string]*recordRef, len(s.index))
+	s.indexMu.RLock()
+	for k, v := range s.index {
+		keys = append(keys, k)
+		indexResult[k] = v
+	}
+	s.indexMu.RUnlock()
+	sort.Strings(keys)
+
+	return indexResult, keys
 }
 
 /**
@@ -449,7 +458,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	}
 
 	s.indexMu.Lock()
-	s.deleteIndex(id)
+	delete(s.index, id)
 	s.indexMu.Unlock()
 
 	if s.IsDebug {
@@ -514,22 +523,10 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	s.metricStart(tag)
 
 	// 1. Seleccionar todos los IDs
-	keys := make([]string, 0)
-	indexResult := make(map[string]*recordRef, len(s.index))
-	s.indexMu.RLock()
-	s.Workers = workers
-	for k, v := range s.index {
-		keys = append(keys, k)
-		indexResult[k] = v
-	}
-	s.indexMu.RUnlock()
+	index, keys := s.cloneIndex()
 
-	// 2. Orden determinista (opcional pero recomendado)
-	s.metricSegment(tag, "load")
-	sort.Strings(keys)
-	s.metricSegment(tag, "sort")
-
-	parts := chunkKeys(keys, s.Workers) // workers workers para paralelizar
+	// 2. Workers para paralelizar
+	parts := chunkKeys(keys, workers)
 	s.metricSegment(tag, "chunk")
 
 	// 3. Procesar en paralelo
@@ -542,7 +539,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 			defer wg.Done()
 
 			for _, id := range keys {
-				ref := indexResult[id]
+				ref := index[id]
 				seg := s.segments[ref.segment]
 
 				data, err := seg.read(ref)
@@ -560,7 +557,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	}
 
 	wg.Wait()
-	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, s.Workers)
+	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, workers)
 	s.metricEnd(tag, msg)
 
 	return nil
