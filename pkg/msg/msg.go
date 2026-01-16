@@ -23,6 +23,8 @@ var (
 	MSG_RECORD_EXISTS          = "record exists"
 	MSG_RECORD_NOT_FOUND       = "record not found"
 	MSG_PRIMARY_KEYS_NOT_FOUND = "primary key not found"
+	MSG_FIELD_NOT_FOUND        = "field not found"
+	MSG_INVALID_TYPE           = "invalid type"
 )
 
 func init() {
@@ -49,5 +51,7 @@ func init() {
 		MSG_RECORD_EXISTS = "record exists"
 		MSG_RECORD_NOT_FOUND = "record no encontrado"
 		MSG_PRIMARY_KEYS_NOT_FOUND = "primary key no encontrado"
+		MSG_FIELD_NOT_FOUND = "field no encontrado"
+		MSG_INVALID_TYPE = "tipo inválido"
 	}
 }

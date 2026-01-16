@@ -31,7 +31,7 @@ type Ql struct {
 func newQl(tx *Tx, model *Model) *Ql {
 	maxRows := envar.GetInt("MAX_ROWS", 1000)
 	if tx == nil {
-		tx = newTx(model.db)
+		tx = newTx()
 	}
 	return &Ql{
 		From:       model,

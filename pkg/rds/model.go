@@ -14,6 +14,8 @@ import (
 var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
+	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	errorInvalidType         = errors.New(msg.MSG_INVALID_TYPE)
 )
 
 type From struct {
@@ -22,7 +24,6 @@ type From struct {
 	Name     string            `json:"name"`
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
-	as       string            `json:"-"`
 }
 
 /**
@@ -36,17 +37,7 @@ func (s *From) clone() *From {
 		Name:     s.Name,
 		Fields:   s.Fields,
 		IsStrict: s.IsStrict,
-		as:       s.Name,
 	}
-}
-
-/**
-* setAs
-* @param as string
-* @return void
-**/
-func (s *From) setAs(as string) {
-	s.as = as
 }
 
 /**

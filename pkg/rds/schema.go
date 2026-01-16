@@ -38,7 +38,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 			Schema:   s.Name,
 			Name:     name,
 			Fields:   make(map[string]*Field, 0),
-			as:       name,
 		},
 		Indexes:       make([]string, 0),
 		PrimaryKeys:   make([]string, 0),

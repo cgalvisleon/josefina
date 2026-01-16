@@ -3,26 +3,29 @@ package rds
 import (
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 )
 
 type Tx struct {
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at"`
-	Id        string    `json:"id"`
-	db        *DB       `json:"-"`
+	StartedAt time.Time            `json:"started_at"`
+	EndedAt   time.Time            `json:"ended_at"`
+	Id        string               `json:"id"`
+	data      map[string][]et.Json `json:"-"`
 }
 
-type TxError struct {
-	Database string `json:"database"`
-	Id       int    `json:"id"`
-	Error    []byte `json:"error"`
-}
-
-func newTx(db *DB) *Tx {
+func newTx() *Tx {
 	return &Tx{
 		StartedAt: time.Now(),
 		Id:        reg.GenULID("transaction"),
-		db:        db,
+		data:      make(map[string][]et.Json, 0),
 	}
+}
+
+/**
+* Add: Adds data to the transaction
+* @param name string, data et.Json
+**/
+func (s *Tx) Add(name string, data et.Json) {
+	s.data[name] = append(s.data[name], data)
 }

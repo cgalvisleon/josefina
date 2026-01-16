@@ -108,7 +108,6 @@ type Field struct {
 	TypeField    TypeField   `json:"type_field"`
 	TypeData     TypeData    `json:"type_data"`
 	DefaultValue interface{} `json:"default_value"`
-	as           string      `json:"-"`
 }
 
 /**
@@ -127,7 +126,6 @@ func newField(from *From, name string, tpField TypeField, tpData TypeData, defau
 		TypeField:    tpField,
 		TypeData:     tpData,
 		DefaultValue: defaultValue,
-		as:           name,
 	}, nil
 }
 
@@ -141,15 +139,6 @@ func (s *Field) clone() *Field {
 		return nil
 	}
 	return result
-}
-
-/**
-* setAs
-* @param as string
-* @return void
-**/
-func (s *Field) setAs(as string) {
-	s.as = as
 }
 
 /**
