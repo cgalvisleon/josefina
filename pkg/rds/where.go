@@ -88,28 +88,27 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 }
 
 /**
-* Apply
-* @param data et.Json
-* @return bool, error
-**/
-func (s *Wheres) Apply(data et.Json) (bool, error) {
-
-	for _, condition := range s.conditions {
-		if condition.Connector == And {
-			data = data.Json(condition.Field)
-		}
-	}
-
-	return result
-}
-
-/**
 * Rows
 * @param page int, rows int
 * @return et.Items, error
 **/
 func (s *Wheres) Rows() (et.Items, error) {
 	result := et.Items{}
+	model := s.owner
+	for _, con := range s.conditions {
+		field := con.Field
+		index, ok := model.index(field)
+		if ok {
+			data, keys := index.Index()
+			keys, err := con.ApplyToIndex(keys)
+			if err != nil {
+				return et.Items{}, err
+			}
+
+		}
+
+	}
+
 	st.Iterate(func(id string, data []byte) bool {
 		result := et.Json{}
 		err := json.Unmarshal(data, &result)

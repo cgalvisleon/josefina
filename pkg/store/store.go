@@ -341,10 +341,10 @@ func (s *FileStore) buildIndex() error {
 }
 
 /**
-* Index
+* getIndex
 * @return map[string]*RecordRef, []string
 **/
-func (s *FileStore) Index() (map[string]*RecordRef, []string) {
+func (s *FileStore) getIndex() (map[string]*RecordRef, []string) {
 	keys := make([]string, 0)
 	indexResult := make(map[string]*RecordRef, len(s.index))
 	s.indexMu.RLock()
@@ -356,6 +356,22 @@ func (s *FileStore) Index() (map[string]*RecordRef, []string) {
 	sort.Strings(keys)
 
 	return indexResult, keys
+}
+
+/**
+* Keys
+* @return []string, error
+**/
+func (s *FileStore) Keys() ([]string, error) {
+	keys := make([]string, 0)
+	s.indexMu.RLock()
+	for k := range s.index {
+		keys = append(keys, k)
+	}
+	s.indexMu.RUnlock()
+	sort.Strings(keys)
+
+	return keys, nil
 }
 
 /**
@@ -513,7 +529,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	s.metricStart(tag)
 
 	// 1. Seleccionar todos los IDs
-	index, keys := s.Index()
+	index, keys := s.getIndex()
 
 	// 2. Workers para paralelizar
 	parts := chunkKeys(keys, workers)

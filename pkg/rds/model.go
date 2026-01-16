@@ -17,6 +17,7 @@ var (
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
 	errorInvalidType         = errors.New(msg.MSG_INVALID_TYPE)
 	errorInvalidOperator     = errors.New(msg.MSG_INVALID_OPERATOR)
+	errorIndexNotFound       = errors.New(msg.MSG_INDEX_NOT_FOUND)
 )
 
 type From struct {
@@ -170,20 +171,16 @@ func (s *Model) init() error {
 }
 
 /**
-* save: Saves the model
-* @param data et.Json
-* @return error
+* index: Returns the index
+* @param name string
+* @return *store.FileStore, bool
 **/
-func (s *Model) save(data et.Json) error {
-	return nil
-}
-
-/**
-* Stricted: Sets the model to strict
-* @return void
-**/
-func (s *Model) Stricted() {
-	s.IsStrict = true
+func (s *Model) index(name string) (*store.FileStore, bool) {
+	data, ok := s.data[name]
+	if !ok {
+		return nil, false
+	}
+	return data, true
 }
 
 /**
@@ -197,6 +194,14 @@ func (s *Model) count() int {
 	}
 
 	return data.Count()
+}
+
+/**
+* stricted: Sets the model to strict
+* @return void
+**/
+func (s *Model) stricted() {
+	s.IsStrict = true
 }
 
 /**
