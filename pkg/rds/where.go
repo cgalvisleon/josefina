@@ -149,23 +149,23 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 			return nil, err
 		}
 
-		st.Iterate(func(id string, src []byte) bool {
+		st.Iterate(func(id string, src []byte) (bool, error) {
 			item := et.Json{}
 			err := json.Unmarshal(src, &item)
 			if err != nil {
-				log
-				return nil, err
+				return false, err
 			}
 
 			ok, err := con.ApplyToData(item)
 			if err != nil {
 				return false, err
 			}
+
 			if ok {
 				add(item)
 			}
-			// logs.Debug("iterate:", result.ToString())
-			return true
+
+			return true, nil
 		}, 2)
 	}
 
