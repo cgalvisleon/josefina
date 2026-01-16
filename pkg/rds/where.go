@@ -105,6 +105,7 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 		result = append(result, item)
 	}
 
+	cons := []*Condition{}
 	for _, con := range s.conditions {
 		field := con.Field
 		index, ok := model.index(field)
@@ -125,6 +126,7 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 					add(item)
 				}
 			}
+
 			continue
 		}
 
@@ -144,30 +146,32 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 			}
 		}
 
-		st, err := model.source()
+		cons = append(cons, con)
+	}
+
+	st, err := model.source()
+	if err != nil {
+		return nil, err
+	}
+
+	st.Iterate(func(id string, src []byte) (bool, error) {
+		item := et.Json{}
+		err := json.Unmarshal(src, &item)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 
-		st.Iterate(func(id string, src []byte) (bool, error) {
-			item := et.Json{}
-			err := json.Unmarshal(src, &item)
-			if err != nil {
-				return false, err
-			}
+		ok, err := con.ApplyToData(item)
+		if err != nil {
+			return false, err
+		}
 
-			ok, err := con.ApplyToData(item)
-			if err != nil {
-				return false, err
-			}
+		if ok {
+			add(item)
+		}
 
-			if ok {
-				add(item)
-			}
-
-			return true, nil
-		}, 2)
-	}
+		return true, nil
+	}, 2)
 
 	return result, nil
 }
