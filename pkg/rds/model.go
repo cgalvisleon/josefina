@@ -286,6 +286,14 @@ func (s *Model) stricted() {
 }
 
 /**
+* getKey: Returns a new key for the model
+* @return string
+**/
+func (s *Model) getKey() string {
+	return reg.GenUUId(s.Name)
+}
+
+/**
 * insert: Inserts the model
 * @param ctx *Tx, data et.Json
 * @return et.Items, error

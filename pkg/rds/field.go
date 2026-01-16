@@ -100,6 +100,7 @@ const (
 	Pending   Status = "pending"
 	Approved  Status = "approved"
 	Rejected  Status = "rejected"
+	Failed    Status = "failed"
 )
 
 type Field struct {
@@ -127,18 +128,6 @@ func newField(from *From, name string, tpField TypeField, tpData TypeData, defau
 		TypeData:     tpData,
 		DefaultValue: defaultValue,
 	}, nil
-}
-
-/**
-* clone: Clones the field
-* @return *Field
-**/
-func (s *Field) clone() *Field {
-	result, err := newField(s.From, s.Name, s.TypeField, s.TypeData, s.DefaultValue)
-	if err != nil {
-		return nil
-	}
-	return result
 }
 
 /**

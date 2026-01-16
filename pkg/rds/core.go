@@ -1,10 +1,5 @@
 package rds
 
-import (
-	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/et"
-)
-
 var (
 	transactions *Model
 	users        *Model
@@ -45,62 +40,6 @@ func (s *Tennant) loadCore() error {
 	// if err := initReferences(db); err != nil {
 	// 	return err
 	// }
-
-	return nil
-}
-
-/**
-* initTransactions: Initializes the transactions model
-* @param db *DB
-* @return error
-**/
-func initTransactions(db *DB) error {
-	var err error
-	transactions, err = db.newModel("", "transactions", true, 1)
-	if err != nil {
-		return err
-	}
-	transactions.defineAtrib(KEY, TpKey, "")
-	transactions.defineAtrib("type", TpText, "")
-	transactions.definePrimaryKeys(KEY)
-	transactions.defineIndexes("type")
-	if err := transactions.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* initUsers: Initializes the users model
-* @param db *DB
-* @return error
-**/
-func initUsers(db *DB) error {
-	var err error
-	users, err = db.newModel("", "users", true, 1)
-	if err != nil {
-		return err
-	}
-	users.defineAtrib("username", TpText, "")
-	users.defineAtrib("password", TpText, "")
-	users.defineHidden("password")
-	users.definePrimaryKeys("username")
-	if err := users.init(); err != nil {
-		return err
-	}
-
-	if users.count() == 0 {
-		useranme := envar.GetStr("USERNAME", "admin")
-		password := envar.GetStr("PASSWORD", "admin")
-		_, err := users.insert(nil, et.Json{
-			"username": useranme,
-			"password": password,
-		})
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
