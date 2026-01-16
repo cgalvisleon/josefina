@@ -16,7 +16,7 @@ import (
 func (s *FileStore) Compact() error {
 	s.indexMu.RLock()
 	keys := make([]string, 0)
-	indexCopy := make(map[string]*recordRef, len(s.index))
+	indexCopy := make(map[string]*RecordRef, len(s.index))
 	for k, v := range s.index {
 		keys = append(keys, k)
 		indexCopy[k] = v
@@ -64,7 +64,7 @@ func (s *FileStore) Compact() error {
 		return err
 	}
 
-	newIndex := make(map[string]*recordRef, len(indexCopy))
+	newIndex := make(map[string]*RecordRef, len(indexCopy))
 
 	n := 0
 	for _, id := range keys {

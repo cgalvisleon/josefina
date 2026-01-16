@@ -36,7 +36,7 @@ func (s *recordHeader) RecordSize() int64 {
 	return s.HeaderSize() + int64(s.DataLen)
 }
 
-type recordRef struct {
+type RecordRef struct {
 	segment int
 	offset  int64
 	length  uint32
@@ -46,7 +46,7 @@ type recordRef struct {
 * ToJson
 * @return et.Json
 **/
-func (s *recordRef) ToJson() et.Json {
+func (s *RecordRef) ToJson() et.Json {
 	return et.Json{
 		"segment": s.segment,
 		"offset":  s.offset,
@@ -58,7 +58,7 @@ func (s *recordRef) ToJson() et.Json {
 * ToString
 * @return string
  */
-func (s *recordRef) ToString() string {
+func (s *RecordRef) ToString() string {
 	return s.ToJson().ToString()
 }
 
@@ -170,9 +170,9 @@ func (s *segment) Write(b []byte) {
 /**
 * WriteHeader
 * @param id string, data []byte, status byte
-* @return *recordRef, error
+* @return *RecordRef, error
 **/
-func (s *segment) WriteHeader(id string, data []byte, status byte) (*recordRef, error) {
+func (s *segment) WriteHeader(id string, data []byte, status byte) (*RecordRef, error) {
 	h, header, err := newRecordHeaderAt(id, data, status)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (s *segment) WriteHeader(id string, data []byte, status byte) (*recordRef, 
 	s.Write(header)
 	s.size += h.HeaderSize()
 
-	return &recordRef{
+	return &RecordRef{
 		offset: offset,
 		length: h.DataLen,
 	}, nil
@@ -192,9 +192,9 @@ func (s *segment) WriteHeader(id string, data []byte, status byte) (*recordRef, 
 /**
 * WriteRecord
 * @param seg *segment, id string, data []byte, status byte
-* @return *recordRef, error
+* @return *RecordRef, error
 **/
-func (s *segment) WriteRecord(id string, data []byte, status byte) (*recordRef, error) {
+func (s *segment) WriteRecord(id string, data []byte, status byte) (*RecordRef, error) {
 	h, header, err := newRecordHeaderAt(id, data, status)
 	if err != nil {
 		return nil, err
@@ -208,7 +208,7 @@ func (s *segment) WriteRecord(id string, data []byte, status byte) (*recordRef, 
 	}
 	s.size += h.RecordSize()
 
-	return &recordRef{
+	return &RecordRef{
 		offset: offset,
 		length: h.DataLen,
 	}, nil
@@ -216,10 +216,10 @@ func (s *segment) WriteRecord(id string, data []byte, status byte) (*recordRef, 
 
 /**
 * ReadHeader
-* @param ref *recordRef
+* @param ref *RecordRef
 * @return recordHeader, error
 **/
-func (s *segment) ReadHeader(ref *recordRef) (recordHeader, error) {
+func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	var header recordHeader
 	buf := make([]byte, fixedHeaderSize)
 	_, err := s.ReadAt(buf, ref.offset)
@@ -250,10 +250,10 @@ func (s *segment) ReadHeader(ref *recordRef) (recordHeader, error) {
 
 /**
 * Read
-* @param ref *recordRef
+* @param ref *RecordRef
 * @return []byte, error
 **/
-func (s *segment) read(ref *recordRef) ([]byte, error) {
+func (s *segment) read(ref *RecordRef) ([]byte, error) {
 	header, err := s.ReadHeader(ref)
 	if err != nil {
 		return nil, err
@@ -275,10 +275,10 @@ func (s *segment) read(ref *recordRef) ([]byte, error) {
 
 /**
 * Read
-* @param ref *recordRef, dest any
+* @param ref *RecordRef, dest any
 * @return error
 **/
-func (s *segment) Read(ref *recordRef, dest any) error {
+func (s *segment) Read(ref *RecordRef, dest any) error {
 	data, err := s.read(ref)
 	if err != nil {
 		return err

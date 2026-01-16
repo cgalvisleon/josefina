@@ -77,7 +77,7 @@ type FileStore struct {
 	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
 	segments     []*segment            `json:"-"` // segmentos de datos
 	active       *segment              `json:"-"` // segmento activo para escritura
-	index        map[string]*recordRef `json:"-"` // índice en memoria
+	index        map[string]*RecordRef `json:"-"` // índice en memoria
 }
 
 /**
@@ -118,16 +118,6 @@ func (s *FileStore) ToJson() et.Json {
  */
 func (s *FileStore) ToString() string {
 	return s.ToJson().ToString()
-}
-
-/**
-* Close
-* @return void
-**/
-func (s *FileStore) Close() {
-	if s.active != nil {
-		s.active.Close()
-	}
 }
 
 /**
@@ -215,9 +205,9 @@ func (s *FileStore) newSegment() error {
 /**
 * appendRecord
 * @param id string, data []byte, status byte
-* @return *recordRef, error
+* @return *RecordRef, error
 **/
-func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRef, error) {
+func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRef, error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -263,7 +253,7 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*recordRe
 * @return error
 **/
 func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint32) error {
-	ref := &recordRef{
+	ref := &RecordRef{
 		segment: segIndex,
 		offset:  offset,
 		length:  dataLen,
@@ -279,7 +269,7 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 **/
 func (s *FileStore) rebuildIndex(segIndex int) error {
 	if len(s.index) == 0 {
-		s.index = make(map[string]*recordRef)
+		s.index = make(map[string]*RecordRef)
 	}
 
 	seg := s.segments[segIndex]
@@ -351,12 +341,12 @@ func (s *FileStore) buildIndex() error {
 }
 
 /**
-* Clone
-* @return map[string]*recordRef, []string
+* cloneIndex
+* @return map[string]*RecordRef, []string
 **/
-func (s *FileStore) Clone() (map[string]*recordRef, []string) {
+func (s *FileStore) cloneIndex() (map[string]*RecordRef, []string) {
 	keys := make([]string, 0)
-	indexResult := make(map[string]*recordRef, len(s.index))
+	indexResult := make(map[string]*RecordRef, len(s.index))
 	s.indexMu.RLock()
 	for k, v := range s.index {
 		keys = append(keys, k)
@@ -380,7 +370,7 @@ func (s *FileStore) RebuildIndexes() error {
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
-	s.index = make(map[string]*recordRef)
+	s.index = make(map[string]*RecordRef)
 	for i := range s.segments {
 		if err := s.rebuildIndex(i); err != nil {
 			return err
@@ -523,7 +513,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	s.metricStart(tag)
 
 	// 1. Seleccionar todos los IDs
-	index, keys := s.Clone()
+	index, keys := s.cloneIndex()
 
 	// 2. Workers para paralelizar
 	parts := chunkKeys(keys, workers)
@@ -590,7 +580,7 @@ func (s *FileStore) Prune() error {
 * @return error
 **/
 func (s *FileStore) Empty() error {
-	s.index = make(map[string]*recordRef)
+	s.index = make(map[string]*RecordRef)
 	s.WAL = 0
 	s.TombStones = 0
 
@@ -617,7 +607,7 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
-	fs.index = make(map[string]*recordRef)
+	fs.index = make(map[string]*RecordRef)
 	fs.IsDebug = debug
 	fs.SyncOnWrite = syncOnWrite
 	tag := "store_open"

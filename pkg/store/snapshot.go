@@ -117,7 +117,7 @@ func (s *FileStore) tryLoadSnapshot() error {
 	binary.Read(buf, binary.BigEndian, &count)
 
 	// ---- Entries ----
-	s.index = make(map[string]*recordRef, count)
+	s.index = make(map[string]*RecordRef, count)
 	for i := uint64(0); i < count; i++ {
 		var idLen uint16
 		binary.Read(buf, binary.BigEndian, &idLen)

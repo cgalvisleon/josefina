@@ -17,21 +17,16 @@ const (
 	cmdUpsert Command = "upsert"
 )
 
-type Store struct {
-	index map[string]*store.FileStore
-	keys  []string
-}
-
 type Cmd struct {
-	model         *Model            `json:"-"`
-	command       Command           `json:"-"`
-	stores        map[string]*Store `json:"-"`
-	beforeInserts []*Trigger        `json:"-"`
-	beforeUpdates []*Trigger        `json:"-"`
-	beforeDeletes []*Trigger        `json:"-"`
-	afterInserts  []*Trigger        `json:"-"`
-	afterUpdates  []*Trigger        `json:"-"`
-	afterDeletes  []*Trigger        `json:"-"`
+	model         *Model                      `json:"-"`
+	command       Command                     `json:"-"`
+	stores        map[string]*store.FileStore `json:"-"`
+	beforeInserts []*Trigger                  `json:"-"`
+	beforeUpdates []*Trigger                  `json:"-"`
+	beforeDeletes []*Trigger                  `json:"-"`
+	afterInserts  []*Trigger                  `json:"-"`
+	afterUpdates  []*Trigger                  `json:"-"`
+	afterDeletes  []*Trigger                  `json:"-"`
 }
 
 /**
@@ -68,6 +63,13 @@ func newCmd(model *Model, command Command) *Cmd {
 	}
 	for _, trigger := range model.AfterDeletes {
 		result.afterDeletes = append(result.afterDeletes, trigger)
+	}
+	for name, store := range model.data {
+		index, keys := store.Clone()
+		result.stores[name] = &Store{
+			index: index,
+			keys:  keys,
+		}
 	}
 
 	return result
