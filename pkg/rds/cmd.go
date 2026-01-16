@@ -222,7 +222,7 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 		return result, err
 	}
 
-	for _, old := range items.Result {
+	for _, old := range items {
 		// Get index
 		idx, ok := old[INDEX]
 		if !ok {

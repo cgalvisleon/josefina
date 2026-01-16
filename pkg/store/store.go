@@ -360,7 +360,7 @@ func (s *FileStore) getIndex() (map[string]*RecordRef, []string) {
 
 /**
 * Keys
-* @return []string
+* @return []string, error
 **/
 func (s *FileStore) Keys() []string {
 	keys := make([]string, 0)
@@ -524,7 +524,7 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 * @param fn func(id string, data []byte) bool, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) error {
+func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), workers int) error {
 	tag := "iterate"
 	s.metricStart(tag)
 
@@ -536,6 +536,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	s.metricSegment(tag, "chunk")
 
 	// 3. Procesar en paralelo
+	mErr := error(nil)
 	n := 0
 	var wg sync.WaitGroup
 	for _, part := range parts {
@@ -550,10 +551,17 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 
 				data, err := seg.read(ref)
 				if err != nil {
+					mErr = err
 					return
 				}
 
-				if !fn(id, data) {
+				ok, err := fn(id, data)
+				if err != nil {
+					mErr = err
+					break
+				}
+
+				if !ok {
 					break
 				}
 
@@ -566,7 +574,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) bool, workers int) e
 	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, workers)
 	s.metricEnd(tag, msg)
 
-	return nil
+	return mErr
 }
 
 /**

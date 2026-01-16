@@ -156,16 +156,16 @@ func (s *Condition) applyOpEq(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	switch v := s.Value.(type) {
+	switch bv := s.Value.(type) {
 	case []et.Json:
-		for _, item := range v {
+		for _, item := range bv {
 			for _, value := range item {
 				return val == value, nil
 			}
 		}
 		return false, nil
 	default:
-		return val == v, nil
+		return val == bv, nil
 	}
 }
 
@@ -233,6 +233,20 @@ func (s *Condition) applyOpLess(val any) (bool, error) {
 		}
 
 		return aNum < bNum, nil
+	case []et.Json:
+		for _, item := range bv {
+			for _, value := range item {
+				s.Value = value
+				return s.applyOpLess(val)
+			}
+		}
+		return invalidType()
+	case []interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpLess(val)
+		}
+		return invalidType()
 	default:
 		return invalidType()
 	}
@@ -288,6 +302,20 @@ func (s *Condition) applyOpLessEq(val any) (bool, error) {
 		}
 
 		return aNum <= bNum, nil
+	case []et.Json:
+		for _, item := range bv {
+			for _, value := range item {
+				s.Value = value
+				return s.applyOpLessEq(val)
+			}
+		}
+		return invalidType()
+	case []interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpLessEq(val)
+		}
+		return invalidType()
 	default:
 		return invalidType()
 	}
@@ -343,6 +371,20 @@ func (s *Condition) applyOpMore(val any) (bool, error) {
 		}
 
 		return aNum > bNum, nil
+	case []et.Json:
+		for _, item := range bv {
+			for _, value := range item {
+				s.Value = value
+				return s.applyOpMore(val)
+			}
+		}
+		return invalidType()
+	case []interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpMore(val)
+		}
+		return invalidType()
 	default:
 		return invalidType()
 	}
@@ -358,50 +400,63 @@ func (s *Condition) applyOpMoreEq(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	// time.Time
-	if av, ok := val.(time.Time); ok {
-		bv, ok := s.Value.(time.Time)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av.After(bv) || av.Equal(bv), nil
-	}
-
-	// string
-	if av, ok := val.(string); ok {
-		bv, ok := s.Value.(string)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av >= bv, nil
-	}
-
-	// numbers
-	aNum, aKind, ok := numberToFloat64(val)
-	if !ok {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	bNum, bKind, ok := numberToFloat64(s.Value)
-	if !ok {
-		return false, errorInvalidType
-	}
-
-	// Evitar comparar signed vs unsigned si hay negativos
-	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
-		ai, _ := numberToInt64(val)
-		if ai < 0 {
-			return false, errorInvalidType
+	switch bv := s.Value.(type) {
+	case time.Time:
+		if av, ok := val.(time.Time); ok {
+			return av.After(bv) || av.Equal(bv), nil
 		}
-	}
-	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
-		bi, _ := numberToInt64(s.Value)
-		if bi < 0 {
-			return false, errorInvalidType
+		return invalidType()
+	case string:
+		if av, ok := val.(string); ok {
+			return av >= bv, nil
 		}
-	}
+		return invalidType()
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		aNum, aKind, ok := numberToFloat64(val)
+		if !ok {
+			return invalidType()
+		}
 
-	return aNum >= bNum, nil
+		bNum, bKind, ok := numberToFloat64(s.Value)
+		if !ok {
+			return invalidType()
+		}
+
+		if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+			ai, _ := numberToInt64(val)
+			if ai < 0 {
+				return invalidType()
+			}
+		}
+		if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+			bi, _ := numberToInt64(s.Value)
+			if bi < 0 {
+				return invalidType()
+			}
+		}
+
+		return aNum >= bNum, nil
+	case []et.Json:
+		for _, item := range bv {
+			for _, value := range item {
+				s.Value = value
+				return s.applyOpMoreEq(val)
+			}
+		}
+		return invalidType()
+	case []interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpMoreEq(val)
+		}
+		return invalidType()
+	default:
+		return invalidType()
+	}
 }
 
 /**
@@ -414,17 +469,34 @@ func (s *Condition) applyOpLike(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	av, ok := val.(string)
-	if !ok {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	pattern, ok := s.Value.(string)
-	if !ok {
-		return false, errorInvalidType
+	switch bv := s.Value.(type) {
+	case string:
+		av, ok := val.(string)
+		if !ok {
+			return invalidType()
+		}
+		return matchLikeStar(av, bv), nil
+	case []et.Json:
+		for _, item := range bv {
+			for _, value := range item {
+				s.Value = value
+				return s.applyOpLike(val)
+			}
+		}
+		return invalidType()
+	case []interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpLike(val)
+		}
+		return invalidType()
+	default:
+		return invalidType()
 	}
-
-	return matchLikeStar(av, pattern), nil
 }
 
 /**
@@ -437,14 +509,17 @@ func (s *Condition) applyOpIn(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	list := reflect.ValueOf(s.Value)
-	if !list.IsValid() {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	// Debe ser slice o array
+	list := reflect.ValueOf(s.Value)
+	if !list.IsValid() {
+		return invalidType()
+	}
+
 	if list.Kind() != reflect.Slice && list.Kind() != reflect.Array {
-		return false, errorInvalidType
+		return invalidType()
 	}
 
 	for i := 0; i < list.Len(); i++ {
@@ -481,12 +556,10 @@ func (s *Condition) applyOpNotIn(val any) (bool, error) {
 * @return bool, error
 **/
 func (s *Condition) applyOpIs(val any) (bool, error) {
-	// nil == nil
 	if val == nil && s.Value == nil {
 		return true, nil
 	}
 
-	// si uno es nil y el otro no -> false
 	if val == nil || s.Value == nil {
 		return false, nil
 	}
@@ -548,21 +621,20 @@ func (s *Condition) applyOpBetween(val any) (bool, error) {
 		return false, errorInvalidType
 	}
 
-	// min/max no deben ser nil
 	if min == nil || max == nil {
 		return false, errorInvalidType
 	}
 
-	c1, ok := compareAnyOrdered(val, min) // val vs min
-	if !ok {
-		return false, errorInvalidType
-	}
-	c2, ok := compareAnyOrdered(val, max) // val vs max
+	c1, ok := compareAnyOrdered(val, min)
 	if !ok {
 		return false, errorInvalidType
 	}
 
-	// BETWEEN inclusivo: val >= min && val <= max
+	c2, ok := compareAnyOrdered(val, max)
+	if !ok {
+		return false, errorInvalidType
+	}
+
 	return c1 >= 0 && c2 <= 0, nil
 }
 

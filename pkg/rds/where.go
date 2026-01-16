@@ -121,7 +121,6 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 				if err != nil {
 					return nil, err
 				}
-
 				if exists {
 					add(item)
 				}
@@ -132,23 +131,43 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 		value := con.Value
 		switch v := value.(type) {
 		case *Wheres:
-			value
+			var err error
+			con.Value, err = v.Rows()
+			if err != nil {
+				return nil, err
+			}
 		case Wheres:
-
+			var err error
+			con.Value, err = v.Rows()
+			if err != nil {
+				return nil, err
+			}
 		}
 
-	}
-
-	st.Iterate(func(id string, data []byte) bool {
-		result := et.Json{}
-		err := json.Unmarshal(data, &result)
+		st, err := model.source()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
-		// logs.Debug("iterate:", result.ToString())
-		return true
-	}, 2)
+		st.Iterate(func(id string, src []byte) bool {
+			item := et.Json{}
+			err := json.Unmarshal(src, &item)
+			if err != nil {
+				log
+				return nil, err
+			}
+
+			ok, err := con.ApplyToData(item)
+			if err != nil {
+				return false, err
+			}
+			if ok {
+				add(item)
+			}
+			// logs.Debug("iterate:", result.ToString())
+			return true
+		}, 2)
+	}
 
 	return result, nil
 }
