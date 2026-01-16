@@ -2,8 +2,10 @@ package rds
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 /**
@@ -92,18 +94,46 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 * @param page int, rows int
 * @return et.Items, error
 **/
-func (s *Wheres) Rows() (et.Items, error) {
-	result := et.Items{}
+func (s *Wheres) Rows() ([]et.Json, error) {
+	result := []et.Json{}
 	model := s.owner
+	if model == nil {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	add := func(item et.Json) {
+		result = append(result, item)
+	}
+
 	for _, con := range s.conditions {
 		field := con.Field
 		index, ok := model.index(field)
 		if ok {
-			data, keys := index.Index()
+			keys := index.Keys()
 			keys, err := con.ApplyToIndex(keys)
 			if err != nil {
-				return et.Items{}, err
+				return nil, err
 			}
+
+			for _, key := range keys {
+				item := et.Json{}
+				exists, err := model.getJson(key, item)
+				if err != nil {
+					return nil, err
+				}
+
+				if exists {
+					add(item)
+				}
+			}
+			continue
+		}
+
+		value := con.Value
+		switch v := value.(type) {
+		case *Wheres:
+			value
+		case Wheres:
 
 		}
 

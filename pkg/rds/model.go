@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -194,6 +195,86 @@ func (s *Model) count() int {
 	}
 
 	return data.Count()
+}
+
+/**
+* source: Returns the source
+* @return *store.FileStore, error
+**/
+func (s *Model) source() (*store.FileStore, error) {
+	result, ok := s.data[INDEX]
+	if !ok {
+		return nil, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	}
+
+	return result, nil
+}
+
+/**
+* get: Gets the model
+* @param key string
+* @return any, error
+**/
+func (s *Model) get(key string, dest any) (bool, error) {
+	source, err := s.source()
+	if err != nil {
+		return false, err
+	}
+
+	_, err = source.Get(key, dest)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+/**
+* getJson: Gets the model as json
+* @param key string
+* @return et.Json, error
+**/
+func (s *Model) getJson(key string, dest et.Json) (bool, error) {
+	src := []byte{}
+	exists, err := s.get(key, &src)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	err = json.Unmarshal(src, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+/**
+* getIndex: Gets the index
+* @param key string
+* @return map[string]bool, error
+**/
+func (s *Model) getIndex(key string, dest map[string]bool) (bool, error) {
+	src := []byte{}
+	exists, err := s.get(key, &src)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	err = json.Unmarshal(src, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 /**

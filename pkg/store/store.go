@@ -360,9 +360,9 @@ func (s *FileStore) getIndex() (map[string]*RecordRef, []string) {
 
 /**
 * Keys
-* @return []string, error
+* @return []string
 **/
-func (s *FileStore) Keys() ([]string, error) {
+func (s *FileStore) Keys() []string {
 	keys := make([]string, 0)
 	s.indexMu.RLock()
 	for k := range s.index {
@@ -371,7 +371,7 @@ func (s *FileStore) Keys() ([]string, error) {
 	s.indexMu.RUnlock()
 	sort.Strings(keys)
 
-	return keys, nil
+	return keys
 }
 
 /**

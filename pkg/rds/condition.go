@@ -156,7 +156,17 @@ func (s *Condition) applyOpEq(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	return val == s.Value, nil
+	switch v := s.Value.(type) {
+	case []et.Json:
+		for _, item := range v {
+			for _, value := range item {
+				return val == value, nil
+			}
+		}
+		return false, nil
+	default:
+		return val == v, nil
+	}
 }
 
 /**
@@ -183,50 +193,49 @@ func (s *Condition) applyOpLess(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	// time.Time (soporta <)
-	if av, ok := val.(time.Time); ok {
-		bv, ok := s.Value.(time.Time)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av.Before(bv), nil
-	}
-
-	// string (soporta < lexicográfico)
-	if av, ok := val.(string); ok {
-		bv, ok := s.Value.(string)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av < bv, nil
-	}
-
-	// Números (int*, uint*, float*)
-	aNum, aKind, ok := numberToFloat64(val)
-	if !ok {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	bNum, bKind, ok := numberToFloat64(s.Value)
-	if !ok {
-		return false, errorInvalidType
-	}
-
-	// Evitar comparar signed vs unsigned si hay negativos (caso peligroso)
-	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
-		ai, _ := numberToInt64(val)
-		if ai < 0 {
-			return false, errorInvalidType
+	switch bv := s.Value.(type) {
+	case time.Time:
+		if av, ok := val.(time.Time); ok {
+			return av.Before(bv), nil
 		}
-	}
-	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
-		bi, _ := numberToInt64(s.Value)
-		if bi < 0 {
-			return false, errorInvalidType
+		return invalidType()
+	case string:
+		if av, ok := val.(string); ok {
+			return av < bv, nil
 		}
-	}
+		return invalidType()
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		aNum, aKind, ok := numberToFloat64(val)
+		if !ok {
+			return invalidType()
+		}
 
-	return aNum < bNum, nil
+		bNum, bKind, ok := numberToFloat64(s.Value)
+		if !ok {
+			return invalidType()
+		}
+
+		if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+			ai, _ := numberToInt64(val)
+			if ai < 0 {
+				return invalidType()
+			}
+		}
+		if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+			bi, _ := numberToInt64(s.Value)
+			if bi < 0 {
+				return invalidType()
+			}
+		}
+
+		return aNum < bNum, nil
+	default:
+		return invalidType()
+	}
 }
 
 /**
@@ -239,50 +248,49 @@ func (s *Condition) applyOpLessEq(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	// time.Time (soporta <=)
-	if av, ok := val.(time.Time); ok {
-		bv, ok := s.Value.(time.Time)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av.Before(bv) || av.Equal(bv), nil
-	}
-
-	// string (soporta <= lexicográfico)
-	if av, ok := val.(string); ok {
-		bv, ok := s.Value.(string)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av <= bv, nil
-	}
-
-	// Números (int*, uint*, float*)
-	aNum, aKind, ok := numberToFloat64(val)
-	if !ok {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	bNum, bKind, ok := numberToFloat64(s.Value)
-	if !ok {
-		return false, errorInvalidType
-	}
-
-	// Evitar comparar signed vs unsigned si hay negativos (caso peligroso)
-	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
-		ai, _ := numberToInt64(val)
-		if ai < 0 {
-			return false, errorInvalidType
+	switch bv := s.Value.(type) {
+	case time.Time:
+		if av, ok := val.(time.Time); ok {
+			return av.Before(bv) || av.Equal(bv), nil
 		}
-	}
-	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
-		bi, _ := numberToInt64(s.Value)
-		if bi < 0 {
-			return false, errorInvalidType
+		return invalidType()
+	case string:
+		if av, ok := val.(string); ok {
+			return av <= bv, nil
 		}
-	}
+		return invalidType()
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		aNum, aKind, ok := numberToFloat64(val)
+		if !ok {
+			return invalidType()
+		}
 
-	return aNum <= bNum, nil
+		bNum, bKind, ok := numberToFloat64(s.Value)
+		if !ok {
+			return invalidType()
+		}
+
+		if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+			ai, _ := numberToInt64(val)
+			if ai < 0 {
+				return invalidType()
+			}
+		}
+		if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+			bi, _ := numberToInt64(s.Value)
+			if bi < 0 {
+				return invalidType()
+			}
+		}
+
+		return aNum <= bNum, nil
+	default:
+		return invalidType()
+	}
 }
 
 /**
