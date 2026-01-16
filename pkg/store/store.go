@@ -539,13 +539,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), worke
 	if workers <= 0 {
 		workers = 1
 	}
-	if workers > len(keys) {
-		workers = len(keys)
-	}
-	if workers == 0 {
-		s.metricEnd(tag, "completed:total:0:workers:0")
-		return nil
-	}
 
 	s.metricSegment(tag, "index")
 	// 2) Worker pool
@@ -633,51 +626,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), worke
 	wg.Wait()
 
 	msg := fmt.Sprintf("completed:total:%d:workers:%d", total, workers)
-	s.metricEnd(tag, msg)
-
-	return mErr
-
-	// 2. Workers para paralelizar
-	parts := chunkKeys(keys, workers)
-	s.metricSegment(tag, "chunk")
-
-	// 3. Procesar en paralelo
-	mErr := error(nil)
-	n := 0
-	var wg sync.WaitGroup
-	for _, part := range parts {
-		wg.Add(1)
-
-		go func(keys []string) {
-			defer wg.Done()
-
-			for _, id := range keys {
-				ref := index[id]
-				seg := s.segments[ref.segment]
-
-				data, err := seg.read(ref)
-				if err != nil {
-					mErr = err
-					return
-				}
-
-				ok, err := fn(id, data)
-				if err != nil {
-					mErr = err
-					break
-				}
-
-				if !ok {
-					break
-				}
-
-				n++
-			}
-		}(part)
-	}
-
-	wg.Wait()
-	msg := fmt.Sprintf("completed:total:%d:workers:%d", n, workers)
 	s.metricEnd(tag, msg)
 
 	return mErr
