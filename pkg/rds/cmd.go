@@ -3,7 +3,6 @@ package rds
 import (
 	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
@@ -217,66 +216,56 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 **/
 func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	maxRows := envar.GetInt("MAX_ROWS", 1000)
 	model := s.model
-	page := 1
-	for {
-		items, err := where.Rows(page, maxRows)
-		if err != nil {
-			return result, err
+	items, err := where.Rows()
+	if err != nil {
+		return result, err
+	}
+
+	for _, old := range items.Result {
+		// Get index
+		idx, ok := old[INDEX]
+		if !ok {
+			return result, errorRecordNotFound
 		}
 
-		if !items.Ok {
-			break
+		// Update data
+		new := old.Clone()
+		for k, v := range data {
+			new[k] = v
 		}
 
-		for _, old := range items.Result {
-			// Get index
-			idx, ok := old[INDEX]
-			if !ok {
-				return result, errorRecordNotFound
+		// Run before update triggers
+		for _, trigger := range s.beforeUpdates {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
 			}
-
-			// Update data
-			new := old.Clone()
-			for k, v := range data {
-				new[k] = v
-			}
-
-			// Run before update triggers
-			for _, trigger := range s.beforeUpdates {
-				err := s.runTrigger(trigger, ctx, old, new)
-				if err != nil {
-					return et.Items{}, err
-				}
-			}
-
-			// Insert data into indexes
-			for _, name := range model.Indexes {
-				source := model.data[name]
-				key := fmt.Sprintf("%v", new[name])
-				if key == "" {
-					continue
-				}
-				if name == INDEX {
-					source.Put(key, new)
-				} else {
-					s.putIndex(source, key, idx)
-				}
-			}
-
-			// Run after update triggers
-			for _, trigger := range s.afterUpdates {
-				err := s.runTrigger(trigger, ctx, old, new)
-				if err != nil {
-					return et.Items{}, err
-				}
-			}
-
-			result.Add(new)
 		}
 
-		page++
+		// Insert data into indexes
+		for _, name := range model.Indexes {
+			source := model.data[name]
+			key := fmt.Sprintf("%v", new[name])
+			if key == "" {
+				continue
+			}
+			if name == INDEX {
+				source.Put(key, new)
+			} else {
+				s.putIndex(source, key, idx)
+			}
+		}
+
+		// Run after update triggers
+		for _, trigger := range s.afterUpdates {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		result.Add(new)
 	}
 
 	return result, nil
@@ -289,61 +278,52 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 **/
 func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	maxRows := envar.GetInt("MAX_ROWS", 1000)
 	model := s.model
 	new := et.Json{}
-	page := 1
-	for {
-		items, err := where.Rows(page, maxRows)
-		if err != nil {
-			return result, err
+
+	items, err := where.Rows()
+	if err != nil {
+		return result, err
+	}
+
+	for _, old := range items.Result {
+		// Get index
+		idx, ok := old[INDEX]
+		if !ok {
+			return result, errorRecordNotFound
 		}
 
-		if !items.Ok {
-			break
+		// Run before delete triggers
+		for _, trigger := range s.beforeDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
 		}
 
-		for _, old := range items.Result {
-			// Get index
-			idx, ok := old[INDEX]
-			if !ok {
-				return result, errorRecordNotFound
+		// Delete data from indexes
+		for _, name := range model.Indexes {
+			source := model.data[name]
+			key := fmt.Sprintf("%v", new[name])
+			if key == "" {
+				continue
 			}
-
-			// Run before delete triggers
-			for _, trigger := range s.beforeDeletes {
-				err := s.runTrigger(trigger, ctx, old, new)
-				if err != nil {
-					return et.Items{}, err
-				}
+			if name == INDEX {
+				source.Delete(key)
+			} else {
+				s.deleteIndex(source, key, idx)
 			}
-
-			// Delete data from indexes
-			for _, name := range model.Indexes {
-				source := model.data[name]
-				key := fmt.Sprintf("%v", new[name])
-				if key == "" {
-					continue
-				}
-				if name == INDEX {
-					source.Delete(key)
-				} else {
-					s.deleteIndex(source, key, idx)
-				}
-			}
-
-			// Run after delete triggers
-			for _, trigger := range s.afterDeletes {
-				err := s.runTrigger(trigger, ctx, old, new)
-				if err != nil {
-					return et.Items{}, err
-				}
-			}
-
-			result.Add(old)
 		}
 
-		page++
+		// Run after delete triggers
+		for _, trigger := range s.afterDeletes {
+			err := s.runTrigger(trigger, ctx, old, new)
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+
+		result.Add(old)
 	}
 
 	return result, nil

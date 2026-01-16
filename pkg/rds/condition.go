@@ -147,11 +147,11 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 }
 
 /**
-* ApplyOpEq
+* applyOpEq
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpEq(data et.Json) (bool, error) {
+func (s *Condition) applyOpEq(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -161,12 +161,12 @@ func (s *Condition) ApplyOpEq(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpNeg
+* applyOpNeg
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpNeg(data et.Json) (bool, error) {
-	result, err := s.ApplyOpEq(data)
+func (s *Condition) applyOpNeg(data et.Json) (bool, error) {
+	result, err := s.applyOpEq(data)
 	if err != nil {
 		return false, err
 	}
@@ -175,11 +175,11 @@ func (s *Condition) ApplyOpNeg(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpLess
+* applyOpLess
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpLess(data et.Json) (bool, error) {
+func (s *Condition) applyOpLess(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -232,11 +232,11 @@ func (s *Condition) ApplyOpLess(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpLessEq
+* applyOpLessEq
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpLessEq(data et.Json) (bool, error) {
+func (s *Condition) applyOpLessEq(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -289,11 +289,11 @@ func (s *Condition) ApplyOpLessEq(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpMore
+* applyOpMore
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
+func (s *Condition) applyOpMore(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -346,11 +346,11 @@ func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpMoreEq
+* applyOpMoreEq
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
+func (s *Condition) applyOpMoreEq(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -403,11 +403,11 @@ func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpLike
+* applyOpLike
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpLike(data et.Json) (bool, error) {
+func (s *Condition) applyOpLike(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -427,11 +427,11 @@ func (s *Condition) ApplyOpLike(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpIn
+* applyOpIn
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpIn(data et.Json) (bool, error) {
+func (s *Condition) applyOpIn(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -463,12 +463,12 @@ func (s *Condition) ApplyOpIn(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpNotIn
+* applyOpNotIn
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpNotIn(data et.Json) (bool, error) {
-	ok, err := s.ApplyOpIn(data)
+func (s *Condition) applyOpNotIn(data et.Json) (bool, error) {
+	ok, err := s.applyOpIn(data)
 	if err != nil {
 		return false, err
 	}
@@ -476,11 +476,11 @@ func (s *Condition) ApplyOpNotIn(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpIs
+* applyOpIs
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpIs(data et.Json) (bool, error) {
+func (s *Condition) applyOpIs(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -504,12 +504,12 @@ func (s *Condition) ApplyOpIs(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpIsNot
+* applyOpIsNot
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpIsNot(data et.Json) (bool, error) {
-	ok, err := s.ApplyOpIs(data)
+func (s *Condition) applyOpIsNot(data et.Json) (bool, error) {
+	ok, err := s.applyOpIs(data)
 	if err != nil {
 		return false, err
 	}
@@ -517,11 +517,11 @@ func (s *Condition) ApplyOpIsNot(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpNull
+* applyOpNull
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpNull(data et.Json) (bool, error) {
+func (s *Condition) applyOpNull(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -530,12 +530,12 @@ func (s *Condition) ApplyOpNull(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpNotNull
+* applyOpNotNull
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpNotNull(data et.Json) (bool, error) {
-	ok, err := s.ApplyOpNull(data)
+func (s *Condition) applyOpNotNull(data et.Json) (bool, error) {
+	ok, err := s.applyOpNull(data)
 	if err != nil {
 		return false, err
 	}
@@ -543,11 +543,11 @@ func (s *Condition) ApplyOpNotNull(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpBetween
+* applyOpBetween
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpBetween(data et.Json) (bool, error) {
+func (s *Condition) applyOpBetween(data et.Json) (bool, error) {
 	val, err := s.fieldValue(data)
 	if err != nil {
 		return false, err
@@ -582,16 +582,56 @@ func (s *Condition) ApplyOpBetween(data et.Json) (bool, error) {
 }
 
 /**
-* ApplyOpNotBetween
+* applyOpNotBetween
 * @param data et.Json
 * @return bool, error
 **/
-func (s *Condition) ApplyOpNotBetween(data et.Json) (bool, error) {
-	ok, err := s.ApplyOpBetween(data)
+func (s *Condition) applyOpNotBetween(data et.Json) (bool, error) {
+	ok, err := s.applyOpBetween(data)
 	if err != nil {
 		return false, err
 	}
 	return !ok, nil
+}
+
+/**
+* Apply
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) Apply(data et.Json) (bool, error) {
+	switch s.Operator {
+	case OpEq:
+		return s.applyOpEq(data)
+	case OpNeg:
+		return s.applyOpNeg(data)
+	case OpLess:
+		return s.applyOpLess(data)
+	case OpLessEq:
+		return s.applyOpLessEq(data)
+	case OpMore:
+		return s.applyOpMore(data)
+	case OpMoreEq:
+		return s.applyOpMoreEq(data)
+	case OpLike:
+		return s.applyOpLike(data)
+	case OpIn:
+		return s.applyOpIn(data)
+	case OpNotIn:
+		return s.applyOpNotIn(data)
+	case OpIs:
+		return s.applyOpIs(data)
+	case OpNull:
+		return s.applyOpNull(data)
+	case OpNotNull:
+		return s.applyOpNotNull(data)
+	case OpBetween:
+		return s.applyOpBetween(data)
+	case OpNotBetween:
+		return s.applyOpNotBetween(data)
+	default:
+		return false, errorInvalidOperator
+	}
 }
 
 /**

@@ -25,6 +25,7 @@ var (
 	MSG_PRIMARY_KEYS_NOT_FOUND = "primary key not found"
 	MSG_FIELD_NOT_FOUND        = "field not found"
 	MSG_INVALID_TYPE           = "invalid type"
+	MSG_INVALID_OPERATOR       = "invalid operator"
 )
 
 func init() {
@@ -53,5 +54,6 @@ func init() {
 		MSG_PRIMARY_KEYS_NOT_FOUND = "primary key no encontrado"
 		MSG_FIELD_NOT_FOUND = "field no encontrado"
 		MSG_INVALID_TYPE = "tipo inválido"
+		MSG_INVALID_OPERATOR = "operador inválido"
 	}
 }

@@ -108,7 +108,7 @@ func (s *Wheres) applyToData(data et.Json) bool {
 * @param page int, rows int
 * @return et.Items, error
 **/
-func (s *Wheres) Rows(page, rows int) (et.Items, error) {
+func (s *Wheres) Rows() (et.Items, error) {
 	result := et.Items{}
 	st.Iterate(func(id string, data []byte) bool {
 		result := et.Json{}

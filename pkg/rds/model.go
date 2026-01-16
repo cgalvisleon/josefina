@@ -16,6 +16,7 @@ var (
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
 	errorInvalidType         = errors.New(msg.MSG_INVALID_TYPE)
+	errorInvalidOperator     = errors.New(msg.MSG_INVALID_OPERATOR)
 )
 
 type From struct {
