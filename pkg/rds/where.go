@@ -299,44 +299,11 @@ func NotBetween(field string, value []interface{}) *Condition {
 }
 
 /**
-* AND
-* @param condition *Condition
-* @return *Condition
-**/
-func AND(condition *Condition) *Condition {
-	condition.Connector = And
-	return condition
-}
-
-/**
-* OR
-* @param condition *Condition
-* @return *Condition
-**/
-func OR(condition *Condition) *Condition {
-	condition.Connector = Or
-	return condition
-}
-
-/**
 * Wheres
 **/
 type Wheres struct {
 	owner      *Model       `json:"-"`
 	conditions []*Condition `json:"-"`
-}
-
-/**
-* ToJson
-* @return []et.Json
-**/
-func (s *Wheres) ToJson() []et.Json {
-	result := []et.Json{}
-	for _, condition := range s.conditions {
-		result = append(result, condition.ToJson())
-	}
-
-	return result
 }
 
 /**
@@ -352,22 +319,16 @@ func newWhere(owner *Model) *Wheres {
 }
 
 /**
-* Add
-* @param condition *Condition
-* @return void
+* ToJson
+* @return []et.Json
 **/
-func (s *Wheres) Add(condition *Condition) {
-	fld := s.owner.getField(condition.Field.Name)
-	if fld == nil {
-		return
+func (s *Wheres) ToJson() []et.Json {
+	result := []et.Json{}
+	for _, condition := range s.conditions {
+		result = append(result, condition.ToJson())
 	}
 
-	condition.Field = fld.clone()
-	if len(s.conditions) > 0 && condition.Connector == NaC {
-		condition.Connector = And
-	}
-
-	s.conditions = append(s.conditions, condition)
+	return result
 }
 
 /**
@@ -385,31 +346,50 @@ func (s *Wheres) ByJson(jsons []et.Json) {
 }
 
 /**
-* WhereByKeys
-* @param data et.Json, keys map[string]string
-* @return []*Condition
+* Add
+* @param condition *Condition
+* @return *Wheres
 **/
-func WhereByKeys(data et.Json, keys map[string]string) []*Condition {
-	result := []*Condition{}
-	for fk, pk := range keys {
-		value := data[pk]
-		result = append(result, Eq(fk, value))
+func (s *Wheres) Add(condition *Condition) *Wheres {
+	fld := s.owner.getField(condition.Field.Name)
+	if fld == nil {
+		return s
 	}
 
-	return result
+	condition.Field = fld.clone()
+	if len(s.conditions) > 0 && condition.Connector == NaC {
+		condition.Connector = And
+	}
+
+	s.conditions = append(s.conditions, condition)
+	return s
 }
 
 /**
-* WhereByForeignKeys
-* @param data et.Json, keys map[string]string
-* @return []*Condition
+* And
+* @param condition *Condition
+* @return *Wheres
 **/
-func WhereByForeignKeys(data et.Json, keys map[string]string) []*Condition {
-	result := []*Condition{}
-	for fk, pk := range keys {
-		value := data[fk]
-		result = append(result, Eq(pk, value))
-	}
+func (s *Wheres) And(condition *Condition) *Wheres {
+	condition.Connector = And
+	return s.Add(condition)
+}
 
-	return result
+/**
+* Or
+* @param condition *Condition
+* @return *Wheres
+**/
+func (s *Wheres) Or(condition *Condition) *Wheres {
+	condition.Connector = Or
+	return s.Add(condition)
+}
+
+/**
+* Rows
+* @param page int, rows int
+* @return et.Items, error
+**/
+func (s *Wheres) Rows(page, rows int) (et.Items, error) {
+	return et.Items{}, nil
 }

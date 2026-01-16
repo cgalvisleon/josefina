@@ -3,6 +3,7 @@ package rds
 import (
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
@@ -18,15 +19,14 @@ const (
 )
 
 type Cmd struct {
-	model         *Model                      `json:"-"`
-	command       Command                     `json:"-"`
-	stores        map[string]*store.FileStore `json:"-"`
-	beforeInserts []*Trigger                  `json:"-"`
-	beforeUpdates []*Trigger                  `json:"-"`
-	beforeDeletes []*Trigger                  `json:"-"`
-	afterInserts  []*Trigger                  `json:"-"`
-	afterUpdates  []*Trigger                  `json:"-"`
-	afterDeletes  []*Trigger                  `json:"-"`
+	model         *Model     `json:"-"`
+	command       Command    `json:"-"`
+	beforeInserts []*Trigger `json:"-"`
+	beforeUpdates []*Trigger `json:"-"`
+	beforeDeletes []*Trigger `json:"-"`
+	afterInserts  []*Trigger `json:"-"`
+	afterUpdates  []*Trigger `json:"-"`
+	afterDeletes  []*Trigger `json:"-"`
 }
 
 /**
@@ -38,7 +38,6 @@ func newCmd(model *Model, command Command) *Cmd {
 	result := &Cmd{
 		model:         model,
 		command:       command,
-		stores:        make(map[string]*Store),
 		beforeInserts: make([]*Trigger, 0),
 		beforeUpdates: make([]*Trigger, 0),
 		beforeDeletes: make([]*Trigger, 0),
@@ -63,13 +62,6 @@ func newCmd(model *Model, command Command) *Cmd {
 	}
 	for _, trigger := range model.AfterDeletes {
 		result.afterDeletes = append(result.afterDeletes, trigger)
-	}
-	for name, store := range model.data {
-		index, keys := store.Clone()
-		result.stores[name] = &Store{
-			index: index,
-			keys:  keys,
-		}
 	}
 
 	return result
@@ -225,58 +217,66 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 **/
 func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.getByWhere(ctx, where)
-	if err != nil {
-		return result, err
-	}
-
-	for _, old := range selects.Result {
-		// Get index
-		idx, ok := old[INDEX]
-		if !ok {
-			return result, errorRecordNotFound
+	maxRows := envar.GetInt("MAX_ROWS", 1000)
+	model := s.model
+	page := 1
+	for {
+		items, err := where.Rows(page, maxRows)
+		if err != nil {
+			return result, err
 		}
 
-		// Update data
-		new := old.Clone()
-		for k, v := range data {
-			new[k] = v
+		if !items.Ok {
+			break
 		}
 
-		// Run before update triggers
-		for _, trigger := range s.beforeUpdates {
-			err := s.runTrigger(trigger, ctx, old, new)
-			if err != nil {
-				return et.Items{}, err
+		for _, old := range items.Result {
+			// Get index
+			idx, ok := old[INDEX]
+			if !ok {
+				return result, errorRecordNotFound
 			}
+
+			// Update data
+			new := old.Clone()
+			for k, v := range data {
+				new[k] = v
+			}
+
+			// Run before update triggers
+			for _, trigger := range s.beforeUpdates {
+				err := s.runTrigger(trigger, ctx, old, new)
+				if err != nil {
+					return et.Items{}, err
+				}
+			}
+
+			// Insert data into indexes
+			for _, name := range model.Indexes {
+				source := model.data[name]
+				key := fmt.Sprintf("%v", new[name])
+				if key == "" {
+					continue
+				}
+				if name == INDEX {
+					source.Put(key, new)
+				} else {
+					s.putIndex(source, key, idx)
+				}
+			}
+
+			// Run after update triggers
+			for _, trigger := range s.afterUpdates {
+				err := s.runTrigger(trigger, ctx, old, new)
+				if err != nil {
+					return et.Items{}, err
+				}
+			}
+
+			result.Add(new)
 		}
 
-		// Get model
-		model := s.model
-
-		// Insert data into indexes
-		for _, name := range model.Indexes {
-			source := model.data[name]
-			key := fmt.Sprintf("%v", new[name])
-			if key == "" {
-				continue
-			}
-			if name == INDEX {
-				source.Put(key, new)
-			} else {
-				s.putIndex(source, key, idx)
-			}
-		}
-
-		// Run after update triggers
-		for _, trigger := range s.afterUpdates {
-			err := s.runTrigger(trigger, ctx, old, new)
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
-
-		result.Add(new)
+		page++
 	}
 
 	return result, nil
@@ -289,55 +289,61 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 **/
 func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.getByWhere(ctx, where)
-	if err != nil {
-		return result, err
-	}
-
-	for _, old := range selects.Result {
-		// Get index
-		idx, ok := old[INDEX]
-		if !ok {
-			return result, errorRecordNotFound
+	maxRows := envar.GetInt("MAX_ROWS", 1000)
+	model := s.model
+	new := et.Json{}
+	page := 1
+	for {
+		items, err := where.Rows(page, maxRows)
+		if err != nil {
+			return result, err
 		}
 
-		// Delete data
-		new := et.Json{}
-
-		// Run before delete triggers
-		for _, trigger := range s.beforeDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
-			if err != nil {
-				return et.Items{}, err
-			}
+		if !items.Ok {
+			break
 		}
 
-		// Get model
-		model := s.model
+		for _, old := range items.Result {
+			// Get index
+			idx, ok := old[INDEX]
+			if !ok {
+				return result, errorRecordNotFound
+			}
 
-		// Delete data from indexes
-		for _, name := range model.Indexes {
-			source := model.data[name]
-			key := fmt.Sprintf("%v", new[name])
-			if key == "" {
-				continue
+			// Run before delete triggers
+			for _, trigger := range s.beforeDeletes {
+				err := s.runTrigger(trigger, ctx, old, new)
+				if err != nil {
+					return et.Items{}, err
+				}
 			}
-			if name == INDEX {
-				source.Delete(key)
-			} else {
-				s.deleteIndex(source, key, idx)
+
+			// Delete data from indexes
+			for _, name := range model.Indexes {
+				source := model.data[name]
+				key := fmt.Sprintf("%v", new[name])
+				if key == "" {
+					continue
+				}
+				if name == INDEX {
+					source.Delete(key)
+				} else {
+					s.deleteIndex(source, key, idx)
+				}
 			}
+
+			// Run after delete triggers
+			for _, trigger := range s.afterDeletes {
+				err := s.runTrigger(trigger, ctx, old, new)
+				if err != nil {
+					return et.Items{}, err
+				}
+			}
+
+			result.Add(old)
 		}
 
-		// Run after delete triggers
-		for _, trigger := range s.afterDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
-
-		result.Add(old)
+		page++
 	}
 
 	return result, nil
@@ -373,14 +379,4 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	return s.update(ctx, new, where)
-}
-
-/**
-* getByWhere: Selects the model by where
-* @param ctx *Tx, where *Wheres
-* @return et.Items, error
-**/
-func (s *Cmd) getByWhere(ctx *Tx, where *Wheres) (et.Items, error) {
-
-	return ql.All()
 }
