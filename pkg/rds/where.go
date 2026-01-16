@@ -111,11 +111,7 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 		index, ok := model.index(field)
 		if ok {
 			keys := index.Keys()
-			keys, err := con.ApplyToIndex(keys)
-			if err != nil {
-				return nil, err
-			}
-
+			keys = con.ApplyToIndex(keys)
 			for _, key := range keys {
 				item := et.Json{}
 				exists, err := model.getJson(key, item)
@@ -161,9 +157,20 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 			return false, err
 		}
 
-		ok, err := con.ApplyToData(item)
-		if err != nil {
-			return false, err
+		var ok bool
+		for i, con := range cons {
+			tmp := con.ApplyToData(item)
+			if i == 0 {
+				ok = tmp
+			} else if con.Connector == And {
+				ok = ok && tmp
+			} else if con.Connector == Or {
+				ok = ok || tmp
+			}
+
+			if !ok {
+				break
+			}
 		}
 
 		if ok {

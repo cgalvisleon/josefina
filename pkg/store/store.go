@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
@@ -527,9 +529,113 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), workers int) error {
 	tag := "iterate"
 	s.metricStart(tag)
+	defer func() {
+		// métrica se cierra al final
+	}()
 
-	// 1. Seleccionar todos los IDs
+	// 1. Seleccionar IDs
 	index, keys := s.getIndex()
+
+	if workers <= 0 {
+		workers = 1
+	}
+	if workers > len(keys) {
+		workers = len(keys)
+	}
+	if workers == 0 {
+		s.metricEnd(tag, "completed:total:0:workers:0")
+		return nil
+	}
+
+	s.metricSegment(tag, "index")
+	// 2) Worker pool
+	jobs := make(chan string, 1024)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		wg      sync.WaitGroup
+		errOnce sync.Once
+		mErr    error
+		total   int64
+	)
+
+	setErr := func(err error) {
+		if err == nil {
+			return
+		}
+		errOnce.Do(func() {
+			mErr = err
+			cancel() // cortar todos
+		})
+	}
+
+	// 3) Lanzar workers
+	wg.Add(workers)
+	for w := 0; w < workers; w++ {
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+
+				case id, ok := <-jobs:
+					if !ok {
+						return
+					}
+
+					ref, ok := index[id]
+					if !ok {
+						// si esto puede pasar, es inconsistencia del índice
+						// define si debe ser error o skip
+						continue
+					}
+
+					seg := s.segments[ref.segment]
+
+					data, err := seg.read(ref)
+					if err != nil {
+						setErr(err)
+						return
+					}
+
+					cont, err := fn(id, data)
+					if err != nil {
+						setErr(err)
+						return
+					}
+
+					atomic.AddInt64(&total, 1)
+
+					if !cont {
+						// detener todo si el callback pide parar
+						cancel()
+						return
+					}
+				}
+			}
+		}()
+	}
+
+	// 4) Enviar jobs (producer)
+	for _, id := range keys {
+		select {
+		case <-ctx.Done():
+			break
+		case jobs <- id:
+		}
+	}
+
+	close(jobs)
+	wg.Wait()
+
+	msg := fmt.Sprintf("completed:total:%d:workers:%d", total, workers)
+	s.metricEnd(tag, msg)
+
+	return mErr
 
 	// 2. Workers para paralelizar
 	parts := chunkKeys(keys, workers)
