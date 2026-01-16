@@ -148,13 +148,12 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 
 /**
 * applyOpEq
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpEq(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpEq(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	return val == s.Value, nil
@@ -162,11 +161,11 @@ func (s *Condition) applyOpEq(data et.Json) (bool, error) {
 
 /**
 * applyOpNeg
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpNeg(data et.Json) (bool, error) {
-	result, err := s.applyOpEq(data)
+func (s *Condition) applyOpNeg(val any) (bool, error) {
+	result, err := s.applyOpEq(val)
 	if err != nil {
 		return false, err
 	}
@@ -176,13 +175,12 @@ func (s *Condition) applyOpNeg(data et.Json) (bool, error) {
 
 /**
 * applyOpLess
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpLess(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpLess(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	// time.Time (soporta <)
@@ -233,13 +231,12 @@ func (s *Condition) applyOpLess(data et.Json) (bool, error) {
 
 /**
 * applyOpLessEq
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpLessEq(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpLessEq(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	// time.Time (soporta <=)
@@ -290,13 +287,12 @@ func (s *Condition) applyOpLessEq(data et.Json) (bool, error) {
 
 /**
 * applyOpMore
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpMore(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpMore(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	// time.Time
@@ -347,13 +343,12 @@ func (s *Condition) applyOpMore(data et.Json) (bool, error) {
 
 /**
 * applyOpMoreEq
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpMoreEq(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpMoreEq(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	// time.Time
@@ -404,13 +399,12 @@ func (s *Condition) applyOpMoreEq(data et.Json) (bool, error) {
 
 /**
 * applyOpLike
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpLike(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpLike(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	av, ok := val.(string)
@@ -428,13 +422,12 @@ func (s *Condition) applyOpLike(data et.Json) (bool, error) {
 
 /**
 * applyOpIn
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpIn(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
+func (s *Condition) applyOpIn(val any) (bool, error) {
+	if val == nil {
+		return false, errorFieldNotFound
 	}
 
 	list := reflect.ValueOf(s.Value)
@@ -464,11 +457,11 @@ func (s *Condition) applyOpIn(data et.Json) (bool, error) {
 
 /**
 * applyOpNotIn
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpNotIn(data et.Json) (bool, error) {
-	ok, err := s.applyOpIn(data)
+func (s *Condition) applyOpNotIn(val any) (bool, error) {
+	ok, err := s.applyOpIn(val)
 	if err != nil {
 		return false, err
 	}
@@ -477,15 +470,10 @@ func (s *Condition) applyOpNotIn(data et.Json) (bool, error) {
 
 /**
 * applyOpIs
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpIs(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
-	}
-
+func (s *Condition) applyOpIs(val any) (bool, error) {
 	// nil == nil
 	if val == nil && s.Value == nil {
 		return true, nil
@@ -505,11 +493,11 @@ func (s *Condition) applyOpIs(data et.Json) (bool, error) {
 
 /**
 * applyOpIsNot
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpIsNot(data et.Json) (bool, error) {
-	ok, err := s.applyOpIs(data)
+func (s *Condition) applyOpIsNot(val any) (bool, error) {
+	ok, err := s.applyOpIs(val)
 	if err != nil {
 		return false, err
 	}
@@ -518,24 +506,20 @@ func (s *Condition) applyOpIsNot(data et.Json) (bool, error) {
 
 /**
 * applyOpNull
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpNull(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
-	}
+func (s *Condition) applyOpNull(val any) (bool, error) {
 	return val == nil, nil
 }
 
 /**
 * applyOpNotNull
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpNotNull(data et.Json) (bool, error) {
-	ok, err := s.applyOpNull(data)
+func (s *Condition) applyOpNotNull(val any) (bool, error) {
+	ok, err := s.applyOpNull(val)
 	if err != nil {
 		return false, err
 	}
@@ -544,18 +528,12 @@ func (s *Condition) applyOpNotNull(data et.Json) (bool, error) {
 
 /**
 * applyOpBetween
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpBetween(data et.Json) (bool, error) {
-	val, err := s.fieldValue(data)
-	if err != nil {
-		return false, err
-	}
-
-	// si el campo es nil, no puede estar entre nada
+func (s *Condition) applyOpBetween(val any) (bool, error) {
 	if val == nil {
-		return false, nil
+		return false, errorFieldNotFound
 	}
 
 	min, max, ok := getBetweenRange(s.Value)
@@ -583,11 +561,11 @@ func (s *Condition) applyOpBetween(data et.Json) (bool, error) {
 
 /**
 * applyOpNotBetween
-* @param data et.Json
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) applyOpNotBetween(data et.Json) (bool, error) {
-	ok, err := s.applyOpBetween(data)
+func (s *Condition) applyOpNotBetween(val any) (bool, error) {
+	ok, err := s.applyOpBetween(val)
 	if err != nil {
 		return false, err
 	}
@@ -595,43 +573,81 @@ func (s *Condition) applyOpNotBetween(data et.Json) (bool, error) {
 }
 
 /**
-* Apply
-* @param data et.Json
+* ApplyToValue
+* @param val any
 * @return bool, error
 **/
-func (s *Condition) Apply(data et.Json) (bool, error) {
+func (s *Condition) ApplyToValue(val any) (bool, error) {
 	switch s.Operator {
 	case OpEq:
-		return s.applyOpEq(data)
+		return s.applyOpEq(val)
 	case OpNeg:
-		return s.applyOpNeg(data)
+		return s.applyOpNeg(val)
 	case OpLess:
-		return s.applyOpLess(data)
+		return s.applyOpLess(val)
 	case OpLessEq:
-		return s.applyOpLessEq(data)
+		return s.applyOpLessEq(val)
 	case OpMore:
-		return s.applyOpMore(data)
+		return s.applyOpMore(val)
 	case OpMoreEq:
-		return s.applyOpMoreEq(data)
+		return s.applyOpMoreEq(val)
 	case OpLike:
-		return s.applyOpLike(data)
+		return s.applyOpLike(val)
 	case OpIn:
-		return s.applyOpIn(data)
+		return s.applyOpIn(val)
 	case OpNotIn:
-		return s.applyOpNotIn(data)
+		return s.applyOpNotIn(val)
 	case OpIs:
-		return s.applyOpIs(data)
+		return s.applyOpIs(val)
 	case OpNull:
-		return s.applyOpNull(data)
+		return s.applyOpNull(val)
 	case OpNotNull:
-		return s.applyOpNotNull(data)
+		return s.applyOpNotNull(val)
 	case OpBetween:
-		return s.applyOpBetween(data)
+		return s.applyOpBetween(val)
 	case OpNotBetween:
-		return s.applyOpNotBetween(data)
+		return s.applyOpNotBetween(val)
 	default:
 		return false, errorInvalidOperator
 	}
+}
+
+/**
+* ApplyToData
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyToData(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	return s.ApplyToValue(val)
+}
+
+/**
+* ApplyToIndex
+* @param keys []string
+* @return []string, error
+**/
+func (s *Condition) ApplyToIndex(keys []string) ([]string, error) {
+	if s.Field == "" {
+		return nil, errorFieldNotFound
+	}
+
+	result := make([]string, 0)
+	for _, key := range keys {
+		ok, err := s.ApplyToValue(key)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			result = append(result, key)
+		}
+	}
+
+	return result, nil
 }
 
 /**

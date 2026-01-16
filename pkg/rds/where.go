@@ -88,12 +88,12 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 }
 
 /**
-* applyToData
+* Apply
 * @param data et.Json
-* @return bool
+* @return bool, error
 **/
-func (s *Wheres) applyToData(data et.Json) bool {
-	result := true
+func (s *Wheres) Apply(data et.Json) (bool, error) {
+
 	for _, condition := range s.conditions {
 		if condition.Connector == And {
 			data = data.Json(condition.Field)
