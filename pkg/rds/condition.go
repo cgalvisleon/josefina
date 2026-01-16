@@ -2,6 +2,7 @@ package rds
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/strs"
@@ -178,12 +179,50 @@ func (s *Condition) ApplyOpLess(data et.Json) (bool, error) {
 		return false, err
 	}
 
-	switch v := val.(type) {
-	case int:
-		return v < s.Value.(int), nil
-	default:
+	// time.Time (soporta <)
+	if av, ok := val.(time.Time); ok {
+		bv, ok := s.Value.(time.Time)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av.Before(bv), nil
+	}
+
+	// string (soporta < lexicográfico)
+	if av, ok := val.(string); ok {
+		bv, ok := s.Value.(string)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av < bv, nil
+	}
+
+	// Números (int*, uint*, float*)
+	aNum, aKind, ok := numberToFloat64(val)
+	if !ok {
 		return false, errorInvalidType
 	}
+
+	bNum, bKind, ok := numberToFloat64(s.Value)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// Evitar comparar signed vs unsigned si hay negativos (caso peligroso)
+	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+		ai, _ := numberToInt64(val)
+		if ai < 0 {
+			return false, errorInvalidType
+		}
+	}
+	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+		bi, _ := numberToInt64(s.Value)
+		if bi < 0 {
+			return false, errorInvalidType
+		}
+	}
+
+	return aNum < bNum, nil
 }
 
 /**
@@ -192,17 +231,193 @@ func (s *Condition) ApplyOpLess(data et.Json) (bool, error) {
 * @return bool, error
 **/
 func (s *Condition) ApplyOpLessEq(data et.Json) (bool, error) {
-	val, ok := data[s.Field]
-	if !ok {
-		return false, errorFieldNotFound
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
 	}
 
-	switch v := val.(type) {
-	case int:
-		return v < s.Value.(int), nil
-	default:
+	// time.Time (soporta <=)
+	if av, ok := val.(time.Time); ok {
+		bv, ok := s.Value.(time.Time)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av.Before(bv) || av.Equal(bv), nil
+	}
+
+	// string (soporta <= lexicográfico)
+	if av, ok := val.(string); ok {
+		bv, ok := s.Value.(string)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av <= bv, nil
+	}
+
+	// Números (int*, uint*, float*)
+	aNum, aKind, ok := numberToFloat64(val)
+	if !ok {
 		return false, errorInvalidType
 	}
+
+	bNum, bKind, ok := numberToFloat64(s.Value)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// Evitar comparar signed vs unsigned si hay negativos (caso peligroso)
+	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+		ai, _ := numberToInt64(val)
+		if ai < 0 {
+			return false, errorInvalidType
+		}
+	}
+	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+		bi, _ := numberToInt64(s.Value)
+		if bi < 0 {
+			return false, errorInvalidType
+		}
+	}
+
+	return aNum <= bNum, nil
+}
+
+/**
+* ApplyOpMore
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	// ✅ time.Time
+	if av, ok := val.(time.Time); ok {
+		bv, ok := s.Value.(time.Time)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av.After(bv), nil
+	}
+
+	// ✅ string
+	if av, ok := val.(string); ok {
+		bv, ok := s.Value.(string)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av > bv, nil
+	}
+
+	// ✅ numbers
+	aNum, aKind, ok := numberToFloat64(val)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	bNum, bKind, ok := numberToFloat64(s.Value)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// Evitar comparar signed vs unsigned si hay negativos
+	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+		ai, _ := numberToInt64(val)
+		if ai < 0 {
+			return false, errorInvalidType
+		}
+	}
+	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+		bi, _ := numberToInt64(s.Value)
+		if bi < 0 {
+			return false, errorInvalidType
+		}
+	}
+
+	return aNum > bNum, nil
+}
+
+/**
+* ApplyOpMoreEq
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	// ✅ time.Time
+	if av, ok := val.(time.Time); ok {
+		bv, ok := s.Value.(time.Time)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av.After(bv) || av.Equal(bv), nil
+	}
+
+	// ✅ string
+	if av, ok := val.(string); ok {
+		bv, ok := s.Value.(string)
+		if !ok {
+			return false, errorInvalidType
+		}
+		return av >= bv, nil
+	}
+
+	// ✅ numbers
+	aNum, aKind, ok := numberToFloat64(val)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	bNum, bKind, ok := numberToFloat64(s.Value)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// Evitar comparar signed vs unsigned si hay negativos
+	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+		ai, _ := numberToInt64(val)
+		if ai < 0 {
+			return false, errorInvalidType
+		}
+	}
+	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+		bi, _ := numberToInt64(s.Value)
+		if bi < 0 {
+			return false, errorInvalidType
+		}
+	}
+
+	return aNum >= bNum, nil
+}
+
+/**
+* ApplyOpLike
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpLike(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	av, ok := val.(string)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	pattern, ok := s.Value.(string)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	return matchLikeStar(av, pattern), nil
 }
 
 /**
@@ -262,9 +477,7 @@ func ToCondition(json et.Json) *Condition {
 **/
 func condition(field string, value interface{}, op Operator) *Condition {
 	return &Condition{
-		Field: &Field{
-			Name: field,
-		},
+		Field:     field,
 		Operator:  op,
 		Value:     value,
 		Connector: NaC,
