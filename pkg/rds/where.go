@@ -150,6 +150,7 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 		return nil, err
 	}
 
+	worker := len(model.Fields)
 	st.Iterate(func(id string, src []byte) (bool, error) {
 		item := et.Json{}
 		err := json.Unmarshal(src, &item)
@@ -178,7 +179,7 @@ func (s *Wheres) Rows() ([]et.Json, error) {
 		}
 
 		return true, nil
-	}, 2)
+	}, worker)
 
 	return result, nil
 }
