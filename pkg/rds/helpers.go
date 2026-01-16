@@ -178,3 +178,107 @@ func equalsAny(a, b any) (bool, error) {
 
 	return ra.Interface() == rb.Interface(), nil
 }
+
+/**
+* compareAnyOrdered: Compares two values
+* @param a any, b any
+* @return int, bool
+**/
+func compareAnyOrdered(a, b any) (int, bool) {
+	// time.Time
+	if ta, ok := a.(time.Time); ok {
+		tb, ok := b.(time.Time)
+		if !ok {
+			return 0, false
+		}
+		if ta.Before(tb) {
+			return -1, true
+		}
+		if ta.After(tb) {
+			return 1, true
+		}
+		return 0, true
+	}
+
+	// string
+	if sa, ok := a.(string); ok {
+		sb, ok := b.(string)
+		if !ok {
+			return 0, false
+		}
+		if sa < sb {
+			return -1, true
+		}
+		if sa > sb {
+			return 1, true
+		}
+		return 0, true
+	}
+
+	// numbers
+	af, aKind, okA := numberToFloat64(a)
+	if !okA {
+		return 0, false
+	}
+
+	bf, bKind, okB := numberToFloat64(b)
+	if !okB {
+		return 0, false
+	}
+
+	// Evitar comparar signed vs unsigned si hay negativos (caso peligroso)
+	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+		ai, _ := numberToInt64(a)
+		if ai < 0 {
+			return 0, false
+		}
+	}
+	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+		bi, _ := numberToInt64(b)
+		if bi < 0 {
+			return 0, false
+		}
+	}
+
+	if af < bf {
+		return -1, true
+	}
+	if af > bf {
+		return 1, true
+	}
+	return 0, true
+}
+
+/**
+* getBetweenRange: Gets the min and max values from a between range
+* @param v any
+* @return min any, max any, ok bool
+**/
+func getBetweenRange(v any) (min any, max any, ok bool) {
+	// Caso 1: BetweenValue
+	if r, ok := v.(BetweenValue); ok {
+		return r.Min, r.Max, true
+	}
+
+	// Caso 2: map[string]any {"min":X,"max":Y}
+	if m, ok := v.(map[string]any); ok {
+		min, okMin := m["min"]
+		max, okMax := m["max"]
+		return min, max, okMin && okMax
+	}
+
+	// Caso 3: slice/array de 2 elementos: []any{min,max}
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
+		return nil, nil, false
+	}
+
+	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		if rv.Len() != 2 {
+			return nil, nil, false
+		}
+		return rv.Index(0).Interface(), rv.Index(1).Interface(), true
+	}
+
+	return nil, nil, false
+}

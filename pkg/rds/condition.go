@@ -72,6 +72,11 @@ func (s Connector) Str() string {
 	return string(s)
 }
 
+type BetweenValue struct {
+	Min any
+	Max any
+}
+
 type Condition struct {
 	Field     string    `json:"field"`
 	Operator  Operator  `json:"operator"`
@@ -512,6 +517,84 @@ func (s *Condition) ApplyOpIsNot(data et.Json) (bool, error) {
 }
 
 /**
+* ApplyOpNull
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpNull(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+	return val == nil, nil
+}
+
+/**
+* ApplyOpNotNull
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpNotNull(data et.Json) (bool, error) {
+	ok, err := s.ApplyOpNull(data)
+	if err != nil {
+		return false, err
+	}
+	return !ok, nil
+}
+
+/**
+* ApplyOpBetween
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpBetween(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	// si el campo es nil, no puede estar entre nada
+	if val == nil {
+		return false, nil
+	}
+
+	min, max, ok := getBetweenRange(s.Value)
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// min/max no deben ser nil
+	if min == nil || max == nil {
+		return false, errorInvalidType
+	}
+
+	c1, ok := compareAnyOrdered(val, min) // val vs min
+	if !ok {
+		return false, errorInvalidType
+	}
+	c2, ok := compareAnyOrdered(val, max) // val vs max
+	if !ok {
+		return false, errorInvalidType
+	}
+
+	// BETWEEN inclusivo: val >= min && val <= max
+	return c1 >= 0 && c2 <= 0, nil
+}
+
+/**
+* ApplyOpNotBetween
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpNotBetween(data et.Json) (bool, error) {
+	ok, err := s.ApplyOpBetween(data)
+	if err != nil {
+		return false, err
+	}
+	return !ok, nil
+}
+
+/**
 * ToCondition
 * @param json et.Json
 * @return *Condition
@@ -694,18 +777,18 @@ func NotNull(field string) *Condition {
 
 /**
 * Between
-* @param field string, value []interface{}
+* @param field string, min any, max any
 * @return Condition
 **/
-func Between(field string, value []interface{}) *Condition {
-	return condition(field, value, OpBetween)
+func Between(field string, min, max any) *Condition {
+	return condition(field, BetweenValue{Min: min, Max: max}, OpBetween)
 }
 
 /**
 * NotBetween
-* @param field string, value []interface{}
+* @param field string, min any, max any
 * @return Condition
 **/
-func NotBetween(field string, value []interface{}) *Condition {
-	return condition(field, value, OpNotBetween)
+func NotBetween(field string, min, max any) *Condition {
+	return condition(field, BetweenValue{Min: min, Max: max}, OpNotBetween)
 }
