@@ -17,15 +17,21 @@ const (
 	cmdUpsert Command = "upsert"
 )
 
+type Store struct {
+	index map[string]*store.FileStore
+	keys  []string
+}
+
 type Cmd struct {
-	model         *Model     `json:"-"`
-	command       Command    `json:"-"`
-	beforeInserts []*Trigger `json:"-"`
-	beforeUpdates []*Trigger `json:"-"`
-	beforeDeletes []*Trigger `json:"-"`
-	afterInserts  []*Trigger `json:"-"`
-	afterUpdates  []*Trigger `json:"-"`
-	afterDeletes  []*Trigger `json:"-"`
+	model         *Model            `json:"-"`
+	command       Command           `json:"-"`
+	stores        map[string]*Store `json:"-"`
+	beforeInserts []*Trigger        `json:"-"`
+	beforeUpdates []*Trigger        `json:"-"`
+	beforeDeletes []*Trigger        `json:"-"`
+	afterInserts  []*Trigger        `json:"-"`
+	afterUpdates  []*Trigger        `json:"-"`
+	afterDeletes  []*Trigger        `json:"-"`
 }
 
 /**
@@ -37,6 +43,7 @@ func newCmd(model *Model, command Command) *Cmd {
 	result := &Cmd{
 		model:         model,
 		command:       command,
+		stores:        make(map[string]*Store),
 		beforeInserts: make([]*Trigger, 0),
 		beforeUpdates: make([]*Trigger, 0),
 		beforeDeletes: make([]*Trigger, 0),
@@ -341,7 +348,7 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 **/
 func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 	model := s.model
-	where := newWhere(model.From)
+	where := newWhere(model)
 	exists := true
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.data[name]

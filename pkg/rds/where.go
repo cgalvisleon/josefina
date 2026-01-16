@@ -322,7 +322,7 @@ func OR(condition *Condition) *Condition {
 * Wheres
 **/
 type Wheres struct {
-	owner      *From        `json:"-"`
+	owner      *Model       `json:"-"`
 	conditions []*Condition `json:"-"`
 }
 
@@ -341,10 +341,10 @@ func (s *Wheres) ToJson() []et.Json {
 
 /**
 * newWhere
-* @param owner *From
+* @param owner *Model
 * @return *Wheres
 **/
-func newWhere(owner *From) *Wheres {
+func newWhere(owner *Model) *Wheres {
 	return &Wheres{
 		owner:      owner,
 		conditions: make([]*Condition, 0),
