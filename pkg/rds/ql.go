@@ -6,7 +6,7 @@ import (
 )
 
 type Ql struct {
-	From       *From    `json:"froms"`
+	From       *Model   `json:"froms"`
 	Selects    []string `json:"selects"`
 	Hidden     []string `json:"hidden"`
 	Wheres     *Wheres  `json:"wheres"`
@@ -28,24 +28,20 @@ type Ql struct {
 * @param tx *Tx, model *Model, as string
 * @return *Ql
 **/
-func newQl(tx *Tx, model *Model, as string) *Ql {
+func newQl(tx *Tx, model *Model) *Ql {
 	maxRows := envar.GetInt("MAX_ROWS", 1000)
-	from := model.From.clone()
-	from.setAs(as)
 	if tx == nil {
 		tx = newTx(model.db)
 	}
 	return &Ql{
-		Froms: []*From{
-			from,
-		},
-		Selects:    make([]*Field, 0),
+		From:       model,
+		Selects:    make([]string, 0),
 		Hidden:     make([]string, 0),
-		Wheres:     make([]*Wheres, 0),
-		GroupsBy:   make([]*Field, 0),
-		Having:     make([]*Wheres, 0),
-		OrdersAsc:  make([]*Field, 0),
-		OrdersDesc: make([]*Field, 0),
+		Wheres:     newWhere(model.From),
+		GroupsBy:   make([]string, 0),
+		Having:     newWhere(model.From),
+		OrdersAsc:  make([]string, 0),
+		OrdersDesc: make([]string, 0),
 		MaxRows:    maxRows,
 		db:         model.db,
 		tx:         tx,

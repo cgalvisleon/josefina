@@ -5,15 +5,16 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type Command string
 
 const (
-	insert Command = "insert"
-	update Command = "update"
-	delete Command = "delete"
-	upsert Command = "upsert"
+	cmdInsert Command = "insert"
+	cmdUpdate Command = "update"
+	cmdDelete Command = "delete"
+	cmdUpsert Command = "upsert"
 )
 
 type Cmd struct {
@@ -92,6 +93,56 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 }
 
 /**
+* putIndex
+* @param store *store.FileStore, id string, key string
+* @return string, error
+**/
+func (s *Cmd) putIndex(store *store.FileStore, id string, key any) (string, error) {
+	result := map[string]bool{}
+	_, err := store.Get(id, result)
+	if err != nil {
+		return id, err
+	}
+
+	st := fmt.Sprintf("%v", key)
+	result[st] = true
+	store.Put(id, result)
+
+	return id, nil
+}
+
+/**
+* deleteIndex
+* @param store *store.FileStore, id string, key string
+* @return bool, error
+**/
+func (s *Cmd) deleteIndex(store *store.FileStore, id string, key any) (bool, error) {
+	result := map[string]bool{}
+	exists, err := store.Get(id, result)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	st := fmt.Sprintf("%v", key)
+	if _, ok := result[st]; !ok {
+		return false, nil
+	}
+
+	delete(result, st)
+	if len(result) == 0 {
+		store.Delete(id)
+		return true, nil
+	}
+
+	store.Put(id, result)
+	return true, nil
+}
+
+/**
 * insert: Inserts the model
 * @param ctx *Tx, new et.Json
 * @return et.Items, error
@@ -141,7 +192,7 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 		if name == INDEX {
 			source.Put(key, new)
 		} else {
-			source.PutIndex(key, idx)
+			s.putIndex(source, key, idx)
 		}
 	}
 
@@ -165,7 +216,7 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 **/
 func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.byWhere(ctx, where)
+	selects, err := s.getByWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -204,7 +255,7 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 			if name == INDEX {
 				source.Put(key, new)
 			} else {
-				source.PutIndex(key, idx)
+				s.putIndex(source, key, idx)
 			}
 		}
 
@@ -229,7 +280,7 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 **/
 func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 	result := et.Items{}
-	selects, err := s.byWhere(ctx, where)
+	selects, err := s.getByWhere(ctx, where)
 	if err != nil {
 		return result, err
 	}
@@ -265,7 +316,7 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 			if name == INDEX {
 				source.Delete(key)
 			} else {
-				source.DeleteIndex(key, idx)
+				s.deleteIndex(source, key, idx)
 			}
 		}
 
@@ -316,12 +367,11 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 }
 
 /**
-* byWhere: Selects the model by where
+* getByWhere: Selects the model by where
 * @param ctx *Tx, where *Wheres
 * @return et.Items, error
 **/
-func (s *Cmd) byWhere(ctx *Tx, where *Wheres) (et.Items, error) {
-	ql := newQl(ctx, s.model, "A")
-	ql.Wheres = append(ql.Wheres, where)
+func (s *Cmd) getByWhere(ctx *Tx, where *Wheres) (et.Items, error) {
+
 	return ql.All()
 }
