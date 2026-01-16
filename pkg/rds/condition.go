@@ -303,50 +303,49 @@ func (s *Condition) applyOpMore(val any) (bool, error) {
 		return false, errorFieldNotFound
 	}
 
-	// time.Time
-	if av, ok := val.(time.Time); ok {
-		bv, ok := s.Value.(time.Time)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av.After(bv), nil
-	}
-
-	// string
-	if av, ok := val.(string); ok {
-		bv, ok := s.Value.(string)
-		if !ok {
-			return false, errorInvalidType
-		}
-		return av > bv, nil
-	}
-
-	// numbers
-	aNum, aKind, ok := numberToFloat64(val)
-	if !ok {
+	invalidType := func() (bool, error) {
 		return false, errorInvalidType
 	}
 
-	bNum, bKind, ok := numberToFloat64(s.Value)
-	if !ok {
-		return false, errorInvalidType
-	}
-
-	// Evitar comparar signed vs unsigned si hay negativos
-	if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
-		ai, _ := numberToInt64(val)
-		if ai < 0 {
-			return false, errorInvalidType
+	switch bv := s.Value.(type) {
+	case time.Time:
+		if av, ok := val.(time.Time); ok {
+			return av.After(bv), nil
 		}
-	}
-	if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
-		bi, _ := numberToInt64(s.Value)
-		if bi < 0 {
-			return false, errorInvalidType
+		return invalidType()
+	case string:
+		if av, ok := val.(string); ok {
+			return av > bv, nil
 		}
-	}
+		return invalidType()
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		aNum, aKind, ok := numberToFloat64(val)
+		if !ok {
+			return invalidType()
+		}
 
-	return aNum > bNum, nil
+		bNum, bKind, ok := numberToFloat64(s.Value)
+		if !ok {
+			return invalidType()
+		}
+
+		if isSignedIntKind(aKind) && isUnsignedIntKind(bKind) {
+			ai, _ := numberToInt64(val)
+			if ai < 0 {
+				return invalidType()
+			}
+		}
+		if isUnsignedIntKind(aKind) && isSignedIntKind(bKind) {
+			bi, _ := numberToInt64(s.Value)
+			if bi < 0 {
+				return invalidType()
+			}
+		}
+
+		return aNum > bNum, nil
+	default:
+		return invalidType()
+	}
 }
 
 /**
