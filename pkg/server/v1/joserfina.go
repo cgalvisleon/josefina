@@ -3,7 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/josefina/pkg/josefina"
+	"github.com/cgalvisleon/josefina/pkg/rds"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -17,7 +17,7 @@ var (
 * @return error
 **/
 func InitJosefina() (http.Handler, error) {
-	err := josefina.Init(Version)
+	err := rds.Init(Version)
 	if err != nil {
 		return nil, err
 	}

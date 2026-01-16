@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 type Relation struct {
 	Key    string `json:"key"`

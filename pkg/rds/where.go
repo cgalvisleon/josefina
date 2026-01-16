@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 import (
 	"github.com/cgalvisleon/et/et"

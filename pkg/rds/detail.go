@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 type Detail struct {
 	From            *From             `json:"from"`

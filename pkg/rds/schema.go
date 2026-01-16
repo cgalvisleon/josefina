@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 import (
 	"fmt"
@@ -321,5 +321,7 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Cmd) byWhere(ctx *Tx, where *Wheres) (et.Items, error) {
-	return et.Items{}, nil
+	ql := newQl(ctx, s.model, "A")
+	ql.Wheres = append(ql.Wheres, where)
+	return ql.All()
 }

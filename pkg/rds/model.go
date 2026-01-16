@@ -1,4 +1,4 @@
-package josefina
+package rds
 
 import (
 	"errors"
@@ -241,4 +241,8 @@ func (s *Model) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 **/
 func (s *Model) upsert(ctx *Tx, data et.Json) (et.Items, error) {
 	return newCmd(s, upsert).upsert(ctx, data)
+}
+
+func (s *Model) byWhere(ctx *Tx, selects, hiddens, ordersAsc, ordersDesc []string, where *Wheres) (et.Items, error) {
+	return newCmd(s, select).byWhere(ctx, where)
 }
