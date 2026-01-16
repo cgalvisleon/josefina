@@ -3,6 +3,7 @@ package rds
 import (
 	"reflect"
 	"strings"
+	"time"
 )
 
 /**
@@ -121,4 +122,59 @@ func matchLikeStar(value, pattern string) bool {
 	default:
 		return value == pattern
 	}
+}
+
+/**
+* equalsAny: Compares two values
+* @param a any, b any
+* @return bool, error
+**/
+func equalsAny(a, b any) (bool, error) {
+	// time.Time
+	if ta, ok := a.(time.Time); ok {
+		tb, ok := b.(time.Time)
+		if !ok {
+			return false, nil
+		}
+		return ta.Equal(tb), nil
+	}
+
+	// string
+	if sa, ok := a.(string); ok {
+		sb, ok := b.(string)
+		if !ok {
+			return false, nil
+		}
+		return sa == sb, nil
+	}
+
+	// numbers (usa tu helper numberToFloat64 del paso anterior)
+	af, _, okA := numberToFloat64(a)
+	if okA {
+		bf, _, okB := numberToFloat64(b)
+		if !okB {
+			return false, nil
+		}
+		return af == bf, nil
+	}
+
+	// fallback: solo para tipos comparables
+	ra := reflect.ValueOf(a)
+	rb := reflect.ValueOf(b)
+
+	if !ra.IsValid() || !rb.IsValid() {
+		return false, nil
+	}
+
+	// si no son comparables, no se puede hacer ==
+	if !ra.Type().Comparable() || !rb.Type().Comparable() {
+		return false, nil
+	}
+
+	// si son tipos distintos pero comparables, no son iguales
+	if ra.Type() != rb.Type() {
+		return false, nil
+	}
+
+	return ra.Interface() == rb.Interface(), nil
 }

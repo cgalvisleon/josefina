@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"reflect"
 	"strconv"
 	"time"
 
@@ -293,7 +294,7 @@ func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
 		return false, err
 	}
 
-	// ✅ time.Time
+	// time.Time
 	if av, ok := val.(time.Time); ok {
 		bv, ok := s.Value.(time.Time)
 		if !ok {
@@ -302,7 +303,7 @@ func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
 		return av.After(bv), nil
 	}
 
-	// ✅ string
+	// string
 	if av, ok := val.(string); ok {
 		bv, ok := s.Value.(string)
 		if !ok {
@@ -311,7 +312,7 @@ func (s *Condition) ApplyOpMore(data et.Json) (bool, error) {
 		return av > bv, nil
 	}
 
-	// ✅ numbers
+	// numbers
 	aNum, aKind, ok := numberToFloat64(val)
 	if !ok {
 		return false, errorInvalidType
@@ -350,7 +351,7 @@ func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
 		return false, err
 	}
 
-	// ✅ time.Time
+	// time.Time
 	if av, ok := val.(time.Time); ok {
 		bv, ok := s.Value.(time.Time)
 		if !ok {
@@ -359,7 +360,7 @@ func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
 		return av.After(bv) || av.Equal(bv), nil
 	}
 
-	// ✅ string
+	// string
 	if av, ok := val.(string); ok {
 		bv, ok := s.Value.(string)
 		if !ok {
@@ -368,7 +369,7 @@ func (s *Condition) ApplyOpMoreEq(data et.Json) (bool, error) {
 		return av >= bv, nil
 	}
 
-	// ✅ numbers
+	// numbers
 	aNum, aKind, ok := numberToFloat64(val)
 	if !ok {
 		return false, errorInvalidType
@@ -418,6 +419,96 @@ func (s *Condition) ApplyOpLike(data et.Json) (bool, error) {
 	}
 
 	return matchLikeStar(av, pattern), nil
+}
+
+/**
+* ApplyOpIn
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpIn(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	list := reflect.ValueOf(s.Value)
+	if !list.IsValid() {
+		return false, errorInvalidType
+	}
+
+	// Debe ser slice o array
+	if list.Kind() != reflect.Slice && list.Kind() != reflect.Array {
+		return false, errorInvalidType
+	}
+
+	for i := 0; i < list.Len(); i++ {
+		item := list.Index(i).Interface()
+
+		ok, err := equalsAny(val, item)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+/**
+* ApplyOpNotIn
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpNotIn(data et.Json) (bool, error) {
+	ok, err := s.ApplyOpIn(data)
+	if err != nil {
+		return false, err
+	}
+	return !ok, nil
+}
+
+/**
+* ApplyOpIs
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpIs(data et.Json) (bool, error) {
+	val, err := s.fieldValue(data)
+	if err != nil {
+		return false, err
+	}
+
+	// nil == nil
+	if val == nil && s.Value == nil {
+		return true, nil
+	}
+
+	// si uno es nil y el otro no -> false
+	if val == nil || s.Value == nil {
+		return false, nil
+	}
+
+	ok, err := equalsAny(val, s.Value)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
+/**
+* ApplyOpIsNot
+* @param data et.Json
+* @return bool, error
+**/
+func (s *Condition) ApplyOpIsNot(data et.Json) (bool, error) {
+	ok, err := s.ApplyOpIs(data)
+	if err != nil {
+		return false, err
+	}
+	return !ok, nil
 }
 
 /**

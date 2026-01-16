@@ -59,12 +59,6 @@ func (s *Wheres) ByJson(jsons []et.Json) {
 * @return *Wheres
 **/
 func (s *Wheres) Add(condition *Condition) *Wheres {
-	fld := s.owner.getField(condition.Field.Name)
-	if fld == nil {
-		return s
-	}
-
-	condition.Field = fld.clone()
 	if len(s.conditions) > 0 && condition.Connector == NaC {
 		condition.Connector = And
 	}
@@ -102,7 +96,7 @@ func (s *Wheres) applyToData(data et.Json) bool {
 	result := true
 	for _, condition := range s.conditions {
 		if condition.Connector == And {
-			data = data.Json(condition.Field.Name)
+			data = data.Json(condition.Field)
 		}
 	}
 
