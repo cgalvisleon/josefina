@@ -295,36 +295,36 @@ func (s *Model) getKey() string {
 
 /**
 * insert: Inserts the model
-* @param ctx *Tx, data et.Json
-* @return et.Items, error
+* @param tx *Tx, data et.Json
+* @return et.Json, error
 **/
-func (s *Model) insert(ctx *Tx, data et.Json) (et.Items, error) {
-	return newCmd(s, cmdInsert).insert(ctx, data)
+func (s *Model) insert(tx *Tx, data et.Json) (et.Json, error) {
+	return newCmd(s, INSERT).insert(tx, data)
 }
 
 /**
 * update: Updates the model
 * @param ctx *Tx, data et.Json, where *Wheres
-* @return et.Items, error
+* @return []et.Json, error
 **/
-func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
-	return newCmd(s, cmdUpdate).update(ctx, data, where)
+func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
+	return newCmd(s, UPDATE).update(ctx, data, where)
 }
 
 /**
 * delete: Deletes the model
 * @param ctx *Tx, where *Wheres
-* @return et.Items, error
+* @return []et.Json, error
 **/
-func (s *Model) delete(ctx *Tx, where *Wheres) (et.Items, error) {
-	return newCmd(s, cmdDelete).delete(ctx, where)
+func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
+	return newCmd(s, DELETE).delete(ctx, where)
 }
 
 /**
 * upsert: Upserts the model
 * @param ctx *Tx, data et.Json
-* @return et.Items, error
+* @return []et.Json, error
 **/
-func (s *Model) upsert(ctx *Tx, data et.Json) (et.Items, error) {
-	return newCmd(s, cmdUpsert).upsert(ctx, data)
+func (s *Model) upsert(ctx *Tx, data et.Json) ([]et.Json, error) {
+	return newCmd(s, UPSERT).upsert(ctx, data)
 }
