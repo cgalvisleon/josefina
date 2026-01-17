@@ -401,25 +401,25 @@ func (s *FileStore) RebuildIndexes() error {
 /**
 * Put
 * @param id string, value any
-* @return string, error
+* @return error
 **/
-func (s *FileStore) Put(id string, value any) (string, error) {
+func (s *FileStore) Put(id string, value any) error {
 	tag := "put"
 	s.metricStart(tag)
 	defer s.metricEnd(tag, "completed")
 
 	if id == "" {
-		return id, errors.New(msg.MSG_ID_IS_REQUIRED)
+		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
 	data, err := json.Marshal(value)
 	if err != nil {
-		return id, err
+		return err
 	}
 
 	ref, err := s.appendRecord(id, data, Active)
 	if err != nil {
-		return id, err
+		return err
 	}
 
 	s.indexMu.Lock()
@@ -437,7 +437,7 @@ func (s *FileStore) Put(id string, value any) (string, error) {
 		logs.Log(packageName, "put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
-	return id, nil
+	return nil
 }
 
 /**

@@ -5,16 +5,15 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type Command string
 
 const (
-	cmdInsert Command = "insert"
-	cmdUpdate Command = "update"
-	cmdDelete Command = "delete"
-	cmdUpsert Command = "upsert"
+	INSERT Command = "insert"
+	UPDATE Command = "update"
+	DELETE Command = "delete"
+	UPSERT Command = "upsert"
 )
 
 type Cmd struct {
@@ -72,6 +71,7 @@ func newCmd(model *Model, command Command) *Cmd {
 * @return error
 **/
 func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
+	getTx(tx)
 	model := s.model
 	vm, ok := model.triggers[trigger.Name]
 	if !ok {
@@ -93,64 +93,15 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 }
 
 /**
-* putIndex
-* @param store *store.FileStore, id string, key string
-* @return string, error
-**/
-func (s *Cmd) putIndex(store *store.FileStore, id string, key any) (string, error) {
-	result := map[string]bool{}
-	_, err := store.Get(id, result)
-	if err != nil {
-		return id, err
-	}
-
-	st := fmt.Sprintf("%v", key)
-	result[st] = true
-	store.Put(id, result)
-
-	return id, nil
-}
-
-/**
-* deleteIndex
-* @param store *store.FileStore, id string, key string
-* @return bool, error
-**/
-func (s *Cmd) deleteIndex(store *store.FileStore, id string, key any) (bool, error) {
-	result := map[string]bool{}
-	exists, err := store.Get(id, result)
-	if err != nil {
-		return false, err
-	}
-
-	if !exists {
-		return false, nil
-	}
-
-	st := fmt.Sprintf("%v", key)
-	if _, ok := result[st]; !ok {
-		return false, nil
-	}
-
-	delete(result, st)
-	if len(result) == 0 {
-		store.Delete(id)
-		return true, nil
-	}
-
-	store.Put(id, result)
-	return true, nil
-}
-
-/**
 * insert: Inserts the model
-* @param ctx *Tx, new et.Json
-* @return et.Items, error
+* @param tx *Tx, new et.Json
+* @return et.Json, error
 **/
-func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
+func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
+	getTx(tx)
 	model := s.model
-	idx, ok := new[INDEX]
-	if !ok {
+	idx := new.ValStr("", INDEX)
+	if idx == "" {
 		idx = model.getJid()
 		new[INDEX] = idx
 	}
@@ -158,75 +109,67 @@ func (s *Cmd) insert(ctx *Tx, new et.Json) (et.Items, error) {
 	// Validate required fields
 	for _, name := range model.Required {
 		if _, ok := new[name]; !ok {
-			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 	}
 
 	// Validate unique fields
 	for _, name := range model.Unique {
 		if _, ok := new[name]; !ok {
-			return et.Items{}, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 		source := model.data[name]
 		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
-			return et.Items{}, fmt.Errorf(msg.MSG_RECORD_EXISTS)
+			return nil, fmt.Errorf(msg.MSG_RECORD_EXISTS)
 		}
 	}
 
 	// Run before insert triggers
 	for _, trigger := range s.beforeInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, new)
+		err := s.runTrigger(trigger, tx, et.Json{}, new)
 		if err != nil {
-			return et.Items{}, err
+			return nil, err
 		}
 	}
 
 	// Insert data into indexes
-	for _, name := range model.Indexes {
-		source := model.data[name]
-		key := fmt.Sprintf("%v", new[name])
-		if key == "" {
-			continue
-		}
-		if name == INDEX {
-			source.Put(key, new)
-		} else {
-			s.putIndex(source, key, idx)
-		}
-	}
+	tx.add(model, INSERT, idx, new)
 
 	// Run after insert triggers
 	for _, trigger := range s.afterInserts {
-		err := s.runTrigger(trigger, ctx, et.Json{}, new)
+		err := s.runTrigger(trigger, tx, et.Json{}, new)
 		if err != nil {
-			return et.Items{}, err
+			return nil, err
 		}
 	}
 
-	result := et.Items{}
-	result.Add(new)
-	return result, nil
+	return new, nil
 }
 
 /**
 * update: Updates the model
-* @param ctx *Tx, data et.Json, where *Wheres
-* @return et.Items, error
+* @param tx *Tx, data et.Json, where *Wheres
+* @return []et.Json, error
 **/
-func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
-	result := et.Items{}
+func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
+	getTx(tx)
 	model := s.model
-	items, err := where.Rows()
+	items, err := where.Rows(tx)
 	if err != nil {
-		return result, err
+		return nil, err
+	}
+
+	result := []et.Json{}
+	add := func(item et.Json) {
+		result = append(result, item)
 	}
 
 	for _, old := range items {
 		// Get index
-		idx, ok := old[INDEX]
-		if !ok {
-			return result, errorRecordNotFound
+		idx := old.ValStr("", INDEX)
+		if idx == "" {
+			return nil, errorRecordNotFound
 		}
 
 		// Update data
@@ -237,35 +180,24 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 
 		// Run before update triggers
 		for _, trigger := range s.beforeUpdates {
-			err := s.runTrigger(trigger, ctx, old, new)
+			err := s.runTrigger(trigger, tx, old, new)
 			if err != nil {
-				return et.Items{}, err
+				return nil, err
 			}
 		}
 
 		// Insert data into indexes
-		for _, name := range model.Indexes {
-			source := model.data[name]
-			key := fmt.Sprintf("%v", new[name])
-			if key == "" {
-				continue
-			}
-			if name == INDEX {
-				source.Put(key, new)
-			} else {
-				s.putIndex(source, key, idx)
-			}
-		}
+		tx.add(model, UPDATE, idx, new)
 
 		// Run after update triggers
 		for _, trigger := range s.afterUpdates {
-			err := s.runTrigger(trigger, ctx, old, new)
+			err := s.runTrigger(trigger, tx, old, new)
 			if err != nil {
-				return et.Items{}, err
+				return nil, err
 			}
 		}
 
-		result.Add(new)
+		add(new)
 	}
 
 	return result, nil
@@ -273,57 +205,49 @@ func (s *Cmd) update(ctx *Tx, data et.Json, where *Wheres) (et.Items, error) {
 
 /**
 * delete: Deletes the model
-* @param ctx *Tx, where *Wheres
-* @return et.Items, error
+* @param tx *Tx, where *Wheres
+* @return []et.Json, error
 **/
-func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
-	result := et.Items{}
+func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
+	getTx(tx)
 	model := s.model
-	new := et.Json{}
-
-	items, err := where.Rows()
+	items, err := where.Rows(tx)
 	if err != nil {
-		return result, err
+		return nil, err
+	}
+
+	result := []et.Json{}
+	add := func(item et.Json) {
+		result = append(result, item)
 	}
 
 	for _, old := range items {
 		// Get index
-		idx, ok := old[INDEX]
-		if !ok {
-			return result, errorRecordNotFound
+		idx := old.ValStr("", INDEX)
+		if idx == "" {
+			return nil, errorRecordNotFound
 		}
 
 		// Run before delete triggers
 		for _, trigger := range s.beforeDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
+			err := s.runTrigger(trigger, tx, old, et.Json{})
 			if err != nil {
-				return et.Items{}, err
+				return nil, err
 			}
 		}
 
 		// Delete data from indexes
-		for _, name := range model.Indexes {
-			source := model.data[name]
-			key := fmt.Sprintf("%v", new[name])
-			if key == "" {
-				continue
-			}
-			if name == INDEX {
-				source.Delete(key)
-			} else {
-				s.deleteIndex(source, key, idx)
-			}
-		}
+		tx.add(model, DELETE, idx, old)
 
 		// Run after delete triggers
 		for _, trigger := range s.afterDeletes {
-			err := s.runTrigger(trigger, ctx, old, new)
+			err := s.runTrigger(trigger, tx, old, et.Json{})
 			if err != nil {
-				return et.Items{}, err
+				return nil, err
 			}
 		}
 
-		result.Add(old)
+		add(old)
 	}
 
 	return result, nil
@@ -332,20 +256,20 @@ func (s *Cmd) delete(ctx *Tx, where *Wheres) (et.Items, error) {
 /**
 * upsert: Upserts the model
 * @param ctx *Tx, new et.Json
-* @return et.Items, error
+* @return []et.Json, error
 **/
-func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
+func (s *Cmd) upsert(ctx *Tx, new et.Json) ([]et.Json, error) {
 	model := s.model
 	where := newWhere(model)
 	exists := true
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.data[name]
 		if !ok {
-			return et.Items{}, errorPrimaryKeysNotFound
+			return nil, errorPrimaryKeysNotFound
 		}
 		key := fmt.Sprintf("%v", new[name])
 		if key == "" {
-			return et.Items{}, errorPrimaryKeysNotFound
+			return nil, errorPrimaryKeysNotFound
 		}
 		where.Add(Eq(name, key))
 		if !source.IsExist(key) {
@@ -355,7 +279,11 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) (et.Items, error) {
 	}
 
 	if !exists {
-		return s.insert(ctx, new)
+		result, err := s.insert(ctx, new)
+		if err != nil {
+			return nil, err
+		}
+		return []et.Json{result}, nil
 	}
 
 	return s.update(ctx, new, where)

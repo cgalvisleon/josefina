@@ -94,7 +94,7 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 * @param page int, rows int
 * @return et.Items, error
 **/
-func (s *Wheres) Rows() ([]et.Json, error) {
+func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	result := []et.Json{}
 	model := s.owner
 	if model == nil {
