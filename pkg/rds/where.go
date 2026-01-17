@@ -151,14 +151,7 @@ func (s *Wheres) Rows(tx *Tx, selects []string) ([]et.Json, error) {
 		return nil, err
 	}
 
-	worker := len(model.Fields)
-	st.Iterate(func(id string, src []byte) (bool, error) {
-		item := et.Json{}
-		err := json.Unmarshal(src, &item)
-		if err != nil {
-			return false, err
-		}
-
+	validate := func(item et.Json) {
 		var ok bool
 		for i, con := range cons {
 			tmp := con.ApplyToData(item)
@@ -178,13 +171,29 @@ func (s *Wheres) Rows(tx *Tx, selects []string) ([]et.Json, error) {
 		if ok {
 			add(item)
 		}
+	}
+
+	workers := len(model.Fields)
+	st.Iterate(func(id string, src []byte) (bool, error) {
+		item := et.Json{}
+		err := json.Unmarshal(src, &item)
+		if err != nil {
+			return false, err
+		}
+
+		validate(item)
 
 		return true, nil
-	}, worker)
+	}, workers)
 
-	idx := slices.IndexFunc(result, func(item et.Json) bool {
-		return item["id"] == ""
-	})
+	idx := slices.IndexFunc(tx.transactions, func(item *transaction) bool { return item.model.Name == model.Name })
+	if idx != -1 {
+		tra := tx.transactions[idx]
+		for _, record := range tra.records {
+			item := record.data
+			validate(item)
+		}
+	}
 
 	return result, nil
 }
