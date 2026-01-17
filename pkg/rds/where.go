@@ -3,6 +3,7 @@ package rds
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -91,10 +92,10 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 
 /**
 * Rows
-* @param page int, rows int
-* @return et.Items, error
+* @param tx *Tx, selects []string
+* @return []et.Json, error
 **/
-func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
+func (s *Wheres) Rows(tx *Tx, selects []string) ([]et.Json, error) {
 	result := []et.Json{}
 	model := s.owner
 	if model == nil {
@@ -130,13 +131,13 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		switch v := value.(type) {
 		case *Wheres:
 			var err error
-			con.Value, err = v.Rows()
+			con.Value, err = v.Rows(tx, selects)
 			if err != nil {
 				return nil, err
 			}
 		case Wheres:
 			var err error
-			con.Value, err = v.Rows()
+			con.Value, err = v.Rows(tx, selects)
 			if err != nil {
 				return nil, err
 			}
@@ -180,6 +181,10 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 
 		return true, nil
 	}, worker)
+
+	idx := slices.IndexFunc(result, func(item et.Json) bool {
+		return item["id"] == ""
+	})
 
 	return result, nil
 }

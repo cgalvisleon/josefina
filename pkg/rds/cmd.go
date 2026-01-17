@@ -155,7 +155,7 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 	getTx(tx)
 	model := s.model
-	items, err := where.Rows(tx)
+	items, err := where.Rows(tx, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 	getTx(tx)
 	model := s.model
-	items, err := where.Rows(tx)
+	items, err := where.Rows(tx, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -255,10 +255,10 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 
 /**
 * upsert: Upserts the model
-* @param ctx *Tx, new et.Json
+* @param tx *Tx, new et.Json
 * @return []et.Json, error
 **/
-func (s *Cmd) upsert(ctx *Tx, new et.Json) ([]et.Json, error) {
+func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 	model := s.model
 	where := newWhere(model)
 	exists := true
@@ -271,20 +271,20 @@ func (s *Cmd) upsert(ctx *Tx, new et.Json) ([]et.Json, error) {
 		if key == "" {
 			return nil, errorPrimaryKeysNotFound
 		}
-		where.Add(Eq(name, key))
 		if !source.IsExist(key) {
 			exists = false
 			break
 		}
+		where.Add(Eq(name, key))
 	}
 
 	if !exists {
-		result, err := s.insert(ctx, new)
+		result, err := s.insert(tx, new)
 		if err != nil {
 			return nil, err
 		}
 		return []et.Json{result}, nil
 	}
 
-	return s.update(ctx, new, where)
+	return s.update(tx, new, where)
 }
