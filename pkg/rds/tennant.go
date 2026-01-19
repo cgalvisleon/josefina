@@ -85,7 +85,6 @@ func (s *Tennant) getDb(name string) (*DB, error) {
 		Version: s.Version,
 		Path:    fmt.Sprintf("%s/%s", s.Path, name),
 		Schemas: make(map[string]*Schema),
-		Models:  make(map[string]*Model),
 		tennant: s,
 	}
 	s.Dbs[name] = result

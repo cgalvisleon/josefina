@@ -12,7 +12,6 @@ type DB struct {
 	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
-	Models  map[string]*Model  `json:"models"`
 	tennant *Tennant           `json:"-"`
 }
 
@@ -29,8 +28,13 @@ func (s *DB) save() error {
 * @param name string
 * @return *Schema
 **/
-func (s *DB) getSchema(name string) *Schema {
-	return s.newSchema(name)
+func (s *DB) getSchema(name string) (*Schema, error) {
+	result, ok := s.Schemas[name]
+	if !ok {
+		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	return result, nil
 }
 
 /**
@@ -39,7 +43,11 @@ func (s *DB) getSchema(name string) *Schema {
 * @return *Model, error
 **/
 func (s *DB) getModel(schema, name string) (*Model, error) {
-	sch := s.getSchema(schema)
+	sch, err := s.getSchema(schema)
+	if err != nil {
+		return nil, err
+	}
+
 	return sch.getModel(name)
 }
 

@@ -27,6 +27,8 @@ var (
 	MSG_FIELD_NOT_FOUND        = "field not found"
 	MSG_INVALID_TYPE           = "invalid type"
 	MSG_INVALID_OPERATOR       = "invalid operator"
+	MSG_VIOLATE_FOREIGN_KEY    = "violate foreign key (%s)"
+	MSG_FOREIGN_KEY_NOT_FOUND  = "foreign key not found"
 )
 
 func init() {
@@ -56,5 +58,7 @@ func init() {
 		MSG_FIELD_NOT_FOUND = "field no encontrado"
 		MSG_INVALID_TYPE = "tipo inválido"
 		MSG_INVALID_OPERATOR = "operador inválido"
+		MSG_VIOLATE_FOREIGN_KEY = "violación de clave foranea (%s)"
+		MSG_FOREIGN_KEY_NOT_FOUND = "foreign key no encontrado"
 	}
 }

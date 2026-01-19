@@ -17,6 +17,7 @@ const (
 )
 
 type Cmd struct {
+	db            *DB        `json:"-"`
 	model         *Model     `json:"-"`
 	command       Command    `json:"-"`
 	beforeInserts []*Trigger `json:"-"`
@@ -34,6 +35,7 @@ type Cmd struct {
 **/
 func newCmd(model *Model, command Command) *Cmd {
 	result := &Cmd{
+		db:            model.db,
 		model:         model,
 		command:       command,
 		beforeInserts: make([]*Trigger, 0),
@@ -122,6 +124,32 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
 			return nil, fmt.Errorf(msg.MSG_RECORD_EXISTS)
+		}
+	}
+
+	for name, detail := range model.References {
+		if _, ok := new[name]; !ok {
+			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
+		}
+
+		to, err := s.db.getModel(detail.To.Schema, detail.To.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		fk, ok := detail.Keys[name]
+		if !ok {
+			return nil, fmt.Errorf(msg.MSG_FOREIGN_KEY_NOT_FOUND, name)
+		}
+
+		key := fmt.Sprintf("%v", new[name])
+		ok, err = to.isExisted(fk, key)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			return nil, fmt.Errorf(msg.MSG_VIOLATE_FOREIGN_KEY, name)
 		}
 	}
 

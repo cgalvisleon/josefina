@@ -5,6 +5,8 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 /**
@@ -23,6 +25,10 @@ func (s *Model) existsField(name string) bool {
 * @return *Field, error
 **/
 func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	if utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
 	result, ok := s.Fields[name]
 	if ok {
 		result.TypeField = tpField
@@ -139,21 +145,31 @@ func (s *Model) definePrimaryKey(name string) bool {
 * @param name, key string, to *Model, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
-func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) *Detail {
-	_, ok := s.Fields[name]
-	if !ok {
-		return nil
+func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
+	if utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	if utility.ValidStr(key, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "key")
 	}
 
-	_, ok = s.References[name]
+	_, ok := s.Fields[name]
+	if !ok {
+		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
+	}
+
+	result, ok := s.References[name]
 	if ok {
-		return nil
+		result.OnDeleteCascade = onDeleteCascade
+		result.OnUpdateCascade = onUpdateCascade
+		return result, nil
 	}
 
 	to.defineIndexe(name)
-	result := newDetail(to, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
+	to.defineRequired(name)
+	result = newDetail(to, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
 	s.References[name] = result
-	return result
+	return result, nil
 }
 
 /**
@@ -207,6 +223,10 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 		}
 
 		s.definePrimaryKey(pk)
+		_, err = to.defineReferences(fk, pk, s, true, true)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	s.Details[name] = newDetail(to, keys, []string{}, false, false)

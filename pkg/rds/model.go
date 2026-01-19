@@ -277,6 +277,20 @@ func (s *Model) getIndex(key string, dest map[string]bool) (bool, error) {
 }
 
 /**
+* isExisted: Check if index exists in model
+* @param name string, key string
+* @return bool, error
+**/
+func (s *Model) isExisted(name, key string) (bool, error) {
+	source, ok := s.data[name]
+	if !ok {
+		return false, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	}
+
+	return source.IsExist(key), nil
+}
+
+/**
 * stricted: Sets the model to strict
 * @return void
 **/

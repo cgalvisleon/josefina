@@ -3,7 +3,6 @@ package rds
 import (
 	"errors"
 
-	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
@@ -62,8 +61,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 	result.defineIndexField()
 	s.Models[name] = result
-	name = strs.Append(s.Name, name, ".")
-	s.db.Models[name] = result
 	err := s.db.save()
 	if err != nil {
 		return nil, err
@@ -78,5 +75,10 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 * @return *Model
 **/
 func (s *Schema) getModel(name string) (*Model, error) {
-	return s.newModel(name, false, 1)
+	result, ok := s.Models[name]
+	if !ok {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return result, nil
 }
