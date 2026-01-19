@@ -255,16 +255,16 @@ func (s *Model) defineRollup(name, from string, keys map[string]string, selects 
 
 /**
 * defineRelation: Defines the relation
-* @param name string, from string, keys map[string]string
+* @param from string, keys map[string]string, onDeleteCascade bool, onUpdateCascade bool
 * @return *Model
 **/
-func (s *Model) defineRelation(from string, keys map[string]string) error {
+func (s *Model) defineRelation(from string, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
 	to, err := s.db.getModel(s.Schema, from)
 	if err != nil {
 		return err
 	}
 
-	detail := newDetail(to, s, keys, []string{}, false, false)
+	detail := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.Relations[to.Name] = detail
 	return nil
 }
