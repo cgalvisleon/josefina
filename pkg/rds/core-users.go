@@ -45,13 +45,38 @@ func initUsers(db *DB) error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	_, err := users.insert(nil, et.Json{
+	tx := getTx(nil)
+	_, err := users.insert(tx, et.Json{
 		"username": username,
 		"password": password,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	return tx.commit()
 }
 
+/**
+* DropUser: Drops a user
+* @param username string
+* @return error
+**/
+func DropUser(username string) error {
+	tx := getTx(nil)
+	_, err := users.delete(tx, users.where(Eq("username", username)))
+	if err != nil {
+		return err
+	}
+
+	return tx.commit()
+}
+
+/**
+* ChanguePassword: Changues the password of a user
+* @param username, newpassword string
+* @return error
+**/
 func ChanguePassword(username, newpassword string) error {
 	ok, err := users.isExisted("username", username)
 	if err != nil {
