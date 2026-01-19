@@ -29,6 +29,7 @@ var (
 	MSG_INVALID_OPERATOR       = "invalid operator"
 	MSG_VIOLATE_FOREIGN_KEY    = "violate foreign key (%s)"
 	MSG_FOREIGN_KEY_NOT_FOUND  = "foreign key not found"
+	MSG_USER_NOT_FOUND         = "user not found"
 )
 
 func init() {
@@ -60,5 +61,6 @@ func init() {
 		MSG_INVALID_OPERATOR = "operador inválido"
 		MSG_VIOLATE_FOREIGN_KEY = "violación de clave foranea (%s)"
 		MSG_FOREIGN_KEY_NOT_FOUND = "foreign key no encontrado"
+		MSG_USER_NOT_FOUND = "usuario no encontrado"
 	}
 }

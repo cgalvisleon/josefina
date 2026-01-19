@@ -369,6 +369,17 @@ func (s *Model) remove(key string) error {
 }
 
 /**
+* where: Returns the where
+* @param condition *Condition
+* @return *Wheres
+**/
+func (s *Model) where(condition *Condition) *Wheres {
+	result := newWhere(s)
+	result.Add(condition)
+	return result
+}
+
+/**
 * insert: Inserts the model
 * @param tx *Tx, data et.Json
 * @return et.Json, error

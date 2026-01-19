@@ -1,8 +1,11 @@
 package rds
 
 import (
+	"errors"
+
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 /**
@@ -47,4 +50,24 @@ func CreateUser(username, password string) error {
 		"password": password,
 	})
 	return err
+}
+
+func ChanguePassword(username, newpassword string) error {
+	ok, err := users.isExisted("username", username)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New(msg.MSG_USER_NOT_FOUND)
+	}
+
+	tx := getTx(nil)
+	_, err = users.update(tx, et.Json{
+		"password": newpassword,
+	}, users.where(Eq("username", username)))
+	if err != nil {
+		return err
+	}
+
+	return tx.commit()
 }

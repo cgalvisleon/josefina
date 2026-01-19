@@ -55,9 +55,14 @@ type Tx struct {
 	transactions []*transaction
 }
 
-func getTx(tx *Tx) {
+/**
+* getTx: Gets the transaction
+* @param tx *Tx
+* @return *Tx
+**/
+func getTx(tx *Tx) *Tx {
 	if tx != nil {
-		return
+		return tx
 	}
 
 	tx = &Tx{
@@ -66,14 +71,7 @@ func getTx(tx *Tx) {
 		id:           reg.GenULID("transaction"),
 		transactions: make([]*transaction, 0),
 	}
-}
-
-/**
-* save: Saves the transaction
-* @return error
-**/
-func (s *Tx) save() error {
-	return nil
+	return tx
 }
 
 /**
@@ -119,7 +117,7 @@ func (s *Tx) commit() error {
 	}
 
 	s.endedAt = timezone.Now()
-	return s.save()
+	return nil
 }
 
 /**
