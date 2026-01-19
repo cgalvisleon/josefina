@@ -101,6 +101,7 @@ const (
 	Approved  Status = "approved"
 	Rejected  Status = "rejected"
 	Failed    Status = "failed"
+	Processed Status = "processed"
 )
 
 type Field struct {

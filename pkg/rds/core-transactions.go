@@ -14,10 +14,7 @@ func initTransactions(db *DB) error {
 		return err
 	}
 	transactions.defineAtrib(KEY, TpKey, "")
-	transactions.defineAtrib("command", TpText, "")
-	transactions.defineAtrib("status", TpText, "")
 	transactions.definePrimaryKey(KEY)
-	transactions.defineIndexe("type")
 	if err := transactions.init(); err != nil {
 		return err
 	}
@@ -27,21 +24,17 @@ func initTransactions(db *DB) error {
 
 /**
 * setTransaction: Sets a transaction
-* @param key string, cmd Command, status Status, args []interface{}
+* @param key string, data et.Json
 * @return string, error
 **/
-func setTransaction(key string, cmd Command, status Status, args []interface{}) (string, error) {
+func setTransaction(key string, data et.Json) (string, error) {
 	if key == "" {
 		key = transactions.getKey()
 	}
 
 	tx := getTx(nil)
-	_, err := transactions.upsert(tx, et.Json{
-		KEY:       key,
-		"command": string(cmd),
-		"args":    args,
-		"status":  string(status),
-	})
+	data.Set(KEY, key)
+	_, err := transactions.upsert(tx, data)
 	if err != nil {
 		return "", err
 	}

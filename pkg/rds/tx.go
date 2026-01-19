@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"encoding/json"
 	"slices"
 	"time"
 
@@ -10,12 +11,29 @@ import (
 )
 
 type record struct {
-	cmd  Command
-	idx  string
-	data et.Json
+	tx      *Tx
+	command Command
+	idx     string
+	data    et.Json
+	status  Status
 }
 
+/**
+* commit: Commits the transaction
+* @return error
+**/
+func (s *record) commit() error {
+	s.status = Processed
+	return s.tx.save()
+}
+
+/**
+* newTransaction: Creates a new transaction
+* @param model *Model
+* @return *transaction
+**/
 type transaction struct {
+	tx      *Tx
 	model   *Model
 	records []*record
 }
@@ -27,9 +45,11 @@ type transaction struct {
 **/
 func (s *transaction) add(cmd Command, idx string, data et.Json) {
 	item := &record{
-		cmd:  cmd,
-		idx:  idx,
-		data: data,
+		tx:      s.tx,
+		command: cmd,
+		idx:     idx,
+		data:    data,
+		status:  Pending,
 	}
 	s.records = append(s.records, item)
 }
@@ -39,8 +59,9 @@ func (s *transaction) add(cmd Command, idx string, data et.Json) {
 * @param model *Model
 * @return *transaction
 **/
-func newTransaction(model *Model) *transaction {
+func newTransaction(tx *Tx, model *Model) *transaction {
 	return &transaction{
+		tx:      tx,
 		model:   model,
 		records: make([]*record, 0),
 	}
@@ -69,7 +90,40 @@ func getTx(tx *Tx) *Tx {
 		id:           reg.GenULID("transaction"),
 		transactions: make([]*transaction, 0),
 	}
+	tx.save()
 	return tx
+}
+
+/**
+* serialize
+* @return []byte, error
+**/
+func (s Tx) serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s Tx) ToJson() (et.Json, error) {
+	definition, err := s.serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -77,6 +131,16 @@ func getTx(tx *Tx) *Tx {
 * @return error
 **/
 func (s *Tx) save() error {
+	data, err := s.ToJson()
+	if err != nil {
+		return err
+	}
+
+	_, err = setTransaction(s.id, data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -87,7 +151,7 @@ func (s *Tx) save() error {
 func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
 	idx := slices.IndexFunc(s.transactions, func(t *transaction) bool { return t.model.Name == model.Name })
 	if idx == -1 {
-		tx := newTransaction(model)
+		tx := newTransaction(s, model)
 		tx.add(cmd, key, data)
 		s.transactions = append(s.transactions, tx)
 		return s.save()
@@ -106,7 +170,7 @@ func (s *Tx) commit() error {
 	for _, tx := range s.transactions {
 		model := tx.model
 		for _, record := range tx.records {
-			cmd := record.cmd
+			cmd := record.command
 			idx := record.idx
 			if cmd == DELETE {
 				err := model.remove(idx)
@@ -119,6 +183,10 @@ func (s *Tx) commit() error {
 				if err != nil {
 					return err
 				}
+			}
+			err := record.commit()
+			if err != nil {
+				return err
 			}
 		}
 	}
