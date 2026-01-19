@@ -7,6 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
@@ -48,9 +49,9 @@ func newTransaction(model *Model) *transaction {
 }
 
 type Tx struct {
-	StartedAt    time.Time
-	EndedAt      time.Time
-	Id           string
+	startedAt    time.Time
+	endedAt      time.Time
+	id           string
 	transactions []*transaction
 }
 
@@ -60,8 +61,9 @@ func getTx(tx *Tx) {
 	}
 
 	tx = &Tx{
-		StartedAt:    time.Now(),
-		Id:           reg.GenULID("transaction"),
+		startedAt:    timezone.Now(),
+		endedAt:      time.Time{},
+		id:           reg.GenULID("transaction"),
 		transactions: make([]*transaction, 0),
 	}
 }
@@ -137,7 +139,7 @@ func (s *Tx) commit() error {
 		}
 	}
 
-	s.EndedAt = time.Now()
+	s.endedAt = timezone.Now()
 	return s.save()
 }
 
