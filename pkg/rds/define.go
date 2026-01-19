@@ -25,6 +25,9 @@ func (s *Model) existsField(name string) bool {
 func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
 	result, ok := s.Fields[name]
 	if ok {
+		result.TypeField = tpField
+		result.TypeData = tpData
+		result.DefaultValue = defaultValue
 		return result, nil
 	}
 
@@ -38,86 +41,119 @@ func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, de
 }
 
 /**
-* defineIndexes: Defines the indexes
-* @param names ...string
+* defineIndexe: Defines the index
+* @param name string
 **/
-func (s *Model) defineIndexes(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.Indexes, name)
-		if idx == -1 {
-			s.Indexes = append(s.Indexes, name)
-		}
+func (s *Model) defineIndexe(name string) bool {
+	_, ok := s.Fields[name]
+	if !ok {
+		return false
 	}
+
+	idx := slices.Index(s.Indexes, name)
+	if idx == -1 {
+		s.Indexes = append(s.Indexes, name)
+	}
+	return true
+}
+
+/*
+*
+* defineUnique: Defines the unique
+* @param name string
+* @return bool
+*
+ */
+func (s *Model) defineUnique(name string) bool {
+	_, ok := s.Fields[name]
+	if !ok {
+		return false
+	}
+
+	idx := slices.Index(s.Unique, name)
+	if idx == -1 {
+		s.Unique = append(s.Unique, name)
+		s.defineIndexe(name)
+	}
+	return true
 }
 
 /**
-* defineUniques: Defines the uniques
-* @param names ...string
+* defineRequired: Defines the required
+* @param name string
+* @return bool
 **/
-func (s *Model) defineUniques(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.Unique, name)
-		if idx == -1 {
-			s.Unique = append(s.Unique, name)
-			s.defineIndexes(name)
-		}
+func (s *Model) defineRequired(name string) bool {
+	_, ok := s.Fields[name]
+	if !ok {
+		return false
 	}
-}
 
-/**
-* defineRequireds: Defines the requireds
-* @param names ...string
-**/
-func (s *Model) defineRequireds(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.Required, name)
-		if idx == -1 {
-			s.Required = append(s.Required, name)
-			s.defineIndexes(name)
-		}
+	idx := slices.Index(s.Required, name)
+	if idx == -1 {
+		s.Required = append(s.Required, name)
+		s.defineIndexe(name)
 	}
+	return true
 }
 
 /**
 * defineHidden: Defines the hidden
-* @param names ...string
+* @param name string
+* @return bool
 **/
-func (s *Model) defineHidden(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.Hidden, name)
-		if idx == -1 {
-			s.Hidden = append(s.Hidden, name)
-		}
+func (s *Model) defineHidden(name string) bool {
+	_, ok := s.Fields[name]
+	if !ok {
+		return false
 	}
+
+	idx := slices.Index(s.Hidden, name)
+	if idx == -1 {
+		s.Hidden = append(s.Hidden, name)
+	}
+	return true
+}
+
+/**
+* definePrimaryKey: Defines the primary keys
+* @param name string
+**/
+func (s *Model) definePrimaryKey(name string) bool {
+	_, ok := s.Fields[name]
+	if !ok {
+		return false
+	}
+
+	idx := slices.Index(s.PrimaryKeys, name)
+	if idx == -1 {
+		s.PrimaryKeys = append(s.PrimaryKeys, name)
+		s.defineRequired(name)
+		s.defineUnique(name)
+	}
+	return true
 }
 
 /**
 * defineReferences: Defines the references
-* @param names ...string
+* @param name, key string, to *Model, onDeleteCascade, onUpdateCascade bool
+* @return *Detail
 **/
-func (s *Model) defineReferences(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.References, name)
-		if idx == -1 {
-			s.References = append(s.References, name)
-			s.defineIndexes(name)
-		}
+func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) *Detail {
+	_, ok := s.Fields[name]
+	if !ok {
+		return nil
 	}
-}
 
-/**
-* definePrimaryKeys: Defines the primary keys
-* @param names ...string
-**/
-func (s *Model) definePrimaryKeys(names ...string) {
-	for _, name := range names {
-		idx := slices.Index(s.PrimaryKeys, name)
-		if idx == -1 {
-			s.PrimaryKeys = append(s.PrimaryKeys, name)
-			s.defineRequireds(name)
-			s.defineUniques(name)
-		}
+	_, ok = s.References[name]
+	if ok {
+		return nil
 	}
+
+	to.defineIndexe(name)
+	result := newDetail(to, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
+	s.References[name] = result
+	return result
 }
 
 /**
@@ -129,7 +165,7 @@ func (s *Model) defineIndexField() (*Field, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.defineIndexes(INDEX)
+	s.defineIndexe(INDEX)
 	s.defineHidden(INDEX)
 	return result, nil
 }
@@ -169,15 +205,11 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 		if err != nil {
 			return nil, err
 		}
+
+		s.definePrimaryKey(pk)
 	}
 
-	detail := newDetail(to, s, keys, []string{}, true, true)
-	s.Details[name] = detail
-	fkeys := map[string]string{}
-	for k, v := range keys {
-		fkeys[v] = k
-	}
-	to.Master[s.Name] = newDetail(s, to, fkeys, []string{}, false, false)
+	s.Details[name] = newDetail(to, keys, []string{}, false, false)
 	return to, nil
 }
 
@@ -186,20 +218,19 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 * @param name string, from string, keys map[string]string, selects []string
 * @return *Model
 **/
-func (s *Model) defineRollup(name, from string, keys map[string]string, selects []string) error {
+func (s *Model) defineRollup(name, from string, keys map[string]string, selects []string) (*Model, error) {
 	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	to, err := s.db.getModel(s.Schema, from)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	detail := newDetail(to, s, keys, selects, false, false)
-	s.Rollups[name] = detail
-	return nil
+	s.Rollups[name] = newDetail(to, keys, selects, false, false)
+	return to, nil
 }
 
 /**

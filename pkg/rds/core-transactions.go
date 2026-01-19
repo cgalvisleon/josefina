@@ -16,8 +16,8 @@ func initTransactions(db *DB) error {
 	transactions.defineAtrib(KEY, TpKey, "")
 	transactions.defineAtrib("type", TpText, "")
 	transactions.defineAtrib("status", TpText, "")
-	transactions.definePrimaryKeys(KEY)
-	transactions.defineIndexes("type")
+	transactions.definePrimaryKey(KEY)
+	transactions.defineIndexe("type")
 	if err := transactions.init(); err != nil {
 		return err
 	}
