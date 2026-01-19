@@ -73,20 +73,29 @@ func getTx(tx *Tx) *Tx {
 }
 
 /**
+* save: Saves the transaction
+* @return error
+**/
+func (s *Tx) save() error {
+	return nil
+}
+
+/**
 * add: Adds data to the transaction
 * @param name string, data et.Json
 **/
-func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) {
+func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
 	idx := slices.IndexFunc(s.transactions, func(t *transaction) bool { return t.model.Name == model.Name })
 	if idx == -1 {
 		tx := newTransaction(model)
 		tx.add(cmd, key, data)
 		s.transactions = append(s.transactions, tx)
-		return
+		return s.save()
 	}
 
 	tx := s.transactions[idx]
 	tx.add(cmd, key, data)
+	return s.save()
 }
 
 /**
@@ -115,5 +124,5 @@ func (s *Tx) commit() error {
 	}
 
 	s.endedAt = timezone.Now()
-	return nil
+	return s.save()
 }
