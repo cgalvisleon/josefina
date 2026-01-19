@@ -1,14 +1,12 @@
 package rds
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type record struct {
@@ -117,66 +115,5 @@ func (s *Tx) commit() error {
 	}
 
 	s.endedAt = timezone.Now()
-	return nil
-}
-
-/**
-* putIndex
-* @param store *store.FileStore, id string, idx any
-* @return error
-**/
-func putIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		result = map[string]bool{}
-	}
-
-	st := fmt.Sprintf("%v", idx)
-	result[st] = true
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* deleteIndex
-* @param store *store.FileStore, id string, idx string
-* @return error
-**/
-func deleteIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	st := fmt.Sprintf("%v", idx)
-	if _, ok := result[st]; !ok {
-		return nil
-	}
-
-	delete(result, st)
-	if len(result) == 0 {
-		_, err := store.Delete(id)
-		return err
-	}
-
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

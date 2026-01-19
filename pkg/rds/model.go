@@ -307,16 +307,37 @@ func (s *Model) getKey() string {
 }
 
 /**
-* put: Puts the model
-* @param key string, data et.Json
+* putIndex
+* @param store *store.FileStore, id string, idx any
 * @return error
 **/
-func (s *Model) put(key string, data et.Json) error {
-	idx, ok := data[INDEX]
-	if !ok {
-		return errors.New(msg.MSG_INDEX_NOT_FOUND)
+func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
+	result := map[string]bool{}
+	exists, err := store.Get(id, result)
+	if err != nil {
+		return err
 	}
 
+	if !exists {
+		result = map[string]bool{}
+	}
+
+	st := fmt.Sprintf("%v", idx)
+	result[st] = true
+	err = store.Put(id, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* put: Puts the model
+* @param idx string, data et.Json
+* @return error
+**/
+func (s *Model) put(idx string, data et.Json) error {
 	for _, name := range s.Indexes {
 		source := s.data[name]
 		key := fmt.Sprintf("%v", data[name])
@@ -329,7 +350,7 @@ func (s *Model) put(key string, data et.Json) error {
 				return err
 			}
 		} else {
-			err := putIndex(source, key, idx)
+			err := s.putIndex(source, key, idx)
 			if err != nil {
 				return err
 			}

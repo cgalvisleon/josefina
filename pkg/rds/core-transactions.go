@@ -45,5 +45,6 @@ func setTransaction(key string, cmd Command, status Status, args []interface{}) 
 	if err != nil {
 		return "", err
 	}
+
 	return key, tx.commit()
 }
