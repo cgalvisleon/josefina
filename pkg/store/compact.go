@@ -129,6 +129,7 @@ func (s *FileStore) Compact() error {
 	// Activar nuevos segmentos
 	s.indexMu.Lock()
 	s.index = newIndex
+	s.keys = keys
 	s.segments = newSegments
 	s.active = newSegments[len(newSegments)-1]
 	s.TombStones = 0

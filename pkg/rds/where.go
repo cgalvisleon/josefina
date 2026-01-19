@@ -92,26 +92,71 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 
 /**
 * Rows
-* @param tx *Tx, selects []string
+* @param tx *Tx, selects []string, offset, limit int, asc bool
 * @return []et.Json, error
 **/
-func (s *Wheres) Rows(tx *Tx, selects []string) ([]et.Json, error) {
+func (s *Wheres) Rows(tx *Tx, selects []string, offset, limit int, asc bool) ([]et.Json, error) {
 	result := []et.Json{}
 	model := s.owner
 	if model == nil {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
+	workers := len(model.Indexes)
+	cons := []*Condition{}
+	st, err := model.source()
+	if err != nil {
+		return nil, err
+	}
+
 	add := func(item et.Json) {
+		if len(selects) > 0 {
+			item = item.Select(selects)
+		}
 		result = append(result, item)
 	}
 
-	cons := []*Condition{}
+	if len(s.conditions) == 0 {
+		st.Iterate(func(id string, src []byte) (bool, error) {
+			item := et.Json{}
+			err := json.Unmarshal(src, &item)
+			if err != nil {
+				return false, err
+			}
+
+			add(item)
+
+			return true, nil
+		}, offset, limit, workers)
+	}
+
+	validate := func(item et.Json) {
+		var ok bool
+		for i, con := range cons {
+			tmp := con.ApplyToData(item)
+			if i == 0 {
+				ok = tmp
+			} else if con.Connector == And {
+				ok = ok && tmp
+			} else if con.Connector == Or {
+				ok = ok || tmp
+			}
+
+			if !ok {
+				break
+			}
+		}
+
+		if ok {
+			add(item)
+		}
+	}
+
 	for _, con := range s.conditions {
 		field := con.Field
 		index, ok := model.index(field)
 		if ok {
-			keys := index.Keys()
+			keys := index.Keys(0, 0)
 			keys = con.ApplyToIndex(keys)
 			for _, key := range keys {
 				item := et.Json{}
@@ -146,34 +191,6 @@ func (s *Wheres) Rows(tx *Tx, selects []string) ([]et.Json, error) {
 		cons = append(cons, con)
 	}
 
-	st, err := model.source()
-	if err != nil {
-		return nil, err
-	}
-
-	validate := func(item et.Json) {
-		var ok bool
-		for i, con := range cons {
-			tmp := con.ApplyToData(item)
-			if i == 0 {
-				ok = tmp
-			} else if con.Connector == And {
-				ok = ok && tmp
-			} else if con.Connector == Or {
-				ok = ok || tmp
-			}
-
-			if !ok {
-				break
-			}
-		}
-
-		if ok {
-			add(item)
-		}
-	}
-
-	workers := len(model.Fields)
 	st.Iterate(func(id string, src []byte) (bool, error) {
 		item := et.Json{}
 		err := json.Unmarshal(src, &item)

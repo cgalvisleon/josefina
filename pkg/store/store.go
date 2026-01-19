@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -80,6 +81,7 @@ type FileStore struct {
 	segments     []*segment            `json:"-"` // segmentos de datos
 	active       *segment              `json:"-"` // segmento activo para escritura
 	index        map[string]*RecordRef `json:"-"` // índice en memoria
+	keys         []string              `json:"-"` // claves en memoria
 }
 
 /**
@@ -261,7 +263,20 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 		length:  dataLen,
 	}
 	s.index[id] = ref
+	s.keys = append(s.keys, id)
 	return nil
+}
+
+/**
+* deleteIndex
+* @param id string
+**/
+func (s *FileStore) deleteIndex(id string) {
+	delete(s.index, id)
+	idx := slices.Index(s.keys, id)
+	if idx != -1 {
+		s.keys = append(s.keys[:idx], s.keys[idx+1:]...)
+	}
 }
 
 /**
@@ -272,6 +287,7 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 func (s *FileStore) rebuildIndex(segIndex int) error {
 	if len(s.index) == 0 {
 		s.index = make(map[string]*RecordRef)
+		s.keys = make([]string, 0)
 	}
 
 	seg := s.segments[segIndex]
@@ -324,7 +340,7 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 		if status == Active {
 			s.setIndex(id, segIndex, offset, dataLen)
 		} else if status == Deleted {
-			delete(s.index, id)
+			s.deleteIndex(id)
 		}
 
 		offset += int64(11) + int64(idLen) + int64(dataLen)
@@ -343,37 +359,87 @@ func (s *FileStore) buildIndex() error {
 }
 
 /**
-* getIndex
+* getRecords
+* @param asc bool, offset int, limit int
 * @return map[string]*RecordRef, []string
 **/
-func (s *FileStore) getIndex() (map[string]*RecordRef, []string) {
+func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string) {
+	n := len(s.index)
 	keys := make([]string, 0)
-	indexResult := make(map[string]*RecordRef, len(s.index))
+	indexResult := make(map[string]*RecordRef, 0)
+	if offset >= n {
+		return indexResult, keys
+	}
+
+	if limit <= 0 {
+		limit = n
+	}
+
 	s.indexMu.RLock()
-	for k, v := range s.index {
-		keys = append(keys, k)
+	nKeys := len(s.keys)
+	if n != nKeys {
+		s.keys = make([]string, 0)
+		for k := range s.index {
+			s.keys = append(s.keys, k)
+		}
+		sort.Strings(keys)
+	}
+
+	if asc {
+		sort.Strings(s.keys)
+	} else {
+		sort.Sort(sort.Reverse(sort.StringSlice(s.keys)))
+	}
+	i := 0
+	for {
+		k := s.keys[offset]
+		v := s.index[k]
 		indexResult[k] = v
+		keys = append(keys, k)
+		offset++
+		i++
+		if i >= limit {
+			break
+		}
 	}
 	s.indexMu.RUnlock()
-	sort.Strings(keys)
 
 	return indexResult, keys
 }
 
 /**
 * Keys
-* @return []string, error
+* @param asc bool, offset int, limit int
+* @return []string
 **/
-func (s *FileStore) Keys() []string {
-	keys := make([]string, 0)
-	s.indexMu.RLock()
-	for k := range s.index {
-		keys = append(keys, k)
+func (s *FileStore) Keys(asc bool, offset, limit int) []string {
+	n := len(s.keys)
+	result := make([]string, 0)
+	if offset >= n {
+		return result
 	}
-	s.indexMu.RUnlock()
-	sort.Strings(keys)
 
-	return keys
+	if limit <= 0 {
+		limit = n
+	}
+
+	if asc {
+		sort.Strings(s.keys)
+	} else {
+		sort.Sort(sort.Reverse(sort.StringSlice(s.keys)))
+	}
+	i := 0
+	for {
+		k := s.keys[offset]
+		result = append(result, k)
+		offset++
+		i++
+		if i >= limit {
+			break
+		}
+	}
+
+	return result
 }
 
 /**
@@ -466,7 +532,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	}
 
 	s.indexMu.Lock()
-	delete(s.index, id)
+	s.deleteIndex(id)
 	s.indexMu.Unlock()
 
 	if s.IsDebug {
@@ -523,18 +589,15 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 
 /**
 * Iterate
-* @param fn func(id string, data []byte) bool, workers int
+* @param fn func(id string, data []byte) bool, offset, limit int, asc bool, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), workers int) error {
+func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), offset, limit int, asc bool, workers int) error {
 	tag := "iterate"
 	s.metricStart(tag)
-	defer func() {
-		// métrica se cierra al final
-	}()
 
 	// 1. Seleccionar IDs
-	index, keys := s.getIndex()
+	index, keys := s.getRecords(asc, offset, limit)
 
 	if workers <= 0 {
 		workers = 1
@@ -686,6 +749,7 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
 	fs.index = make(map[string]*RecordRef)
+	fs.keys = make([]string, 0)
 	fs.IsDebug = debug
 	fs.SyncOnWrite = syncOnWrite
 	tag := "store_open"

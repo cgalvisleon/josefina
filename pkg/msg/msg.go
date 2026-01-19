@@ -9,6 +9,7 @@ var (
 	MSG_DATA_TOO_LARGE         = "data too large"
 	MSG_FILE_IS_NIL            = "file is nil"
 	MSG_CORRUPTED_RECORD       = "corrupted record"
+	MSG_INVALID_INDEX          = "invalid index"
 	MSG_INVALID_SNAPSHOT       = "invalid snapshot"
 	MSG_SNAPSHOT_CORRUPTED     = "snapshot corrupted"
 	MSG_INVALID_SNAPSHOT_MAGIC = "invalid snapshot magic"
