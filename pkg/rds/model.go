@@ -230,11 +230,11 @@ func (s *Model) get(key string, dest any) (bool, error) {
 }
 
 /**
-* getJson: Gets the model as json
+* getObjet: Gets the model as object
 * @param key string
 * @return et.Json, error
 **/
-func (s *Model) getJson(key string, dest et.Json) (bool, error) {
+func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
 	src := []byte{}
 	exists, err := s.get(key, &src)
 	if err != nil {
@@ -291,6 +291,68 @@ func (s *Model) stricted() {
 **/
 func (s *Model) getKey() string {
 	return reg.GenUUId(s.Name)
+}
+
+/**
+* put: Puts the model
+* @param key string, data et.Json
+* @return error
+**/
+func (s *Model) put(key string, data et.Json) error {
+	idx, ok := data[INDEX]
+	if !ok {
+		return errors.New(msg.MSG_INDEX_NOT_FOUND)
+	}
+
+	for _, name := range s.Indexes {
+		source := s.data[name]
+		key := fmt.Sprintf("%v", data[name])
+		if key == "" {
+			continue
+		}
+		if name == INDEX {
+			err := source.Put(key, data)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := putIndex(source, key, idx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+/**
+* remove: Removes the model
+* @param key string
+* @return error
+**/
+func (s *Model) remove(key string) error {
+	data := et.Json{}
+	exists, err := s.getObjet(key, data)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	for _, name := range s.Indexes {
+		source := s.data[name]
+		key := fmt.Sprintf("%v", data[name])
+		if key == "" {
+			continue
+		}
+		_, err := source.Delete(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /**

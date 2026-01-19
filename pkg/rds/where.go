@@ -280,7 +280,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	for _, keys := range s.keys {
 		for _, key := range keys {
 			item := et.Json{}
-			exists, err := model.getJson(key, item)
+			exists, err := model.getObjet(key, item)
 			if err != nil {
 				return nil, err
 			}

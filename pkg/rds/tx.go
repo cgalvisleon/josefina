@@ -103,37 +103,16 @@ func (s *Tx) commit() error {
 		for _, record := range tx.records {
 			cmd := record.cmd
 			idx := record.idx
-			data := record.data
-			for _, name := range model.Indexes {
-				source := model.data[name]
-				key := fmt.Sprintf("%v", data[name])
-				if key == "" {
-					continue
+			if cmd == DELETE {
+				err := model.remove(idx)
+				if err != nil {
+					return err
 				}
-				if cmd == DELETE {
-					if name == INDEX {
-						_, err := source.Delete(key)
-						if err != nil {
-							return err
-						}
-					} else {
-						err := deleteIndex(source, key, idx)
-						if err != nil {
-							return err
-						}
-					}
-				} else {
-					if name == INDEX {
-						err := source.Put(key, data)
-						if err != nil {
-							return err
-						}
-					} else {
-						err := putIndex(source, key, idx)
-						if err != nil {
-							return err
-						}
-					}
+			} else {
+				data := record.data
+				err := model.put(idx, data)
+				if err != nil {
+					return err
 				}
 			}
 		}
