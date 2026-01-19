@@ -13,8 +13,14 @@ import (
 * Wheres
 **/
 type Wheres struct {
-	owner      *Model       `json:"-"`
-	conditions []*Condition `json:"-"`
+	owner      *Model              `json:"-"`
+	selects    []string            `json:"-"`
+	keys       map[string][]string `json:"-"`
+	asc        map[string]bool     `json:"-"`
+	offset     int                 `json:"-"`
+	limit      int                 `json:"-"`
+	conditions []*Condition        `json:"-"`
+	workers    int                 `json:"-"`
 }
 
 /**
@@ -25,7 +31,13 @@ type Wheres struct {
 func newWhere(owner *Model) *Wheres {
 	return &Wheres{
 		owner:      owner,
+		selects:    make([]string, 0),
+		keys:       make(map[string][]string, 0),
+		asc:        make(map[string]bool, 0),
+		offset:     0,
+		limit:      0,
 		conditions: make([]*Condition, 0),
+		workers:    len(owner.Indexes),
 	}
 }
 
@@ -91,48 +103,95 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 }
 
 /**
+* Selects
+* @param fields ...string
+* @return *Wheres
+**/
+func (s *Wheres) Selects(fields ...string) *Wheres {
+	if len(fields) == 0 {
+		return s
+	}
+
+	for _, field := range fields {
+		s.selects = append(s.selects, field)
+	}
+
+	return s
+}
+
+/**
+* Asc
+* @param field string
+* @return *Wheres
+**/
+func (s *Wheres) Asc(field string) *Wheres {
+	s.asc[field] = true
+	return s
+}
+
+/**
+* Desc
+* @param field string
+* @return *Wheres
+**/
+func (s *Wheres) Desc(field string) *Wheres {
+	s.asc[field] = false
+	return s
+}
+
+/**
+* Order
+* @param field string
+* @return bool
+**/
+func (s *Wheres) Order(field string) bool {
+	result, exists := s.asc[field]
+	if !exists {
+		result = true
+	}
+
+	return result
+}
+
+/**
+* Limit
+* @param page int, rows int
+* @return *Wheres
+**/
+func (s *Wheres) Limit(page int, rows int) *Wheres {
+	offset := (page - 1) * rows
+	s.limit = rows
+	s.offset = offset
+	return s
+}
+
+/**
 * Rows
-* @param tx *Tx, selects []string, offset, limit int, asc bool
+* @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Wheres) Rows(tx *Tx, selects []string, offset, limit int, asc bool) ([]et.Json, error) {
+func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	result := []et.Json{}
 	model := s.owner
 	if model == nil {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	workers := len(model.Indexes)
-	cons := []*Condition{}
 	st, err := model.source()
 	if err != nil {
 		return nil, err
 	}
 
 	add := func(item et.Json) {
-		if len(selects) > 0 {
-			item = item.Select(selects)
+		if len(s.selects) > 0 {
+			item = item.Select(s.selects)
 		}
 		result = append(result, item)
 	}
 
-	if len(s.conditions) == 0 {
-		st.Iterate(func(id string, src []byte) (bool, error) {
-			item := et.Json{}
-			err := json.Unmarshal(src, &item)
-			if err != nil {
-				return false, err
-			}
-
-			add(item)
-
-			return true, nil
-		}, offset, limit, workers)
-	}
-
-	validate := func(item et.Json) {
+	validateItem := func(item et.Json, conditions []*Condition) {
 		var ok bool
-		for i, con := range cons {
+		for i, con := range conditions {
 			tmp := con.ApplyToData(item)
 			if i == 0 {
 				ok = tmp
@@ -152,63 +211,114 @@ func (s *Wheres) Rows(tx *Tx, selects []string, offset, limit int, asc bool) ([]
 		}
 	}
 
-	for _, con := range s.conditions {
-		field := con.Field
-		index, ok := model.index(field)
-		if ok {
-			keys := index.Keys(0, 0)
-			keys = con.ApplyToIndex(keys)
-			for _, key := range keys {
-				item := et.Json{}
-				exists, err := model.getJson(key, item)
-				if err != nil {
-					return nil, err
-				}
-				if exists {
-					add(item)
-				}
+	if len(s.conditions) == 0 {
+		// Items by data
+		asc := s.Order(INDEX)
+		err = st.Iterate(func(id string, src []byte) (bool, error) {
+			item := et.Json{}
+			err := json.Unmarshal(src, &item)
+			if err != nil {
+				return false, err
 			}
 
-			continue
+			add(item)
+			return true, nil
+		}, asc, s.offset, s.limit, s.workers)
+		if err != nil {
+			return nil, err
 		}
 
+		// Items by cache
+		idx := slices.IndexFunc(tx.transactions, func(item *transaction) bool { return item.model.Name == model.Name })
+		if idx != -1 {
+			tra := tx.transactions[idx]
+			for _, record := range tra.records {
+				item := record.data
+
+				add(item)
+			}
+		}
+
+		return result, nil
+	}
+
+	cnds := []*Condition{}
+	for _, con := range s.conditions {
 		value := con.Value
 		switch v := value.(type) {
 		case *Wheres:
 			var err error
-			con.Value, err = v.Rows(tx, selects)
+			con.Value, err = v.Rows(tx)
 			if err != nil {
 				return nil, err
 			}
 		case Wheres:
 			var err error
-			con.Value, err = v.Rows(tx, selects)
+			con.Value, err = v.Rows(tx)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		cons = append(cons, con)
+		field := con.Field
+		index, ok := model.index(field)
+		if !ok {
+			cnds = append(cnds, con)
+			continue
+		}
+
+		keys, ok := s.keys[field]
+		if !ok {
+			asc := s.Order(field)
+			keys = index.Keys(asc, 0, 0)
+		}
+
+		s.keys[field] = con.ApplyToIndex(keys)
 	}
 
-	st.Iterate(func(id string, src []byte) (bool, error) {
+	// Items by keys
+	for _, keys := range s.keys {
+		for _, key := range keys {
+			item := et.Json{}
+			exists, err := model.getJson(key, item)
+			if err != nil {
+				return nil, err
+			}
+
+			if exists {
+				add(item)
+			}
+		}
+	}
+
+	if len(cnds) == 0 {
+		return result, nil
+	}
+
+	// Items by data
+	asc := s.Order(INDEX)
+	err = st.Iterate(func(id string, src []byte) (bool, error) {
 		item := et.Json{}
 		err := json.Unmarshal(src, &item)
 		if err != nil {
 			return false, err
 		}
 
-		validate(item)
-
+		validateItem(item, cnds)
 		return true, nil
-	}, workers)
+	}, asc, s.offset, s.limit, s.workers)
+	if err != nil {
+		return nil, err
+	}
 
+	// Items by cache
 	idx := slices.IndexFunc(tx.transactions, func(item *transaction) bool { return item.model.Name == model.Name })
 	if idx != -1 {
 		tra := tx.transactions[idx]
 		for _, record := range tra.records {
 			item := record.data
-			validate(item)
+
+			validateItem(item, cnds)
 		}
 	}
 

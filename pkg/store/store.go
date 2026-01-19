@@ -589,10 +589,10 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 
 /**
 * Iterate
-* @param fn func(id string, data []byte) bool, offset, limit int, asc bool, workers int
+* @param fn func(id string, data []byte) bool, asc bool, offset, limit, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), offset, limit int, asc bool, workers int) error {
+func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
 	tag := "iterate"
 	s.metricStart(tag)
 

@@ -699,13 +699,19 @@ func (s *Condition) ApplyToData(data et.Json) bool {
 * @return []string
 **/
 func (s *Condition) ApplyToIndex(keys []string) []string {
+	result := make([]string, 0)
 	if s.Field == "" {
-		return nil
+		return result
 	}
 
-	result := make([]string, 0)
 	for _, key := range keys {
 		ok := s.ApplyToValue(key)
+		if s.Connector == And {
+			ok = true && ok
+		} else if s.Connector == Or {
+			ok = true || ok
+		}
+
 		if ok {
 			result = append(result, key)
 		}

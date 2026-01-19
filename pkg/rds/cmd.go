@@ -155,7 +155,7 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 	getTx(tx)
 	model := s.model
-	items, err := where.Rows(tx, []string{})
+	items, err := where.Rows(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 	getTx(tx)
 	model := s.model
-	items, err := where.Rows(tx, []string{})
+	items, err := where.Rows(tx)
 	if err != nil {
 		return nil, err
 	}
