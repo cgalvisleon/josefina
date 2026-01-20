@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
 )
@@ -23,8 +24,7 @@ func initTransactions(db *DB) error {
 	if err != nil {
 		return err
 	}
-	transactions.defineAtrib(KEY, TpKey, "")
-	transactions.definePrimaryKey(KEY)
+	transactions.definePrimaryKey(INDEX)
 	if err := transactions.init(); err != nil {
 		return err
 	}
@@ -178,6 +178,8 @@ func (s *Tx) save() error {
 	if err != nil {
 		return err
 	}
+
+	logs.Debug(data.ToString())
 
 	_, err = setTransaction(s.Id, data)
 	if err != nil {

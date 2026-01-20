@@ -105,7 +105,7 @@ const (
 )
 
 type Field struct {
-	From         *From       `json:"from"`
+	from         *From       `json:"-"`
 	Name         string      `json:"name"`
 	TypeField    TypeField   `json:"type_field"`
 	TypeData     TypeData    `json:"type_data"`
@@ -123,18 +123,10 @@ func newField(from *From, name string, tpField TypeField, tpData TypeData, defau
 	}
 
 	return &Field{
-		From:         from,
+		from:         from,
 		Name:         name,
 		TypeField:    tpField,
 		TypeData:     tpData,
 		DefaultValue: defaultValue,
 	}, nil
-}
-
-/**
-* As
-* @return string
-**/
-func (s *Field) As() string {
-	return fmt.Sprintf("%s.%s", s.From.As(), s.Name)
 }
