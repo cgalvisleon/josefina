@@ -96,6 +96,7 @@ func (s *transaction) toJson() et.Json {
 			"database": s.Model.Database,
 			"schema":   s.Model.Schema,
 			"name":     s.Model.Name,
+			"host":     s.Model.Host,
 			"version":  s.Model.Version,
 		},
 		"records": records,

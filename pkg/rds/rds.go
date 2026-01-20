@@ -1,11 +1,20 @@
 package rds
 
 import (
+	"os"
+
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
 
-var tennant *Tennant
+var (
+	tennant  *Tennant
+	hostName string
+)
+
+func init() {
+	hostName, _ = os.Hostname()
+}
 
 /**
 * Init: Initializes the josefina

@@ -25,6 +25,7 @@ type From struct {
 	Database string            `json:"database"`
 	Schema   string            `json:"schema"`
 	Name     string            `json:"name"`
+	Host     string            `json:"host"`
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
 }
@@ -38,6 +39,7 @@ func (s *From) clone() *From {
 		Database: s.Database,
 		Schema:   s.Schema,
 		Name:     s.Name,
+		Host:     s.Host,
 		Fields:   s.Fields,
 		IsStrict: s.IsStrict,
 	}
