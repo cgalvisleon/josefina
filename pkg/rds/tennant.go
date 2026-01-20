@@ -80,7 +80,7 @@ func (s *Tennant) newDb(name string) (*DB, error) {
 }
 
 /**
-* getDb
+* loadDb
 * @param name string
 * @return *DB, error
 **/

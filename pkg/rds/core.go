@@ -8,7 +8,7 @@ var (
 )
 
 func (s *Tennant) loadCore() error {
-	db, err := s.getDb(packageName)
+	db, err := s.newDb(packageName)
 	if err != nil {
 		return err
 	}
