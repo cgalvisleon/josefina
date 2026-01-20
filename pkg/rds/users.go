@@ -21,8 +21,8 @@ func initUsers(db *DB) error {
 	if err != nil {
 		return err
 	}
-	users.defineAtrib("username", TpText, "")
-	users.defineAtrib("password", TpText, "")
+	users.DefineAtrib("username", TpText, "")
+	users.DefineAtrib("password", TpText, "")
 	users.defineHidden("password")
 	users.definePrimaryKey("username")
 	if err := users.init(); err != nil {

@@ -141,11 +141,34 @@ func (s *Model) definePrimaryKey(name string) bool {
 }
 
 /**
-* defineReferences: Defines the references
+* defineIndexField: Defines the index field
+* @return *Field, error
+**/
+func (s *Model) defineIndexField() (*Field, error) {
+	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
+	if err != nil {
+		return nil, err
+	}
+	s.defineIndexe(INDEX)
+	s.defineHidden(INDEX)
+	return result, nil
+}
+
+/**
+* DefineAtrib: Defines the field
+* @param name string, tpData TypeData, defaultValue interface{}
+* @return *Field, error
+**/
+func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	return s.defineFields(name, TpAtrib, tpData, defaultValue)
+}
+
+/**
+* DefineReferences: Defines the references
 * @param name, key string, to *Model, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
-func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
+func (s *Model) DefineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -173,34 +196,11 @@ func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, o
 }
 
 /**
-* defineIndexField: Defines the index field
-* @return *Field, error
-**/
-func (s *Model) defineIndexField() (*Field, error) {
-	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
-	if err != nil {
-		return nil, err
-	}
-	s.defineIndexe(INDEX)
-	s.defineHidden(INDEX)
-	return result, nil
-}
-
-/**
-* defineAtrib: Defines the field
-* @param name string, tpData TypeData, defaultValue interface{}
-* @return *Field, error
-**/
-func (s *Model) defineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	return s.defineFields(name, TpAtrib, tpData, defaultValue)
-}
-
-/**
-* defineDetail: Defines the detail
+* DefineDetail: Defines the detail
 * @param name string, keys map[string]string, version int
 * @return *Model, error
 **/
-func (s *Model) defineDetail(name string, keys map[string]string, version int) (*Model, error) {
+func (s *Model) DefineDetail(name string, keys map[string]string, version int) (*Model, error) {
 	_, err := s.defineFields(name, TpDetail, TpAny, []et.Json{})
 	if err != nil {
 		return nil, err
@@ -212,18 +212,18 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 	}
 
 	for fk, pk := range keys {
-		_, err = s.defineAtrib(pk, TpKey, "")
+		_, err = s.DefineAtrib(pk, TpKey, "")
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = to.defineAtrib(fk, TpKey, "")
+		_, err = to.DefineAtrib(fk, TpKey, "")
 		if err != nil {
 			return nil, err
 		}
 
 		s.definePrimaryKey(pk)
-		_, err = to.defineReferences(fk, pk, s, true, true)
+		_, err = to.DefineReferences(fk, pk, s, true, true)
 		if err != nil {
 			return nil, err
 		}
@@ -234,11 +234,11 @@ func (s *Model) defineDetail(name string, keys map[string]string, version int) (
 }
 
 /**
-* defineRollup: Defines the rollup
+* DefineRollup: Defines the rollup
 * @param name string, from string, keys map[string]string, selects []string
 * @return *Model
 **/
-func (s *Model) defineRollup(name, from string, keys map[string]string, selects []string) (*Model, error) {
+func (s *Model) DefineRollup(name, from string, keys map[string]string, selects []string) (*Model, error) {
 	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
 		return nil, err
@@ -254,11 +254,11 @@ func (s *Model) defineRollup(name, from string, keys map[string]string, selects 
 }
 
 /**
-* defineRelation: Defines the relation
+* DefineRelation: Defines the relation
 * @param from string, keys map[string]string, onDeleteCascade bool, onUpdateCascade bool
 * @return *Model
 **/
-func (s *Model) defineRelation(from string, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
+func (s *Model) DefineRelation(from string, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
 	to, err := s.db.getModel(s.Schema, from)
 	if err != nil {
 		return err
@@ -270,16 +270,40 @@ func (s *Model) defineRelation(from string, keys map[string]string, onDeleteCasc
 }
 
 /**
-* defineCalc: Defines the calc
+* DefineCalc: Defines the calc
 * @param name string, definition []byte
 * @return error
 **/
-func (s *Model) defineCalc(name string, definition []byte) error {
+func (s *Model) DefineCalc(name string, definition []byte) error {
 	_, err := s.defineFields(name, TpCalc, TpBytes, nil)
 	if err != nil {
 		return err
 	}
 
 	s.Calcs[name] = definition
+	return nil
+}
+
+/**
+* DefineIndexes: Defines the indexes
+* @param names ...string
+* @return error
+**/
+func (s *Model) DefineIndexes(names ...string) error {
+	for _, name := range names {
+		s.defineIndexe(name)
+	}
+	return nil
+}
+
+/**
+* DefinePrimaryKeys: Defines the primary keys
+* @param names ...string
+* @return error
+**/
+func (s *Model) DefinePrimaryKeys(names ...string) error {
+	for _, name := range names {
+		s.definePrimaryKey(name)
+	}
 	return nil
 }
