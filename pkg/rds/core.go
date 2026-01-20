@@ -3,7 +3,6 @@ package rds
 var (
 	series     *Model
 	records    *Model
-	schemas    *Model
 	models     *Model
 	references *Model
 )
@@ -71,24 +70,6 @@ func initRecords(db *DB) error {
 		return err
 	}
 	if err := records.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* initSchemas: Initializes the schemas model
-* @param db *DB
-* @return error
-**/
-func initSchemas(db *DB) error {
-	var err error
-	schemas, err = db.newModel("", "schemas", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := schemas.init(); err != nil {
 		return err
 	}
 
