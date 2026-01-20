@@ -63,12 +63,30 @@ func CreateSerie(name, tag, format string, value int) error {
 	return err
 }
 
+func DropSerie(name, tag string) error {
+	if series == nil {
+		return errors.New(msg.MSG_SERIES_NOT_FOUND)
+	}
+
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	_, err := series.delete(nil,
+		Where(Eq("name", name)).
+			And(Eq("tag", tag)))
+	return err
+}
+
 /**
-* UpdateSerie: Updates a serie
+* SetSerie: Sets a serie
 * @param name, tag string, value int
 * @return error
 **/
-func UpdateSerie(name, tag string, value int) error {
+func SetSerie(name, tag string, value int) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
