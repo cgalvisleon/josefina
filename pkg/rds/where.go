@@ -3,7 +3,6 @@ package rds
 import (
 	"encoding/json"
 	"errors"
-	"slices"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -229,14 +228,11 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		}
 
 		// Items by cache
-		idx := slices.IndexFunc(tx.transactions, func(item *transaction) bool { return item.model.Name == model.Name })
-		if idx != -1 {
-			tra := tx.transactions[idx]
-			for _, record := range tra.records {
-				item := record.data
+		cache := tx.getRecors(model.Name)
+		for _, record := range cache {
+			item := record.Data
 
-				add(item)
-			}
+			add(item)
 		}
 
 		return result, nil
@@ -312,14 +308,11 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by cache
-	idx := slices.IndexFunc(tx.transactions, func(item *transaction) bool { return item.model.Name == model.Name })
-	if idx != -1 {
-		tra := tx.transactions[idx]
-		for _, record := range tra.records {
-			item := record.data
+	cache := tx.getRecors(model.Name)
+	for _, record := range cache {
+		item := record.Data
 
-			validateItem(item, cnds)
-		}
+		validateItem(item, cnds)
 	}
 
 	return result, nil

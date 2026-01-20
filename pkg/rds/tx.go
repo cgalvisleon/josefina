@@ -52,17 +52,17 @@ func setTransaction(key string, data et.Json) (string, error) {
 
 type record struct {
 	tx      *Tx
-	command Command
-	idx     string
-	data    et.Json
-	status  Status
+	Command Command `json:"command"`
+	Idx     string  `json:"idx"`
+	Data    et.Json `json:"data"`
+	Status  Status  `json:"status"`
 }
 
 /**
 * commit: Commits the transaction
 **/
 func (s *record) commit() error {
-	s.status = Processed
+	s.Status = Processed
 	return s.tx.save()
 }
 
@@ -73,8 +73,8 @@ func (s *record) commit() error {
 **/
 type transaction struct {
 	tx      *Tx
-	model   *Model
-	records []*record
+	Model   *Model    `json:"model"`
+	Records []*record `json:"records"`
 }
 
 /**
@@ -85,12 +85,12 @@ type transaction struct {
 func (s *transaction) add(cmd Command, idx string, data et.Json) error {
 	item := &record{
 		tx:      s.tx,
-		command: cmd,
-		idx:     idx,
-		data:    data,
-		status:  Pending,
+		Command: cmd,
+		Idx:     idx,
+		Data:    data,
+		Status:  Pending,
 	}
-	s.records = append(s.records, item)
+	s.Records = append(s.Records, item)
 	return s.tx.save()
 }
 
@@ -102,16 +102,16 @@ func (s *transaction) add(cmd Command, idx string, data et.Json) error {
 func newTransaction(tx *Tx, model *Model) *transaction {
 	return &transaction{
 		tx:      tx,
-		model:   model,
-		records: make([]*record, 0),
+		Model:   model,
+		Records: make([]*record, 0),
 	}
 }
 
 type Tx struct {
-	startedAt    time.Time
-	endedAt      time.Time
-	id           string
-	transactions []*transaction
+	StartedAt    time.Time `json:"startedAt"`
+	EndedAt      time.Time `json:"endedAt"`
+	Id           string    `json:"id"`
+	Transactions []*transaction
 }
 
 /**
@@ -125,10 +125,10 @@ func getTx(tx *Tx) (*Tx, error) {
 	}
 
 	tx = &Tx{
-		startedAt:    timezone.Now(),
-		endedAt:      time.Time{},
-		id:           reg.GenULID("transaction"),
-		transactions: make([]*transaction, 0),
+		StartedAt:    timezone.Now(),
+		EndedAt:      time.Time{},
+		Id:           reg.GenULID("transaction"),
+		Transactions: make([]*transaction, 0),
 	}
 	if err := tx.save(); err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func (s *Tx) save() error {
 		return err
 	}
 
-	_, err = setTransaction(s.id, data)
+	_, err = setTransaction(s.Id, data)
 	if err != nil {
 		return err
 	}
@@ -188,17 +188,31 @@ func (s *Tx) save() error {
 }
 
 /**
+* getTx: Gets the transaction
+* @return error
+**/
+func (s *Tx) getRecors(name string) []*record {
+	idx := slices.IndexFunc(s.Transactions, func(item *transaction) bool { return item.Model.Name == name })
+	if idx == -1 {
+		return []*record{}
+	}
+
+	tra := s.Transactions[idx]
+	return tra.Records
+}
+
+/**
 * add: Adds data to the transaction
 * @param name string, data et.Json
 **/
 func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
-	idx := slices.IndexFunc(s.transactions, func(t *transaction) bool { return t.model.Name == model.Name })
+	idx := slices.IndexFunc(s.Transactions, func(t *transaction) bool { return t.Model.Name == model.Name })
 	if idx == -1 {
 		tx := newTransaction(s, model)
-		s.transactions = append(s.transactions, tx)
+		s.Transactions = append(s.Transactions, tx)
 	}
 
-	tx := s.transactions[idx]
+	tx := s.Transactions[idx]
 	return tx.add(cmd, key, data)
 }
 
@@ -207,18 +221,18 @@ func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
 * @return error
 **/
 func (s *Tx) commit() error {
-	for _, tx := range s.transactions {
-		model := tx.model
-		for _, record := range tx.records {
-			cmd := record.command
-			idx := record.idx
+	for _, tx := range s.Transactions {
+		model := tx.Model
+		for _, record := range tx.Records {
+			cmd := record.Command
+			idx := record.Idx
 			if cmd == DELETE {
 				err := model.remove(idx)
 				if err != nil {
 					return err
 				}
 			} else {
-				data := record.data
+				data := record.Data
 				err := model.put(idx, data)
 				if err != nil {
 					return err
@@ -231,6 +245,6 @@ func (s *Tx) commit() error {
 		}
 	}
 
-	s.endedAt = timezone.Now()
-	return nil
+	s.EndedAt = timezone.Now()
+	return s.save()
 }
