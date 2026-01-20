@@ -430,6 +430,9 @@ func (s *Model) remove(key string) error {
 		if err != nil {
 			return err
 		}
+		if name == INDEX {
+			
+		}
 	}
 	return nil
 }

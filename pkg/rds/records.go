@@ -1,5 +1,7 @@
 package rds
 
+import "github.com/cgalvisleon/et/et"
+
 var records *Model
 
 /**
@@ -13,9 +15,30 @@ func initRecords(db *DB) error {
 	if err != nil {
 		return err
 	}
+	records.DefineAtrib("schema", TpText, "")
+	records.DefineAtrib("model", TpText, "")
+	records.DefineAtrib("key", TpText, "")
+	records.DefinePrimaryKeys("schema", "model", "key")
 	if err := records.init(); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+/**
+* setRecord: Sets a record
+* @param schema, model, key string
+* @return error
+**/
+func setRecord(schema, model, key string) error {
+	_, err := records.upsert(nil, et.Json{
+		"schema": schema,
+		"model":  model,
+		"key":    key,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
