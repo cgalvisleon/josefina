@@ -89,6 +89,11 @@ func UpdateSerie(name, tag string, value int) error {
 	return err
 }
 
+/**
+* GetSerie: Gets a serie
+* @param name, tag string
+* @return et.Json, error
+**/
 func GetSerie(name, tag string) (et.Json, error) {
 	if series == nil {
 		return et.Json{}, errors.New(msg.MSG_SERIES_NOT_FOUND)
@@ -100,7 +105,11 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	result, err := series.update(nil,
+	items, err := series.BeforeUpdate(func(tx *Tx, old, new et.Json) error {
+		value := old.Int("value")
+		new["value"] = value + 1
+		return nil
+	}).update(nil,
 		et.Json{},
 		Where(Eq("name", name)).
 			And(Eq("tag", tag)))
@@ -108,9 +117,17 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, err
 	}
 
-	if len(result) == 0 {
+	if len(items) == 0 {
 		return et.Json{}, errors.New(msg.MSG_NOT_FOUND)
 	}
 
-	return result[0], nil
+	item := items[0]
+	format := item.String("format")
+	value := item.Int("value")
+	result := fmt.Sprintf(format, value)
+
+	return et.Json{
+		"value":  value,
+		"result": result,
+	}, nil
 }

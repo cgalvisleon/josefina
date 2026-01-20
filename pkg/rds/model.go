@@ -485,6 +485,47 @@ func (s *Model) upsert(ctx *Tx, data et.Json) ([]et.Json, error) {
 	return newCmd(s).upsert(ctx, data)
 }
 
-func (s *Model) AfterInsert(fn TriggerFunction) *Cmd {
-	return newCmd(s).afterInsert(fn)
+/**
+* AfterInsert: Adds an after insert trigger
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Model) BeforeInsert(fn TriggerFunction) *Cmd {
+	return newCmd(s).beforeInsert(fn)
+}
+
+/**
+* BeforeUpdate: Adds a before update trigger
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Model) BeforeUpdate(fn TriggerFunction) *Cmd {
+	return newCmd(s).beforeUpdate(fn)
+}
+
+/**
+* BeforeDelete: Adds a before delete trigger
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Model) BeforeDelete(fn TriggerFunction) *Cmd {
+	return newCmd(s).beforeDelete(fn)
+}
+
+/**
+* AfterUpdate: Adds an after update trigger
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Model) AfterUpdate(fn TriggerFunction) *Cmd {
+	return newCmd(s).afterUpdate(fn)
+}
+
+/**
+* AfterDelete: Adds an after delete trigger
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Model) AfterDelete(fn TriggerFunction) *Cmd {
+	return newCmd(s).afterDelete(fn)
 }
