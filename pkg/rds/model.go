@@ -221,12 +221,12 @@ func (s *Model) get(key string, dest any) (bool, error) {
 		return false, err
 	}
 
-	_, err = source.Get(key, dest)
+	exists, err := source.Get(key, dest)
 	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return exists, nil
 }
 
 /**
