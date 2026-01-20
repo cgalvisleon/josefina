@@ -144,9 +144,9 @@ type Tx struct {
 * @param tx *Tx
 * @return *Tx
 **/
-func getTx(tx *Tx) (*Tx, error) {
+func getTx(tx *Tx) (*Tx, bool) {
 	if tx != nil {
-		return tx, nil
+		return tx, false
 	}
 
 	tx = &Tx{
@@ -155,11 +155,7 @@ func getTx(tx *Tx) (*Tx, error) {
 		Id:           reg.GenULID("transaction"),
 		Transactions: make([]*transaction, 0),
 	}
-	if err := tx.save(); err != nil {
-		return nil, err
-	}
-
-	return tx, nil
+	return tx, true
 }
 
 /**
