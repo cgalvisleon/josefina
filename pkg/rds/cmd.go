@@ -13,19 +13,24 @@ const (
 	INSERT Command = "insert"
 	UPDATE Command = "update"
 	DELETE Command = "delete"
-	UPSERT Command = "upsert"
 )
 
 type Cmd struct {
-	db            *DB        `json:"-"`
-	model         *Model     `json:"-"`
-	command       Command    `json:"-"`
-	beforeInserts []*Trigger `json:"-"`
-	beforeUpdates []*Trigger `json:"-"`
-	beforeDeletes []*Trigger `json:"-"`
-	afterInserts  []*Trigger `json:"-"`
-	afterUpdates  []*Trigger `json:"-"`
-	afterDeletes  []*Trigger `json:"-"`
+	db                   *DB               `json:"-"`
+	model                *Model            `json:"-"`
+	command              Command           `json:"-"`
+	beforeTriggerInserts []*Trigger        `json:"-"`
+	beforeTriggerUpdates []*Trigger        `json:"-"`
+	beforeTriggerDeletes []*Trigger        `json:"-"`
+	afterTriggerInserts  []*Trigger        `json:"-"`
+	afterTriggerUpdates  []*Trigger        `json:"-"`
+	afterTriggerDeletes  []*Trigger        `json:"-"`
+	beforeInserts        []TriggerFunction `json:"-"`
+	afterInserts         []TriggerFunction `json:"-"`
+	beforeUpdates        []TriggerFunction `json:"-"`
+	afterUpdates         []TriggerFunction `json:"-"`
+	beforeDeletes        []TriggerFunction `json:"-"`
+	afterDeletes         []TriggerFunction `json:"-"`
 }
 
 /**
@@ -33,35 +38,40 @@ type Cmd struct {
 * @param model *Model, command Command
 * @return *Cmd
 **/
-func newCmd(model *Model, command Command) *Cmd {
+func newCmd(model *Model) *Cmd {
 	result := &Cmd{
-		db:            model.db,
-		model:         model,
-		command:       command,
-		beforeInserts: make([]*Trigger, 0),
-		beforeUpdates: make([]*Trigger, 0),
-		beforeDeletes: make([]*Trigger, 0),
-		afterInserts:  make([]*Trigger, 0),
-		afterUpdates:  make([]*Trigger, 0),
-		afterDeletes:  make([]*Trigger, 0),
+		db:                   model.db,
+		model:                model,
+		beforeTriggerInserts: make([]*Trigger, 0),
+		beforeTriggerUpdates: make([]*Trigger, 0),
+		beforeTriggerDeletes: make([]*Trigger, 0),
+		afterTriggerInserts:  make([]*Trigger, 0),
+		afterTriggerUpdates:  make([]*Trigger, 0),
+		afterTriggerDeletes:  make([]*Trigger, 0),
+		beforeInserts:        make([]TriggerFunction, 0),
+		afterInserts:         make([]TriggerFunction, 0),
+		beforeUpdates:        make([]TriggerFunction, 0),
+		afterUpdates:         make([]TriggerFunction, 0),
+		beforeDeletes:        make([]TriggerFunction, 0),
+		afterDeletes:         make([]TriggerFunction, 0),
 	}
 	for _, trigger := range model.BeforeInserts {
-		result.beforeInserts = append(result.beforeInserts, trigger)
+		result.beforeTriggerInserts = append(result.beforeTriggerInserts, trigger)
 	}
 	for _, trigger := range model.AfterInserts {
-		result.afterInserts = append(result.afterInserts, trigger)
+		result.afterTriggerInserts = append(result.afterTriggerInserts, trigger)
 	}
 	for _, trigger := range model.BeforeUpdates {
-		result.beforeUpdates = append(result.beforeUpdates, trigger)
+		result.beforeTriggerUpdates = append(result.beforeTriggerUpdates, trigger)
 	}
 	for _, trigger := range model.AfterUpdates {
-		result.afterUpdates = append(result.afterUpdates, trigger)
+		result.afterTriggerUpdates = append(result.afterTriggerUpdates, trigger)
 	}
 	for _, trigger := range model.BeforeDeletes {
-		result.beforeDeletes = append(result.beforeDeletes, trigger)
+		result.beforeTriggerDeletes = append(result.beforeTriggerDeletes, trigger)
 	}
 	for _, trigger := range model.AfterDeletes {
-		result.afterDeletes = append(result.afterDeletes, trigger)
+		result.afterTriggerDeletes = append(result.afterTriggerDeletes, trigger)
 	}
 
 	return result
@@ -94,11 +104,72 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 }
 
 /**
+* beforeInsert
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) beforeInsert(fn TriggerFunction) *Cmd {
+	s.beforeInserts = append(s.beforeInserts, fn)
+	return s
+}
+
+/**
+* afterInsert
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) afterInsert(fn TriggerFunction) *Cmd {
+	s.afterInserts = append(s.afterInserts, fn)
+	return s
+}
+
+/**
+* beforeUpdate
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) beforeUpdate(fn TriggerFunction) *Cmd {
+	s.beforeUpdates = append(s.beforeUpdates, fn)
+	return s
+}
+
+/**
+* afterUpdate
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) afterUpdate(fn TriggerFunction) *Cmd {
+	s.afterUpdates = append(s.afterUpdates, fn)
+	return s
+}
+
+/**
+* beforeDelete
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) beforeDelete(fn TriggerFunction) *Cmd {
+	s.beforeDeletes = append(s.beforeDeletes, fn)
+	return s
+}
+
+/**
+* afterDelete
+* @param fn TriggerFunction
+* @return *Cmd
+**/
+func (s *Cmd) afterDelete(fn TriggerFunction) *Cmd {
+	s.afterDeletes = append(s.afterDeletes, fn)
+	return s
+}
+
+/**
 * insert: Inserts the model
 * @param tx *Tx, new et.Json
 * @return et.Json, error
 **/
 func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
+	s.command = INSERT
 	tx, commit := getTx(tx)
 	model := s.model
 	idx := new.ValStr("", INDEX)
@@ -153,8 +224,16 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 	}
 
 	// Run before insert triggers
-	for _, trigger := range s.beforeInserts {
+	for _, trigger := range s.beforeTriggerInserts {
 		err := s.runTrigger(trigger, tx, et.Json{}, new)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Run before insert trigger function
+	for _, fn := range s.beforeInserts {
+		err := fn(tx, et.Json{}, new)
 		if err != nil {
 			return nil, err
 		}
@@ -164,8 +243,16 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 	tx.add(model, INSERT, idx, new)
 
 	// Run after insert triggers
-	for _, trigger := range s.afterInserts {
+	for _, trigger := range s.afterTriggerInserts {
 		err := s.runTrigger(trigger, tx, et.Json{}, new)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Run after insert trigger function
+	for _, fn := range s.afterInserts {
+		err := fn(tx, et.Json{}, new)
 		if err != nil {
 			return nil, err
 		}
@@ -186,10 +273,11 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 * @param tx *Tx, data et.Json, where *Wheres
 * @return []et.Json, error
 **/
-func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
+func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
+	s.command = UPDATE
 	tx, commit := getTx(tx)
 	model := s.model
-	items, err := where.Rows(tx)
+	items, err := wheres.Rows(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +305,16 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 		}
 
 		// Run before update triggers
-		for _, trigger := range s.beforeUpdates {
+		for _, trigger := range s.beforeTriggerUpdates {
 			err := s.runTrigger(trigger, tx, old, new)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Run before update trigger function
+		for _, fn := range s.beforeUpdates {
+			err := fn(tx, old, new)
 			if err != nil {
 				return nil, err
 			}
@@ -228,8 +324,16 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 		tx.add(model, UPDATE, idx, new)
 
 		// Run after update triggers
-		for _, trigger := range s.afterUpdates {
+		for _, trigger := range s.afterTriggerUpdates {
 			err := s.runTrigger(trigger, tx, old, new)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Run after update trigger function
+		for _, fn := range s.afterUpdates {
+			err := fn(tx, old, new)
 			if err != nil {
 				return nil, err
 			}
@@ -254,6 +358,7 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
+	s.command = DELETE
 	tx, commit := getTx(tx)
 	model := s.model
 	items, err := where.Rows(tx)
@@ -278,8 +383,16 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 		}
 
 		// Run before delete triggers
-		for _, trigger := range s.beforeDeletes {
+		for _, trigger := range s.beforeTriggerDeletes {
 			err := s.runTrigger(trigger, tx, old, et.Json{})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Run before delete trigger function
+		for _, fn := range s.beforeDeletes {
+			err := fn(tx, old, et.Json{})
 			if err != nil {
 				return nil, err
 			}
@@ -289,8 +402,16 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 		tx.add(model, DELETE, idx, old)
 
 		// Run after delete triggers
-		for _, trigger := range s.afterDeletes {
+		for _, trigger := range s.afterTriggerDeletes {
 			err := s.runTrigger(trigger, tx, old, et.Json{})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Run after delete trigger function
+		for _, fn := range s.afterDeletes {
+			err := fn(tx, old, et.Json{})
 			if err != nil {
 				return nil, err
 			}
@@ -343,4 +464,56 @@ func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 	}
 
 	return s.update(tx, new, where)
+}
+
+/**
+* Insert: Inserts the model
+* @param tx *Tx, new et.Json
+* @return et.Json, error
+**/
+func (s *Cmd) Insert(tx *Tx, new et.Json) (et.Json, error) {
+	if !s.model.IsCore {
+		return et.Json{}, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.insert(tx, new)
+}
+
+/**
+* Update: Updates the model
+* @param tx *Tx, new et.Json, where *Wheres
+* @return []et.Json, error
+**/
+func (s *Cmd) Update(tx *Tx, new et.Json, where *Wheres) ([]et.Json, error) {
+	if !s.model.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.update(tx, new, where)
+}
+
+/**
+* Delete: Deletes the model
+* @param tx *Tx, where *Wheres
+* @return []et.Json, error
+**/
+func (s *Cmd) Delete(tx *Tx, where *Wheres) ([]et.Json, error) {
+	if !s.model.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.delete(tx, where)
+}
+
+/**
+* Upsert: Upserts the model
+* @param tx *Tx, new et.Json
+* @return []et.Json, error
+**/
+func (s *Cmd) Upsert(tx *Tx, new et.Json) ([]et.Json, error) {
+	if !s.model.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.upsert(tx, new)
 }

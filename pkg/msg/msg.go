@@ -32,6 +32,7 @@ var (
 	MSG_FOREIGN_KEY_NOT_FOUND  = "foreign key not found"
 	MSG_USER_NOT_FOUND         = "user not found"
 	MSG_SERIES_NOT_FOUND       = "series not found"
+	MSG_OPERATION_NOT_ALLOW    = "operation not allow"
 )
 
 func init() {
@@ -66,5 +67,6 @@ func init() {
 		MSG_FOREIGN_KEY_NOT_FOUND = "foreign key no encontrado"
 		MSG_USER_NOT_FOUND = "usuario no encontrado"
 		MSG_SERIES_NOT_FOUND = "series no encontrada"
+		MSG_OPERATION_NOT_ALLOW = "operación no permitida"
 	}
 }

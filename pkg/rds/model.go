@@ -445,7 +445,7 @@ func (s *Model) where(condition *Condition) *Wheres {
 * @return et.Json, error
 **/
 func (s *Model) insert(tx *Tx, data et.Json) (et.Json, error) {
-	return newCmd(s, INSERT).insert(tx, data)
+	return newCmd(s).insert(tx, data)
 }
 
 /**
@@ -459,7 +459,7 @@ func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) 
 	} else {
 		where = where.setOwner(s)
 	}
-	return newCmd(s, UPDATE).update(ctx, data, where)
+	return newCmd(s).update(ctx, data, where)
 }
 
 /**
@@ -473,7 +473,7 @@ func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
 	} else {
 		where = where.setOwner(s)
 	}
-	return newCmd(s, DELETE).delete(ctx, where)
+	return newCmd(s).delete(ctx, where)
 }
 
 /**
@@ -482,5 +482,9 @@ func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Model) upsert(ctx *Tx, data et.Json) ([]et.Json, error) {
-	return newCmd(s, UPSERT).upsert(ctx, data)
+	return newCmd(s).upsert(ctx, data)
+}
+
+func (s *Model) AfterInsert(fn TriggerFunction) *Cmd {
+	return newCmd(s).afterInsert(fn)
 }

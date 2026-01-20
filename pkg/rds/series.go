@@ -93,7 +93,6 @@ func GetSerie(name, tag string) (et.Json, error) {
 	if series == nil {
 		return et.Json{}, errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
-
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -101,7 +100,10 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	result, err := series.get(nil, Where(Eq("name", name)).And(Eq("tag", tag)))
+	result, err := series.update(nil,
+		et.Json{},
+		Where(Eq("name", name)).
+			And(Eq("tag", tag)))
 	if err != nil {
 		return et.Json{}, err
 	}
