@@ -196,7 +196,7 @@ func (s *Model) init() error {
 	}
 
 	s.isInit = true
-	return nil
+	return s.save()
 }
 
 /**
