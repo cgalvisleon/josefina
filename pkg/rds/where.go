@@ -176,11 +176,6 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	st, err := model.source()
-	if err != nil {
-		return nil, err
-	}
-
 	add := func(item et.Json) {
 		if len(s.selects) > 0 {
 			item = item.Select(s.selects)
@@ -208,6 +203,11 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		if ok {
 			add(item)
 		}
+	}
+
+	st, err := model.source()
+	if err != nil {
+		return nil, err
 	}
 
 	if len(s.conditions) == 0 {

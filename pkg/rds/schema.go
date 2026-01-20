@@ -48,6 +48,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		Details:       make(map[string]*Detail, 0),
 		Rollups:       make(map[string]*Detail, 0),
 		Relations:     make(map[string]*Detail, 0),
+		Calcs:         make(map[string][]byte, 0),
 		BeforeInserts: make([]*Trigger, 0),
 		BeforeUpdates: make([]*Trigger, 0),
 		BeforeDeletes: make([]*Trigger, 0),

@@ -319,8 +319,8 @@ func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 		if key == "" {
 			return nil, errorPrimaryKeysNotFound
 		}
-		if !source.IsExist(key) {
-			exists = false
+		exists = source.IsExist(key)
+		if !exists {
 			break
 		}
 		where.Add(Eq(name, key))

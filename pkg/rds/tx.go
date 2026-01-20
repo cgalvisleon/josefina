@@ -4,6 +4,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
@@ -184,7 +185,10 @@ func (s Tx) toJson() et.Json {
 func (s *Tx) save() error {
 	s.EndedAt = timezone.Now()
 	data := s.toJson()
-	logs.Debug(data.ToString())
+	debug := envar.GetBool("DEBUG", false)
+	if debug {
+		logs.Debug(data.ToString())
+	}
 
 	_, err := setTransaction(s.Id, data)
 	if err != nil {
