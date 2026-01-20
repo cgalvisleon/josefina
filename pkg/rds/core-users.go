@@ -45,8 +45,7 @@ func initUsers(db *DB) error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	tx := getTx(nil)
-	_, err := users.insert(tx, et.Json{
+	_, err := users.insert(nil, et.Json{
 		"username": username,
 		"password": password,
 	})
@@ -54,7 +53,7 @@ func CreateUser(username, password string) error {
 		return err
 	}
 
-	return tx.commit()
+	return nil
 }
 
 /**
@@ -63,13 +62,12 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username string) error {
-	tx := getTx(nil)
-	_, err := users.delete(tx, users.where(Eq("username", username)))
+	_, err := users.delete(nil, users.where(Eq("username", username)))
 	if err != nil {
 		return err
 	}
 
-	return tx.commit()
+	return nil
 }
 
 /**
@@ -86,13 +84,12 @@ func ChanguePassword(username, newpassword string) error {
 		return errors.New(msg.MSG_USER_NOT_FOUND)
 	}
 
-	tx := getTx(nil)
-	_, err = users.update(tx, et.Json{
+	_, err = users.update(nil, et.Json{
 		"password": newpassword,
 	}, users.where(Eq("username", username)))
 	if err != nil {
 		return err
 	}
 
-	return tx.commit()
+	return nil
 }

@@ -1,14 +1,13 @@
 package rds
 
 var (
-	transactions *Model
-	users        *Model
-	series       *Model
-	records      *Model
-	databases    *Model
-	schemas      *Model
-	models       *Model
-	references   *Model
+	users      *Model
+	series     *Model
+	records    *Model
+	databases  *Model
+	schemas    *Model
+	models     *Model
+	references *Model
 )
 
 func (s *Tennant) loadCore() error {

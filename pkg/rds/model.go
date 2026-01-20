@@ -337,6 +337,7 @@ func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
 * @return error
 **/
 func (s *Model) put(idx string, data et.Json) error {
+	data[INDEX] = idx
 	for _, name := range s.Indexes {
 		source := s.data[name]
 		key := fmt.Sprintf("%v", data[name])

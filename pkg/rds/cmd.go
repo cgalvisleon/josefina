@@ -73,7 +73,6 @@ func newCmd(model *Model, command Command) *Cmd {
 * @return error
 **/
 func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
-	getTx(tx)
 	model := s.model
 	vm, ok := model.triggers[trigger.Name]
 	if !ok {
@@ -100,7 +99,12 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 * @return et.Json, error
 **/
 func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
-	getTx(tx)
+	commit := tx == nil
+	tx, err := getTx(tx)
+	if err != nil {
+		return nil, err
+	}
+
 	model := s.model
 	idx := new.ValStr("", INDEX)
 	if idx == "" {
@@ -172,6 +176,13 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 		}
 	}
 
+	if commit {
+		err := tx.commit()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return new, nil
 }
 
@@ -181,7 +192,12 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
-	getTx(tx)
+	commit := tx == nil
+	tx, err := getTx(tx)
+	if err != nil {
+		return nil, err
+	}
+
 	model := s.model
 	items, err := where.Rows(tx)
 	if err != nil {
@@ -228,6 +244,13 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 		add(new)
 	}
 
+	if commit {
+		err := tx.commit()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return result, nil
 }
 
@@ -237,7 +260,12 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
-	getTx(tx)
+	commit := tx == nil
+	tx, err := getTx(tx)
+	if err != nil {
+		return nil, err
+	}
+
 	model := s.model
 	items, err := where.Rows(tx)
 	if err != nil {
@@ -276,6 +304,13 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 		}
 
 		add(old)
+	}
+
+	if commit {
+		err := tx.commit()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return result, nil

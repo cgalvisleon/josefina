@@ -10,6 +10,46 @@ import (
 	"github.com/cgalvisleon/et/timezone"
 )
 
+var transactions *Model
+
+/**
+* initTransactions: Initializes the transactions model
+* @param db *DB
+* @return error
+**/
+func initTransactions(db *DB) error {
+	var err error
+	transactions, err = db.newModel("", "transactions", true, 1)
+	if err != nil {
+		return err
+	}
+	transactions.defineAtrib(KEY, TpKey, "")
+	transactions.definePrimaryKey(KEY)
+	if err := transactions.init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* setTransaction: Sets a transaction
+* @param key string, data et.Json
+* @return string, error
+**/
+func setTransaction(key string, data et.Json) (string, error) {
+	if key == "" {
+		key = transactions.getKey()
+	}
+
+	err := transactions.put(key, data)
+	if err != nil {
+		return "", err
+	}
+
+	return key, nil
+}
+
 type record struct {
 	tx      *Tx
 	command Command
@@ -21,8 +61,9 @@ type record struct {
 /**
 * commit: Commits the transaction
 **/
-func (s *record) commit() {
+func (s *record) commit() error {
 	s.status = Processed
+	return s.tx.save()
 }
 
 /**
@@ -41,7 +82,7 @@ type transaction struct {
 * @param cmd Command, idx string, data et.Json
 * @return void
 **/
-func (s *transaction) add(cmd Command, idx string, data et.Json) {
+func (s *transaction) add(cmd Command, idx string, data et.Json) error {
 	item := &record{
 		tx:      s.tx,
 		command: cmd,
@@ -50,6 +91,7 @@ func (s *transaction) add(cmd Command, idx string, data et.Json) {
 		status:  Pending,
 	}
 	s.records = append(s.records, item)
+	return s.tx.save()
 }
 
 /**
@@ -73,13 +115,13 @@ type Tx struct {
 }
 
 /**
-* getTx: Gets the transaction
+* getTx: Creates a new transaction
 * @param tx *Tx
 * @return *Tx
 **/
-func getTx(tx *Tx) *Tx {
+func getTx(tx *Tx) (*Tx, error) {
 	if tx != nil {
-		return tx
+		return tx, nil
 	}
 
 	tx = &Tx{
@@ -88,7 +130,11 @@ func getTx(tx *Tx) *Tx {
 		id:           reg.GenULID("transaction"),
 		transactions: make([]*transaction, 0),
 	}
-	return tx
+	if err := tx.save(); err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }
 
 /**
@@ -145,7 +191,7 @@ func (s *Tx) save() error {
 * add: Adds data to the transaction
 * @param name string, data et.Json
 **/
-func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) {
+func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
 	idx := slices.IndexFunc(s.transactions, func(t *transaction) bool { return t.model.Name == model.Name })
 	if idx == -1 {
 		tx := newTransaction(s, model)
@@ -153,7 +199,7 @@ func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) {
 	}
 
 	tx := s.transactions[idx]
-	tx.add(cmd, key, data)
+	return tx.add(cmd, key, data)
 }
 
 /**
@@ -178,7 +224,10 @@ func (s *Tx) commit() error {
 					return err
 				}
 			}
-			record.commit()
+			err := record.commit()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
