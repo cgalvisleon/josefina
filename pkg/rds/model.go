@@ -18,7 +18,29 @@ var (
 	errorInvalidType         = errors.New(msg.MSG_INVALID_TYPE)
 	errorInvalidOperator     = errors.New(msg.MSG_INVALID_OPERATOR)
 	errorIndexNotFound       = errors.New(msg.MSG_INDEX_NOT_FOUND)
+	models                   *Model
 )
+
+/**
+* initModels: Initializes the models model
+* @param db *DB
+* @return error
+**/
+func initModels(db *DB) error {
+	var err error
+	models, err = db.newModel("", "models", true, 1)
+	if err != nil {
+		return err
+	}
+	models.DefineAtrib("schema", TpText, "")
+	models.DefineAtrib("name", TpText, "")
+	models.DefinePrimaryKeys("schema", "name")
+	if err := models.init(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 type From struct {
 	Database string            `json:"database"`
@@ -432,6 +454,11 @@ func (s *Model) insert(tx *Tx, data et.Json) (et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
+	if where == nil {
+		where = newWhere(s)
+	} else {
+		where = where.setOwner(s)
+	}
 	return newCmd(s, UPDATE).update(ctx, data, where)
 }
 
@@ -441,6 +468,11 @@ func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) 
 * @return []et.Json, error
 **/
 func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
+	if where == nil {
+		where = newWhere(s)
+	} else {
+		where = where.setOwner(s)
+	}
 	return newCmd(s, DELETE).delete(ctx, where)
 }
 

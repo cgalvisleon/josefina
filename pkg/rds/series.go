@@ -62,3 +62,53 @@ func CreateSerie(name, tag, format string, value int) error {
 	})
 	return err
 }
+
+/**
+* UpdateSerie: Updates a serie
+* @param name, tag string, value int
+* @return error
+**/
+func UpdateSerie(name, tag string, value int) error {
+	if series == nil {
+		return errors.New(msg.MSG_SERIES_NOT_FOUND)
+	}
+
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	_, err := series.update(nil,
+		et.Json{
+			"value": value,
+		},
+		Where(Eq("name", name)).
+			And(Eq("tag", tag)))
+	return err
+}
+
+func GetSerie(name, tag string) (et.Json, error) {
+	if series == nil {
+		return et.Json{}, errors.New(msg.MSG_SERIES_NOT_FOUND)
+	}
+
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	result, err := series.get(nil, Where(Eq("name", name)).And(Eq("tag", tag)))
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	if len(result) == 0 {
+		return et.Json{}, errors.New(msg.MSG_NOT_FOUND)
+	}
+
+	return result[0], nil
+}
