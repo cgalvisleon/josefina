@@ -117,8 +117,8 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, err
 	}
 
-	if len(items) == 0 {
-		return et.Json{}, errors.New(msg.MSG_NOT_FOUND)
+	if len(items) != 1 {
+		return et.Json{}, errors.New(msg.MSG_INVALID_CONDITION_ONLY_ONE)
 	}
 
 	item := items[0]
