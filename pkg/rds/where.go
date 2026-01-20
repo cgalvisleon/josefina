@@ -284,9 +284,9 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 				continue
 			}
 
-			for index := range indexes {
+			for idx := range indexes {
 				item := et.Json{}
-				exists, err = model.getObjet(index, item)
+				exists, err = model.getObjet(idx, item)
 				if err != nil {
 					return nil, err
 				}

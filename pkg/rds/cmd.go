@@ -195,6 +195,10 @@ func (s *Cmd) update(tx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
 	}
 
 	result := []et.Json{}
+	if len(items) == 0 {
+		return result, nil
+	}
+
 	add := func(item et.Json) {
 		result = append(result, item)
 	}
@@ -258,6 +262,10 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 	}
 
 	result := []et.Json{}
+	if len(items) == 0 {
+		return result, nil
+	}
+
 	add := func(item et.Json) {
 		result = append(result, item)
 	}

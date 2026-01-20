@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -211,43 +210,23 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* getSource: Gets the model
-* @param key string
-* @return any, error
-**/
-func (s *Model) getSource(key string, dest any) (bool, error) {
-	source, err := s.source()
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := source.Get(key, dest)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
-}
-
-/**
 * getObjet: Gets the model as object
 * @param key string
 * @return et.Json, error
 **/
 func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
-	src := []byte{}
-	exists, err := s.getSource(key, &src)
+	source, err := s.source()
+	if err != nil {
+		return false, err
+	}
+
+	exists, err := source.Get(key, &dest)
 	if err != nil {
 		return false, err
 	}
 
 	if !exists {
 		return false, nil
-	}
-
-	err = json.Unmarshal(src, &dest)
-	if err != nil {
-		return false, err
 	}
 
 	return true, nil
@@ -264,7 +243,7 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 		return false, errors.New(msg.MSG_INDEX_NOT_FOUND)
 	}
 
-	exists, err := index.Get(key, dest)
+	exists, err := index.Get(key, &dest)
 	if err != nil {
 		return false, err
 	}
