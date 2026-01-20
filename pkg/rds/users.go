@@ -2,9 +2,11 @@ package rds
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -60,7 +62,14 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username string) error {
-	_, err := users.delete(nil, users.where(Eq("username", username)))
+	if users == nil {
+		return errors.New(msg.MSG_USERS_NOT_FOUND)
+	}
+
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	_, err := users.delete(nil, Where(Eq("username", username)))
 	return err
 }
 
