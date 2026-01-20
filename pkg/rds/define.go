@@ -25,7 +25,7 @@ func (s *Model) existsField(name string) bool {
 * @return *Field, error
 **/
 func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	if utility.ValidStr(name, 0, []string{""}) {
+	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
@@ -146,10 +146,10 @@ func (s *Model) definePrimaryKey(name string) bool {
 * @return *Detail
 **/
 func (s *Model) defineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
-	if utility.ValidStr(name, 0, []string{""}) {
+	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
-	if utility.ValidStr(key, 0, []string{""}) {
+	if !utility.ValidStr(key, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "key")
 	}
 

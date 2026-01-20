@@ -117,9 +117,8 @@ type Model struct {
 * @return error
 **/
 func (s *Model) prepared() error {
-	if len(s.Fields) == 0 {
-		s.defineIndexField()
-		s.definePrimaryKey(INDEX)
+	if len(s.Indexes) == 0 {
+		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
 	return nil

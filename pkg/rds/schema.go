@@ -59,9 +59,12 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		data:          make(map[string]*store.FileStore, 0),
 		triggers:      make(map[string]*Vm, 0),
 	}
-	result.defineIndexField()
+	_, err := result.defineIndexField()
+	if err != nil {
+		return nil, err
+	}
 	s.Models[name] = result
-	err := s.db.save()
+	err = s.db.save()
 	if err != nil {
 		return nil, err
 	}

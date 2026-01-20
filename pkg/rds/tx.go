@@ -20,11 +20,9 @@ type record struct {
 
 /**
 * commit: Commits the transaction
-* @return error
 **/
-func (s *record) commit() error {
+func (s *record) commit() {
 	s.status = Processed
-	return s.tx.save()
 }
 
 /**
@@ -90,7 +88,6 @@ func getTx(tx *Tx) *Tx {
 		id:           reg.GenULID("transaction"),
 		transactions: make([]*transaction, 0),
 	}
-	tx.save()
 	return tx
 }
 
@@ -108,10 +105,10 @@ func (s Tx) serialize() ([]byte, error) {
 }
 
 /**
-* ToJson
+* toJson
 * @return et.Json, error
 **/
-func (s Tx) ToJson() (et.Json, error) {
+func (s Tx) toJson() (et.Json, error) {
 	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
@@ -131,7 +128,7 @@ func (s Tx) ToJson() (et.Json, error) {
 * @return error
 **/
 func (s *Tx) save() error {
-	data, err := s.ToJson()
+	data, err := s.toJson()
 	if err != nil {
 		return err
 	}
@@ -148,18 +145,15 @@ func (s *Tx) save() error {
 * add: Adds data to the transaction
 * @param name string, data et.Json
 **/
-func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
+func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) {
 	idx := slices.IndexFunc(s.transactions, func(t *transaction) bool { return t.model.Name == model.Name })
 	if idx == -1 {
 		tx := newTransaction(s, model)
-		tx.add(cmd, key, data)
 		s.transactions = append(s.transactions, tx)
-		return s.save()
 	}
 
 	tx := s.transactions[idx]
 	tx.add(cmd, key, data)
-	return s.save()
 }
 
 /**
@@ -184,13 +178,10 @@ func (s *Tx) commit() error {
 					return err
 				}
 			}
-			err := record.commit()
-			if err != nil {
-				return err
-			}
+			record.commit()
 		}
 	}
 
 	s.endedAt = timezone.Now()
-	return s.save()
+	return nil
 }

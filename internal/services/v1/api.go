@@ -15,7 +15,7 @@ var PackageName = pkg.PackageName
 * @return http.Handler
 **/
 func New() http.Handler {
-	result, err := pkg.InitJosefina()
+	result, err := pkg.Init()
 	if err != nil {
 		logs.Panic(err)
 	}

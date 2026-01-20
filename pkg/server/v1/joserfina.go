@@ -13,10 +13,10 @@ var (
 )
 
 /**
-* InitJosefina
+* Init
 * @return error
 **/
-func InitJosefina() (http.Handler, error) {
+func Init() (http.Handler, error) {
 	err := rds.Init(Version)
 	if err != nil {
 		return nil, err
