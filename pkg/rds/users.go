@@ -51,11 +51,7 @@ func CreateUser(username, password string) error {
 		"username": username,
 		"password": password,
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 /**
@@ -65,11 +61,7 @@ func CreateUser(username, password string) error {
 **/
 func DropUser(username string) error {
 	_, err := users.delete(nil, users.where(Eq("username", username)))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 /**
@@ -89,9 +81,5 @@ func ChanguePassword(username, newpassword string) error {
 	_, err = users.update(nil, et.Json{
 		"password": newpassword,
 	}, users.where(Eq("username", username)))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

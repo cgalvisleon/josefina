@@ -160,3 +160,13 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 	sch := s.newSchema(schema)
 	return sch.newModel(name, isCore, version)
 }
+
+/**
+* NewModel: Creates a new model
+* @param schema string, name string, version int
+* @return *Model, error
+**/
+func (s *DB) NewModel(schema, name string, version int) (*Model, error) {
+	sch := s.newSchema(schema)
+	return sch.newModel(name, false, version)
+}
