@@ -65,11 +65,12 @@ func DropUser(username string) error {
 	if users == nil {
 		return errors.New(msg.MSG_USERS_NOT_FOUND)
 	}
-
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
-	_, err := users.delete(nil, Where(Eq("username", username)))
+
+	_, err := users.delete(nil,
+		Where(Eq("username", username)))
 	return err
 }
 
@@ -89,6 +90,6 @@ func ChanguePassword(username, newpassword string) error {
 
 	_, err = users.update(nil, et.Json{
 		"password": newpassword,
-	}, users.where(Eq("username", username)))
+	}, Where(Eq("username", username)))
 	return err
 }

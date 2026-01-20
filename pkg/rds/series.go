@@ -43,7 +43,6 @@ func CreateSerie(name, tag, format string, value int) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
-
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -63,11 +62,15 @@ func CreateSerie(name, tag, format string, value int) error {
 	return err
 }
 
+/**
+* DropSerie: Drops a serie
+* @param name, tag string
+* @return error
+**/
 func DropSerie(name, tag string) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
-
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -90,7 +93,6 @@ func SetSerie(name, tag string, value int) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
-
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -142,10 +144,10 @@ func GetSerie(name, tag string) (et.Json, error) {
 	item := items[0]
 	format := item.String("format")
 	value := item.Int("value")
-	result := fmt.Sprintf(format, value)
+	code := fmt.Sprintf(format, value)
 
 	return et.Json{
-		"value":  value,
-		"result": result,
+		"value": value,
+		"code":  code,
 	}, nil
 }
