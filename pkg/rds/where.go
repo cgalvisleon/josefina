@@ -27,20 +27,15 @@ type Wheres struct {
 * @param owner *Model
 * @return *Wheres
 **/
-func newWhere(owner *Model) *Wheres {
-	workers := 1
-	if owner != nil && len(owner.Indexes) > workers {
-		workers = len(owner.Indexes)
-	}
+func newWhere() *Wheres {
 	return &Wheres{
-		owner:      owner,
 		selects:    make([]string, 0),
 		keys:       make(map[string][]string, 0),
 		asc:        make(map[string]bool, 0),
 		offset:     0,
 		limit:      0,
 		conditions: make([]*Condition, 0),
-		workers:    workers,
+		workers:    1,
 	}
 }
 
@@ -350,8 +345,13 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	return result, nil
 }
 
+/**
+* Where creates a new Where condition
+* @param condition *Condition
+* @return *Wheres
+**/
 func Where(condition *Condition) *Wheres {
-	return &Wheres{
-		conditions: []*Condition{condition},
-	}
+	result := newWhere()
+	result.conditions = append(result.conditions, condition)
+	return result
 }

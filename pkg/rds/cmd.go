@@ -440,7 +440,8 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 **/
 func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 	model := s.model
-	where := newWhere(model)
+	where := newWhere()
+	where.setOwner(model)
 	exists := true
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.data[name]
