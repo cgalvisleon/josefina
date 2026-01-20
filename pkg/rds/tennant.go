@@ -3,7 +3,6 @@ package rds
 import (
 	"fmt"
 
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -73,16 +72,6 @@ func (s *Tennant) loadCore() error {
 	if err := db.save(); err != nil {
 		return err
 	}
-
-	err = CreateSerie("pqr", "37860631", "%08d", 0)
-	if err != nil {
-		logs.Debugf("CreateSerie error: %v", err)
-	}
-	result, err := GetSerie("pqr", "37860631")
-	if err != nil {
-		return err
-	}
-	logs.Debug(result.ToString())
 
 	return nil
 }
