@@ -273,16 +273,27 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by keys
-	for _, keys := range s.keys {
+	for field, keys := range s.keys {
 		for _, key := range keys {
-			item := et.Json{}
-			exists, err := model.getObjet(key, item)
+			indexes := map[string]bool{}
+			exists, err := model.getIndex(field, key, indexes)
 			if err != nil {
 				return nil, err
 			}
+			if !exists {
+				continue
+			}
 
-			if exists {
-				add(item)
+			for index := range indexes {
+				item := et.Json{}
+				exists, err = model.getObjet(index, item)
+				if err != nil {
+					return nil, err
+				}
+
+				if exists {
+					add(item)
+				}
 			}
 		}
 	}

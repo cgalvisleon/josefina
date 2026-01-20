@@ -189,7 +189,7 @@ func (s *Model) index(name string) (*store.FileStore, bool) {
 * @return int
 **/
 func (s *Model) count() int {
-	data, ok := s.data[INDEX]
+	data, ok := s.index(INDEX)
 	if !ok {
 		return 0
 	}
@@ -202,7 +202,7 @@ func (s *Model) count() int {
 * @return *store.FileStore, error
 **/
 func (s *Model) source() (*store.FileStore, error) {
-	result, ok := s.data[INDEX]
+	result, ok := s.index(INDEX)
 	if !ok {
 		return nil, errors.New(msg.MSG_INDEX_NOT_FOUND)
 	}
@@ -211,11 +211,11 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* get: Gets the model
+* getSource: Gets the model
 * @param key string
 * @return any, error
 **/
-func (s *Model) get(key string, dest any) (bool, error) {
+func (s *Model) getSource(key string, dest any) (bool, error) {
 	source, err := s.source()
 	if err != nil {
 		return false, err
@@ -236,7 +236,7 @@ func (s *Model) get(key string, dest any) (bool, error) {
 **/
 func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
 	src := []byte{}
-	exists, err := s.get(key, &src)
+	exists, err := s.getSource(key, &src)
 	if err != nil {
 		return false, err
 	}
@@ -255,23 +255,22 @@ func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
 
 /**
 * getIndex: Gets the index
-* @param key string
-* @return map[string]bool, error
+* @param field, key string, dest map[string]bool
+* @return bool, error
 **/
-func (s *Model) getIndex(key string, dest map[string]bool) (bool, error) {
-	src := []byte{}
-	exists, err := s.get(key, &src)
+func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) {
+	index, ok := s.index(field)
+	if !ok {
+		return false, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	}
+
+	exists, err := index.Get(key, dest)
 	if err != nil {
 		return false, err
 	}
 
 	if !exists {
 		return false, nil
-	}
-
-	err = json.Unmarshal(src, &dest)
-	if err != nil {
-		return false, err
 	}
 
 	return true, nil
