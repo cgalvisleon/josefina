@@ -292,7 +292,7 @@ func (s *Model) getKey() string {
 **/
 func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
 	result := map[string]bool{}
-	exists, err := store.Get(id, result)
+	exists, err := store.Get(id, &result)
 	if err != nil {
 		return err
 	}
