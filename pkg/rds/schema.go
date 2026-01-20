@@ -66,11 +66,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		return nil, err
 	}
 	s.Models[name] = result
-	err = s.db.save()
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 

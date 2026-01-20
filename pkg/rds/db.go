@@ -168,5 +168,15 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 **/
 func (s *DB) NewModel(schema, name string, version int) (*Model, error) {
 	sch := s.newSchema(schema)
-	return sch.newModel(name, false, version)
+	result, err := sch.newModel(name, false, version)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.save()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

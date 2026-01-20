@@ -69,10 +69,18 @@ func (s *Tennant) loadCore() error {
 	if err := initModels(db); err != nil {
 		return err
 	}
+	if err := db.save(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
+/**
+* newDb
+* @param name string
+* @return *DB, error
+**/
 func (s *Tennant) newDb(name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
