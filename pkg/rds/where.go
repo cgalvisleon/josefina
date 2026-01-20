@@ -3,6 +3,7 @@ package rds
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -255,6 +256,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	cnds := []*Condition{}
+	cndsIndex := []*Condition{}
 	for _, con := range s.conditions {
 		value := con.Value
 		switch v := value.(type) {
@@ -279,6 +281,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 			continue
 		}
 
+		cndsIndex = append(cndsIndex, con)
 		keys, ok := s.keys[field]
 		if !ok {
 			asc := s.Order(field)
@@ -289,6 +292,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by keys
+	items := []et.Json{}
 	for field, keys := range s.keys {
 		for _, key := range keys {
 			indexes := map[string]bool{}
@@ -308,10 +312,26 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 				}
 
 				if exists {
-					add(item)
+					index, ok := item[INDEX]
+					if !ok {
+						continue
+					}
+
+					if index == "" {
+						continue
+					}
+
+					idx := slices.IndexFunc(items, func(v et.Json) bool { return v[INDEX] == index })
+					if idx == -1 {
+						items = append(items, item)
+					}
 				}
 			}
 		}
+	}
+
+	for _, item := range items {
+		validateItem(item, cndsIndex)
 	}
 
 	if len(cnds) == 0 {

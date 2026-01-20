@@ -706,12 +706,6 @@ func (s *Condition) ApplyToIndex(keys []string) []string {
 
 	for _, key := range keys {
 		ok := s.ApplyToValue(key)
-		if s.Connector == And {
-			ok = true && ok
-		} else if s.Connector == Or {
-			ok = true || ok
-		}
-
 		if ok {
 			result = append(result, key)
 		}
