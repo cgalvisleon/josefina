@@ -41,11 +41,27 @@ func newWhere() *Wheres {
 }
 
 /**
-* setOwner
+* ByJson
+* @param jsons []et.Json
+* @return *Wheres
+**/
+func ByJson(jsons []et.Json) *Wheres {
+	result := newWhere()
+	for _, where := range jsons {
+		condition := ToCondition(where)
+		if condition != nil {
+			result.Add(condition)
+		}
+	}
+	return result
+}
+
+/**
+* SetOwner
 * @param owner *Model
 * @return *Wheres
 **/
-func (s *Wheres) setOwner(owner *Model) *Wheres {
+func (s *Wheres) SetOwner(owner *Model) *Wheres {
 	if owner == nil {
 		return s
 	}
@@ -68,20 +84,6 @@ func (s *Wheres) ToJson() []et.Json {
 	}
 
 	return result
-}
-
-/**
-* ByJson
-* @param jsons []et.Json
-* @return void
-**/
-func (s *Wheres) ByJson(jsons []et.Json) {
-	for _, where := range jsons {
-		condition := ToCondition(where)
-		if condition != nil {
-			s.Add(condition)
-		}
-	}
 }
 
 /**

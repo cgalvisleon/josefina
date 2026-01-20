@@ -278,7 +278,7 @@ func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
 	s.command = UPDATE
 	tx, commit := getTx(tx)
 	model := s.model
-	wheres.setOwner(model)
+	wheres.SetOwner(model)
 	items, err := wheres.Rows(tx)
 	if err != nil {
 		return nil, err
@@ -363,7 +363,7 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 	s.command = DELETE
 	tx, commit := getTx(tx)
 	model := s.model
-	where.setOwner(model)
+	where.SetOwner(model)
 	items, err := where.Rows(tx)
 	if err != nil {
 		return nil, err
@@ -441,7 +441,7 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 	model := s.model
 	where := newWhere()
-	where.setOwner(model)
+	where.SetOwner(model)
 	exists := true
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.data[name]

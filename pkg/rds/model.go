@@ -449,7 +449,7 @@ func (s *Model) remove(key string) error {
 **/
 func (s *Model) where(condition *Condition) *Wheres {
 	result := newWhere()
-	result.setOwner(s)
+	result.SetOwner(s)
 	result.Add(condition)
 	return result
 }
@@ -472,7 +472,7 @@ func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) 
 	if where == nil {
 		where = newWhere()
 	}
-	where = where.setOwner(s)
+	where = where.SetOwner(s)
 	return newCmd(s).update(ctx, data, where)
 }
 
@@ -485,7 +485,7 @@ func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
 	if where == nil {
 		where = newWhere()
 	}
-	where = where.setOwner(s)
+	where = where.SetOwner(s)
 	return newCmd(s).delete(ctx, where)
 }
 
