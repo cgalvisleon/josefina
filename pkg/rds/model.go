@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,9 +16,6 @@ var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
-	errorInvalidType         = errors.New(msg.MSG_INVALID_TYPE)
-	errorInvalidOperator     = errors.New(msg.MSG_INVALID_OPERATOR)
-	errorIndexNotFound       = errors.New(msg.MSG_INDEX_NOT_FOUND)
 	models                   *Model
 )
 
@@ -49,21 +47,6 @@ type From struct {
 	Host     string            `json:"host"`
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
-}
-
-/**
-* clone: Clones the from
-* @return *From
-**/
-func (s *From) clone() *From {
-	return &From{
-		Database: s.Database,
-		Schema:   s.Schema,
-		Name:     s.Name,
-		Host:     s.Host,
-		Fields:   s.Fields,
-		IsStrict: s.IsStrict,
-	}
 }
 
 /**
@@ -103,12 +86,57 @@ type Model struct {
 }
 
 /**
+* serialize
+* @return []byte, error
+**/
+func (s *Model) serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* toJson
+* @return et.Json, error
+**/
+func (s *Model) toJson() (et.Json, error) {
+	definition, err := s.serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
 * save: Saves the model
 * @return error
 **/
 func (s *Model) save() error {
 	if s.IsCore {
 		return nil
+	}
+
+	if models == nil {
+		return nil
+	}
+
+	data, err := s.toJson()
+	if err != nil {
+		return err
+	}
+	_, err = databases.upsert(nil, data)
+	if err != nil {
+		return err
 	}
 
 	return nil
