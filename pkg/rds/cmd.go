@@ -172,11 +172,6 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 	s.command = INSERT
 	tx, commit := getTx(tx)
 	model := s.model
-	idx := new.ValStr("", INDEX)
-	if idx == "" {
-		idx = model.getJid()
-		new[INDEX] = idx
-	}
 
 	// Validate required fields
 	for _, name := range model.Required {
@@ -221,6 +216,12 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 		if !ok {
 			return nil, fmt.Errorf(msg.MSG_VIOLATE_FOREIGN_KEY, name)
 		}
+	}
+
+	idx := new.ValStr("", INDEX)
+	if idx == "" {
+		idx = model.getJid()
+		new[INDEX] = idx
 	}
 
 	// Run before insert triggers
@@ -277,6 +278,7 @@ func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
 	s.command = UPDATE
 	tx, commit := getTx(tx)
 	model := s.model
+	wheres.setOwner(model)
 	items, err := wheres.Rows(tx)
 	if err != nil {
 		return nil, err
@@ -361,6 +363,7 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 	s.command = DELETE
 	tx, commit := getTx(tx)
 	model := s.model
+	where.setOwner(model)
 	items, err := where.Rows(tx)
 	if err != nil {
 		return nil, err

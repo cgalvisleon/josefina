@@ -76,7 +76,7 @@ func (s *Tennant) loadCore() error {
 
 	err = CreateSerie("pqr", "37860631", "%08d", 0)
 	if err != nil {
-		return err
+		logs.Debugf("CreateSerie error: %v", err)
 	}
 	result, err := GetSerie("pqr", "37860631")
 	if err != nil {
