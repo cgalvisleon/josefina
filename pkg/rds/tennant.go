@@ -56,20 +56,7 @@ func (s *Tennant) serialize() ([]byte, error) {
 	return bt, nil
 }
 
-/**
-* save
-* @return error
-**/
-func (s *Tennant) save() error {
-	return nil
-}
-
-/**
-* getDb
-* @param name string
-* @return *DB, error
-**/
-func (s *Tennant) getDb(name string) (*DB, error) {
+func (s *Tennant) newDb(name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -88,9 +75,27 @@ func (s *Tennant) getDb(name string) (*DB, error) {
 		tennant: s,
 	}
 	s.Dbs[name] = result
-	s.save()
 
 	return result, nil
+}
+
+/**
+* getDb
+* @param name string
+* @return *DB, error
+**/
+func (s *Tennant) getDb(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	result, ok := s.Dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 }
 
 /**

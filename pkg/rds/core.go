@@ -1,10 +1,8 @@
 package rds
 
 var (
-	users      *Model
 	series     *Model
 	records    *Model
-	databases  *Model
 	schemas    *Model
 	models     *Model
 	references *Model
@@ -18,6 +16,9 @@ func (s *Tennant) loadCore() error {
 	if err := initTransactions(db); err != nil {
 		return err
 	}
+	if err := initDatabases(db); err != nil {
+		return err
+	}
 	if err := initUsers(db); err != nil {
 		return err
 	}
@@ -25,9 +26,6 @@ func (s *Tennant) loadCore() error {
 	// 	return err
 	// }
 	// if err := initRecords(db); err != nil {
-	// 	return err
-	// }
-	// if err := initDatabases(db); err != nil {
 	// 	return err
 	// }
 	// if err := initSchemas(db); err != nil {
@@ -73,24 +71,6 @@ func initRecords(db *DB) error {
 		return err
 	}
 	if err := records.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* initDatabases: Initializes the databases model
-* @param db *DB
-* @return error
-**/
-func initDatabases(db *DB) error {
-	var err error
-	databases, err = db.newModel("", "databases", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := databases.init(); err != nil {
 		return err
 	}
 

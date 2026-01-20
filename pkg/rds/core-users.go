@@ -8,6 +8,8 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
+var users *Model
+
 /**
 * initUsers: Initializes the users model
 * @param db *DB

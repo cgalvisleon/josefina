@@ -1,11 +1,35 @@
 package rds
 
 import (
+	"encoding/json"
 	"errors"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
+
+var databases *Model
+
+/**
+* initDatabases: Initializes the databases model
+* @param db *DB
+* @return error
+**/
+func initDatabases(db *DB) error {
+	var err error
+	databases, err = db.newModel("", "databases", true, 1)
+	if err != nil {
+		return err
+	}
+	databases.defineAtrib("name", TpText, "")
+	databases.definePrimaryKey("name")
+	if err := databases.init(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 type DB struct {
 	Name    string             `json:"name"`
@@ -15,12 +39,65 @@ type DB struct {
 	tennant *Tennant           `json:"-"`
 }
 
+/**
+* serialize
+* @return []byte, error
+**/
+func (s *DB) serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* toJson
+* @return et.Json, error
+**/
+func (s *DB) toJson() (et.Json, error) {
+	definition, err := s.serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* save: Saves the database
+* @return error
+**/
 func (s *DB) save() error {
 	if s.tennant == nil {
 		return errors.New(msg.MSG_TENNANT_NOT_FOUND)
 	}
 
-	return s.tennant.save()
+	if databases == nil {
+		return nil
+	}
+
+	if !databases.isInit {
+		return nil
+	}
+
+	data, err := s.toJson()
+	if err != nil {
+		return err
+	}
+	_, err = databases.upsert(nil, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
