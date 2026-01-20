@@ -67,40 +67,6 @@ func (s *From) clone() *From {
 }
 
 /**
-* As
-* @return string
-**/
-func (s *From) As() string {
-	if s.Schema == "" {
-		return s.Name
-	}
-	return fmt.Sprintf("%s.%s", s.Schema, s.Name)
-}
-
-/**
-* getField
-* @param name string
-* @return *Field
-**/
-func (s *From) getField(name string) *Field {
-	result, ok := s.Fields[name]
-	if ok {
-		return result
-	}
-
-	if s.IsStrict {
-		return nil
-	}
-
-	result, err := newField(s, name, TpAtrib, TpAny, "")
-	if err != nil {
-		return nil
-	}
-
-	return result
-}
-
-/**
 * getJid: Gets the jid
 * @return string
 **/
@@ -134,6 +100,18 @@ type Model struct {
 	data          map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	changed       bool                        `json:"-"`
+}
+
+/**
+* save: Saves the model
+* @return error
+**/
+func (s *Model) save() error {
+	if s.IsCore {
+		return nil
+	}
+
+	return nil
 }
 
 /**

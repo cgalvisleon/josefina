@@ -193,14 +193,17 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	add := func(item et.Json) {
+	add := func(item et.Json) bool {
 		if len(s.selects) > 0 {
 			item = item.Select(s.selects)
 		}
 		result = append(result, item)
+		n := len(result)
+		return n < s.limit
 	}
 
-	validateItem := func(item et.Json, conditions []*Condition) {
+	validateItem := func(item et.Json, conditions []*Condition) bool {
+		next := true
 		var ok bool
 		for i, con := range conditions {
 			tmp := con.ApplyToData(item)
@@ -218,8 +221,10 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		}
 
 		if ok {
-			add(item)
+			next = add(item)
 		}
+
+		return next
 	}
 
 	st, err := model.source()
@@ -229,6 +234,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 
 	if len(s.conditions) == 0 {
 		// Items by data
+		next := true
 		asc := s.Order(INDEX)
 		err = st.Iterate(func(id string, src []byte) (bool, error) {
 			item := et.Json{}
@@ -237,11 +243,15 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 				return false, err
 			}
 
-			add(item)
-			return true, nil
+			next = add(item)
+			return next, nil
 		}, asc, s.offset, s.limit, s.workers)
 		if err != nil {
 			return nil, err
+		}
+
+		if !next {
+			return result, nil
 		}
 
 		// Items by cache
@@ -249,7 +259,10 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		for _, record := range cache {
 			item := record.Data
 
-			add(item)
+			next = add(item)
+			if !next {
+				return result, nil
+			}
 		}
 
 		return result, nil
@@ -330,8 +343,12 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		}
 	}
 
+	next := true
 	for _, item := range items {
-		validateItem(item, cndsIndex)
+		next = validateItem(item, cndsIndex)
+		if !next {
+			return result, nil
+		}
 	}
 
 	if len(cnds) == 0 {
@@ -347,11 +364,15 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 			return false, err
 		}
 
-		validateItem(item, cnds)
-		return true, nil
+		next = validateItem(item, cnds)
+		return next, nil
 	}, asc, s.offset, s.limit, s.workers)
 	if err != nil {
 		return nil, err
+	}
+
+	if !next {
+		return result, nil
 	}
 
 	// Items by cache
@@ -359,7 +380,10 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	for _, record := range cache {
 		item := record.Data
 
-		validateItem(item, cnds)
+		next = validateItem(item, cnds)
+		if !next {
+			return result, nil
+		}
 	}
 
 	return result, nil
