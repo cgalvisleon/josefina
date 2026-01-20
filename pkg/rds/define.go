@@ -289,21 +289,27 @@ func (s *Model) DefineCalc(name string, definition []byte) error {
 * @param names ...string
 * @return error
 **/
-func (s *Model) DefineIndexes(names ...string) error {
+func (s *Model) DefineIndexes(names ...string) bool {
 	for _, name := range names {
-		s.defineIndexe(name)
+		ok := s.defineIndexe(name)
+		if !ok {
+			return false
+		}
 	}
-	return nil
+	return true
 }
 
 /**
 * DefinePrimaryKeys: Defines the primary keys
 * @param names ...string
-* @return error
+* @return bool
 **/
-func (s *Model) DefinePrimaryKeys(names ...string) error {
+func (s *Model) DefinePrimaryKeys(names ...string) bool {
 	for _, name := range names {
-		s.definePrimaryKey(name)
+		ok := s.definePrimaryKey(name)
+		if !ok {
+			return false
+		}
 	}
-	return nil
+	return true
 }
