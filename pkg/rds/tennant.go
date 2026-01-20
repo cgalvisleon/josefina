@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/cgalvisleon/et/utility"
@@ -43,6 +42,10 @@ func loadTennant(path, name, version string) (*Tennant, error) {
 	return result, nil
 }
 
+/**
+* loadCore
+* @return error
+**/
 func (s *Tennant) loadCore() error {
 	db, err := s.newDb(packageName)
 	if err != nil {
@@ -68,19 +71,6 @@ func (s *Tennant) loadCore() error {
 	}
 
 	return nil
-}
-
-/**
-* Serialize
-* @return []byte, error
-**/
-func (s *Tennant) serialize() ([]byte, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return bt, nil
 }
 
 func (s *Tennant) newDb(name string) (*DB, error) {
