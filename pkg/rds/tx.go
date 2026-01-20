@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"encoding/json"
 	"slices"
 	"time"
 
@@ -78,6 +77,32 @@ type transaction struct {
 }
 
 /**
+* getFrom: Gets the from
+* @return *From
+**/
+func (s *transaction) toJson() et.Json {
+	records := []et.Json{}
+	for _, record := range s.Records {
+		records = append(records, et.Json{
+			"command": record.Command,
+			"idx":     record.Idx,
+			"data":    record.Data,
+			"status":  record.Status,
+		})
+	}
+
+	return et.Json{
+		"model": et.Json{
+			"database": s.Model.Database,
+			"schema":   s.Model.Schema,
+			"name":     s.Model.Name,
+			"version":  s.Model.Version,
+		},
+		"records": records,
+	}
+}
+
+/**
 * add: Adds data to the transaction
 * @param cmd Command, idx string, data et.Json
 * @return void
@@ -138,35 +163,21 @@ func getTx(tx *Tx) (*Tx, error) {
 }
 
 /**
-* serialize
-* @return []byte, error
-**/
-func (s Tx) serialize() ([]byte, error) {
-	result, err := json.Marshal(s)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return result, nil
-}
-
-/**
 * toJson
 * @return et.Json, error
 **/
-func (s Tx) toJson() (et.Json, error) {
-	definition, err := s.serialize()
-	if err != nil {
-		return et.Json{}, err
+func (s Tx) toJson() et.Json {
+	transactions := []et.Json{}
+	for _, transaction := range s.Transactions {
+		transactions = append(transactions, transaction.toJson())
 	}
 
-	result := et.Json{}
-	err = json.Unmarshal(definition, &result)
-	if err != nil {
-		return et.Json{}, err
+	return et.Json{
+		"startedAt":    s.StartedAt,
+		"endedAt":      s.EndedAt,
+		"id":           s.Id,
+		"transactions": transactions,
 	}
-
-	return result, nil
 }
 
 /**
@@ -174,14 +185,10 @@ func (s Tx) toJson() (et.Json, error) {
 * @return error
 **/
 func (s *Tx) save() error {
-	data, err := s.toJson()
-	if err != nil {
-		return err
-	}
-
+	data := s.toJson()
 	logs.Debug(data.ToString())
 
-	_, err = setTransaction(s.Id, data)
+	_, err := setTransaction(s.Id, data)
 	if err != nil {
 		return err
 	}
