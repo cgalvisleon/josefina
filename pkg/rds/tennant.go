@@ -43,6 +43,33 @@ func loadTennant(path, name, version string) (*Tennant, error) {
 	return result, nil
 }
 
+func (s *Tennant) loadCore() error {
+	db, err := s.newDb(packageName)
+	if err != nil {
+		return err
+	}
+	if err := initTransactions(db); err != nil {
+		return err
+	}
+	if err := initDatabases(db); err != nil {
+		return err
+	}
+	if err := initUsers(db); err != nil {
+		return err
+	}
+	if err := initSeries(db); err != nil {
+		return err
+	}
+	if err := initRecords(db); err != nil {
+		return err
+	}
+	if err := initModels(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 /**
 * Serialize
 * @return []byte, error
