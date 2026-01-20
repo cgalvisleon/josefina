@@ -108,10 +108,10 @@ func newTransaction(tx *Tx, model *Model) *transaction {
 }
 
 type Tx struct {
-	StartedAt    time.Time `json:"startedAt"`
-	EndedAt      time.Time `json:"endedAt"`
-	Id           string    `json:"id"`
-	Transactions []*transaction
+	StartedAt    time.Time      `json:"startedAt"`
+	EndedAt      time.Time      `json:"endedAt"`
+	Id           string         `json:"id"`
+	Transactions []*transaction `json:"transactions"`
 }
 
 /**
@@ -206,13 +206,15 @@ func (s *Tx) getRecors(name string) []*record {
 * @param name string, data et.Json
 **/
 func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
+	var tx *transaction
 	idx := slices.IndexFunc(s.Transactions, func(t *transaction) bool { return t.Model.Name == model.Name })
 	if idx == -1 {
-		tx := newTransaction(s, model)
+		tx = newTransaction(s, model)
 		s.Transactions = append(s.Transactions, tx)
+	} else {
+		tx = s.Transactions[idx]
 	}
 
-	tx := s.Transactions[idx]
 	return tx.add(cmd, key, data)
 }
 

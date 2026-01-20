@@ -575,7 +575,7 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 	s.indexMu.RUnlock()
 
 	if !existed {
-		return false, errors.New(msg.MSG_NOT_FOUND)
+		return false, nil
 	}
 
 	seg := s.segments[ref.segment]
