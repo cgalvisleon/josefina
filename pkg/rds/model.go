@@ -270,10 +270,10 @@ func (s *Model) isExisted(name, key string) (bool, error) {
 }
 
 /**
-* stricted: Sets the model to strict
+* Stricted: Sets the model to strict
 * @return void
 **/
-func (s *Model) stricted() {
+func (s *Model) Stricted() {
 	s.IsStrict = true
 }
 
@@ -302,7 +302,43 @@ func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
 	}
 
 	st := fmt.Sprintf("%v", idx)
+	_, ok := result[st]
+	if ok {
+		return nil
+	}
+
 	result[st] = true
+	err = store.Put(id, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* removeIndex
+* @param store *store.FileStore, id string, idx any
+* @return error
+**/
+func (s *Model) removeIndex(store *store.FileStore, id string, idx any) error {
+	result := map[string]bool{}
+	exists, err := store.Get(id, &result)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	st := fmt.Sprintf("%v", idx)
+	_, ok := result[st]
+	if !ok {
+		return nil
+	}
+
+	delete(result, st)
 	err = store.Put(id, result)
 	if err != nil {
 		return err
