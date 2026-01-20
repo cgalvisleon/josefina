@@ -181,6 +181,7 @@ func (s Tx) toJson() et.Json {
 * @return error
 **/
 func (s *Tx) save() error {
+	s.EndedAt = timezone.Now()
 	data := s.toJson()
 	logs.Debug(data.ToString())
 
@@ -252,6 +253,5 @@ func (s *Tx) commit() error {
 		}
 	}
 
-	s.EndedAt = timezone.Now()
-	return s.save()
+	return nil
 }
