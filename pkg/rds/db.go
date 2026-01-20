@@ -37,6 +37,7 @@ type DB struct {
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
 	tennant *Tennant           `json:"-"`
+	changed bool               `json:"-"`
 }
 
 /**
@@ -85,6 +86,10 @@ func (s *DB) save() error {
 	}
 
 	if !databases.isInit {
+		return nil
+	}
+
+	if !s.changed {
 		return nil
 	}
 

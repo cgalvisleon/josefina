@@ -111,6 +111,7 @@ type Model struct {
 	isInit        bool                        `json:"-"`
 	data          map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
+	changed       bool                        `json:"-"`
 }
 
 /**

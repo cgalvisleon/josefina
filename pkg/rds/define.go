@@ -9,14 +9,11 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-/**
-* existsField: Checks if the field exists
-* @param name string
-* @return bool
-**/
-func (s *Model) existsField(name string) bool {
-	_, ok := s.Fields[name]
-	return ok
+func (s *Model) setChanged() {
+	if !s.isInit {
+		return
+	}
+	s.changed = true
 }
 
 /**
@@ -42,6 +39,7 @@ func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, de
 		return nil, err
 	}
 	s.Fields[name] = result
+	s.setChanged()
 
 	return result, nil
 }
@@ -59,6 +57,7 @@ func (s *Model) defineIndexe(name string) bool {
 	idx := slices.Index(s.Indexes, name)
 	if idx == -1 {
 		s.Indexes = append(s.Indexes, name)
+		s.setChanged()
 	}
 	return true
 }
@@ -117,6 +116,7 @@ func (s *Model) defineHidden(name string) bool {
 	idx := slices.Index(s.Hidden, name)
 	if idx == -1 {
 		s.Hidden = append(s.Hidden, name)
+		s.setChanged()
 	}
 	return true
 }
@@ -266,6 +266,7 @@ func (s *Model) DefineRelation(from string, keys map[string]string, onDeleteCasc
 
 	detail := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.Relations[to.Name] = detail
+	s.setChanged()
 	return nil
 }
 
@@ -281,6 +282,7 @@ func (s *Model) DefineCalc(name string, definition []byte) error {
 	}
 
 	s.Calcs[name] = definition
+	s.setChanged()
 	return nil
 }
 
