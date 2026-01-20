@@ -37,8 +37,19 @@ func setRecord(schema, model, key string) error {
 		"model":  model,
 		"key":    key,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
+}
+
+/**
+* deleteRecord: Deletes a record
+* @param schema, model, key string
+* @return error
+**/
+func deleteRecord(schema, model, key string) error {
+	_, err := records.delete(nil,
+		Where(Eq("schema", schema)).
+			And(Eq("model", model)).
+			And(Eq("key", key)),
+	)
+	return err
 }

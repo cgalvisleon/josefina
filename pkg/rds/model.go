@@ -394,6 +394,9 @@ func (s *Model) put(idx string, data et.Json) error {
 			if err != nil {
 				return err
 			}
+			if !s.IsCore {
+				return setRecord(s.Schema, s.Name, key)
+			}
 		} else {
 			err := s.putIndex(source, key, idx)
 			if err != nil {
@@ -431,7 +434,9 @@ func (s *Model) remove(key string) error {
 			return err
 		}
 		if name == INDEX {
-			
+			if !s.IsCore {
+				return deleteRecord(s.Schema, s.Name, key)
+			}
 		}
 	}
 	return nil
