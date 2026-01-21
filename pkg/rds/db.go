@@ -106,7 +106,7 @@ func (s *DB) save() error {
 	}
 
 	key := fmt.Sprintf("%s", s.Name)
-	err = databases.Put(key, scr)
+	err = databases.put(key, scr)
 	if err != nil {
 		return err
 	}
@@ -173,23 +173,4 @@ func (s *DB) newSchema(name string) *Schema {
 func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch := s.newSchema(schema)
 	return sch.newModel(name, isCore, version)
-}
-
-/**
-* NewModel: Creates a new model
-* @param schema string, name string, version int
-* @return *Model, error
-**/
-func (s *DB) NewModel(schema, name string, version int) (*Model, error) {
-	result, err := s.newModel(schema, name, false, version)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.save()
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }

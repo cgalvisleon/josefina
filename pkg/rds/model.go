@@ -103,7 +103,7 @@ func (s *Model) serialize() ([]byte, error) {
 * ToJson
 * @return et.Json, error
 **/
-func (s *Model) ToJson() (et.Json, error) {
+func (s *Model) toJson() (et.Json, error) {
 	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
@@ -122,7 +122,7 @@ func (s *Model) ToJson() (et.Json, error) {
 * Key
 * @return string
 **/
-func (s *Model) Key() string {
+func (s *Model) key() string {
 	result := s.Name
 	if s.Schema != "" {
 		result = fmt.Sprintf("%s.%s", s.Schema, result)
@@ -151,8 +151,8 @@ func (s *Model) save() error {
 		return err
 	}
 
-	key := s.Key()
-	err = models.Put(key, scr)
+	key := s.key()
+	err = models.put(key, scr)
 	if err != nil {
 		return err
 	}
@@ -472,7 +472,7 @@ func (s *Model) removeData(idx string) error {
 * @param idx string, valu any
 * @return error
 **/
-func (s *Model) Put(key string, value any) error {
+func (s *Model) put(key string, value any) error {
 	source, err := s.source()
 	if err != nil {
 		return err
@@ -494,7 +494,7 @@ func (s *Model) Put(key string, value any) error {
 * @param key string
 * @return error
 **/
-func (s *Model) Remove(key string) error {
+func (s *Model) remove(key string) error {
 	source, err := s.source()
 	if err != nil {
 		return err
