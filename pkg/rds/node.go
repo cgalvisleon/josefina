@@ -10,11 +10,12 @@ import (
 )
 
 type Node struct {
-	Host    string         `json:"name"`
-	Version string         `json:"version"`
-	Path    string         `json:"path"`
-	Dbs     map[string]*DB `json:"dbs"`
-	db      *DB            `json:"-"`
+	Host    string            `json:"name"`
+	Version string            `json:"version"`
+	Path    string            `json:"path"`
+	Dbs     map[string]*DB    `json:"dbs"`
+	db      *DB               `json:"-"`
+	models  map[string]*Model `json:"-"`
 }
 
 /**
@@ -64,28 +65,22 @@ func (s *Node) newDb(name string) (*DB, error) {
 * @return error
 **/
 func (s *Node) load() error {
-	db, err := s.newDb(packageName)
-	if err != nil {
+	if err := initTransactions(s.db); err != nil {
 		return err
 	}
-	db.isCore = true
-
-	if err := initTransactions(db); err != nil {
+	if err := initDatabases(s.db); err != nil {
 		return err
 	}
-	if err := initDatabases(db); err != nil {
+	if err := initUsers(s.db); err != nil {
 		return err
 	}
-	if err := initUsers(db); err != nil {
+	if err := initSeries(s.db); err != nil {
 		return err
 	}
-	if err := initSeries(db); err != nil {
+	if err := initRecords(s.db); err != nil {
 		return err
 	}
-	if err := initRecords(db); err != nil {
-		return err
-	}
-	if err := initModels(db); err != nil {
+	if err := initModels(s.db); err != nil {
 		return err
 	}
 
