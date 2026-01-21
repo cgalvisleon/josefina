@@ -5,7 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	pkg "github.com/cgalvisleon/josefina/pkg/server/v1"
+	pkg "github.com/cgalvisleon/josefina/pkg/http/v1"
 )
 
 var PackageName = pkg.PackageName
