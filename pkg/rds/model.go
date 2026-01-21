@@ -214,10 +214,6 @@ func (s *Model) init() error {
 	}
 
 	s.isInit = true
-	if s.IsCore {
-		return nil
-	}
-
 	return s.save()
 }
 
