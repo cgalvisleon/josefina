@@ -581,16 +581,6 @@ func (s *Condition) applyOpIs(val any) bool {
 }
 
 /**
-* applyOpIsNot
-* @param val any
-* @return bool
-**/
-func (s *Condition) applyOpIsNot(val any) bool {
-	ok := s.applyOpIs(val)
-	return !ok
-}
-
-/**
 * applyOpNull
 * @param val any
 * @return bool

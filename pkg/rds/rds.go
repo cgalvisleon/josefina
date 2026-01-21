@@ -29,7 +29,7 @@ func loadMaster(version string) error {
 
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	port := envar.GetInt("RPC_PORT", 4200)
-	node = newNode(Master, host, port, path, version)
+	node = newNode(MASTER, host, port, path, version)
 	db := newDb(node.Path, packageName, node.Version)
 	if err := initTransactions(db); err != nil {
 		return err
@@ -47,6 +47,12 @@ func loadMaster(version string) error {
 		return err
 	}
 	if err := initModels(db); err != nil {
+		return err
+	}
+
+	services := new(Master)
+	err = node.mount(services)
+	if err != nil {
 		return err
 	}
 
@@ -72,7 +78,16 @@ func loadFollow(version string) error {
 
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	port := envar.GetInt("RPC_PORT", 4200)
-	node = newNode(Follow, host, port, path, version)
+	node = newNode(FOLLOW, host, port, path, version)
+
+	services := new(Follow)
+	err = node.mount(services)
+	if err != nil {
+		return err
+	}
+
+	go node.start()
+
 	return nil
 }
 

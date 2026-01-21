@@ -13,8 +13,8 @@ import (
 type TypeNode string
 
 const (
-	Master TypeNode = "master"
-	Follow TypeNode = "follow"
+	MASTER TypeNode = "master"
+	FOLLOW TypeNode = "follow"
 )
 
 type Node struct {
@@ -73,6 +73,15 @@ func (s *Node) start() error {
 
 		go rpc.ServeConn(conn)
 	}
+}
+
+/**
+* mount
+* @param services any
+* @return error
+**/
+func (s *Node) mount(services any) error {
+	return rpc.Register(services)
 }
 
 /**
