@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 )
 
@@ -23,15 +24,8 @@ func (s *FileStore) Compact() error {
 	}
 	s.indexMu.RUnlock()
 
-	tag := "compact"
-	msg := ""
-	s.metricStart(tag)
-	defer s.metricEnd(tag, msg)
-
 	// Orden determinista
-	s.metricSegment(tag, "load")
 	sort.Strings(keys)
-	s.metricSegment(tag, "sort")
 
 	// Directorio temporal
 	name := fmt.Sprintf("segments-%s.tmp", s.Name)
@@ -101,7 +95,8 @@ func (s *FileStore) Compact() error {
 		}
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
-		if s.IsDebug {
+		isDebug := envar.GetBool("DEBUG", false)
+		if isDebug {
 			logs.Log(packageName, "compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 
@@ -134,8 +129,6 @@ func (s *FileStore) Compact() error {
 	s.active = newSegments[len(newSegments)-1]
 	s.TombStones = 0
 	s.indexMu.Unlock()
-
-	msg = fmt.Sprintf("completed:total%d", n)
 
 	return nil
 }

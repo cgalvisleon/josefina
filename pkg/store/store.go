@@ -74,8 +74,6 @@ type FileStore struct {
 	MaxSegment   int64                 `json:"max_segment"`
 	SyncOnWrite  bool                  `json:"sync_on_write"`
 	Size         int64                 `json:"size"`
-	Metrics      map[string]int64      `json:"metrics"`
-	IsDebug      bool                  `json:"-"`
 	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
 	segments     []*segment            `json:"-"` // segmentos de datos
@@ -122,14 +120,6 @@ func (s *FileStore) ToJson() et.Json {
  */
 func (s *FileStore) ToString() string {
 	return s.ToJson().ToString()
-}
-
-/**
-* Debug
-* Enable debug mode for this store
-**/
-func (s *FileStore) Debug() {
-	s.IsDebug = true
 }
 
 /**
@@ -450,10 +440,6 @@ func (s *FileStore) RebuildIndexes() error {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
-	tag := "rebuild_indexes"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	s.index = make(map[string]*RecordRef)
 	for i := range s.segments {
 		if err := s.rebuildIndex(i); err != nil {
@@ -470,10 +456,6 @@ func (s *FileStore) RebuildIndexes() error {
 * @return error
 **/
 func (s *FileStore) Put(id string, value any) error {
-	tag := "put"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	if id == "" {
 		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
@@ -498,7 +480,8 @@ func (s *FileStore) Put(id string, value any) error {
 	s.index[id] = ref
 	s.indexMu.Unlock()
 
-	if s.IsDebug {
+	isDebug := envar.GetBool("DEBUG", false)
+	if isDebug {
 		i := len(s.index)
 		logs.Log(packageName, "put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
@@ -512,10 +495,6 @@ func (s *FileStore) Put(id string, value any) error {
 * @return bool, error
 **/
 func (s *FileStore) Delete(id string) (bool, error) {
-	tag := "delete"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	s.indexMu.RLock()
 	_, exists := s.index[id]
 	if exists {
@@ -535,7 +514,8 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
 
-	if s.IsDebug {
+	isDebug := envar.GetBool("DEBUG", false)
+	if isDebug {
 		i := len(s.index)
 		logs.Log(packageName, "deleted", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
 	}
@@ -549,10 +529,6 @@ func (s *FileStore) Delete(id string) (bool, error) {
 * @return bool
 **/
 func (s *FileStore) IsExist(id string) bool {
-	tag := "isExist"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	s.indexMu.RLock()
 	_, existed := s.index[id]
 	s.indexMu.RUnlock()
@@ -566,10 +542,6 @@ func (s *FileStore) IsExist(id string) bool {
 * @return bool, error
 **/
 func (s *FileStore) Get(id string, dest any) (bool, error) {
-	tag := "get"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	s.indexMu.RLock()
 	ref, existed := s.index[id]
 	s.indexMu.RUnlock()
@@ -593,9 +565,6 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 * @return error
 **/
 func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
-	tag := "iterate"
-	s.metricStart(tag)
-
 	// 1. Seleccionar IDs
 	index, keys := s.getRecords(asc, offset, limit)
 
@@ -603,7 +572,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 		workers = 1
 	}
 
-	s.metricSegment(tag, "index")
 	// 2) Worker pool
 	jobs := make(chan string, 1024)
 
@@ -688,9 +656,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 	close(jobs)
 	wg.Wait()
 
-	msg := fmt.Sprintf("completed:total:%d:workers:%d", total, workers)
-	s.metricEnd(tag, msg)
-
 	return mErr
 }
 
@@ -699,10 +664,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 * @return error
 **/
 func (s *FileStore) Prune() error {
-	tag := "prune"
-	s.metricStart(tag)
-	defer s.metricEnd(tag, "completed")
-
 	err := s.Compact()
 	if err != nil {
 		return err
@@ -744,16 +705,12 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 		PathSnapshot: filepath.Join(path, name, "snapshot"),
 		PathCompact:  filepath.Join(path, name, "compact"),
 		MaxSegment:   maxSegmentMG,
-		Metrics:      make(map[string]int64),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
 	fs.index = make(map[string]*RecordRef)
 	fs.keys = make([]string, 0)
-	fs.IsDebug = debug
 	fs.SyncOnWrite = syncOnWrite
-	tag := "store_open"
-	fs.metricStart(tag)
 
 	if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
 		return nil, err
@@ -775,6 +732,5 @@ func Open(path, name string, debug bool) (*FileStore, error) {
 		return nil, fmt.Errorf("buildIndex: %w", err)
 	}
 
-	fs.metricEnd(tag, fmt.Sprintf("total:%d:completed", len(fs.index)))
 	return fs, nil
 }
