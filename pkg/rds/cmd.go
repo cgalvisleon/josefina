@@ -34,6 +34,7 @@ type Cmd struct {
 	afterUpdates         []TriggerFunction `json:"-"`
 	beforeDeletes        []TriggerFunction `json:"-"`
 	afterDeletes         []TriggerFunction `json:"-"`
+	isDebug              bool              `json:"-"`
 }
 
 /**
@@ -106,6 +107,15 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 	}
 
 	return nil
+}
+
+/**
+* IsDebug: Returns the debug mode
+* @return *Cmd
+**/
+func (s *Cmd) IsDebug() *Cmd {
+	s.isDebug = true
+	return s
 }
 
 /**
@@ -479,6 +489,7 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 **/
 func (s *Cmd) Execute(tx *Tx) ([]et.Json, error) {
 	tx, commit := getTx(tx)
+	tx.isDebug = s.isDebug
 	result := []et.Json{}
 	switch s.command {
 	case INSERT:

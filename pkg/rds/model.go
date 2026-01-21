@@ -481,6 +481,15 @@ func (s *Model) removeData(key string) error {
 }
 
 /**
+* IsDebug: Returns the debug mode
+* @return *Model
+**/
+func (s *Model) IsDebug() *Model {
+	s.isDebug = true
+	return s
+}
+
+/**
 * Stricted: Sets the model to strict
 * @return void
 **/

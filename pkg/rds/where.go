@@ -21,6 +21,7 @@ type Wheres struct {
 	limit      int                 `json:"-"`
 	conditions []*Condition        `json:"-"`
 	workers    int                 `json:"-"`
+	isDebug    bool                `json:"-"`
 }
 
 /**
@@ -54,6 +55,15 @@ func ByJson(jsons []et.Json) *Wheres {
 		}
 	}
 	return result
+}
+
+/**
+* IsDebug: Returns the debug mode
+* @return *Wheres
+**/
+func (s *Wheres) IsDebug() *Wheres {
+	s.isDebug = true
+	return s
 }
 
 /**

@@ -4,7 +4,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
@@ -139,6 +138,7 @@ type Tx struct {
 	EndedAt      time.Time      `json:"endedAt"`
 	Id           string         `json:"id"`
 	Transactions []*transaction `json:"transactions"`
+	isDebug      bool           `json:"-"`
 }
 
 /**
@@ -186,8 +186,7 @@ func (s Tx) toJson() et.Json {
 func (s *Tx) save() error {
 	s.EndedAt = timezone.Now()
 	data := s.toJson()
-	debug := envar.GetBool("DEBUG", false)
-	if debug {
+	if s.isDebug {
 		logs.Debug(data.ToString())
 	}
 
