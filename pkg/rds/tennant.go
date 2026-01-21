@@ -55,6 +55,8 @@ func (s *Tennant) load() error {
 	if err != nil {
 		return err
 	}
+	db.isCore = true
+
 	if err := initTransactions(db); err != nil {
 		return err
 	}
@@ -104,7 +106,6 @@ func (s *Tennant) newDb(name string) (*DB, error) {
 		Version: s.Version,
 		Path:    fmt.Sprintf("%s/%s", s.Path, name),
 		Schemas: make(map[string]*Schema),
-		tennant: s,
 	}
 	s.Dbs[name] = result
 

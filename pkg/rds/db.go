@@ -35,7 +35,7 @@ type DB struct {
 	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
-	tennant *Tennant           `json:"-"`
+	isCore  bool               `json:"-"`
 }
 
 /**
@@ -75,8 +75,8 @@ func (s *DB) toJson() (et.Json, error) {
 * @return error
 **/
 func (s *DB) save() error {
-	if s.tennant == nil {
-		return errors.New(msg.MSG_TENNANT_NOT_FOUND)
+	if s.isCore {
+		return nil
 	}
 
 	if databases == nil {
