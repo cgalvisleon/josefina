@@ -32,11 +32,13 @@ func initRecords(db *DB) error {
 * @return error
 **/
 func setRecord(schema, model, key string) error {
-	_, err := records.upsert(nil, et.Json{
-		"schema": schema,
-		"model":  model,
-		"key":    key,
-	})
+	_, err := records.
+		Upsert(et.Json{
+			"schema": schema,
+			"model":  model,
+			"key":    key,
+		}).
+		Execute(nil)
 	return err
 }
 
@@ -46,10 +48,11 @@ func setRecord(schema, model, key string) error {
 * @return error
 **/
 func deleteRecord(schema, model, key string) error {
-	_, err := records.delete(nil,
+	_, err := records.
+		Delete().
 		Where(Eq("schema", schema)).
-			And(Eq("model", model)).
-			And(Eq("key", key)),
-	)
+		And(Eq("model", model)).
+		And(Eq("key", key)).
+		Execute(nil)
 	return err
 }
