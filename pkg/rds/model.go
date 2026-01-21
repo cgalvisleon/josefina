@@ -443,18 +443,6 @@ func (s *Model) remove(key string) error {
 }
 
 /**
-* where: Returns the where
-* @param condition *Condition
-* @return *Wheres
-**/
-func (s *Model) where(condition *Condition) *Wheres {
-	result := newWhere()
-	result.SetOwner(s)
-	result.Add(condition)
-	return result
-}
-
-/**
 * insert: Inserts the model
 * @param tx *Tx, data et.Json
 * @return et.Json, error
@@ -541,4 +529,70 @@ func (s *Model) AfterUpdate(fn TriggerFunction) *Cmd {
 **/
 func (s *Model) AfterDelete(fn TriggerFunction) *Cmd {
 	return newCmd(s).afterDelete(fn)
+}
+
+/**
+* Insert: Inserts the model
+* @param tx *Tx, new et.Json
+* @return et.Json, error
+**/
+func (s *Model) Insert(tx *Tx, new et.Json) (et.Json, error) {
+	if !s.IsCore {
+		return et.Json{}, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.insert(tx, new)
+}
+
+/**
+* Update: Updates the model
+* @param tx *Tx, new et.Json, where *Wheres
+* @return []et.Json, error
+**/
+func (s *Model) Update(tx *Tx, new et.Json, where *Wheres) ([]et.Json, error) {
+	if !s.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.update(tx, new, where)
+}
+
+/**
+* Delete: Deletes the model
+* @param tx *Tx, where *Wheres
+* @return []et.Json, error
+**/
+func (s *Model) Delete(tx *Tx, where *Wheres) ([]et.Json, error) {
+	if !s.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.delete(tx, where)
+}
+
+/**
+* Upsert: Upserts the model
+* @param tx *Tx, new et.Json
+* @return []et.Json, error
+**/
+func (s *Model) Upsert(tx *Tx, new et.Json) ([]et.Json, error) {
+	if !s.IsCore {
+		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
+	}
+
+	return s.upsert(tx, new)
+}
+
+/**
+* Select: Returns the select
+* @param fields ...string
+* @return *Wheres
+**/
+func (s *Model) Select(fields ...string) *Wheres {
+	result := newWhere()
+	result.SetOwner(s)
+	for _, field := range fields {
+		result.selects = append(result.selects, field)
+	}
+	return result
 }

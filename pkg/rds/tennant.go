@@ -135,6 +135,8 @@ func (s *Tennant) loadDbs() error {
 		return fmt.Errorf(msg.MSG_DONT_HAVE_DATABASES)
 	}
 
+	databases.Where()
+
 	return nil
 }
 
