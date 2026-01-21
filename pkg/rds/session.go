@@ -16,6 +16,55 @@ type Session struct {
 	Token     string    `json:"token"`
 }
 
+type Sessions struct {
+	sessions []*Session `json:"-"`
+}
+
+/**
+* add: Add a session
+* @param session *Session
+* @return void
+**/
+func (s *Sessions) add(session *Session) {
+	s.sessions = append(s.sessions, session)
+}
+
+/**
+* remove: Remove a session
+* @param token string
+* @return void
+**/
+func (s *Sessions) remove(token string) {
+	for i, session := range s.sessions {
+		if session.Token == token {
+			s.sessions = append(s.sessions[:i], s.sessions[i+1:]...)
+			break
+		}
+	}
+}
+
+/**
+* get: Get a session
+* @param token string
+* @return *Session
+**/
+func (s *Sessions) get(token string) *Session {
+	for _, session := range s.sessions {
+		if session.Token == token {
+			return session
+		}
+	}
+	return nil
+}
+
+var sessions *Sessions
+
+func init() {
+	sessions = &Sessions{
+		sessions: make([]*Session, 0),
+	}
+}
+
 /**
 * NewSession: Creates a new session
 * @param device, username string
@@ -27,20 +76,22 @@ func newSession(device, username string) (*Session, error) {
 		return nil, err
 	}
 
-	return &Session{
+	result := &Session{
 		CreatedAt: time.Now(),
 		Username:  username,
 		Token:     token,
-	}, nil
+	}
+
+	sessions.add(result)
+	return result, nil
 }
 
-var sessions []*Session
-
-func init() {
-	sessions = make([]*Session, 0)
-}
-
-func signIn(device, database, username, password string) (*Session, error) {
+/**
+* signIn: Sign in a user
+* @param device, username, password string
+* @return *Session, error
+**/
+func signIn(device, username, password string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -48,10 +99,17 @@ func signIn(device, database, username, password string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	users.
-		Selects("password").
+	item, err := users.
+		Selects().
 		Where(Eq("username", username)).
 		And(Eq("password", password)).
-		Rows(nil)		
-	return nil, nil
+		Rows(nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
+	}
+
+	return newSession(device, username)
 }

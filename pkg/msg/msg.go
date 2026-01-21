@@ -40,6 +40,7 @@ var (
 	MSG_NOT_DATA                   = "not data"
 	MSG_USERNAME_REQUIRED          = "username is required"
 	MSG_PASSWORD_REQUIRED          = "password is required"
+	MSG_AUTHENTICATION_FAILED      = "authentication failed"
 )
 
 func init() {
@@ -82,5 +83,6 @@ func init() {
 		MSG_NOT_DATA = "no data"
 		MSG_USERNAME_REQUIRED = "username es requerido"
 		MSG_PASSWORD_REQUIRED = "password es requerido"
+		MSG_AUTHENTICATION_FAILED = "autenticación fallida"
 	}
 }

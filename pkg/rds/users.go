@@ -34,7 +34,7 @@ func initUsers(db *DB) error {
 	if users.count() == 0 {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
-		err := CreateUser(useranme, password)
+		err := createUser(useranme, password)
 		if err != nil {
 			return err
 		}
@@ -44,11 +44,11 @@ func initUsers(db *DB) error {
 }
 
 /**
-* CreateUser: Creates a new user
+* createUser: Creates a new user
 * @param username, password string
 * @return error
 **/
-func CreateUser(username, password string) error {
+func createUser(username, password string) error {
 	_, err := users.
 		Insert(et.Json{
 			"username": username,
@@ -59,11 +59,11 @@ func CreateUser(username, password string) error {
 }
 
 /**
-* DropUser: Drops a user
+* dropUser: Drops a user
 * @param username string
 * @return error
 **/
-func DropUser(username string) error {
+func dropUser(username string) error {
 	if users == nil {
 		return errors.New(msg.MSG_USERS_NOT_FOUND)
 	}
@@ -79,11 +79,11 @@ func DropUser(username string) error {
 }
 
 /**
-* ChanguePassword: Changues the password of a user
+* changuePassword: Changues the password of a user
 * @param username, newpassword string
 * @return error
 **/
-func ChanguePassword(username, newpassword string) error {
+func changuePassword(username, newpassword string) error {
 	ok, err := users.isExisted("username", username)
 	if err != nil {
 		return err

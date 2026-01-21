@@ -35,11 +35,11 @@ func initSeries(db *DB) error {
 }
 
 /**
-* CreateSerie: Creates a new serie
+* createSerie: Creates a new serie
 * @param name, tag, format string, value int
 * @return error
 **/
-func CreateSerie(name, tag, format string, value int) error {
+func createSerie(name, tag, format string, value int) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
@@ -65,11 +65,11 @@ func CreateSerie(name, tag, format string, value int) error {
 }
 
 /**
-* DropSerie: Drops a serie
+* dropSerie: Drops a serie
 * @param name, tag string
 * @return error
 **/
-func DropSerie(name, tag string) error {
+func dropSerie(name, tag string) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
@@ -89,11 +89,11 @@ func DropSerie(name, tag string) error {
 }
 
 /**
-* SetSerie: Sets a serie
+* setSerie: Sets a serie
 * @param name, tag string, value int
 * @return error
 **/
-func SetSerie(name, tag string, value int) error {
+func setSerie(name, tag string, value int) error {
 	if series == nil {
 		return errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
@@ -115,11 +115,11 @@ func SetSerie(name, tag string, value int) error {
 }
 
 /**
-* GetSerie: Gets a serie
+* getSerie: Gets a serie
 * @param name, tag string
 * @return et.Json, error
 **/
-func GetSerie(name, tag string) (et.Json, error) {
+func getSerie(name, tag string) (et.Json, error) {
 	if series == nil {
 		return et.Json{}, errors.New(msg.MSG_SERIES_NOT_FOUND)
 	}
