@@ -97,7 +97,8 @@ func (s *DB) save() error {
 	if err != nil {
 		return err
 	}
-	_, err = databases.put(nil, data)
+
+	err = databases.put(s.Name, scr)
 	if err != nil {
 		return err
 	}

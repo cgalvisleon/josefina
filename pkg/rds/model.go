@@ -319,18 +319,40 @@ func (s *Model) getKey() string {
 * @param idx string, valu any
 * @return error
 **/
-func (s *Model) put(idx string, valu any) error {
+func (s *Model) put(key string, valu any) error {
 	source, err := s.source()
 	if err != nil {
 		return err
 	}
 
-	err = source.Put(idx, valu)
+	err = source.Put(key, valu)
 	if err != nil {
 		return err
 	}
 	if !s.IsCore {
-		return setRecord(s.Schema, s.Name, idx)
+		return setRecord(s.Schema, s.Name, key)
+	}
+
+	return nil
+}
+
+/**
+* remove: Removes the model
+* @param key string
+* @return error
+**/
+func (s *Model) remove(key string) error {
+	source, err := s.source()
+	if err != nil {
+		return err
+	}
+
+	_, err = source.Delete(key)
+	if err != nil {
+		return err
+	}
+	if !s.IsCore {
+		return deleteRecord(s.Schema, s.Name, key)
 	}
 
 	return nil
