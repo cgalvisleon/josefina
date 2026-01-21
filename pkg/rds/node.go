@@ -2,8 +2,11 @@ package rds
 
 import (
 	"fmt"
+	"net"
+	"net/rpc"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -24,6 +27,7 @@ type Node struct {
 	master  string          `json:"-"`
 	dbs     map[string]*DB  `json:"-"`
 	nodes   map[string]bool `json:"-"`
+	started bool            `json:"-"`
 }
 
 /**
@@ -32,7 +36,7 @@ type Node struct {
 * @return *Node
 **/
 func newNode(tp TypeNode, version, path string) *Node {
-	port := envar.GetInt("PORT", 4200)
+	port := envar.GetInt("RPC_PORT", 4200)
 	return &Node{
 		Type:    tp,
 		Host:    hostName,
@@ -41,6 +45,35 @@ func newNode(tp TypeNode, version, path string) *Node {
 		Path:    path,
 		dbs:     make(map[string]*DB),
 		nodes:   make(map[string]bool),
+	}
+}
+
+/**
+* start
+* @return error
+**/
+func (s *Node) start() error {
+	if s.started {
+		return nil
+	}
+
+	address := fmt.Sprintf(`:%d`, s.Port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		logs.Fatal(err)
+	}
+
+	s.started = true
+	logs.Logf("Rpc", "running on %s%s", s.Host, listener.Addr())
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			logs.Panic(err)
+			continue
+		}
+
+		go rpc.ServeConn(conn)
 	}
 }
 

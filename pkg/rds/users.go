@@ -59,7 +59,7 @@ func createUser(username, password string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
-	if !utility.ValidStr(password, 6, []string{""}) {
+	if !utility.ValidStr(password, 3, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 

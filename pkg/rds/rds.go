@@ -49,6 +49,8 @@ func LoadMaster(version string) error {
 		return err
 	}
 
+	go node.start()
+
 	return nil
 }
 
