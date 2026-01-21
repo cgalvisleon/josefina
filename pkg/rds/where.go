@@ -15,6 +15,7 @@ import (
 type Wheres struct {
 	owner      *Model              `json:"-"`
 	selects    []string            `json:"-"`
+	hidden     []string            `json:"-"`
 	keys       map[string][]string `json:"-"`
 	asc        map[string]bool     `json:"-"`
 	offset     int                 `json:"-"`
@@ -32,6 +33,7 @@ type Wheres struct {
 func newWhere() *Wheres {
 	return &Wheres{
 		selects:    make([]string, 0),
+		hidden:     make([]string, 0),
 		keys:       make(map[string][]string, 0),
 		asc:        make(map[string]bool, 0),
 		offset:     0,
@@ -148,6 +150,23 @@ func (s *Wheres) Selects(fields ...string) *Wheres {
 }
 
 /**
+* Hidden
+* @param fields ...string
+* @return *Wheres
+**/
+func (s *Wheres) Hidden(fields ...string) *Wheres {
+	if len(fields) == 0 {
+		return s
+	}
+
+	for _, field := range fields {
+		s.hidden = append(s.hidden, field)
+	}
+
+	return s
+}
+
+/**
 * Asc
 * @param field string
 * @return *Wheres
@@ -207,7 +226,9 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	add := func(item et.Json) bool {
-		if len(s.selects) > 0 {
+		if len(s.selects) == 0 {
+			item = item.Hidden(s.hidden)
+		} else {
 			item = item.Select(s.selects)
 		}
 		result = append(result, item)
