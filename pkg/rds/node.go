@@ -16,13 +16,13 @@ const (
 )
 
 type Node struct {
-	Type    TypeNode         `json:"type"`
-	Host    string           `json:"name"`
-	Port    int              `json:"port"`
-	Version string           `json:"version"`
-	Path    string           `json:"path"`
-	Dbs     map[string]*DB   `json:"dbs"`
-	nodes   map[string]*Node `json:"-"`
+	Type    TypeNode       `json:"type"`
+	Host    string         `json:"name"`
+	Port    int            `json:"port"`
+	Version string         `json:"version"`
+	Path    string         `json:"path"`
+	dbs     map[string]*DB `json:"-"`
+	nodes   []string       `json:"-"`
 }
 
 /**
@@ -38,8 +38,8 @@ func newNode(tp TypeNode, version, path string) *Node {
 		Port:    port,
 		Version: version,
 		Path:    path,
-		Dbs:     make(map[string]*DB),
-		nodes:   make(map[string]*Node),
+		dbs:     make(map[string]*DB),
+		nodes:   make([]string, 0),
 	}
 }
 
@@ -54,13 +54,13 @@ func (s *Node) newDb(name string) (*DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	result, ok := s.Dbs[name]
+	result, ok := s.dbs[name]
 	if ok {
 		return result, nil
 	}
 
 	result = newDb(s.Path, name, s.Version)
-	s.Dbs[name] = result
+	s.dbs[name] = result
 
 	return result, nil
 }
@@ -71,7 +71,7 @@ func (s *Node) newDb(name string) (*DB, error) {
 * @return *DB, error
 **/
 func (s *Node) getDb(name string) (*DB, error) {
-	result, ok := s.Dbs[name]
+	result, ok := s.dbs[name]
 	if !ok {
 		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 	}
