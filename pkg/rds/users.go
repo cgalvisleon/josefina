@@ -96,6 +96,7 @@ func ChanguePassword(username, newpassword string) error {
 		Update(et.Json{
 			"password": newpassword,
 		}).
-		Where(Eq("username", username)).Execute(nil)
+		Where(Eq("username", username)).
+		Execute(nil)
 	return err
 }
