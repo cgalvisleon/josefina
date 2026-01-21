@@ -126,6 +126,11 @@ func (s *Tennant) getDb(name string) (*DB, error) {
 	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 }
 
+func (s *Tennant) loadDb(item et.Json) (*DB, error) {
+	name := item.Str("name")
+	return s.getDb(name)
+}
+
 /**
 * loadDbs
 * @return error
@@ -135,7 +140,19 @@ func (s *Tennant) loadDbs() error {
 		return fmt.Errorf(msg.MSG_DONT_HAVE_DATABASES)
 	}
 
-	databases.Where()
+	items, err := databases.Select().
+		Rows(nil)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		name := item.Str("name")
+		_, err := s.getDb(name)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

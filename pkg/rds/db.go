@@ -93,11 +93,11 @@ func (s *DB) save() error {
 		return nil
 	}
 
-	data, err := s.toJson()
+	scr, err := s.serialize()
 	if err != nil {
 		return err
 	}
-	_, err = databases.upsert(nil, data)
+	_, err = databases.put(nil, data)
 	if err != nil {
 		return err
 	}

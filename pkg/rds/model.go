@@ -315,6 +315,28 @@ func (s *Model) getKey() string {
 }
 
 /**
+* put: Puts the model
+* @param idx string, valu any
+* @return error
+**/
+func (s *Model) put(idx string, valu any) error {
+	source, err := s.source()
+	if err != nil {
+		return err
+	}
+
+	err = source.Put(idx, valu)
+	if err != nil {
+		return err
+	}
+	if !s.IsCore {
+		return setRecord(s.Schema, s.Name, idx)
+	}
+
+	return nil
+}
+
+/**
 * putIndex
 * @param store *store.FileStore, id string, idx any
 * @return error
@@ -377,11 +399,11 @@ func (s *Model) removeIndex(store *store.FileStore, id string, idx any) error {
 }
 
 /**
-* put: Puts the model
+* putData: Puts the model
 * @param idx string, data et.Json
 * @return error
 **/
-func (s *Model) put(idx string, data et.Json) error {
+func (s *Model) putData(idx string, data et.Json) error {
 	data[INDEX] = idx
 	for _, name := range s.Indexes {
 		source := s.data[name]
@@ -408,11 +430,11 @@ func (s *Model) put(idx string, data et.Json) error {
 }
 
 /**
-* remove: Removes the model
+* removeData: Removes the model
 * @param key string
 * @return error
 **/
-func (s *Model) remove(key string) error {
+func (s *Model) removeData(key string) error {
 	data := et.Json{}
 	exists, err := s.getObjet(key, data)
 	if err != nil {

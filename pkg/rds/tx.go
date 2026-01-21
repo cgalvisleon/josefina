@@ -42,7 +42,7 @@ func setTransaction(key string, data et.Json) (string, error) {
 		key = transactions.getKey()
 	}
 
-	err := transactions.put(key, data)
+	err := transactions.putData(key, data)
 	if err != nil {
 		return "", err
 	}
@@ -240,13 +240,13 @@ func (s *Tx) commit() error {
 			cmd := record.Command
 			idx := record.Idx
 			if cmd == DELETE {
-				err := model.remove(idx)
+				err := model.removeData(idx)
 				if err != nil {
 					return err
 				}
 			} else {
 				data := record.Data
-				err := model.put(idx, data)
+				err := model.putData(idx, data)
 				if err != nil {
 					return err
 				}
