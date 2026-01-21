@@ -22,7 +22,7 @@ func init() {
 * LoadMaster: Initializes the josefina
 * @return error
 **/
-func LoadMaster(version string) error {
+func loadMaster(version string) error {
 	if node != nil {
 		return nil
 	}
@@ -59,7 +59,7 @@ func LoadMaster(version string) error {
 * @param version string
 * @return error
 **/
-func LoadFollow(version string) error {
+func loadFollow(version string) error {
 	if node != nil {
 		return nil
 	}
@@ -67,6 +67,20 @@ func LoadFollow(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	node = newNode(Master, version, path)
 	return nil
+}
+
+/**
+* Load: Initializes josefine
+* @param version string
+* @return error
+**/
+func Load(version string) error {
+	mode := envar.GetStr("MODE", "master")
+	if mode == "follow" {
+		return loadFollow(version)
+	} else {
+		return loadMaster(version)
+	}
 }
 
 /**
