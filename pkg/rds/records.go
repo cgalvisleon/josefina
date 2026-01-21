@@ -10,6 +10,10 @@ var records *Model
 * @return error
 **/
 func initRecords(db *DB) error {
+	if records != nil {
+		return nil
+	}
+
 	var err error
 	records, err = db.newModel("", "records", true, 1)
 	if err != nil {

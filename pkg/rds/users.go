@@ -18,6 +18,10 @@ var users *Model
 * @return error
 **/
 func initUsers(db *DB) error {
+	if users != nil {
+		return nil
+	}
+
 	var err error
 	users, err = db.newModel("", "users", true, 1)
 	if err != nil {

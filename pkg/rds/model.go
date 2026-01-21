@@ -25,6 +25,10 @@ var (
 * @return error
 **/
 func initModels(db *DB) error {
+	if models != nil {
+		return nil
+	}
+
 	var err error
 	models, err = db.newModel("", "models", true, 1)
 	if err != nil {
