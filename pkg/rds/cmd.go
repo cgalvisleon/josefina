@@ -473,11 +473,11 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 }
 
 /**
-* execute: Executes the command
+* Execute: Executes the command
 * @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Cmd) execute(tx *Tx) ([]et.Json, error) {
+func (s *Cmd) Execute(tx *Tx) ([]et.Json, error) {
 	tx, commit := getTx(tx)
 	result := []et.Json{}
 	switch s.command {
@@ -522,43 +522,73 @@ func (s *Cmd) execute(tx *Tx) ([]et.Json, error) {
 }
 
 /**
-* insert: Inserts the model
+* Insert: Inserts the model
 * @param new et.Json
 * @return *Cmd
 **/
-func (s *Cmd) insert(new et.Json) *Cmd {
+func (s *Cmd) Insert(new et.Json) *Cmd {
 	s.command = INSERT
 	s.data = new
 	return s
 }
 
 /**
-* update: Updates the model
+* Update: Updates the model
 * @param data et.Json, where *Wheres
 * @return *Cmd
 **/
-func (s *Cmd) update(data et.Json) *Cmd {
+func (s *Cmd) Update(data et.Json) *Cmd {
 	s.command = UPDATE
 	s.data = data
 	return s
 }
 
 /**
-* delete: Deletes the model
+* Delete: Deletes the model
 * @return *Cmd
 **/
-func (s *Cmd) delete() *Cmd {
+func (s *Cmd) Delete() *Cmd {
 	s.command = DELETE
 	return s
 }
 
 /**
-* upsert: Upserts the model
-* @param tx *Tx, new et.Json
-* @return []et.Json, error
+* Upsert: Upserts the model
+* @param new et.Json
+* @return *Cmd
 **/
-func (s *Cmd) upsert(new et.Json) *Cmd {
+func (s *Cmd) Upsert(new et.Json) *Cmd {
 	s.command = UPSERT
 	s.data = new
+	return s
+}
+
+/**
+* Where
+* @param con *Condition
+* @return *Cmd
+**/
+func (s *Cmd) Where(con *Condition) *Cmd {
+	s.wheres.Add(con)
+	return s
+}
+
+/**
+* And
+* @param con *Condition
+* @return *Cmd
+**/
+func (s *Cmd) And(con *Condition) *Cmd {
+	s.wheres.And(con)
+	return s
+}
+
+/**
+* Or
+* @param con *Condition
+* @return *Cmd
+**/
+func (s *Cmd) Or(con *Condition) *Cmd {
+	s.wheres.Or(con)
 	return s
 }

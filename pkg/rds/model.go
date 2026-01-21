@@ -489,13 +489,13 @@ func (s *Model) Stricted() {
 }
 
 /**
-* insert: Inserts the model
+* Insert: Inserts the model
 * @param data et.Json
 * @return *Cmd
 **/
-func (s *Model) insert(data et.Json) *Cmd {
+func (s *Model) Insert(data et.Json) *Cmd {
 	result := newCmd(s)
-	result.insert(data)
+	result.Insert(data)
 	return result
 }
 
@@ -504,30 +504,30 @@ func (s *Model) insert(data et.Json) *Cmd {
 * @param data et.Json
 * @return *Cmd
 **/
-func (s *Model) update(data et.Json) *Cmd {
+func (s *Model) Update(data et.Json) *Cmd {
 	result := newCmd(s)
-	result.update(data)
+	result.Update(data)
 	return result
 }
 
 /**
-* delete: Deletes the model
+* Delete: Deletes the model
 * @return *Cmd
 **/
-func (s *Model) delete() *Cmd {
+func (s *Model) Delete() *Cmd {
 	result := newCmd(s)
-	result.delete()
+	result.Delete()
 	return result
 }
 
 /**
-* upsert: Upserts the model
+* Upsert: Upserts the model
 * @param data et.Json
 * @return *Cmd
 **/
-func (s *Model) upsert(data et.Json) *Cmd {
+func (s *Model) Upsert(data et.Json) *Cmd {
 	result := newCmd(s)
-	result.upsert(data)
+	result.Upsert(data)
 	return result
 }
 
@@ -536,7 +536,7 @@ func (s *Model) upsert(data et.Json) *Cmd {
 * @param fields ...string
 * @return *Wheres
 **/
-func (s *Model) selects(fields ...string) *Wheres {
+func (s *Model) Selects(fields ...string) *Wheres {
 	result := newWhere()
 	result.SetOwner(s)
 	for _, field := range fields {

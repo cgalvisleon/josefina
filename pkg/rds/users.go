@@ -49,10 +49,12 @@ func initUsers(db *DB) error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	_, err := users.insert(nil, et.Json{
-		"username": username,
-		"password": password,
-	})
+	_, err := users.
+		Insert(et.Json{
+			"username": username,
+			"password": password,
+		}).
+		Execute(nil)
 	return err
 }
 
@@ -69,8 +71,10 @@ func DropUser(username string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	_, err := users.delete(nil,
-		Where(Eq("username", username)))
+	_, err := users.
+		Delete().
+		Where(Eq("username", username)).
+		Execute(nil)
 	return err
 }
 
@@ -88,8 +92,10 @@ func ChanguePassword(username, newpassword string) error {
 		return errors.New(msg.MSG_USER_NOT_FOUND)
 	}
 
-	_, err = users.update(nil, et.Json{
-		"password": newpassword,
-	}, Where(Eq("username", username)))
+	_, err = users.
+		Update(et.Json{
+			"password": newpassword,
+		}).
+		Where(Eq("username", username)).Execute(nil)
 	return err
 }
