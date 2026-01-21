@@ -189,7 +189,10 @@ func (s *Wheres) Limit(page int, rows int) *Wheres {
 * @return []et.Json, error
 **/
 func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
-	tx, _ = getTx(tx)
+	if tx == nil {
+		return nil, errors.New(msg.MSG_TX_NOT_DEFINED)
+	}
+
 	result := []et.Json{}
 	model := s.owner
 	if model == nil {

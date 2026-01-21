@@ -7,7 +7,6 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
 )
 
@@ -140,25 +139,6 @@ type Tx struct {
 	Session      string         `json:"session"`
 	Id           string         `json:"id"`
 	Transactions []*transaction `json:"transactions"`
-}
-
-/**
-* getTx: Creates a new transaction
-* @param tx *Tx
-* @return *Tx
-**/
-func getTx(tx *Tx) (*Tx, bool) {
-	if tx != nil {
-		return tx, false
-	}
-
-	tx = &Tx{
-		StartedAt:    timezone.Now(),
-		EndedAt:      time.Time{},
-		Id:           reg.GenULID("transaction"),
-		Transactions: make([]*transaction, 0),
-	}
-	return tx, true
 }
 
 /**
