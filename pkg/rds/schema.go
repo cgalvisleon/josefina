@@ -70,6 +70,23 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 }
 
 /**
+* load
+* @param db *DB
+* @return error
+**/
+func (s *Schema) load(db *DB) error {
+	s.db = db
+	for _, model := range s.Models {
+		model.db = s.db
+		if err := model.init(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/**
 * getModel: Returns a model
 * @param name string
 * @return *Model

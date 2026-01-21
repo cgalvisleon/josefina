@@ -1,8 +1,10 @@
 package rds
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -126,9 +128,29 @@ func (s *Tennant) getDb(name string) (*DB, error) {
 	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 }
 
-func (s *Tennant) loadDb(item et.Json) (*DB, error) {
-	name := item.Str("name")
-	return s.getDb(name)
+/**
+* loadDb
+* @param db *DB
+* @return error
+**/
+func (s *Tennant) loadDb(db *DB) error {
+	if db == nil {
+		return fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+	}
+
+	data, err := db.toJson()
+	if err != nil {
+		return err
+	}
+
+	logs.Debug(data.ToString())
+	err = db.load(s)
+	if err != nil {
+		return err
+	}
+
+	s.Dbs[db.Name] = db
+	return nil
 }
 
 /**
@@ -140,21 +162,26 @@ func (s *Tennant) loadDbs() error {
 		return fmt.Errorf(msg.MSG_DONT_HAVE_DATABASES)
 	}
 
-	items, err := databases.Select().
-		Rows(nil)
+	st, err := databases.source()
 	if err != nil {
 		return err
 	}
 
-	for _, item := range items {
-		name := item.Str("name")
-		_, err := s.getDb(name)
+	err = st.Iterate(func(id string, src []byte) (bool, error) {
+		var item *DB
+		err := json.Unmarshal(src, &item)
 		if err != nil {
-			return err
+			return false, err
 		}
-	}
 
-	return nil
+		err = s.loadDb(item)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}, true, 0, 0, 1)
+	return err
 }
 
 /**

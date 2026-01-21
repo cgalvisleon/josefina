@@ -3,6 +3,7 @@ package rds
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
@@ -155,6 +156,19 @@ func (s *DB) newSchema(name string) *Schema {
 
 	s.Schemas[name] = result
 	return result
+}
+
+/**
+* load: Loads the database
+* @return error
+**/
+func (s *DB) load(tennant *Tennant) error {
+	s.Path = fmt.Sprintf("%s/%s", tennant.Path, s.Name)
+	for _, schema := range s.Schemas {
+		schema.load(s)
+	}
+
+	return nil
 }
 
 /**
