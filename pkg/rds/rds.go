@@ -22,9 +22,8 @@ func init() {
 **/
 func Server(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
-	name := envar.GetStr("TENNANT_NAME", "josefina")
 	var err error
-	tennant, err = loadTennant(path, name, version)
+	tennant, err = loadTennant(path, version)
 	if err != nil {
 		return err
 	}

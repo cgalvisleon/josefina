@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -23,20 +22,16 @@ type Tennant struct {
 * @return *Tennant, error
 **/
 func loadTennant(path, version string) (*Tennant, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	node, err := newNode(version, path)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &Tennant{
-		Node: &Node{
-			Name:    name,
-			Version: version,
-			Path:    path,
-			Dbs:     make(map[string]*DB),
-		},
+		Node:  node,
 		Nodes: []string{},
 	}
-	err := result.load()
+	err = result.load()
 	if err != nil {
 		return nil, err
 	}

@@ -4,13 +4,23 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
+type TypeNode string
+
+const (
+	Master TypeNode = "master"
+	Follow TypeNode = "follow"
+)
+
 type Node struct {
+	Type    TypeNode          `json:"type"`
 	Host    string            `json:"name"`
+	Port    int               `json:"port"`
 	Version string            `json:"version"`
 	Path    string            `json:"path"`
 	Dbs     map[string]*DB    `json:"dbs"`
@@ -20,17 +30,20 @@ type Node struct {
 
 /**
 * newNode
-* @param version, path string
+* @param tp TypeNode, version, path string
 * @return *Node, error
 **/
-func newNode(version, path string) (*Node, error) {
+func newNode(tp TypeNode, version, path string) (*Node, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
 
+	port := envar.GetInt("PORT", 4200)
 	return &Node{
+		Type:    tp,
 		Host:    hostName,
+		Port:    port,
 		Version: version,
 		Path:    path,
 		Dbs:     make(map[string]*DB),
