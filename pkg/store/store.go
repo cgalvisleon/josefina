@@ -190,12 +190,16 @@ func (s *FileStore) newSegment() error {
 	seg := newSegment(fd, 0, name)
 	s.segments = append(s.segments, seg)
 	if s.active != nil {
-		s.active.Close()
+		err := s.active.Close()
+		if err != nil {
+			return err
+		}
 	}
 	s.active = seg
 	if s.isDebug {
 		logs.Log(packageName, "new:segment:", s.Path, ":", s.Name, ":", seg.ToString())
 	}
+
 	return nil
 }
 
@@ -398,6 +402,23 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 	s.indexMu.RUnlock()
 
 	return indexResult, keys
+}
+
+/**
+* Close
+* @return error
+**/
+func (s *FileStore) Close() error {
+	if s.active == nil {
+		return nil
+	}
+
+	err := s.active.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**

@@ -78,7 +78,7 @@ func (s *DB) toJson() (et.Json, error) {
 * save: Saves the database
 * @return error
 **/
-func (s *DB) save() error {
+func (s *DB) saved() error {
 	if s.isCore {
 		return nil
 	}
