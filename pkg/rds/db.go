@@ -160,6 +160,7 @@ func (s *DB) newSchema(name string) *Schema {
 
 /**
 * load: Loads the database
+* @param tennant *Tennant
 * @return error
 **/
 func (s *DB) load(tennant *Tennant) error {
