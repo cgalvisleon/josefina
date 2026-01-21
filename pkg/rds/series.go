@@ -125,7 +125,7 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	items, err := series.BeforeUpdate(func(tx *Tx, old, new et.Json) error {
+	items, err := series.beforeUpdate(func(tx *Tx, old, new et.Json) error {
 		value := old.Int("value")
 		new["value"] = value + 1
 		return nil

@@ -299,14 +299,6 @@ func (s *Model) isExisted(name, key string) (bool, error) {
 }
 
 /**
-* Stricted: Sets the model to strict
-* @return void
-**/
-func (s *Model) Stricted() {
-	s.IsStrict = true
-}
-
-/**
 * getKey: Returns a new key for the model
 * @return string
 **/
@@ -487,6 +479,14 @@ func (s *Model) removeData(key string) error {
 }
 
 /**
+* Stricted: Sets the model to strict
+* @return void
+**/
+func (s *Model) Stricted() {
+	s.IsStrict = true
+}
+
+/**
 * insert: Inserts the model
 * @param tx *Tx, data et.Json
 * @return et.Json, error
@@ -535,7 +535,7 @@ func (s *Model) upsert(ctx *Tx, data et.Json) ([]et.Json, error) {
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Model) BeforeInsert(fn TriggerFunction) *Cmd {
+func (s *Model) beforeInsert(fn TriggerFunction) *Cmd {
 	return newCmd(s).beforeInsert(fn)
 }
 
@@ -544,7 +544,7 @@ func (s *Model) BeforeInsert(fn TriggerFunction) *Cmd {
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Model) BeforeUpdate(fn TriggerFunction) *Cmd {
+func (s *Model) beforeUpdate(fn TriggerFunction) *Cmd {
 	return newCmd(s).beforeUpdate(fn)
 }
 
@@ -553,7 +553,7 @@ func (s *Model) BeforeUpdate(fn TriggerFunction) *Cmd {
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Model) BeforeDelete(fn TriggerFunction) *Cmd {
+func (s *Model) beforeDelete(fn TriggerFunction) *Cmd {
 	return newCmd(s).beforeDelete(fn)
 }
 
@@ -562,7 +562,7 @@ func (s *Model) BeforeDelete(fn TriggerFunction) *Cmd {
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Model) AfterUpdate(fn TriggerFunction) *Cmd {
+func (s *Model) afterUpdate(fn TriggerFunction) *Cmd {
 	return newCmd(s).afterUpdate(fn)
 }
 
@@ -571,68 +571,16 @@ func (s *Model) AfterUpdate(fn TriggerFunction) *Cmd {
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Model) AfterDelete(fn TriggerFunction) *Cmd {
+func (s *Model) afterDelete(fn TriggerFunction) *Cmd {
 	return newCmd(s).afterDelete(fn)
 }
 
 /**
-* Insert: Inserts the model
-* @param tx *Tx, new et.Json
-* @return et.Json, error
-**/
-func (s *Model) Insert(tx *Tx, new et.Json) (et.Json, error) {
-	if !s.IsCore {
-		return et.Json{}, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
-	}
-
-	return s.insert(tx, new)
-}
-
-/**
-* Update: Updates the model
-* @param tx *Tx, new et.Json, where *Wheres
-* @return []et.Json, error
-**/
-func (s *Model) Update(tx *Tx, new et.Json, where *Wheres) ([]et.Json, error) {
-	if !s.IsCore {
-		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
-	}
-
-	return s.update(tx, new, where)
-}
-
-/**
-* Delete: Deletes the model
-* @param tx *Tx, where *Wheres
-* @return []et.Json, error
-**/
-func (s *Model) Delete(tx *Tx, where *Wheres) ([]et.Json, error) {
-	if !s.IsCore {
-		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
-	}
-
-	return s.delete(tx, where)
-}
-
-/**
-* Upsert: Upserts the model
-* @param tx *Tx, new et.Json
-* @return []et.Json, error
-**/
-func (s *Model) Upsert(tx *Tx, new et.Json) ([]et.Json, error) {
-	if !s.IsCore {
-		return nil, fmt.Errorf(msg.MSG_OPERATION_NOT_ALLOW)
-	}
-
-	return s.upsert(tx, new)
-}
-
-/**
-* Select: Returns the select
+* selects: Returns the select
 * @param fields ...string
 * @return *Wheres
 **/
-func (s *Model) Select(fields ...string) *Wheres {
+func (s *Model) selects(fields ...string) *Wheres {
 	result := newWhere()
 	result.SetOwner(s)
 	for _, field := range fields {

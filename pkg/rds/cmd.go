@@ -169,8 +169,8 @@ func (s *Cmd) afterDelete(fn TriggerFunction) *Cmd {
 * @return et.Json, error
 **/
 func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
-	s.command = INSERT
 	tx, commit := getTx(tx)
+	s.command = INSERT
 	model := s.model
 
 	// Validate required fields
@@ -275,8 +275,8 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
-	s.command = UPDATE
 	tx, commit := getTx(tx)
+	s.command = UPDATE
 	model := s.model
 	wheres.SetOwner(model)
 	items, err := wheres.Rows(tx)
@@ -360,8 +360,8 @@ func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
-	s.command = DELETE
 	tx, commit := getTx(tx)
+	s.command = DELETE
 	model := s.model
 	where.SetOwner(model)
 	items, err := where.Rows(tx)

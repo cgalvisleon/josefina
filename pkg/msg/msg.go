@@ -36,7 +36,6 @@ var (
 	MSG_USERS_NOT_FOUND            = "users not found"
 	MSG_OPERATION_NOT_ALLOW        = "operation not allow"
 	MSG_INVALID_CONDITION_ONLY_ONE = "invalid condition: expected an array with exactly one element"
-	MSG_TX_NOT_DEFINED             = "transaction not defined"
 )
 
 func init() {
@@ -75,6 +74,5 @@ func init() {
 		MSG_USERS_NOT_FOUND = "usuarios no encontrados"
 		MSG_OPERATION_NOT_ALLOW = "operación no permitida"
 		MSG_INVALID_CONDITION_ONLY_ONE = "condición inválida: se esperaba un array con exactamente un elemento"
-		MSG_TX_NOT_DEFINED = "transacción no definida"
 	}
 }

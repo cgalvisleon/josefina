@@ -28,29 +28,15 @@ func NewSession(username string) *Session {
 	}
 }
 
-/**
-* getTx: Returns the transaction for the session
-* @param tx *Tx
-* @return (*Tx, bool)
-**/
-func (s *Session) getTx(tx *Tx) (*Tx, bool) {
-	if tx != nil {
-		return tx, false
+func (s *Session) Insert(tx *Tx, model *Model, new et.Json) (et.Json, error) {
+	tx, commit := s.getTx(tx)
+	result, err := model.insert(tx, new)
+	if err != nil {
+		return nil, err
 	}
 
-	id := reg.GenULID("transaction")
-	tx = &Tx{
-		StartedAt:    timezone.Now(),
-		EndedAt:      time.Time{},
-		Session:      s.Id,
-		Id:           id,
-		Transactions: make([]*transaction, 0),
-	}
-	return tx, true
-}
-
-func (s *Session) Insert(model *Model, new et.Json) (et.Json, error) {
-	return model.Insert(nil, new)
+	
+	return result, nil
 }
 
 var sessions []*Session
