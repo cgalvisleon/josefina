@@ -163,7 +163,9 @@ func (s *FileStore) loadSegments() error {
 		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
 		s.Size += size
-		logs.Log(packageName, "load:segments:", s.Path, ":", s.Name, ":", seg.ToString())
+		if s.isDebug {
+			logs.Log(packageName, "load:segments:", s.Path, ":", s.Name, ":", seg.ToString())
+		}
 	}
 
 	if len(s.segments) == 0 {

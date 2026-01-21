@@ -97,16 +97,14 @@ func (s *Node) mount(services any) error {
 		for i := 1; i < numInputs; i++ {
 			name := fmt.Sprintf(`param_%d`, i)
 			paramType := metodo.Type.In(i)
-			inputs[name] = paramType
-			// inputs[name] = paramType.String()
+			inputs[name] = paramType.String()
 		}
 
 		outputs := et.Json{}
 		for i := 0; i < numOutputs; i++ {
 			name := fmt.Sprintf(`output_%d`, i)
 			paramType := metodo.Type.Out(i)
-			outputs[name] = paramType
-			// inputs[name] = paramType.String()
+			outputs[name] = paramType.String()
 		}
 
 		logs.Debug(et.Json{
