@@ -53,12 +53,14 @@ func CreateSerie(name, tag, format string, value int) error {
 		format = `%d`
 	}
 
-	_, err := series.insert(nil, et.Json{
-		"name":   name,
-		"tag":    tag,
-		"value":  value,
-		"format": format,
-	})
+	_, err := series.
+		Insert(et.Json{
+			"name":   name,
+			"tag":    tag,
+			"value":  value,
+			"format": format,
+		}).
+		Execute(nil)
 	return err
 }
 
@@ -78,9 +80,11 @@ func DropSerie(name, tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	_, err := series.delete(nil,
+	_, err := series.
+		Delete().
 		Where(Eq("name", name)).
-			And(Eq("tag", tag)))
+		And(Eq("tag", tag)).
+		Execute(nil)
 	return err
 }
 
@@ -100,12 +104,13 @@ func SetSerie(name, tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	_, err := series.update(nil,
-		et.Json{
+	_, err := series.
+		Update(et.Json{
 			"value": value,
-		},
+		}).
 		Where(Eq("name", name)).
-			And(Eq("tag", tag)))
+		And(Eq("tag", tag)).
+		Execute(nil)
 	return err
 }
 
@@ -125,14 +130,16 @@ func GetSerie(name, tag string) (et.Json, error) {
 		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	items, err := series.beforeUpdate(func(tx *Tx, old, new et.Json) error {
-		value := old.Int("value")
-		new["value"] = value + 1
-		return nil
-	}).update(nil,
-		et.Json{},
+	items, err := series.
+		Update(et.Json{}).
+		BeforeUpdate(func(tx *Tx, old, new et.Json) error {
+			value := old.Int("value")
+			new["value"] = value + 1
+			return nil
+		}).
 		Where(Eq("name", name)).
-			And(Eq("tag", tag)))
+		And(Eq("tag", tag)).
+		Execute(nil)
 	if err != nil {
 		return et.Json{}, err
 	}

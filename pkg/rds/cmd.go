@@ -109,61 +109,61 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 }
 
 /**
-* beforeInsert
+* BeforeInsert
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) beforeInsert(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeInsert(fn TriggerFunction) *Cmd {
 	s.beforeInserts = append(s.beforeInserts, fn)
 	return s
 }
 
 /**
-* afterInsert
+* AfterInsert
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) afterInsert(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterInsert(fn TriggerFunction) *Cmd {
 	s.afterInserts = append(s.afterInserts, fn)
 	return s
 }
 
 /**
-* beforeUpdate
+* BeforeUpdate
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) beforeUpdate(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeUpdate(fn TriggerFunction) *Cmd {
 	s.beforeUpdates = append(s.beforeUpdates, fn)
 	return s
 }
 
 /**
-* afterUpdate
+* AfterUpdate
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) afterUpdate(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterUpdate(fn TriggerFunction) *Cmd {
 	s.afterUpdates = append(s.afterUpdates, fn)
 	return s
 }
 
 /**
-* beforeDelete
+* BeforeDelete
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) beforeDelete(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeDelete(fn TriggerFunction) *Cmd {
 	s.beforeDeletes = append(s.beforeDeletes, fn)
 	return s
 }
 
 /**
-* afterDelete
+* AfterDelete
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) afterDelete(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterDelete(fn TriggerFunction) *Cmd {
 	s.afterDeletes = append(s.afterDeletes, fn)
 	return s
 }
