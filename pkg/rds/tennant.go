@@ -75,12 +75,6 @@ func (s *Tennant) load() error {
 	if err := initModels(db); err != nil {
 		return err
 	}
-	if err := db.save(); err != nil {
-		return err
-	}
-	if err := s.loadDbs(); err != nil {
-		return err
-	}
 
 	return nil
 }

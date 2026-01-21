@@ -119,6 +119,17 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
+* Key
+* @return string
+**/
+func (s *Model) Key() string {
+	if s.Schema == "" {
+		return s.Name
+	}
+	return fmt.Sprintf("%s.%s", s.Schema, s.Name)
+}
+
+/**
 * save: Saves the model
 * @return error
 **/
@@ -136,7 +147,7 @@ func (s *Model) save() error {
 		return err
 	}
 
-	key := fmt.Sprintf(`%s.%s`, s.Schema, s.Name)
+	key := s.Key()
 	err = models.Put(key, scr)
 	if err != nil {
 		return err

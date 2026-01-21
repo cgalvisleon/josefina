@@ -33,15 +33,6 @@ func Server(version string) error {
 }
 
 /**
-* Node: Initializes the josefina as a node
-* @param version string
-* @return error
-**/
-func Node(version string) error {
-	return Server(version)
-}
-
-/**
 * getDB: Returns a database by name
 * @param name string
 * @return *DB, error
