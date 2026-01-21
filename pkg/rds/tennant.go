@@ -74,7 +74,7 @@ func (s *Tennant) loadCore() error {
 	if err := db.save(); err != nil {
 		return err
 	}
-	if err := s.loadDbs(); err != nil {
+	if err := s.load(); err != nil {
 		return err
 	}
 
@@ -154,10 +154,10 @@ func (s *Tennant) loadDb(db *DB) error {
 }
 
 /**
-* loadDbs
+* load
 * @return error
 **/
-func (s *Tennant) loadDbs() error {
+func (s *Tennant) load() error {
 	if databases == nil {
 		return fmt.Errorf(msg.MSG_DONT_HAVE_DATABASES)
 	}
