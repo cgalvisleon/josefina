@@ -43,6 +43,20 @@ type DB struct {
 }
 
 /**
+* newDb
+* @param path, name, version string
+* @return *DB
+**/
+func newDb(path, name, version string) *DB {
+	return &DB{
+		Name:    name,
+		Version: version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema),
+	}
+}
+
+/**
 * serialize
 * @return []byte, error
 **/

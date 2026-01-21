@@ -123,10 +123,14 @@ func (s *Model) ToJson() (et.Json, error) {
 * @return string
 **/
 func (s *Model) Key() string {
-	if s.Schema == "" {
-		return s.Name
+	result := s.Name
+	if s.Schema != "" {
+		result = fmt.Sprintf("%s.%s", s.Schema, result)
 	}
-	return fmt.Sprintf("%s.%s", s.Schema, s.Name)
+	if s.Database != "" {
+		result = fmt.Sprintf("%s.%s", s.Database, result)
+	}
+	return result
 }
 
 /**
