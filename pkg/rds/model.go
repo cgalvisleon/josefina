@@ -309,6 +309,149 @@ func (s *Model) getKey() string {
 }
 
 /**
+* putIndex
+* @param store *store.FileStore, id string, idx any
+* @return error
+**/
+func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
+	result := map[string]bool{}
+	exists, err := store.Get(id, &result)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		result = map[string]bool{}
+	}
+
+	key := fmt.Sprintf("%v", idx)
+	_, ok := result[key]
+	if ok {
+		return nil
+	}
+
+	result[key] = true
+	err = store.Put(id, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* removeIndex
+* @param store *store.FileStore, id string, idx any
+* @return error
+**/
+func (s *Model) removeIndex(store *store.FileStore, id string, idx any) error {
+	result := map[string]bool{}
+	exists, err := store.Get(id, &result)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	key := fmt.Sprintf("%v", idx)
+	_, ok := result[key]
+	if !ok {
+		return nil
+	}
+
+	delete(result, key)
+	if len(result) == 0 {
+		_, err = store.Delete(id)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	err = store.Put(id, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* putData: Puts the model
+* @param idx string, data et.Json
+* @return error
+**/
+func (s *Model) putData(idx string, data et.Json) error {
+	data[INDEX] = idx
+	for _, name := range s.Indexes {
+		key := fmt.Sprintf("%v", data[name])
+		if key == "" {
+			continue
+		}
+
+		source := s.data[name]
+		if name == INDEX {
+			err := source.Put(key, data)
+			if err != nil {
+				return err
+			}
+			if !s.IsCore {
+				return setRecord(s.Schema, s.Name, key)
+			}
+		} else {
+			err := s.putIndex(source, key, idx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+/**
+* removeData: Removes the model
+* @param idx string
+* @return error
+**/
+func (s *Model) removeData(idx string) error {
+	data := et.Json{}
+	exists, err := s.getObjet(idx, data)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	for _, name := range s.Indexes {
+		key := fmt.Sprintf("%v", data[name])
+		if key == "" {
+			continue
+		}
+
+		source := s.data[name]
+		if name == INDEX {
+			_, err := source.Delete(key)
+			if err != nil {
+				return err
+			}
+			if !s.IsCore {
+				return deleteRecord(s.Schema, s.Name, key)
+			}
+		} else {
+			err := s.removeIndex(source, key, idx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+/**
 * put: Puts the model
 * @param idx string, valu any
 * @return error
@@ -349,134 +492,6 @@ func (s *Model) Remove(key string) error {
 		return deleteRecord(s.Schema, s.Name, key)
 	}
 
-	return nil
-}
-
-/**
-* putIndex
-* @param store *store.FileStore, id string, idx any
-* @return error
-**/
-func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, &result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		result = map[string]bool{}
-	}
-
-	st := fmt.Sprintf("%v", idx)
-	_, ok := result[st]
-	if ok {
-		return nil
-	}
-
-	result[st] = true
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* removeIndex
-* @param store *store.FileStore, id string, idx any
-* @return error
-**/
-func (s *Model) removeIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, &result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	st := fmt.Sprintf("%v", idx)
-	_, ok := result[st]
-	if !ok {
-		return nil
-	}
-
-	delete(result, st)
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* putData: Puts the model
-* @param idx string, data et.Json
-* @return error
-**/
-func (s *Model) putData(idx string, data et.Json) error {
-	data[INDEX] = idx
-	for _, name := range s.Indexes {
-		source := s.data[name]
-		key := fmt.Sprintf("%v", data[name])
-		if key == "" {
-			continue
-		}
-		if name == INDEX {
-			err := source.Put(key, data)
-			if err != nil {
-				return err
-			}
-			if !s.IsCore {
-				return setRecord(s.Schema, s.Name, key)
-			}
-		} else {
-			err := s.putIndex(source, key, idx)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-/**
-* removeData: Removes the model
-* @param key string
-* @return error
-**/
-func (s *Model) removeData(key string) error {
-	data := et.Json{}
-	exists, err := s.getObjet(key, data)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	for _, name := range s.Indexes {
-		source := s.data[name]
-		key := fmt.Sprintf("%v", data[name])
-		if key == "" {
-			continue
-		}
-		_, err := source.Delete(key)
-		if err != nil {
-			return err
-		}
-		if name == INDEX {
-			if !s.IsCore {
-				return deleteRecord(s.Schema, s.Name, key)
-			}
-		}
-	}
 	return nil
 }
 
