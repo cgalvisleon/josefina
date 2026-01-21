@@ -2,6 +2,7 @@ package rds
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -31,12 +32,13 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 
 	name = utility.Normalize(name)
+	host := fmt.Sprintf(`%s:%d`, node.Host, node.Port)
 	result = &Model{
 		From: &From{
 			Database: s.Database,
 			Schema:   s.Name,
 			Name:     name,
-			Host:     hostName,
+			Host:     host,
 			Fields:   make(map[string]*Field, 0),
 		},
 		Indexes:       make([]string, 0),
@@ -67,23 +69,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 	s.Models[name] = result
 	return result, nil
-}
-
-/**
-* load
-* @param db *DB
-* @return error
-**/
-func (s *Schema) load(db *DB) error {
-	s.db = db
-	for _, model := range s.Models {
-		model.db = s.db
-		if err := model.init(); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 /**
