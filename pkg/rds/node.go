@@ -2,6 +2,7 @@ package rds
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
@@ -9,10 +10,30 @@ import (
 )
 
 type Node struct {
-	Name    string         `json:"name"`
+	Host    string         `json:"name"`
 	Version string         `json:"version"`
 	Path    string         `json:"path"`
 	Dbs     map[string]*DB `json:"dbs"`
+	db      *DB            `json:"-"`
+}
+
+/**
+* newNode
+* @param version, path string
+* @return *Node, error
+**/
+func newNode(version, path string) (*Node, error) {
+	hostName, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Node{
+		Host:    hostName,
+		Version: version,
+		Path:    path,
+		Dbs:     make(map[string]*DB),
+	}, nil
 }
 
 /**
@@ -31,12 +52,7 @@ func (s *Node) newDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	result = &DB{
-		Name:    name,
-		Version: s.Version,
-		Path:    fmt.Sprintf("%s/%s", s.Path, name),
-		Schemas: make(map[string]*Schema),
-	}
+	result = newDb(s.Path, name, s.Version)
 	s.Dbs[name] = result
 
 	return result, nil

@@ -22,7 +22,7 @@ type Tennant struct {
 * @param name string
 * @return *Tennant, error
 **/
-func loadTennant(path, name, version string) (*Tennant, error) {
+func loadTennant(path, version string) (*Tennant, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}

@@ -52,7 +52,7 @@ func newDb(path, name, version string) *DB {
 		Name:    name,
 		Version: version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema),
+		Schemas: make(map[string]*Schema, 0),
 	}
 }
 
