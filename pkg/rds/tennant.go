@@ -18,6 +18,7 @@ type Tennant struct {
 	Version string         `json:"version"`
 	Path    string         `json:"path"`
 	Dbs     map[string]*DB `json:"dbs"`
+	Nodes   []string       `json:"nodes"`
 }
 
 /**
@@ -35,8 +36,9 @@ func loadTennant(path, name, version string) (*Tennant, error) {
 		Version: version,
 		Path:    path,
 		Dbs:     make(map[string]*DB),
+		Nodes:   []string{},
 	}
-	err := result.loadCore()
+	err := result.load()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,7 @@ func loadTennant(path, name, version string) (*Tennant, error) {
 * loadCore
 * @return error
 **/
-func (s *Tennant) loadCore() error {
+func (s *Tennant) load() error {
 	db, err := s.newDb(packageName)
 	if err != nil {
 		return err
@@ -74,7 +76,7 @@ func (s *Tennant) loadCore() error {
 	if err := db.save(); err != nil {
 		return err
 	}
-	if err := s.load(); err != nil {
+	if err := s.loadDbs(); err != nil {
 		return err
 	}
 
@@ -157,7 +159,7 @@ func (s *Tennant) loadDb(db *DB) error {
 * load
 * @return error
 **/
-func (s *Tennant) load() error {
+func (s *Tennant) loadDbs() error {
 	if databases == nil {
 		return fmt.Errorf(msg.MSG_DONT_HAVE_DATABASES)
 	}
