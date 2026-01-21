@@ -79,6 +79,7 @@ func (s *Wheres) SetOwner(owner *Model) *Wheres {
 	}
 
 	s.owner = owner
+	s.hidden = owner.Hidden
 	if len(owner.Indexes) > s.workers {
 		s.workers = len(owner.Indexes)
 	}
@@ -110,6 +111,15 @@ func (s *Wheres) Add(condition *Condition) *Wheres {
 
 	s.conditions = append(s.conditions, condition)
 	return s
+}
+
+/**
+* Where
+* @param condition *Condition
+* @return *Wheres
+**/
+func (s *Wheres) Where(condition *Condition) *Wheres {
+	return s.Add(condition)
 }
 
 /**
@@ -419,4 +429,22 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* One
+* @param tx *Tx
+* @return et.Json, error
+**/
+func (s *Wheres) One(tx *Tx) (et.Json, error) {
+	rows, err := s.Rows(tx)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	if len(rows) == 0 {
+		return et.Json{}, nil
+	}
+
+	return rows[0], nil
 }

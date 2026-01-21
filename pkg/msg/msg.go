@@ -38,6 +38,8 @@ var (
 	MSG_INVALID_CONDITION_ONLY_ONE = "invalid condition: expected an array with exactly one element"
 	MSG_MODEL_IS_NIL               = "model is nil"
 	MSG_NOT_DATA                   = "not data"
+	MSG_USERNAME_REQUIRED          = "username is required"
+	MSG_PASSWORD_REQUIRED          = "password is required"
 )
 
 func init() {
@@ -78,5 +80,7 @@ func init() {
 		MSG_INVALID_CONDITION_ONLY_ONE = "condición inválida: se esperaba un array con exactamente un elemento"
 		MSG_MODEL_IS_NIL = "model es nil"
 		MSG_NOT_DATA = "no data"
+		MSG_USERNAME_REQUIRED = "username es requerido"
+		MSG_PASSWORD_REQUIRED = "password es requerido"
 	}
 }

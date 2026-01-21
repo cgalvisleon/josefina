@@ -480,6 +480,18 @@ func (s *Condition) applyOpLike(val any) bool {
 			return invalidType()
 		}
 		return matchLikeStar(av, bv)
+	case et.Json:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpLike(val)
+		}
+		return invalidType()
+	case map[string]interface{}:
+		for _, value := range bv {
+			s.Value = value
+			return s.applyOpLike(val)
+		}
+		return invalidType()
 	case []et.Json:
 		for _, item := range bv {
 			for _, value := range item {
