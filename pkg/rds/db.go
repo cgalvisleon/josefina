@@ -18,6 +18,10 @@ var databases *Model
 * @return error
 **/
 func initDatabases(db *DB) error {
+	if databases != nil {
+		return nil
+	}
+
 	var err error
 	databases, err = db.newModel("", "databases", true, 1)
 	if err != nil {

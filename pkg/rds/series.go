@@ -17,6 +17,10 @@ var series *Model
 * @return error
 **/
 func initSeries(db *DB) error {
+	if series != nil {
+		return nil
+	}
+
 	var err error
 	series, err = db.newModel("", "series", true, 1)
 	if err != nil {

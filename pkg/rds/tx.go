@@ -18,6 +18,10 @@ var transactions *Model
 * @return error
 **/
 func initTransactions(db *DB) error {
+	if transactions != nil {
+		return nil
+	}
+
 	var err error
 	transactions, err = db.newModel("", "transactions", true, 1)
 	if err != nil {
