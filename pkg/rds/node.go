@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"reflect"
+	"strings"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -81,7 +84,41 @@ func (s *Node) start() error {
 * @return error
 **/
 func (s *Node) mount(services any) error {
-	return rpc.Register(services)
+	tipoStruct := reflect.TypeOf(services)
+	structName := tipoStruct.String()
+	list := strings.Split(structName, ".")
+	structName = list[len(list)-1]
+	for i := 0; i < tipoStruct.NumMethod(); i++ {
+		metodo := tipoStruct.Method(i)
+		numInputs := metodo.Type.NumIn()
+		numOutputs := metodo.Type.NumOut()
+
+		inputs := et.Json{}
+		for i := 1; i < numInputs; i++ {
+			name := fmt.Sprintf(`param_%d`, i)
+			paramType := metodo.Type.In(i)
+			inputs[name] = paramType
+			// inputs[name] = paramType.String()
+		}
+
+		outputs := et.Json{}
+		for i := 0; i < numOutputs; i++ {
+			name := fmt.Sprintf(`output_%d`, i)
+			paramType := metodo.Type.Out(i)
+			outputs[name] = paramType
+			// inputs[name] = paramType.String()
+		}
+
+		logs.Debug(et.Json{
+			"method":  metodo,
+			"inputs":  inputs,
+			"outputs": outputs,
+		}.ToString())
+
+	}
+
+	rpc.Register(services)
+	return nil
 }
 
 /**
