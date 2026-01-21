@@ -52,7 +52,7 @@ func (s *FileStore) CreateSnapshot() error {
 		binary.Write(buf, binary.BigEndian, ref.length)
 		isDebug := envar.GetBool("DEBUG", false)
 		if isDebug {
-			logs.Log(packageName, "snapshot:", s.Path, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
+			logs.Debug("snapshot:", s.Path, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}
 

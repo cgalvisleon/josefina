@@ -436,7 +436,7 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 * RebuildIndexes
 * @return error
 **/
-func (s *FileStore) RebuildIndexes() error {
+func (s *FileStore) rebuildIndexes() error {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
@@ -483,7 +483,7 @@ func (s *FileStore) Put(id string, value any) error {
 	isDebug := envar.GetBool("DEBUG", false)
 	if isDebug {
 		i := len(s.index)
-		logs.Log(packageName, "put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
+		logs.Debug("put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
 	return nil
@@ -517,7 +517,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	isDebug := envar.GetBool("DEBUG", false)
 	if isDebug {
 		i := len(s.index)
-		logs.Log(packageName, "deleted", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
+		logs.Debug("deleted:", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
 	}
 
 	return true, nil
@@ -669,7 +669,7 @@ func (s *FileStore) Prune() error {
 		return err
 	}
 
-	err = s.RebuildIndexes()
+	err = s.rebuildIndexes()
 	if err != nil {
 		return err
 	}

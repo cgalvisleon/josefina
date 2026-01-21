@@ -97,7 +97,7 @@ func (s *FileStore) Compact() error {
 		newIndex[id] = newRef
 		isDebug := envar.GetBool("DEBUG", false)
 		if isDebug {
-			logs.Log(packageName, "compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+			logs.Debug("compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 
 		n++
