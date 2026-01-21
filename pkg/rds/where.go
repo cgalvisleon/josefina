@@ -391,11 +391,11 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 }
 
 /**
-* Where creates a new Where condition
+* where creates a new Where condition
 * @param condition *Condition
 * @return *Wheres
 **/
-func Where(condition *Condition) *Wheres {
+func where(condition *Condition) *Wheres {
 	result := newWhere()
 	result.conditions = append(result.conditions, condition)
 	return result

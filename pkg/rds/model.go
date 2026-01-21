@@ -130,11 +130,13 @@ func (s *Model) save() error {
 		return nil
 	}
 
-	data, err := s.toJson()
+	scr, err := s.serialize()
 	if err != nil {
 		return err
 	}
-	_, err = databases.upsert(nil, data)
+
+	key := fmt.Sprintf(`%s.%s`, s.Schema, s.Name)
+	err = models.put(key, scr)
 	if err != nil {
 		return err
 	}
@@ -488,91 +490,45 @@ func (s *Model) Stricted() {
 
 /**
 * insert: Inserts the model
-* @param tx *Tx, data et.Json
-* @return et.Json, error
+* @param data et.Json
+* @return *Cmd
 **/
-func (s *Model) insert(tx *Tx, data et.Json) (et.Json, error) {
-	return newCmd(s).insert(tx, data)
+func (s *Model) insert(data et.Json) *Cmd {
+	result := newCmd(s)
+	result.insert(data)
+	return result
 }
 
 /**
 * update: Updates the model
-* @param ctx *Tx, data et.Json, where *Wheres
-* @return []et.Json, error
+* @param data et.Json
+* @return *Cmd
 **/
-func (s *Model) update(ctx *Tx, data et.Json, where *Wheres) ([]et.Json, error) {
-	if where == nil {
-		where = newWhere()
-	}
-	where = where.SetOwner(s)
-	return newCmd(s).update(ctx, data, where)
+func (s *Model) update(data et.Json) *Cmd {
+	result := newCmd(s)
+	result.update(data)
+	return result
 }
 
 /**
 * delete: Deletes the model
-* @param ctx *Tx, where *Wheres
-* @return []et.Json, error
+* @return *Cmd
 **/
-func (s *Model) delete(ctx *Tx, where *Wheres) ([]et.Json, error) {
-	if where == nil {
-		where = newWhere()
-	}
-	where = where.SetOwner(s)
-	return newCmd(s).delete(ctx, where)
+func (s *Model) delete() *Cmd {
+	result := newCmd(s)
+	result.delete()
+	return result
 }
 
 /**
 * upsert: Upserts the model
-* @param ctx *Tx, data et.Json
-* @return []et.Json, error
-**/
-func (s *Model) upsert(ctx *Tx, data et.Json) ([]et.Json, error) {
-	return newCmd(s).upsert(ctx, data)
-}
-
-/**
-* AfterInsert: Adds an after insert trigger
-* @param fn TriggerFunction
+* @param data et.Json
 * @return *Cmd
 **/
-func (s *Model) beforeInsert(fn TriggerFunction) *Cmd {
-	return newCmd(s).beforeInsert(fn)
-}
-
-/**
-* BeforeUpdate: Adds a before update trigger
-* @param fn TriggerFunction
-* @return *Cmd
-**/
-func (s *Model) beforeUpdate(fn TriggerFunction) *Cmd {
-	return newCmd(s).beforeUpdate(fn)
-}
-
-/**
-* BeforeDelete: Adds a before delete trigger
-* @param fn TriggerFunction
-* @return *Cmd
-**/
-func (s *Model) beforeDelete(fn TriggerFunction) *Cmd {
-	return newCmd(s).beforeDelete(fn)
-}
-
-/**
-* AfterUpdate: Adds an after update trigger
-* @param fn TriggerFunction
-* @return *Cmd
-**/
-func (s *Model) afterUpdate(fn TriggerFunction) *Cmd {
-	return newCmd(s).afterUpdate(fn)
-}
-
-/**
-* AfterDelete: Adds an after delete trigger
-* @param fn TriggerFunction
-* @return *Cmd
-**/
-func (s *Model) afterDelete(fn TriggerFunction) *Cmd {
-	return newCmd(s).afterDelete(fn)
+func (s *Model) upsert(data et.Json) *Cmd {
+	result := newCmd(s)
+	result.upsert(data)
+	return result
 }
 
 /**

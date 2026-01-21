@@ -13,12 +13,15 @@ const (
 	INSERT Command = "insert"
 	UPDATE Command = "update"
 	DELETE Command = "delete"
+	UPSERT Command = "upsert"
 )
 
 type Cmd struct {
 	db                   *DB               `json:"-"`
 	model                *Model            `json:"-"`
+	data                 et.Json           `json:"-"`
 	command              Command           `json:"-"`
+	wheres               *Wheres           `json:"-"`
 	beforeTriggerInserts []*Trigger        `json:"-"`
 	beforeTriggerUpdates []*Trigger        `json:"-"`
 	beforeTriggerDeletes []*Trigger        `json:"-"`
@@ -42,6 +45,8 @@ func newCmd(model *Model) *Cmd {
 	result := &Cmd{
 		db:                   model.db,
 		model:                model,
+		data:                 et.Json{},
+		wheres:               newWhere(),
 		beforeTriggerInserts: make([]*Trigger, 0),
 		beforeTriggerUpdates: make([]*Trigger, 0),
 		beforeTriggerDeletes: make([]*Trigger, 0),
@@ -164,14 +169,22 @@ func (s *Cmd) afterDelete(fn TriggerFunction) *Cmd {
 }
 
 /**
-* insert: Inserts the model
-* @param tx *Tx, new et.Json
+* executeInsert
+* @param tx *Tx
 * @return et.Json, error
 **/
-func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
-	tx, commit := getTx(tx)
-	s.command = INSERT
+func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 	model := s.model
+	if model == nil {
+		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+
+	}
+
+	if s.data.IsEmpty() {
+		return nil, fmt.Errorf(msg.MSG_NOT_DATA)
+	}
+
+	new := s.data
 
 	// Validate required fields
 	for _, name := range model.Required {
@@ -259,27 +272,22 @@ func (s *Cmd) insert(tx *Tx, new et.Json) (et.Json, error) {
 		}
 	}
 
-	if commit {
-		err := tx.commit()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return new, nil
+	return et.Json{}, nil
 }
 
 /**
-* update: Updates the model
-* @param tx *Tx, data et.Json, where *Wheres
+* executeUpdate
+* @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
-	tx, commit := getTx(tx)
-	s.command = UPDATE
+func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 	model := s.model
-	wheres.SetOwner(model)
-	items, err := wheres.Rows(tx)
+	if model == nil {
+		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+	}
+
+	s.wheres.SetOwner(model)
+	items, err := s.wheres.Rows(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +296,8 @@ func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
 	if len(items) == 0 {
 		return result, nil
 	}
+
+	data := s.data
 
 	add := func(item et.Json) {
 		result = append(result, item)
@@ -344,27 +354,22 @@ func (s *Cmd) update(tx *Tx, data et.Json, wheres *Wheres) ([]et.Json, error) {
 		add(new)
 	}
 
-	if commit {
-		err := tx.commit()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return result, nil
 }
 
 /**
-* delete: Deletes the model
-* @param tx *Tx, where *Wheres
+* executeDelete
+* @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
-	tx, commit := getTx(tx)
-	s.command = DELETE
+func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 	model := s.model
-	where.SetOwner(model)
-	items, err := where.Rows(tx)
+	if model == nil {
+		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+	}
+
+	s.wheres.SetOwner(model)
+	items, err := s.wheres.Rows(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -423,25 +428,22 @@ func (s *Cmd) delete(tx *Tx, where *Wheres) ([]et.Json, error) {
 		add(old)
 	}
 
-	if commit {
-		err := tx.commit()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return result, nil
 }
 
 /**
-* upsert: Upserts the model
-* @param tx *Tx, new et.Json
+* executeUpsert
+* @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
+func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 	model := s.model
-	where := newWhere()
-	where.SetOwner(model)
+	if model == nil {
+		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+	}
+
+	new := s.data
+
 	exists := true
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.data[name]
@@ -456,16 +458,107 @@ func (s *Cmd) upsert(tx *Tx, new et.Json) ([]et.Json, error) {
 		if !exists {
 			break
 		}
-		where.Add(Eq(name, key))
+		s.wheres.Add(Eq(name, key))
 	}
 
 	if !exists {
-		result, err := s.insert(tx, new)
+		result, err := s.executeInsert(tx)
 		if err != nil {
 			return nil, err
 		}
 		return []et.Json{result}, nil
 	}
 
-	return s.update(tx, new, where)
+	return s.executeUpdate(tx)
+}
+
+/**
+* execute: Executes the command
+* @param tx *Tx
+* @return []et.Json, error
+**/
+func (s *Cmd) execute(tx *Tx) ([]et.Json, error) {
+	tx, commit := getTx(tx)
+	result := []et.Json{}
+	switch s.command {
+	case INSERT:
+		item, err := s.executeInsert(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, item)
+	case UPDATE:
+		items, err := s.executeUpdate(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, items...)
+	case DELETE:
+		items, err := s.executeDelete(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, items...)
+	case UPSERT:
+		items, err := s.executeUpsert(tx)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, items...)
+	}
+
+	if commit {
+		err := tx.commit()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+/**
+* insert: Inserts the model
+* @param new et.Json
+* @return *Cmd
+**/
+func (s *Cmd) insert(new et.Json) *Cmd {
+	s.command = INSERT
+	s.data = new
+	return s
+}
+
+/**
+* update: Updates the model
+* @param data et.Json, where *Wheres
+* @return *Cmd
+**/
+func (s *Cmd) update(data et.Json) *Cmd {
+	s.command = UPDATE
+	s.data = data
+	return s
+}
+
+/**
+* delete: Deletes the model
+* @return *Cmd
+**/
+func (s *Cmd) delete() *Cmd {
+	s.command = DELETE
+	return s
+}
+
+/**
+* upsert: Upserts the model
+* @param tx *Tx, new et.Json
+* @return []et.Json, error
+**/
+func (s *Cmd) upsert(new et.Json) *Cmd {
+	s.command = UPSERT
+	s.data = new
+	return s
 }

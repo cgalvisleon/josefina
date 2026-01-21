@@ -38,7 +38,6 @@ type DB struct {
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
 	tennant *Tennant           `json:"-"`
-	changed bool               `json:"-"`
 }
 
 /**
@@ -90,16 +89,13 @@ func (s *DB) save() error {
 		return nil
 	}
 
-	if !s.changed {
-		return nil
-	}
-
 	scr, err := s.serialize()
 	if err != nil {
 		return err
 	}
 
-	err = databases.put(s.Name, scr)
+	key := fmt.Sprintf("%s", s.Name)
+	err = databases.put(key, scr)
 	if err != nil {
 		return err
 	}

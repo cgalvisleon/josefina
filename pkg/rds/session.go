@@ -3,9 +3,7 @@ package rds
 import (
 	"time"
 
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/et/timezone"
 )
 
 type Session struct {
@@ -26,17 +24,6 @@ func NewSession(username string) *Session {
 		Id:        id,
 		Username:  username,
 	}
-}
-
-func (s *Session) Insert(tx *Tx, model *Model, new et.Json) (et.Json, error) {
-	tx, commit := s.getTx(tx)
-	result, err := model.insert(tx, new)
-	if err != nil {
-		return nil, err
-	}
-
-	
-	return result, nil
 }
 
 var sessions []*Session
