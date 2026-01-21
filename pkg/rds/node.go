@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/rpc"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -32,14 +31,13 @@ type Node struct {
 
 /**
 * newNode
-* @param tp TypeNode, version, path string
+* @param tp TypeNode, host string, port int, path, version string
 * @return *Node
 **/
-func newNode(tp TypeNode, version, path string) *Node {
-	port := envar.GetInt("RPC_PORT", 4200)
+func newNode(tp TypeNode, host string, port int, path, version string) *Node {
 	return &Node{
 		Type:    tp,
-		Host:    hostName,
+		Host:    host,
 		Port:    port,
 		Version: version,
 		Path:    path,

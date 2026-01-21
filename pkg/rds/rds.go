@@ -11,12 +11,7 @@ import (
 var (
 	packageName = "josefina"
 	node        *Node
-	hostName    string
 )
-
-func init() {
-	hostName, _ = os.Hostname()
-}
 
 /**
 * LoadMaster: Initializes the josefina
@@ -27,8 +22,14 @@ func loadMaster(version string) error {
 		return nil
 	}
 
+	host, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
-	node = newNode(Master, version, path)
+	port := envar.GetInt("RPC_PORT", 4200)
+	node = newNode(Master, host, port, path, version)
 	db := newDb(node.Path, packageName, node.Version)
 	if err := initTransactions(db); err != nil {
 		return err
@@ -64,8 +65,14 @@ func loadFollow(version string) error {
 		return nil
 	}
 
+	host, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
-	node = newNode(Master, version, path)
+	port := envar.GetInt("RPC_PORT", 4200)
+	node = newNode(Follow, host, port, path, version)
 	return nil
 }
 
