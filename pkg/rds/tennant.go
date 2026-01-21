@@ -114,25 +114,6 @@ func (s *Tennant) newDb(name string) (*DB, error) {
 
 /**
 * loadDb
-* @param name string
-* @return *DB, error
-**/
-func (s *Tennant) getDb(name string) (*DB, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
-	result, ok := s.Dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
-}
-
-/**
-* loadDb
 * @param db *DB
 * @return error
 **/
@@ -185,18 +166,4 @@ func (s *Tennant) loadDbs() error {
 		return true, nil
 	}, true, 0, 0, 1)
 	return err
-}
-
-/**
-* getModel
-* @param database string, schema string, model string
-* @return *Model, error
-**/
-func (s *Tennant) getModel(database, schema, name string) (*Model, error) {
-	db, err := s.getDb(database)
-	if err != nil {
-		return nil, err
-	}
-
-	return db.getModel(schema, name)
 }

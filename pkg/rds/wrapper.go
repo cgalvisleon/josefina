@@ -117,7 +117,7 @@ func wrapperModel(vm *Vm) {
 		database := args[0].String()
 		schema := args[1].String()
 		model := args[1].String()
-		result, err := GetModel(database, schema, model)
+		result, err := getModel(database, schema, model)
 		if err != nil {
 			panic(vm.NewGoError(err))
 		}

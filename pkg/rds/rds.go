@@ -20,8 +20,7 @@ func init() {
 * Init: Initializes the josefina
 * @return error
 **/
-
-func Init(version string) error {
+func Server(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	name := envar.GetStr("TENNANT_NAME", "josefina")
 	var err error
@@ -34,11 +33,20 @@ func Init(version string) error {
 }
 
 /**
-* GetDB: Returns a database by name
+* Node: Initializes the josefina as a node
+* @param version string
+* @return error
+**/
+func Node(version string) error {
+	return Server(version)
+}
+
+/**
+* getDB: Returns a database by name
 * @param name string
 * @return *DB, error
 **/
-func GetDB(name string) (*DB, error) {
+func getDB(name string) (*DB, error) {
 	result, err := tennant.getDb(name)
 	if err != nil {
 		return nil, err
@@ -52,8 +60,8 @@ func GetDB(name string) (*DB, error) {
 * @param database string, schema string, model string
 * @return *Model, error
 **/
-func GetModel(database, schema, model string) (*Model, error) {
-	db, err := GetDB(database)
+func getModel(database, schema, model string) (*Model, error) {
+	db, err := getDB(database)
 	if err != nil {
 		return nil, err
 	}

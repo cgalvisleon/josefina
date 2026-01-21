@@ -16,8 +16,37 @@ type Session struct {
 	Token     string    `json:"token"`
 }
 
+/**
+* NewSession: Creates a new session
+* @param device, username string
+* @return *Session, error
+**/
+func newSession(device, username string) (*Session, error) {
+	token, err := claim.NewToken(packageName, device, username, et.Json{}, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &Session{
+		CreatedAt: time.Now(),
+		Username:  username,
+		Token:     token,
+	}
+
+	sessions.add(result)
+	return result, nil
+}
+
 type Sessions struct {
 	sessions []*Session `json:"-"`
+}
+
+var sessions *Sessions
+
+func init() {
+	sessions = &Sessions{
+		sessions: make([]*Session, 0),
+	}
 }
 
 /**
@@ -57,41 +86,12 @@ func (s *Sessions) get(token string) *Session {
 	return nil
 }
 
-var sessions *Sessions
-
-func init() {
-	sessions = &Sessions{
-		sessions: make([]*Session, 0),
-	}
-}
-
 /**
-* NewSession: Creates a new session
-* @param device, username string
-* @return *Session, error
-**/
-func newSession(device, username string) (*Session, error) {
-	token, err := claim.NewToken(packageName, device, username, et.Json{}, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &Session{
-		CreatedAt: time.Now(),
-		Username:  username,
-		Token:     token,
-	}
-
-	sessions.add(result)
-	return result, nil
-}
-
-/**
-* signIn: Sign in a user
+* SignIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/
-func signIn(device, username, password string) (*Session, error) {
+func SignIn(device, username, password string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -112,4 +112,9 @@ func signIn(device, username, password string) (*Session, error) {
 	}
 
 	return newSession(device, username)
+}
+
+func (s *Session) CreateDatabase(name string) error {
+	// TODO: Implement database creation logic
+	return nil
 }

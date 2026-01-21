@@ -49,6 +49,16 @@ func initUsers(db *DB) error {
 * @return error
 **/
 func createUser(username, password string) error {
+	if users == nil {
+		return errors.New(msg.MSG_USERS_NOT_FOUND)
+	}
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(password, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
 	_, err := users.
 		Insert(et.Json{
 			"username": username,
@@ -80,10 +90,20 @@ func dropUser(username string) error {
 
 /**
 * changuePassword: Changues the password of a user
-* @param username, newpassword string
+* @param username, password string
 * @return error
 **/
-func changuePassword(username, newpassword string) error {
+func changuePassword(username, password string) error {
+	if users == nil {
+		return errors.New(msg.MSG_USERS_NOT_FOUND)
+	}
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(password, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
 	ok, err := users.isExisted("username", username)
 	if err != nil {
 		return err
@@ -94,7 +114,7 @@ func changuePassword(username, newpassword string) error {
 
 	_, err = users.
 		Update(et.Json{
-			"password": newpassword,
+			"password": password,
 		}).
 		Where(Eq("username", username)).
 		Execute(nil)
