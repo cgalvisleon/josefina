@@ -78,7 +78,9 @@ func loadFollow(version string) error {
 
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	port := envar.GetInt("RPC_PORT", 4200)
+	master := envar.GetStr("MASTER_HOST", "")
 	node = newNode(FOLLOW, host, port, path, version)
+	node.master = master
 
 	services := new(Follow)
 	err = node.mount(services)

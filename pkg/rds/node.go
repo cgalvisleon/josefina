@@ -118,6 +118,32 @@ func (s *Node) mount(services any) error {
 }
 
 /**
+* addNode
+* @param node string
+**/
+func (s *Node) addNode(node string) {
+	s.nodes[node] = true
+}
+
+/**
+* getDb
+* @param name string
+* @return *DB, error
+**/
+func (s *Node) getDb(name string) (*DB, error) {
+	result, ok := s.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	if s.master != "" {
+
+	}
+
+	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+}
+
+/**
 * newDb
 * @param name string
 * @return *DB, error
@@ -137,26 +163,4 @@ func (s *Node) newDb(name string) (*DB, error) {
 	s.dbs[name] = result
 
 	return result, nil
-}
-
-/**
-* getDb
-* @param name string
-* @return *DB, error
-**/
-func (s *Node) getDb(name string) (*DB, error) {
-	result, ok := s.dbs[name]
-	if !ok {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
-	}
-
-	return result, nil
-}
-
-/**
-* addNode
-* @param node string
-**/
-func (s *Node) addNode(node string) {
-	s.nodes[node] = true
 }
