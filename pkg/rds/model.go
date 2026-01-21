@@ -136,7 +136,7 @@ func (s *Model) save() error {
 	}
 
 	key := fmt.Sprintf(`%s.%s`, s.Schema, s.Name)
-	err = models.put(key, scr)
+	err = models.Put(key, scr)
 	if err != nil {
 		return err
 	}
@@ -313,13 +313,13 @@ func (s *Model) getKey() string {
 * @param idx string, valu any
 * @return error
 **/
-func (s *Model) put(key string, valu any) error {
+func (s *Model) Put(key string, value any) error {
 	source, err := s.source()
 	if err != nil {
 		return err
 	}
 
-	err = source.Put(key, valu)
+	err = source.Put(key, value)
 	if err != nil {
 		return err
 	}
@@ -335,7 +335,7 @@ func (s *Model) put(key string, valu any) error {
 * @param key string
 * @return error
 **/
-func (s *Model) remove(key string) error {
+func (s *Model) Remove(key string) error {
 	source, err := s.source()
 	if err != nil {
 		return err

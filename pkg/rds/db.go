@@ -95,7 +95,7 @@ func (s *DB) save() error {
 	}
 
 	key := fmt.Sprintf("%s", s.Name)
-	err = databases.put(key, scr)
+	err = databases.Put(key, scr)
 	if err != nil {
 		return err
 	}
