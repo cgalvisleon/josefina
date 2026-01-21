@@ -187,8 +187,7 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *Model, error
 **/
 func (s *DB) NewModel(schema, name string, version int) (*Model, error) {
-	sch := s.newSchema(schema)
-	result, err := sch.newModel(name, false, version)
+	result, err := s.newModel(schema, name, false, version)
 	if err != nil {
 		return nil, err
 	}
