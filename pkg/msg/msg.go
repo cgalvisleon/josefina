@@ -41,6 +41,7 @@ var (
 	MSG_USERNAME_REQUIRED          = "username is required"
 	MSG_PASSWORD_REQUIRED          = "password is required"
 	MSG_AUTHENTICATION_FAILED      = "authentication failed"
+	MSG_NODE_NOT_INITIALIZED       = "node not initialized"
 )
 
 func init() {
@@ -84,5 +85,6 @@ func init() {
 		MSG_USERNAME_REQUIRED = "username es requerido"
 		MSG_PASSWORD_REQUIRED = "password es requerido"
 		MSG_AUTHENTICATION_FAILED = "autenticación fallida"
+		MSG_NODE_NOT_INITIALIZED = "nodo no inicializado"
 	}
 }

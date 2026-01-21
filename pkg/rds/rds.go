@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
@@ -8,8 +9,9 @@ import (
 )
 
 var (
-	node     *Node
-	hostName string
+	packageName = "josefina"
+	node        *Node
+	hostName    string
 )
 
 func init() {
@@ -71,7 +73,11 @@ func LoadFollow(version string) error {
 * @return *DB, error
 **/
 func getDB(name string) (*DB, error) {
-	result, err := tennant.getDb(name)
+	if node == nil {
+		return nil, fmt.Errorf("node not initialized")
+	}
+
+	result, err := node.getDb(name)
 	if err != nil {
 		return nil, err
 	}
