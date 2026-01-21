@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 )
 
@@ -95,8 +94,7 @@ func (s *FileStore) Compact() error {
 		}
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
-		isDebug := envar.GetBool("DEBUG", false)
-		if isDebug {
+		if s.isDebug {
 			logs.Debug("compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 

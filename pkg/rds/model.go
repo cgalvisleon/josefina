@@ -77,7 +77,7 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
-	IsDebug       bool                        `json:"-"`
+	isDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
 	data          map[string]*store.FileStore `json:"-"`
@@ -190,7 +190,7 @@ func (s *Model) init() error {
 	}
 
 	for _, name := range s.Indexes {
-		fStore, err := store.Open(path, name, s.IsDebug)
+		fStore, err := store.Open(path, name, s.isDebug)
 		if err != nil {
 			return err
 		}

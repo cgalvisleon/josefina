@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -50,8 +49,7 @@ func (s *FileStore) CreateSnapshot() error {
 		binary.Write(buf, binary.BigEndian, uint32(ref.segment))
 		binary.Write(buf, binary.BigEndian, ref.offset)
 		binary.Write(buf, binary.BigEndian, ref.length)
-		isDebug := envar.GetBool("DEBUG", false)
-		if isDebug {
+		if s.isDebug {
 			logs.Debug("snapshot:", s.Path, ":", s.Name, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}

@@ -74,6 +74,7 @@ type FileStore struct {
 	MaxSegment   int64                 `json:"max_segment"`
 	SyncOnWrite  bool                  `json:"sync_on_write"`
 	Size         int64                 `json:"size"`
+	isDebug      bool                  `json:"-"`
 	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
 	segments     []*segment            `json:"-"` // segmentos de datos
@@ -480,8 +481,7 @@ func (s *FileStore) Put(id string, value any) error {
 	s.index[id] = ref
 	s.indexMu.Unlock()
 
-	isDebug := envar.GetBool("DEBUG", false)
-	if isDebug {
+	if s.isDebug {
 		i := len(s.index)
 		logs.Debug("put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
@@ -514,8 +514,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
 
-	isDebug := envar.GetBool("DEBUG", false)
-	if isDebug {
+	if s.isDebug {
 		i := len(s.index)
 		logs.Debug("deleted:", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
 	}
@@ -691,10 +690,10 @@ func (s *FileStore) Empty() error {
 
 /**
 * Open
-* @param path, name string, debug bool
+* @param path, name string,
 * @return *FileStore, error
 **/
-func Open(path, name string, debug bool) (*FileStore, error) {
+func Open(path, name string, isDebug bool) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
 	name = utility.Normalize(name)
