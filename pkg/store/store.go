@@ -193,7 +193,9 @@ func (s *FileStore) newSegment() error {
 		s.active.Close()
 	}
 	s.active = seg
-	logs.Log(packageName, "new:segment:", s.Path, ":", s.Name, ":", seg.ToString())
+	if s.isDebug {
+		logs.Log(packageName, "new:segment:", s.Path, ":", s.Name, ":", seg.ToString())
+	}
 	return nil
 }
 
