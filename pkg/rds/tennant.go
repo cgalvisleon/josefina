@@ -11,28 +11,34 @@ const (
 	packageName = "josefina"
 )
 
-type Tennant struct {
-	*Node
-	Nodes []string `json:"nodes"`
-}
-
 /**
 * loadTennant
 * @param name string
 * @return *Tennant, error
 **/
-func loadTennant(path, version string) (*Tennant, error) {
-	node, err := newNode(version, path)
+func loadMaster(path, version string) (*Node, error) {
+	result, err := newNode(Master, version, path)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &Tennant{
-		Node:  node,
-		Nodes: []string{},
+	db := newDb(result.Path, packageName, result.Version)
+	if err := initTransactions(db); err != nil {
+		return nil, err
 	}
-	err = result.load()
-	if err != nil {
+	if err := initDatabases(db); err != nil {
+		return nil, err
+	}
+	if err := initUsers(db); err != nil {
+		return nil, err
+	}
+	if err := initSeries(db); err != nil {
+		return nil, err
+	}
+	if err := initRecords(db); err != nil {
+		return nil, err
+	}
+	if err := initModels(db); err != nil {
 		return nil, err
 	}
 

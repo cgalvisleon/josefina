@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	tennant  *Tennant
+	node     *Node
 	hostName string
 )
 
@@ -20,10 +20,26 @@ func init() {
 * Init: Initializes the josefina
 * @return error
 **/
-func Server(version string) error {
+func Master(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	var err error
-	tennant, err = loadTennant(path, version)
+	node, err = loadMaster(path, version)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Follow: Initializes the josefina as a follow node
+* @param version string
+* @return error
+**/
+func Follow(version string) error {
+	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
+	var err error
+	node, err = loadMaster(path, version)
 	if err != nil {
 		return err
 	}
