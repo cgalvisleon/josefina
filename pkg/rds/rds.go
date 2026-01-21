@@ -17,14 +17,33 @@ func init() {
 }
 
 /**
-* Init: Initializes the josefina
+* LoadMaster: Initializes the josefina
 * @return error
 **/
-func Master(version string) error {
+func LoadMaster(version string) error {
+	if node != nil {
+		return nil
+	}
+
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
-	var err error
-	node, err = loadMaster(path, version)
-	if err != nil {
+	node = newNode(Master, version, path)
+	db := newDb(node.Path, packageName, node.Version)
+	if err := initTransactions(db); err != nil {
+		return err
+	}
+	if err := initDatabases(db); err != nil {
+		return err
+	}
+	if err := initUsers(db); err != nil {
+		return err
+	}
+	if err := initSeries(db); err != nil {
+		return err
+	}
+	if err := initRecords(db); err != nil {
+		return err
+	}
+	if err := initModels(db); err != nil {
 		return err
 	}
 
@@ -36,14 +55,13 @@ func Master(version string) error {
 * @param version string
 * @return error
 **/
-func Follow(version string) error {
-	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
-	var err error
-	node, err = loadMaster(path, version)
-	if err != nil {
-		return err
+func LoadFollow(version string) error {
+	if node != nil {
+		return nil
 	}
 
+	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
+	node = newNode(Master, version, path)
 	return nil
 }
 

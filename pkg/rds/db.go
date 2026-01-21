@@ -166,20 +166,6 @@ func (s *DB) newSchema(name string) *Schema {
 }
 
 /**
-* load: Loads the database
-* @param tennant *Tennant
-* @return error
-**/
-func (s *DB) load(tennant *Tennant) error {
-	s.Path = fmt.Sprintf("%s/%s", tennant.Path, s.Name)
-	for _, schema := range s.Schemas {
-		schema.load(s)
-	}
-
-	return nil
-}
-
-/**
 * newModel: Creates a new model
 * @param schema string, name string, isCore bool, version int
 * @return *Model, error

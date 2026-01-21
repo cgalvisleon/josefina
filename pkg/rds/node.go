@@ -11,18 +11,19 @@ import (
 type TypeNode string
 
 const (
-	TpMaster TypeNode = "master"
-	TpFollow TypeNode = "follow"
+	Master TypeNode = "master"
+	Follow TypeNode = "follow"
 )
 
 type Node struct {
-	Type    TypeNode       `json:"type"`
-	Host    string         `json:"name"`
-	Port    int            `json:"port"`
-	Version string         `json:"version"`
-	Path    string         `json:"path"`
-	dbs     map[string]*DB `json:"-"`
-	nodes   []string       `json:"-"`
+	Type    TypeNode        `json:"type"`
+	Host    string          `json:"name"`
+	Port    int             `json:"port"`
+	Version string          `json:"version"`
+	Path    string          `json:"path"`
+	master  string          `json:"-"`
+	dbs     map[string]*DB  `json:"-"`
+	nodes   map[string]bool `json:"-"`
 }
 
 /**
@@ -39,7 +40,7 @@ func newNode(tp TypeNode, version, path string) *Node {
 		Version: version,
 		Path:    path,
 		dbs:     make(map[string]*DB),
-		nodes:   make([]string, 0),
+		nodes:   make(map[string]bool),
 	}
 }
 
@@ -77,4 +78,12 @@ func (s *Node) getDb(name string) (*DB, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* addNode
+* @param node string
+**/
+func (s *Node) addNode(node string) {
+	s.nodes[node] = true
 }

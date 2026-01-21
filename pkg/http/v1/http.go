@@ -17,7 +17,7 @@ var (
 * @return error
 **/
 func Init() (http.Handler, error) {
-	err := rds.Master(Version)
+	err := rds.LoadMaster(Version)
 	if err != nil {
 		return nil, err
 	}

@@ -12,40 +12,6 @@ const (
 )
 
 /**
-* loadTennant
-* @param name string
-* @return *Tennant, error
-**/
-func loadMaster(path, version string) (*Node, error) {
-	result, err := newNode(Master, version, path)
-	if err != nil {
-		return nil, err
-	}
-
-	db := newDb(result.Path, packageName, result.Version)
-	if err := initTransactions(db); err != nil {
-		return nil, err
-	}
-	if err := initDatabases(db); err != nil {
-		return nil, err
-	}
-	if err := initUsers(db); err != nil {
-		return nil, err
-	}
-	if err := initSeries(db); err != nil {
-		return nil, err
-	}
-	if err := initRecords(db); err != nil {
-		return nil, err
-	}
-	if err := initModels(db); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-/**
 * load
 * @return error
 **/
