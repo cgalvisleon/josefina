@@ -270,8 +270,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		return result, nil
 	}
 
-	cnds := []*Condition{}
-	cndsIndex := []*Condition{}
+	onlyKeys := true
 	for _, con := range s.conditions {
 		value := con.Value
 		switch v := value.(type) {
@@ -292,11 +291,10 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		field := con.Field
 		index, ok := model.index(field)
 		if !ok {
-			cnds = append(cnds, con)
+			onlyKeys = false
 			continue
 		}
 
-		cndsIndex = append(cndsIndex, con)
 		keys, ok := s.keys[field]
 		if !ok {
 			asc := s.Order(field)
@@ -308,6 +306,22 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 
 	// Items by keys
 	items := []et.Json{}
+	addItem := func(item et.Json) {
+		index, ok := item[INDEX]
+		if !ok {
+			return
+		}
+
+		if index == "" {
+			return
+		}
+
+		idx := slices.IndexFunc(items, func(v et.Json) bool { return v[INDEX] == index })
+		if idx == -1 {
+			items = append(items, item)
+		}
+	}
+
 	for field, keys := range s.keys {
 		for _, key := range keys {
 			indexes := map[string]bool{}
@@ -327,33 +341,28 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 				}
 
 				if exists {
-					index, ok := item[INDEX]
-					if !ok {
-						continue
-					}
-
-					if index == "" {
-						continue
-					}
-
-					idx := slices.IndexFunc(items, func(v et.Json) bool { return v[INDEX] == index })
-					if idx == -1 {
-						items = append(items, item)
-					}
+					addItem(item)
 				}
 			}
 		}
 	}
 
+	// Items by cache
+	cache := tx.getRecors(model.Name)
+	for _, record := range cache {
+		item := record.Data
+		addItem(item)
+	}
+
 	next := true
 	for _, item := range items {
-		next = validateItem(item, cndsIndex)
+		next = validateItem(item, s.conditions)
 		if !next {
 			return result, nil
 		}
 	}
 
-	if len(cnds) == 0 {
+	if onlyKeys {
 		return result, nil
 	}
 
@@ -366,7 +375,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 			return false, err
 		}
 
-		next = validateItem(item, cnds)
+		next = validateItem(item, s.conditions)
 		return next, nil
 	}, asc, s.offset, s.limit, s.workers)
 	if err != nil {
@@ -375,17 +384,6 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 
 	if !next {
 		return result, nil
-	}
-
-	// Items by cache
-	cache := tx.getRecors(model.Name)
-	for _, record := range cache {
-		item := record.Data
-
-		next = validateItem(item, cnds)
-		if !next {
-			return result, nil
-		}
 	}
 
 	return result, nil
