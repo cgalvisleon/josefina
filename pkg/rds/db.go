@@ -23,8 +23,6 @@ func initDatabases(db *DB) error {
 	if err != nil {
 		return err
 	}
-	databases.DefineAtrib("name", TpText, "")
-	databases.definePrimaryKey("name")
 	if err := databases.init(); err != nil {
 		return err
 	}

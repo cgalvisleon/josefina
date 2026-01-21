@@ -30,9 +30,6 @@ func initModels(db *DB) error {
 	if err != nil {
 		return err
 	}
-	models.DefineAtrib("schema", TpText, "")
-	models.DefineAtrib("name", TpText, "")
-	models.DefinePrimaryKeys("schema", "name")
 	if err := models.init(); err != nil {
 		return err
 	}
@@ -99,10 +96,10 @@ func (s *Model) serialize() ([]byte, error) {
 }
 
 /**
-* toJson
+* ToJson
 * @return et.Json, error
 **/
-func (s *Model) toJson() (et.Json, error) {
+func (s *Model) ToJson() (et.Json, error) {
 	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
