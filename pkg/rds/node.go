@@ -33,6 +33,7 @@ func newNode(version, path string) (*Node, error) {
 		Version: version,
 		Path:    path,
 		Dbs:     make(map[string]*DB),
+		db:      newDb(path, packageName, version),
 	}, nil
 }
 

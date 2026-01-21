@@ -39,7 +39,6 @@ type DB struct {
 	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
-	isCore  bool               `json:"-"`
 }
 
 /**
@@ -93,10 +92,6 @@ func (s *DB) toJson() (et.Json, error) {
 * @return error
 **/
 func (s *DB) save() error {
-	if s.isCore {
-		return nil
-	}
-
 	if databases == nil {
 		return nil
 	}
