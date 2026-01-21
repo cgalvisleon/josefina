@@ -137,6 +137,7 @@ func newTransaction(tx *Tx, model *Model) *transaction {
 type Tx struct {
 	StartedAt    time.Time      `json:"startedAt"`
 	EndedAt      time.Time      `json:"endedAt"`
+	Session      string         `json:"session"`
 	Id           string         `json:"id"`
 	Transactions []*transaction `json:"transactions"`
 }
