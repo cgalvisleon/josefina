@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
@@ -50,22 +49,4 @@ func Load(version string) error {
 	}
 
 	return nil
-}
-
-/**
-* GetModel: Returns a model by database, schema and name
-* @param database string, schema string, model string
-* @return *Model, error
-**/
-func getModel(database, schema, model string) (*Model, error) {
-	if node == nil {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	db, err := getDB(database)
-	if err != nil {
-		return nil, err
-	}
-
-	return db.getModel(schema, model)
 }

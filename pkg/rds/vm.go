@@ -25,7 +25,6 @@ func newVm() *Vm {
 	wrapperToJson(result)
 	wrapperToString(result)
 	wrapperModel(result)
-	wrapperSelect(result)
 	return result
 }
 

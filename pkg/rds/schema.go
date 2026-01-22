@@ -80,9 +80,9 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 **/
 func (s *Schema) getModel(name string) (*Model, error) {
 	result, ok := s.Models[name]
-	if !ok {
-		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	if ok {
+		return result, nil
 	}
 
-	return result, nil
+	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 }

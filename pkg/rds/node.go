@@ -224,12 +224,36 @@ func (s *Node) getDb(name string) (*DB, error) {
 * @return *Model, error
 **/
 func (s *Node) getModel(database, schema, model string) (*Model, error) {
-	db, err := s.getDb(database)
+	key := model
+	if schema != "" {
+		key = fmt.Sprintf("%s.%s", schema, key)
+	}
+	if database != "" {
+		key = fmt.Sprintf("%s.%s", database, key)
+	}
+
+	result, ok := s.models[key]
+	if ok {
+		return result, nil
+	}
+
+	if s.master != "" {
+		result, err := methods.getModel(database, schema, model)
+		if err != nil {
+			return nil, err
+		}
+
+		s.models[key] = result
+		return result, nil
+	}
+
+	result, err := getModel(database, schema, model)
 	if err != nil {
 		return nil, err
 	}
 
-	return db.getModel(schema, model)
+	s.models[key] = result
+	return result, nil
 }
 
 func init() {

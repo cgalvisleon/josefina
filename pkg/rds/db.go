@@ -149,7 +149,7 @@ func (s *DB) getSchema(name string) (*Schema, error) {
 
 /**
 * getModel: Returns a model by schema and name
-* @param schema string, name string
+* @param schema, name string
 * @return *Model, error
 **/
 func (s *DB) getModel(schema, name string) (*Model, error) {

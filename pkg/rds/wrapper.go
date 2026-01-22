@@ -125,23 +125,3 @@ func wrapperModel(vm *Vm) {
 		return vm.ToValue(result)
 	})
 }
-
-/**
-* wrapperSelect: Wraps the select
-* @param vm *Vm
-**/
-func wrapperSelect(vm *Vm) {
-	vm.Set("select", func(call goja.FunctionCall) goja.Value {
-		args := call.Arguments
-		if len(args) != 1 {
-			panic(vm.NewGoError(fmt.Errorf(msg.MSG_ARG_REQUIRED, "query")))
-		}
-		query := args[0].Export().(map[string]interface{})
-		result, err := Select(query)
-		if err != nil {
-			panic(vm.NewGoError(err))
-		}
-
-		return vm.ToValue(result)
-	})
-}
