@@ -161,8 +161,12 @@ func (s *Node) addNode(host string, port int, version string) error {
 		return err
 	}
 
-	data := s.toJson()
 	key := fmt.Sprintf("%s:%d", host, port)
+	data := et.Json{
+		"host":    host,
+		"rpcPort": port,
+		"version": version,
+	}
 	err = nodes.putData(key, data)
 	if err != nil {
 		return err
