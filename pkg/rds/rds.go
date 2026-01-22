@@ -47,12 +47,5 @@ func Load(version string) error {
 
 	go node.start()
 
-	if node.leader != "" {
-		err = methods.ping(node.leader)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
