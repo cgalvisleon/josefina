@@ -48,20 +48,36 @@ func initSeries() error {
 * @return error
 **/
 func createSerie(name, tag, format string, value int) error {
-	if series == nil {
-		return errors.New(msg.MSG_SERIES_NOT_FOUND)
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
+
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
+
+	if node.leader != node.host {
+		err := methods.createSerie(name, tag, format, value)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initSeries()
+	if err != nil {
+		return err
+	}
+
 	if format == "" {
 		format = `%d`
 	}
 
-	_, err := series.
+	_, err = series.
 		Insert(et.Json{
 			"name":   name,
 			"tag":    tag,
