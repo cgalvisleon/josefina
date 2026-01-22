@@ -3,7 +3,6 @@ package rds
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -25,11 +24,15 @@ func init() {
 }
 
 /**
-* getVote: Returns the votes for a tag
+* makeVote: Returns the votes for a tag
 * @param tag string
 * @return string, error
 **/
-func getVote(tag, host string) (string, error) {
+func makeVote(tag string) (string, error) {
+	if node == nil {
+		return "", fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	if methods == nil {
 		return "", fmt.Errorf(msg.MSG_METHODS_NOT_INITIALIZED)
 	}
@@ -39,25 +42,24 @@ func getVote(tag, host string) (string, error) {
 
 	result, ok := votes.votes[tag]
 	if ok {
-		time.AfterFunc(1*time.Minute, func() {
-			delete(votes.votes, tag)
-		})
-
 		return result, nil
 	}
 
-	votes.votes[tag] = host
+	votes.votes[tag] = node.host
 	nodes, err := getNodes()
 	if err != nil {
 		return "", err
 	}
 
 	results := make(map[string]int)
-	for _, host := range nodes {
+	results[node.host]++
+	post := -1
+	for i, host := range nodes {
 		if host == node.host {
+			post = i
 			continue
 		}
-		
+
 		res, err := methods.getVote(tag, host)
 		if err != nil {
 			continue
@@ -65,5 +67,31 @@ func getVote(tag, host string) (string, error) {
 		results[res]++
 	}
 
+	maxVotos := -1
+	for host, v := range results {
+		if v > maxVotos {
+			maxVotos = v
+			result = host
+		}
+	}
+
 	return result, nil
+}
+
+/**
+* getVote: Returns the votes for a tag
+* @param tag string
+* @return string, error
+**/
+func getVote(tag, host string) string {
+	votes.mu.Lock()
+	defer votes.mu.Unlock()
+
+	result, ok := votes.votes[tag]
+	if ok {
+		return result
+	}
+
+	votes.votes[tag] = host
+	return host
 }

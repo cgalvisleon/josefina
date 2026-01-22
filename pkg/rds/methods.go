@@ -74,12 +74,13 @@ func (s *Methods) getVote(tag, host string) (string, error) {
 func (s *Methods) GetVote(require et.Json, response *string) error {
 	tag := require.Str("tag")
 	host := require.Str("host")
-	result, err := getVote(tag, host)
-	if err != nil {
-		return err
-	}
+	result := make(chan string)
+	go func() {
+		res := getVote(tag, host)
+		result <- res
+	}()
 
-	*response = result
+	*response = <-result
 	return nil
 }
 
