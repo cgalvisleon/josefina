@@ -149,8 +149,41 @@ func (s *Node) mount(services any) error {
 * addNode
 * @param node string
 **/
-func (s *Node) addNode(node string) {
-	s.nodes[node] = true
+func (s *Node) addNode(host string, port int, version string) error {
+	err := initNodes()
+	if err != nil {
+		return err
+	}
+
+	data := s.toJson()
+	key := fmt.Sprintf("%s:%d", host, port)
+	err = nodes.putData(key, data)
+	if err != nil {
+		return err
+	}
+
+	s.nodes[key] = true
+	return nil
+}
+
+/**
+* removeNode
+* @param node string
+**/
+func (s *Node) removeNode(host string, port int) error {
+	err := initNodes()
+	if err != nil {
+		return err
+	}
+
+	key := fmt.Sprintf("%s:%d", host, port)
+	err = nodes.removeData(key)
+	if err != nil {
+		return err
+	}
+
+	delete(s.nodes, key)
+	return nil
 }
 
 /**
