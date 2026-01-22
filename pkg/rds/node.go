@@ -131,9 +131,8 @@ func (s *Node) mount(services any) error {
 * @return *DB, error
 **/
 func (s *Node) getDb(name string) (*DB, error) {
-	result, ok := s.dbs[name]
-	if ok {
-		return result, nil
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	if s.leader != "" {
@@ -142,13 +141,26 @@ func (s *Node) getDb(name string) (*DB, error) {
 			return nil, err
 		}
 
-		s.dbs[name] = result
 		return result, nil
 	}
 
-	result, err := getDB(name)
+	result, ok := s.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	err := initDatabases()
 	if err != nil {
 		return nil, err
+	}
+
+	exists, err := databases.get(name, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 	}
 
 	s.dbs[name] = result
@@ -157,11 +169,18 @@ func (s *Node) getDb(name string) (*DB, error) {
 
 /**
 * getModel
-* @param database, schema, model string
+* @param database, schema, name, host string
 * @return *Model, error
 **/
-func (s *Node) getModel(database, schema, model string) (*Model, error) {
-	key := model
+func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	key := name
 	if schema != "" {
 		key = fmt.Sprintf("%s.%s", schema, key)
 	}
@@ -175,16 +194,24 @@ func (s *Node) getModel(database, schema, model string) (*Model, error) {
 	}
 
 	if s.leader != "" {
-		result, err := methods.getModel(database, schema, model)
+		result, err := methods.getModel(database, schema, name, s.host)
 		if err != nil {
 			return nil, err
 		}
 
-		s.models[key] = result
+		if result.Host == s.host {
+			s.models[key] = result
+		}
 		return result, nil
 	}
 
-	result, err := getModel(database, schema, model)
+	db, err := s.getDb(database)
+	if err != nil {
+		return nil, err
+	}
+
+
+	result, err = getModel(database, schema, model)
 	if err != nil {
 		return nil, err
 	}

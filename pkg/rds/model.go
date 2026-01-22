@@ -623,21 +623,3 @@ func (s *Model) Selects(fields ...string) *Wheres {
 	}
 	return result
 }
-
-/**
-* GetModel: Returns a model by database, schema and name
-* @param database, schema, model string
-* @return *Model, error
-**/
-func getModel(database, schema, model string) (*Model, error) {
-	if node == nil {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	db, err := getDB(database)
-	if err != nil {
-		return nil, err
-	}
-
-	return db.getModel(schema, model)
-}

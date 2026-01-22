@@ -150,7 +150,7 @@ func (s *Methods) GetDB(require string, response *DB) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getModel(database, schema, model string) (*Model, error) {
+func (s *Methods) getModel(database, schema, model, host string) (*Model, error) {
 	var response Model
 	err := jrpc.CallRpc(node.leader, "Methods.GetModel", et.Json{
 		"database": database,
@@ -177,7 +177,8 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	model := require.Str("model")
-	result, err := node.getModel(database, schema, model)
+	host := require.Str("host")
+	result, err := node.getModel(database, schema, model, host)
 	if err != nil {
 		return err
 	}

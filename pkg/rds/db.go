@@ -193,38 +193,3 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 	sch := s.newSchema(schema)
 	return sch.newModel(name, isCore, version)
 }
-
-/**
-* getDB: Returns a database by name
-* @param name string
-* @return *DB, error
-**/
-func getDB(name string) (*DB, error) {
-	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	err := initDatabases()
-	if err != nil {
-		return nil, err
-	}
-
-	if name == packageName {
-		result, ok := node.dbs[name]
-		if ok {
-			return result, nil
-		}
-	}
-
-	var result *DB
-	exists, err := databases.get(name, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
-	}
-
-	return result, nil
-}
