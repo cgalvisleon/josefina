@@ -165,7 +165,11 @@ func (s *Node) getDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+	if s.master != "" {
+		return methods.getDB(name)
+	}
+
+	return getDB(name)
 }
 
 /**
@@ -183,14 +187,6 @@ func (s *Node) getModel(database, schema, model string) (*Model, error) {
 }
 
 func init() {
-	gob.Register(map[string]interface{}{})
-	gob.Register(map[string]bool{})
-	gob.Register(map[string]string{})
-	gob.Register(map[string]int{})
-	gob.Register(map[string]int64{})
-	gob.Register(map[string]float64{})
-	gob.Register(map[string]float32{})
-	gob.Register(map[string]time.Time{})
 	gob.Register(time.Time{})
 	gob.Register(et.Json{})
 	gob.Register([]et.Json{})
@@ -200,4 +196,6 @@ func init() {
 	gob.Register(&DB{})
 	gob.Register(&Schema{})
 	gob.Register(&Model{})
+	gob.Register(&Session{})
+	gob.Register(&Tx{})
 }

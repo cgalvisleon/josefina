@@ -99,11 +99,11 @@ func (s *Sessions) get(token string) *Session {
 }
 
 /**
-* SignIn: Sign in a user
+* signIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, database, username, password string) (*Session, error) {
+func signIn(device, database, username, password string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -111,7 +111,16 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	item, err := users.
+	if database == "" {
+		database = packageName
+	}
+
+	model, err := node.getModel(database, "", "users")
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := model.
 		Selects().
 		Where(Eq("username", username)).
 		And(Eq("password", password)).

@@ -160,3 +160,25 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 	sch := s.newSchema(schema)
 	return sch.newModel(name, isCore, version)
 }
+
+/**
+* getDB: Returns a database by name
+* @param name string
+* @return *DB, error
+**/
+func getDB(name string) (*DB, error) {
+	if node == nil {
+		return nil, fmt.Errorf("node not initialized")
+	}
+
+	if node.Type == FOLLOW {
+		return follow.getDB(name)
+	}
+
+	result, err := node.getDb(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

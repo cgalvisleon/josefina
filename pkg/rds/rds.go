@@ -125,28 +125,6 @@ func Load(version string) error {
 }
 
 /**
-* getDB: Returns a database by name
-* @param name string
-* @return *DB, error
-**/
-func getDB(name string) (*DB, error) {
-	if node == nil {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	if node.Type == FOLLOW {
-		return follow.getDB(name)
-	}
-
-	result, err := node.getDb(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-/**
 * GetModel: Returns a model by database, schema and name
 * @param database string, schema string, model string
 * @return *Model, error
