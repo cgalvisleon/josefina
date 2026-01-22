@@ -128,29 +128,11 @@ func (s *Node) addNode(node string) {
 }
 
 /**
-* getDb
-* @param name string
-* @return *DB, error
-**/
-func (s *Node) getDb(name string) (*DB, error) {
-	result, ok := s.dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	if s.master != "" {
-
-	}
-
-	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
-}
-
-/**
 * newDb
-* @param name string
+* @param name, version string
 * @return *DB, error
 **/
-func (s *Node) newDb(name string) (*DB, error) {
+func (s *Node) newDb(name, version string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -161,10 +143,29 @@ func (s *Node) newDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	result = newDb(s.Path, name, s.Version)
+	result = &DB{
+		Name:    name,
+		Version: version,
+		Path:    fmt.Sprintf("%s/%s", s.Path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
 	s.dbs[name] = result
 
 	return result, nil
+}
+
+/**
+* getDb
+* @param name string
+* @return *DB, error
+**/
+func (s *Node) getDb(name string) (*DB, error) {
+	result, ok := s.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 }
 
 func init() {

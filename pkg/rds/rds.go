@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -31,7 +32,10 @@ func loadMaster(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	port := envar.GetInt("RPC_PORT", 4200)
 	node = newNode(MASTER, host, port, path, version)
-	db := newDb(node.Path, packageName, node.Version)
+	db, err := node.newDb(packageName, node.Version)
+	if err != nil {
+		return err
+	}
 	if err := initTransactions(db); err != nil {
 		return err
 	}
@@ -104,6 +108,17 @@ func loadFollow(version string) error {
 		return err
 	}
 
+	db, err := follow.getDB(packageName)
+	if err != nil {
+		return err
+	}
+
+	data, err := db.toJson()
+	if err != nil {
+		return err
+	}
+	logs.Logf("db:", data.ToString())
+
 	return nil
 }
 
@@ -149,6 +164,10 @@ func getDB(name string) (*DB, error) {
 * @return *Model, error
 **/
 func getModel(database, schema, model string) (*Model, error) {
+	if node == nil {
+		return nil, fmt.Errorf("node not initialized")
+	}
+
 	db, err := getDB(database)
 	if err != nil {
 		return nil, err
