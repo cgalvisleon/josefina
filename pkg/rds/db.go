@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -39,6 +40,23 @@ type DB struct {
 	Version string             `json:"version"`
 	Path    string             `json:"path"`
 	Schemas map[string]*Schema `json:"schemas"`
+}
+
+func newDb(name, version string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
+	name = utility.Normalize(name)
+	result := &DB{
+		Name:    name,
+		Version: version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
+
+	return result, nil
 }
 
 /**
@@ -167,10 +185,7 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *DB, error
 **/
 func getDB(name string) (*DB, error) {
-	if node == nil {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
+	
 	if node.Type == FOLLOW {
 		return follow.getDB(name)
 	}

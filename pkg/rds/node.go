@@ -11,23 +11,12 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/msg"
-)
-
-type TypeNode string
-
-const (
-	MASTER TypeNode = "master"
-	FOLLOW TypeNode = "follow"
 )
 
 type Node struct {
-	Type    TypeNode        `json:"type"`
-	Host    string          `json:"name"`
-	Port    int             `json:"port"`
-	Version string          `json:"version"`
-	Path    string          `json:"path"`
+	host    string          `json:"-"`
+	port    int             `json:"-"`
+	version string          `json:"-"`
 	master  string          `json:"-"`
 	dbs     map[string]*DB  `json:"-"`
 	nodes   map[string]bool `json:"-"`
@@ -36,16 +25,14 @@ type Node struct {
 
 /**
 * newNode
-* @param tp TypeNode, host string, port int, path, version string
+* @param tp TypeNode, host string, port int, version string
 * @return *Node
 **/
-func newNode(tp TypeNode, host string, port int, path, version string) *Node {
+func newNode(host string, port int, version string) *Node {
 	return &Node{
-		Type:    tp,
-		Host:    host,
-		Port:    port,
-		Version: version,
-		Path:    path,
+		host:    host,
+		port:    port,
+		version: version,
 		dbs:     make(map[string]*DB),
 		nodes:   make(map[string]bool),
 	}
@@ -60,14 +47,14 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	address := fmt.Sprintf(`:%d`, s.Port)
+	address := fmt.Sprintf(`:%d`, s.port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		logs.Fatal(err)
 	}
 
 	s.started = true
-	logs.Logf("Rpc", "running on %s%s", s.Host, listener.Addr())
+	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
 
 	for {
 		conn, err := listener.Accept()
@@ -128,33 +115,6 @@ func (s *Node) addNode(node string) {
 }
 
 /**
-* newDb
-* @param name, version string
-* @return *DB, error
-**/
-func (s *Node) newDb(name, version string) (*DB, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
-	result, ok := s.dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	result = &DB{
-		Name:    name,
-		Version: version,
-		Path:    fmt.Sprintf("%s/%s", s.Path, name),
-		Schemas: make(map[string]*Schema, 0),
-	}
-	s.dbs[name] = result
-
-	return result, nil
-}
-
-/**
 * getDb
 * @param name string
 * @return *DB, error
@@ -169,7 +129,13 @@ func (s *Node) getDb(name string) (*DB, error) {
 		return methods.getDB(name)
 	}
 
-	return getDB(name)
+	result, err := getDB(name)
+	if err != nil {
+		return nil, err
+	}
+
+	s.dbs[name] = result
+	return result, nil
 }
 
 /**
