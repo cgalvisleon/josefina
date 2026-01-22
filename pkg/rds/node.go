@@ -138,13 +138,13 @@ func (s *Node) mount(services any) error {
 			outputs = append(outputs, paramType.String())
 		}
 
-		name := fmt.Sprintf("/%s:%d/%s.%s", s.host, s.rpcPort, structName, metodo.Name)
+		name := fmt.Sprintf("%s.%s", structName, metodo.Name)
 		s.rpcs[name] = et.Json{
 			"inputs":  inputs,
 			"outputs": outputs,
 		}
 
-		logs.Logf("rpc", "RPC:%s", name)
+		logs.Logf("rpc", "RPC:/%s:%d/%s", s.host, s.rpcPort, name)
 	}
 
 	rpc.Register(services)
