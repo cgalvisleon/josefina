@@ -62,7 +62,7 @@ func newDb(name, version string) (*DB, error) {
 		return result, nil
 	}
 
-	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
+	path := envar.GetStr("PATH_DATA", "./data")
 	result = &DB{
 		Name:    name,
 		Version: version,
