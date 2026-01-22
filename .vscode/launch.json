@@ -17,7 +17,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3600", "-rpc", "4201"],
+      "args": ["-port", "3501", "-rpc", "4201"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     },
@@ -27,7 +27,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3600", "-rpc", "4202"],
+      "args": ["-port", "3502", "-rpc", "4202"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     }

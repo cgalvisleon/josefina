@@ -207,19 +207,20 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 	}
 
 	if s.leader != "" {
-		
+		result, err := methods.signIn(device, database, username, password)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
-	if database == "" {
-		database = packageName
-	}
-
-	model, err := node.getModel(database, "", "users")
+	err := initUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	item, err := model.
+	item, err := users.
 		Selects().
 		Where(Eq("username", username)).
 		And(Eq("password", password)).

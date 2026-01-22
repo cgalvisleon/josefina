@@ -17,12 +17,16 @@ var users *Model
 * @param db *DB
 * @return error
 **/
-func initUsers(db *DB) error {
+func initUsers() error {
 	if users != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
 	users, err = db.newModel("", "users", true, 1)
 	if err != nil {
 		return err

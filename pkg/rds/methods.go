@@ -6,7 +6,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -193,33 +192,39 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 * @return *Session, error
 **/
 func (s *Methods) signIn(device, database, username, password string) (*Session, error) {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
-	}
-	if !utility.ValidStr(password, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
-	}
-
-	if database == "" {
-		database = packageName
-	}
-
-	model, err := node.getModel(database, "", "users")
+	var response Session
+	err := jrpc.CallRpc(node.leader, "Methods.SignIn", et.Json{
+		"device":   device,
+		"database": database,
+		"username": username,
+		"password": password,
+	}, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	item, err := model.
-		Selects().
-		Where(Eq("username", username)).
-		And(Eq("password", password)).
-		Rows(nil)
-	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
+	return &response, nil
+}
+
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) SignIn(require et.Json, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	return newSession(device, username)
+	device := require.Str("device")
+	database := require.Str("database")
+	username := require.Str("username")
+	password := require.Str("password")
+	result, err := node.signIn(device, database, username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = *result
+	return nil
 }
