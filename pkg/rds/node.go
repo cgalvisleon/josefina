@@ -30,12 +30,11 @@ func initNodes() error {
 		return err
 	}
 
-	node.dbs[packageName] = db
-	databases, err = db.newModel("", "databases", true, 1)
+	nodes, err = db.newModel("", "nodes", true, 1)
 	if err != nil {
 		return err
 	}
-	if err := databases.init(); err != nil {
+	if err := nodes.init(); err != nil {
 		return err
 	}
 
@@ -64,6 +63,18 @@ func newNode(host string, port int, version string) *Node {
 		version: version,
 		dbs:     make(map[string]*DB),
 		nodes:   make(map[string]bool),
+	}
+}
+
+/**
+* toJson: Converts the node to a json
+* @return et.Json
+**/
+func (s *Node) toJson() et.Json {
+	return et.Json{
+		"host":    s.host,
+		"post":    s.port,
+		"version": s.version,
 	}
 }
 
