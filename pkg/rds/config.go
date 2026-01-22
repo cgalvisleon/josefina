@@ -13,15 +13,9 @@ type Config struct {
 }
 
 func getConfig() (*Config, error) {
-	path := envar.GetStr("PATH_DATA", "./data")
-	filePath := path + "/config.json"
+	filePath := "./config.json"
 
-	// 1) Asegurar directorio
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		return nil, err
-	}
-
-	// 2) Intentar abrir
+	// 1) Intentar abrir
 	f, err := os.Open(filePath)
 	if err != nil {
 		// Si no existe, crearlo con valores por defecto
@@ -43,7 +37,7 @@ func getConfig() (*Config, error) {
 	}
 	defer f.Close()
 
-	// 3) Leer/parsear
+	// 2) Leer/parsear
 	var result Config
 	if err := json.NewDecoder(f).Decode(&result); err != nil {
 		return nil, err
