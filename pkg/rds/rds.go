@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 )
 
 var (
@@ -87,6 +88,14 @@ func loadFollow(version string) error {
 	if err != nil {
 		return err
 	}
+
+	var response string
+	err = callRpc(master, "Master.Ping", "", &response)
+	if err != nil {
+		return err
+	}
+
+	logs.Debug("ping:", response)
 
 	go node.start()
 

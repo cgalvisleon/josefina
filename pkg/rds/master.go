@@ -1,9 +1,13 @@
 package rds
 
-import "github.com/cgalvisleon/et/et"
-
 type Master struct{}
 
-func (s *Master) CreateDatabase(require et.Json, response *et.Item) error {
+/**
+* Ping: Pings the master
+* @param response *string
+* @return error
+**/
+func (s *Master) Ping(require string, response *string) error {
+	*response = "pong"
 	return nil
 }

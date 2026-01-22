@@ -1,11 +1,13 @@
 package rds
 
 import (
+	"encoding/gob"
 	"fmt"
 	"net"
 	"net/rpc"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
@@ -163,4 +165,21 @@ func (s *Node) newDb(name string) (*DB, error) {
 	s.dbs[name] = result
 
 	return result, nil
+}
+
+func init() {
+	gob.Register(map[string]interface{}{})
+	gob.Register(map[string]bool{})
+	gob.Register(map[string]string{})
+	gob.Register(map[string]int{})
+	gob.Register(map[string]int64{})
+	gob.Register(map[string]float64{})
+	gob.Register(map[string]float32{})
+	gob.Register(map[string]time.Time{})
+	gob.Register(time.Time{})
+	gob.Register(et.Json{})
+	gob.Register([]et.Json{})
+	gob.Register(et.Item{})
+	gob.Register(et.Items{})
+	gob.Register(et.List{})
 }

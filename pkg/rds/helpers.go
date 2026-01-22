@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"fmt"
 	"net/rpc"
 	"reflect"
 	"strings"
@@ -287,11 +286,10 @@ func getBetweenRange(v any) (min any, max any, ok bool) {
 
 /**
 * callRpc: Calls a remote procedure
-* @param host string, port int, method string, args any, reply any
+* @param address string, method string, args any, reply any
 * @return error
 **/
-func callRpc(host string, port int, method string, args any, reply any) error {
-	address := fmt.Sprintf(`%s:%d`, host, port)
+func callRpc(address string, method string, args any, reply any) error {
 	client, err := rpc.Dial("tcp", address)
 	if err != nil {
 		return err
