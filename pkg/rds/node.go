@@ -168,7 +168,11 @@ func (s *Node) getDb(name string) (*DB, error) {
 	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 }
 
-
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
 func (s *Node) getModel(database, schema, model string) (*Model, error) {
 	db, err := s.getDb(database)
 	if err != nil {
