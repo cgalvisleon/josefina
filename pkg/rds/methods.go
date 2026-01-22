@@ -52,13 +52,13 @@ func (s *Methods) Ping(require string, response *string) error {
 * @param tag, host string
 * @return error
 **/
-func (s *Methods) vote(tag, host string) error {
+func (s *Methods) vote(to, tag, host string) error {
 	data := et.Json{
 		"tag":  tag,
 		"host": host,
 	}
 	var response string
-	err := jrpc.CallRpc(node.master, "Methods.Vote", data, &response)
+	err := jrpc.CallRpc(to, "Methods.Vote", data, &response)
 	if err != nil {
 		return err
 	}
@@ -84,13 +84,13 @@ func (s *Methods) Vote(require et.Json, response *string) error {
 * @param tag, host string
 * @return error
 **/
-func (s *Methods) getVote(tag, host string) (string, error) {
+func (s *Methods) getVote(to, tag, host string) (string, error) {
 	data := et.Json{
 		"tag":  tag,
 		"host": host,
 	}
 	var response string
-	err := jrpc.CallRpc(node.master, "Methods.GetVote", data, &response)
+	err := jrpc.CallRpc(to, "Methods.GetVote", data, &response)
 	if err != nil {
 		return "", err
 	}

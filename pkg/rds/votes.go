@@ -37,26 +37,27 @@ func makeVote(tag string) (string, error) {
 		return "", fmt.Errorf(msg.MSG_METHODS_NOT_INITIALIZED)
 	}
 
-	votes.mu.Lock()
-	defer votes.mu.Unlock()
-
-	result, ok := votes.votes[tag]
-	if ok {
-		return result, nil
-	}
-
-	votes.votes[tag] = node.host
 	nodes, err := getNodes()
 	if err != nil {
 		return "", err
 	}
 
+	if len(nodes) < 2 {
+		return node.host, nil
+	}
+
+	for _, host := range nodes {
+		if host == node.host {
+			continue
+		}
+
+		methods.vote(tag, host)
+	}
+
 	results := make(map[string]int)
 	results[node.host]++
-	post := -1
-	for i, host := range nodes {
+	for _, host := range nodes {
 		if host == node.host {
-			post = i
 			continue
 		}
 
@@ -67,6 +68,7 @@ func makeVote(tag string) (string, error) {
 		results[res]++
 	}
 
+	result := ""
 	maxVotos := -1
 	for host, v := range results {
 		if v > maxVotos {
