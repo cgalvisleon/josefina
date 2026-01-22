@@ -6,7 +6,6 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -84,6 +83,7 @@ func loadFollow(version string) error {
 	if master == "" {
 		return fmt.Errorf(msg.MSG_MASTER_HOST_REQUIRED)
 	}
+
 	node = newNode(FOLLOW, host, port, path, version)
 	node.master = master
 
@@ -93,15 +93,12 @@ func loadFollow(version string) error {
 		return err
 	}
 
-	var response string
-	err = callRpc(master, "Master.Ping", "", &response)
+	go node.start()
+
+	err = services.ping()
 	if err != nil {
 		return err
 	}
-
-	logs.Debug("ping:", response)
-
-	go node.start()
 
 	return nil
 }

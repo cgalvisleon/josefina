@@ -10,11 +10,11 @@ import (
 
 type Follow struct{}
 
-func (s *Follow) Select(require et.Json, response *et.Item) error {
-	return nil
-}
-
-func ping() error {
+/**
+* ping
+* @return error
+**/
+func (s *Follow) ping() error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -26,6 +26,15 @@ func ping() error {
 		return err
 	}
 
-	logs.Debug(response)
+	logs.Debugf("%s:%s", response, node.master)
+	return nil
+}
+
+/**
+* Select
+* @params require et.Json, response *et.Item
+* @return error
+**/
+func (s *Follow) Select(require et.Json, response *et.Item) error {
 	return nil
 }
