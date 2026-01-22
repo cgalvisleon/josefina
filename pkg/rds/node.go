@@ -13,6 +13,8 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
+var nodes []string
+
 type Node struct {
 	host    string             `json:"-"`
 	port    int                `json:"-"`

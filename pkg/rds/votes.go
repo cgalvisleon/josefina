@@ -2,7 +2,9 @@ package rds
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -17,10 +19,17 @@ var (
 )
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
 	votes = &Votes{
 		votes: make(map[string]string),
 		mu:    sync.Mutex{},
 	}
+}
+
+func randomElectionTimeout(min, max time.Duration) time.Duration {
+	// min y max deben ser > 0 y max > min
+	delta := max - min
+	return min + time.Duration(rand.Int63n(int64(delta)))
 }
 
 /**

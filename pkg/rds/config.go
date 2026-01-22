@@ -12,21 +12,40 @@ type Config struct {
 	Nodes  []string `json:"nodes"`
 }
 
-/**
-* getConfig: Returns the config
-* @return *Config, error
-**/
 func getConfig() (*Config, error) {
 	path := envar.GetStr("PATH_DATA", "./data")
-	f, err := os.Open(path + "/config.json")
+	filePath := path + "/config.json"
+
+	// 1) Asegurar directorio
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return nil, err
+	}
+
+	// 2) Intentar abrir
+	f, err := os.Open(filePath)
 	if err != nil {
+		// Si no existe, crearlo con valores por defecto
+		if os.IsNotExist(err) {
+			cfg := Config{} // TODO: pon aquí tus valores por defecto
+
+			b, err := json.MarshalIndent(cfg, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+
+			if err := os.WriteFile(filePath, b, 0o644); err != nil {
+				return nil, err
+			}
+
+			return &cfg, nil
+		}
 		return nil, err
 	}
 	defer f.Close()
 
+	// 3) Leer/parsear
 	var result Config
-	err = json.NewDecoder(f).Decode(&result)
-	if err != nil {
+	if err := json.NewDecoder(f).Decode(&result); err != nil {
 		return nil, err
 	}
 
