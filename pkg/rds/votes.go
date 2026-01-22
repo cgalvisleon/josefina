@@ -2,9 +2,7 @@ package rds
 
 import (
 	"fmt"
-	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -25,12 +23,6 @@ func init() {
 	}
 }
 
-func randomElectionTimeout(min, max time.Duration) time.Duration {
-	// min y max deben ser > 0 y max > min
-	delta := max - min
-	return min + time.Duration(rand.Int63n(int64(delta)))
-}
-
 /**
 * makeVote: Returns the votes for a tag
 * @param tag string
@@ -44,13 +36,6 @@ func makeVote(tag string) (string, error) {
 	if methods == nil {
 		return "", fmt.Errorf(msg.MSG_METHODS_NOT_INITIALIZED)
 	}
-
-	heartbeat := 100 * time.Millisecond
-	minElection := 10 * heartbeat // 1s
-	maxElection := 20 * heartbeat // 2s
-
-	timeout := randomElectionTimeout(minElection, maxElection)
-	time.Sleep(timeout)
 
 	go vote(tag, node.host)
 
