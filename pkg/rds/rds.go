@@ -6,7 +6,6 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
@@ -20,101 +19,38 @@ func init() {
 }
 
 /**
-* LoadMaster: Initializes the josefina
-* @return error
-**/
-func loadMaster(version string) error {
-	if node != nil {
-		return nil
-	}
-
-	port := envar.GetInt("RPC_PORT", 4200)
-	node = newNode(MASTER, host, port, version)
-	db, err := node.newDb(packageName, node.Version)
-	if err != nil {
-		return err
-	}
-	if err := initTransactions(db); err != nil {
-		return err
-	}
-	if err := initDatabases(db); err != nil {
-		return err
-	}
-	if err := initUsers(db); err != nil {
-		return err
-	}
-	if err := initSeries(db); err != nil {
-		return err
-	}
-	if err := initRecords(db); err != nil {
-		return err
-	}
-	if err := initModels(db); err != nil {
-		return err
-	}
-
-	if master == nil {
-		master = new(Master)
-	}
-	err = node.mount(master)
-	if err != nil {
-		return err
-	}
-
-	go node.start()
-
-	return nil
-}
-
-/**
-* Follow: Initializes the josefina as a follow node
+* Load: Initializes josefine
 * @param version string
 * @return error
 **/
-func loadFollow(version string) error {
+func Load(version string) error {
 	if node != nil {
 		return nil
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
 	master := envar.GetStr("MASTER_HOST", "")
-	if master == "" {
-		return fmt.Errorf(msg.MSG_MASTER_HOST_REQUIRED)
-	}
-
-	node = newNode(FOLLOW, host, port, version)
+	node = newNode(hostname, port, version)
 	node.master = master
 
-	if follow == nil {
-		follow = new(Follow)
+	if methods == nil {
+		methods = new(Methods)
 	}
-	err = node.mount(follow)
+	err := node.mount(methods)
 	if err != nil {
 		return err
 	}
 
 	go node.start()
 
-	err = follow.ping()
-	if err != nil {
-		return err
+	if node.master != "" {
+		err = methods.ping()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
-}
-
-/**
-* Load: Initializes josefine
-* @param version string
-* @return error
-**/
-func Load(version string) error {
-	mode := envar.GetStr("MODE", "master")
-	if mode == "follow" {
-		return loadFollow(version)
-	} else {
-		return loadMaster(version)
-	}
 }
 
 /**
