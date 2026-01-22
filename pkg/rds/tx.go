@@ -14,15 +14,18 @@ var transactions *Model
 
 /**
 * initTransactions: Initializes the transactions model
-* @param db *DB
 * @return error
 **/
-func initTransactions(db *DB) error {
+func initTransactions() error {
 	if transactions != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
 	transactions, err = db.newModel("", "transactions", true, 1)
 	if err != nil {
 		return err

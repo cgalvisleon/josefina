@@ -14,7 +14,6 @@ var databases *Model
 
 /**
 * initDatabases: Initializes the databases model
-* @param db *DB
 * @return error
 **/
 func initDatabases() error {

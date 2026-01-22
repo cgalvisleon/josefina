@@ -6,15 +6,18 @@ var records *Model
 
 /**
 * initRecords: Initializes the records model
-* @param db *DB
 * @return error
 **/
-func initRecords(db *DB) error {
+func initRecords() error {
 	if records != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
 	records, err = db.newModel("", "records", true, 1)
 	if err != nil {
 		return err

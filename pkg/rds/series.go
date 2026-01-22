@@ -16,12 +16,16 @@ var series *Model
 * @param db *DB
 * @return error
 **/
-func initSeries(db *DB) error {
+func initSeries() error {
 	if series != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
 	series, err = db.newModel("", "series", true, 1)
 	if err != nil {
 		return err
