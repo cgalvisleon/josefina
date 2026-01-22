@@ -42,13 +42,14 @@ func initNodes() error {
 }
 
 type Node struct {
-	host    string          `json:"-"`
-	port    int             `json:"-"`
-	version string          `json:"-"`
-	master  string          `json:"-"`
-	dbs     map[string]*DB  `json:"-"`
-	nodes   map[string]bool `json:"-"`
-	started bool            `json:"-"`
+	host    string            `json:"-"`
+	port    int               `json:"-"`
+	version string            `json:"-"`
+	master  string            `json:"-"`
+	dbs     map[string]*DB    `json:"-"`
+	models  map[string]*Model `json:"-"`
+	nodes   map[string]bool   `json:"-"`
+	started bool              `json:"-"`
 }
 
 /**
@@ -62,6 +63,7 @@ func newNode(host string, port int, version string) *Node {
 		port:    port,
 		version: version,
 		dbs:     make(map[string]*DB),
+		models:  make(map[string]*Model),
 		nodes:   make(map[string]bool),
 	}
 }
