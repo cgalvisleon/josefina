@@ -94,11 +94,24 @@ type Model struct {
 * @return *Model
 **/
 func newModel(database, schema, name string, isCore bool, version int) (*Model, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
 	if !utility.ValidStr(database, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	db, ok := node.dbs[database]
+	if !ok {
+		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+	}
+
+	sch, err := db.getSchema(schema)
+	if err != nil {
+		return nil, err
 	}
 
 	name = utility.Normalize(name)
@@ -130,7 +143,7 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 		AfterDeletes:  make([]*Trigger, 0),
 		Version:       version,
 		IsCore:        isCore,
-		db:            s.db,
+		db:            db,
 		data:          make(map[string]*store.FileStore, 0),
 		triggers:      make(map[string]*Vm, 0),
 	}
@@ -138,7 +151,7 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 	if err != nil {
 		return nil, err
 	}
-	s.Models[name] = result
+	db.models[name] = result
 	return result, nil
 }
 

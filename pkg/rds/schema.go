@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
@@ -32,7 +33,8 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 
 	name = utility.Normalize(name)
-	host := fmt.Sprintf(`%s:%d`, node.Host, node.Port)
+	port := envar.GetInt("RPC_PORT", 4200)
+	host := fmt.Sprintf(`%s:%d`, hostname, port)
 	result = &Model{
 		From: &From{
 			Database: s.Database,
