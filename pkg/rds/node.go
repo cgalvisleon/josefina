@@ -168,6 +168,16 @@ func (s *Node) getDb(name string) (*DB, error) {
 	return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 }
 
+
+func (s *Node) getModel(database, schema, model string) (*Model, error) {
+	db, err := s.getDb(database)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.getModel(schema, model)
+}
+
 func init() {
 	gob.Register(map[string]interface{}{})
 	gob.Register(map[string]bool{})

@@ -108,16 +108,16 @@ func loadFollow(version string) error {
 		return err
 	}
 
-	db, err := follow.getDB(packageName)
+	model, err := follow.getModel(packageName, "", "users")
 	if err != nil {
 		return err
 	}
 
-	data, err := db.toJson()
+	data, err := model.toJson()
 	if err != nil {
 		return err
 	}
-	logs.Debug("db:", data.ToString())
+	logs.Debug("model:", data.ToString())
 
 	return nil
 }
@@ -166,6 +166,10 @@ func getDB(name string) (*DB, error) {
 func getModel(database, schema, model string) (*Model, error) {
 	if node == nil {
 		return nil, fmt.Errorf("node not initialized")
+	}
+
+	if node.Type == FOLLOW {
+		return follow.getModel(database, schema, model)
 	}
 
 	db, err := getDB(database)
