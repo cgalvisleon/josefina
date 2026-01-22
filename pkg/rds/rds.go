@@ -37,15 +37,16 @@ func Load(version string) error {
 		node.leader = leader
 	}
 
+	go node.start()
+
 	if methods == nil {
 		methods = new(Methods)
 	}
+
 	err = node.mount(methods)
 	if err != nil {
 		return err
 	}
-
-	go node.start()
 
 	return nil
 }

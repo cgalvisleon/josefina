@@ -11,6 +11,8 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var nodes []string
@@ -189,6 +191,47 @@ func (s *Node) getModel(database, schema, model string) (*Model, error) {
 
 	s.models[key] = result
 	return result, nil
+}
+
+/**
+* signIn: Sign in a user
+* @param device, username, password string
+* @return *Session, error
+**/
+func (s *Node) signIn(device, database, username, password string) (*Session, error) {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
+	}
+	if !utility.ValidStr(password, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
+	}
+
+	if s.leader != "" {
+		
+	}
+
+	if database == "" {
+		database = packageName
+	}
+
+	model, err := node.getModel(database, "", "users")
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := model.
+		Selects().
+		Where(Eq("username", username)).
+		And(Eq("password", password)).
+		Rows(nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
+	}
+
+	return newSession(device, username)
 }
 
 func init() {
