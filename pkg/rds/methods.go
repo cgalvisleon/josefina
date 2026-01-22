@@ -94,6 +94,47 @@ func (s *Methods) GetDB(require string, response *DB) error {
 }
 
 /**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) getModel(database, schema, model string) (*Model, error) {
+	var response Model
+	err := callRpc(node.master, "Master.GetModel", et.Json{
+		"database": database,
+		"schema":   schema,
+		"model":    model,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) GetModel(require et.Json, response *Model) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	database := require.Str("database")
+	schema := require.Str("schema")
+	model := require.Str("model")
+	result, err := node.getModel(database, schema, model)
+	if err != nil {
+		return err
+	}
+
+	*response = *result
+	return nil
+}
+
+/**
 * SignIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error

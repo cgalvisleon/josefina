@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
@@ -109,49 +108,11 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
 	}
 
-	sch, err := db.getSchema(schema)
+	result, err := db.newModel(schema, name, isCore, version)
 	if err != nil {
 		return nil, err
 	}
 
-	name = utility.Normalize(name)
-	port := envar.GetInt("RPC_PORT", 4200)
-	host := fmt.Sprintf(`%s:%d`, hostname, port)
-	result := &Model{
-		From: &From{
-			Database: database,
-			Schema:   schema,
-			Name:     name,
-			Host:     host,
-			Fields:   make(map[string]*Field, 0),
-		},
-		Indexes:       make([]string, 0),
-		PrimaryKeys:   make([]string, 0),
-		Unique:        make([]string, 0),
-		Required:      make([]string, 0),
-		Hidden:        make([]string, 0),
-		References:    make(map[string]*Detail, 0),
-		Details:       make(map[string]*Detail, 0),
-		Rollups:       make(map[string]*Detail, 0),
-		Relations:     make(map[string]*Detail, 0),
-		Calcs:         make(map[string][]byte, 0),
-		BeforeInserts: make([]*Trigger, 0),
-		BeforeUpdates: make([]*Trigger, 0),
-		BeforeDeletes: make([]*Trigger, 0),
-		AfterInserts:  make([]*Trigger, 0),
-		AfterUpdates:  make([]*Trigger, 0),
-		AfterDeletes:  make([]*Trigger, 0),
-		Version:       version,
-		IsCore:        isCore,
-		db:            db,
-		data:          make(map[string]*store.FileStore, 0),
-		triggers:      make(map[string]*Vm, 0),
-	}
-	_, err := result.defineIndexField()
-	if err != nil {
-		return nil, err
-	}
-	db.models[name] = result
 	return result, nil
 }
 
