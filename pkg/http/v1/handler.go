@@ -5,6 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/josefina/pkg/rds"
 )
 
 /**
@@ -36,14 +37,18 @@ func (s *Router) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	device := body.Str("device")
+	database := body.Str("database")
 	username := body.Str("username")
 	password := body.Str("password")
+	session, err := rds.SignIn(device, database, username, password)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	response.ITEM(w, r, http.StatusOK, et.Item{
-		Ok: true,
-		Result: et.Json{
-			"username": username,
-			"password": password,
-		},
+		Ok:     true,
+		Result: session.ToJson(),
 	})
 }

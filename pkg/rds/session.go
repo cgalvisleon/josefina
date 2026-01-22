@@ -16,6 +16,24 @@ type Session struct {
 	Token     string    `json:"token"`
 }
 
+type Sessions struct {
+	sessions []*Session `json:"-"`
+}
+
+var sessions *Sessions
+
+/**
+* toJson: Converts the session to a json
+* @return et.Json
+**/
+func (s *Session) ToJson() et.Json {
+	return et.Json{
+		"created_at": s.CreatedAt,
+		"username":   s.Username,
+		"token":      s.Token,
+	}
+}
+
 /**
 * NewSession: Creates a new session
 * @param device, username string
@@ -36,12 +54,6 @@ func newSession(device, username string) (*Session, error) {
 	sessions.add(result)
 	return result, nil
 }
-
-type Sessions struct {
-	sessions []*Session `json:"-"`
-}
-
-var sessions *Sessions
 
 func init() {
 	sessions = &Sessions{
@@ -91,7 +103,7 @@ func (s *Sessions) get(token string) *Session {
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, username, password string) (*Session, error) {
+func SignIn(device, database, username, password string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -112,9 +124,4 @@ func SignIn(device, username, password string) (*Session, error) {
 	}
 
 	return newSession(device, username)
-}
-
-func (s *Session) CreateDatabase(name string) error {
-	// TODO: Implement database creation logic
-	return nil
 }

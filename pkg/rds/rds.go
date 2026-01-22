@@ -6,7 +6,6 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -107,17 +106,6 @@ func loadFollow(version string) error {
 	if err != nil {
 		return err
 	}
-
-	model, err := follow.getModel(packageName, "", "users")
-	if err != nil {
-		return err
-	}
-
-	data, err := model.toJson()
-	if err != nil {
-		return err
-	}
-	logs.Debug("model:", data.ToString())
 
 	return nil
 }
