@@ -43,7 +43,7 @@ func initNodes() error {
 
 type Node struct {
 	host    string             `json:"-"`
-	port    int                `json:"-"`
+	rpcPort int                `json:"-"`
 	version string             `json:"-"`
 	master  string             `json:"-"`
 	rpcs    map[string]et.Json `json:"-"`
@@ -58,10 +58,10 @@ type Node struct {
 * @param tp TypeNode, host string, port int, version string
 * @return *Node
 **/
-func newNode(host string, port int, version string) *Node {
+func newNode(host string, rpcPort int, version string) *Node {
 	return &Node{
 		host:    host,
-		port:    port,
+		rpcPort: rpcPort,
 		version: version,
 		rpcs:    make(map[string]et.Json),
 		dbs:     make(map[string]*DB),
@@ -77,7 +77,7 @@ func newNode(host string, port int, version string) *Node {
 func (s *Node) toJson() et.Json {
 	return et.Json{
 		"host":    s.host,
-		"post":    s.port,
+		"rpcPort": s.rpcPort,
 		"version": s.version,
 	}
 }
@@ -91,7 +91,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	address := fmt.Sprintf(`:%d`, s.port)
+	address := fmt.Sprintf(`:%d`, s.rpcPort)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		logs.Fatal(err)
@@ -138,7 +138,7 @@ func (s *Node) mount(services any) error {
 			outputs = append(outputs, paramType.String())
 		}
 
-		name := fmt.Sprintf("%s.%s", structName, metodo.Name)
+		name := fmt.Sprintf("/%s:%d/%s.%s", s.host, s.rpcPort, structName, metodo.Name)
 		s.rpcs[name] = et.Json{
 			"inputs":  inputs,
 			"outputs": outputs,

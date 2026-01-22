@@ -23,7 +23,7 @@ func (s *Methods) ping() error {
 
 	data := et.Json{
 		"host":    node.host,
-		"port":    node.port,
+		"rpcPort": node.rpcPort,
 		"version": node.version,
 	}
 	var response string
