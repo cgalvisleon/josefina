@@ -592,7 +592,7 @@ func saveModel(model *Model) error {
 		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
-	if node.leader != "" {
+	if node.leader != node.host {
 		err := methods.saveModel(model)
 		if err != nil {
 			return err

@@ -48,7 +48,7 @@ func setRecord(schema, model, key string) error {
 		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
-	if node.leader != "" {
+	if node.leader != node.host {
 		err := methods.setRecord(schema, model, key)
 		if err != nil {
 			return err
@@ -82,7 +82,7 @@ func deleteRecord(schema, model, key string) error {
 		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
-	if node.leader != "" {
+	if node.leader != node.host {
 		err := methods.setRecord(schema, model, key)
 		if err != nil {
 			return err
