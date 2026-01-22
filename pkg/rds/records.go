@@ -1,6 +1,11 @@
 package rds
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"errors"
+
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
 
 var records *Model
 
@@ -39,7 +44,25 @@ func initRecords() error {
 * @return error
 **/
 func setRecord(schema, model, key string) error {
-	_, err := records.
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_FOUND)
+	}
+
+	if node.leader != "" {
+		err := methods.setRecord(schema, model, key)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initRecords()
+	if err != nil {
+		return err
+	}
+
+	_, err = records.
 		Upsert(et.Json{
 			"schema": schema,
 			"model":  model,

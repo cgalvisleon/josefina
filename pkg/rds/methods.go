@@ -266,3 +266,48 @@ func (s *Methods) SaveModel(require *Model, response *Session) error {
 
 	return nil
 }
+
+/**
+* saveModel
+* @param model *Model
+* @return error
+**/
+func (s *Methods) setRecord(schema, model, key string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"scgema": schema,
+		"model":  model,
+		"key":    key,
+	}
+	var reply string
+	err := jrpc.CallRpc(node.leader, "Methods.SetRecord", data, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) SetRecord(require et.Json, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	schema := require.Str("schema")
+	model := require.Str("model")
+	key := require.Str("key")
+	err := setRecord(schema, model, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
