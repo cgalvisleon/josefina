@@ -619,3 +619,20 @@ func (s *Model) Selects(fields ...string) *Wheres {
 	}
 	return result
 }
+
+/**
+* getModel
+* @param from *From
+* @return *Model, error
+**/
+func getModel(from *From) (*Model, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.getDb(from.Database)
+	if err != nil {
+		return nil, err
+	}
+	return db.getModel(from.Schema, from.Name, node.host)
+}

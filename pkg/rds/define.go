@@ -238,13 +238,13 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 * @param name string, from string, keys map[string]string, selects []string
 * @return *Model
 **/
-func (s *Model) DefineRollup(name, from string, keys map[string]string, selects []string) (*Model, error) {
+func (s *Model) DefineRollup(name string, from *From, keys map[string]string, selects []string) (*Model, error) {
 	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
 		return nil, err
 	}
 
-	to, err := s.db.getModel(s.Schema, from)
+	to, err := getModel(from)
 	if err != nil {
 		return nil, err
 	}
@@ -255,11 +255,11 @@ func (s *Model) DefineRollup(name, from string, keys map[string]string, selects 
 
 /**
 * DefineRelation: Defines the relation
-* @param from string, keys map[string]string, onDeleteCascade bool, onUpdateCascade bool
-* @return *Model
+* @param from *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool
+* @return error
 **/
-func (s *Model) DefineRelation(from string, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
-	to, err := s.db.getModel(s.Schema, from)
+func (s *Model) DefineRelation(from *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
+	to, err := getModel(from)
 	if err != nil {
 		return err
 	}

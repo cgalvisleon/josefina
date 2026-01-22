@@ -220,7 +220,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 
-		to, err := s.db.getModel(detail.To.Schema, detail.To.Name)
+		to, err := getModel(detail.To)
 		if err != nil {
 			return nil, err
 		}
