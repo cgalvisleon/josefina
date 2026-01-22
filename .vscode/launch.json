@@ -7,7 +7,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3500", "-rpc", "4200", "-mode", "master"],
+      "args": ["-port", "3500", "-rpc", "4200"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     },
@@ -22,10 +22,8 @@
         "3600",
         "-rpc",
         "4300",
-        "-mode",
-        "follow",
         "-master",
-        "localhost:4200"
+        "Cesars-MacBook-Pro.local:4200"
       ],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"

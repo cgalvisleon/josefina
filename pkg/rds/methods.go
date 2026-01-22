@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -27,7 +28,7 @@ func (s *Methods) ping() error {
 		"version": node.version,
 	}
 	var response string
-	err := callRpc(node.master, "Methods.Ping", data, &response)
+	err := jrpc.CallRpc(node.master, "Methods.Ping", data, &response)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (s *Methods) Ping(require et.Json, response *string) error {
 **/
 func (s *Methods) getDB(name string) (*DB, error) {
 	var response DB
-	err := callRpc(node.master, "Methods.GetDB", name, &response)
+	err := jrpc.CallRpc(node.master, "Methods.GetDB", name, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (s *Methods) GetDB(require string, response *DB) error {
 **/
 func (s *Methods) getModel(database, schema, model string) (*Model, error) {
 	var response Model
-	err := callRpc(node.master, "Master.GetModel", et.Json{
+	err := jrpc.CallRpc(node.master, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"model":    model,
