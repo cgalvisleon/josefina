@@ -8,6 +8,7 @@ import (
 )
 
 type Master struct{}
+var master *Master
 
 /**
 * Ping: Pings the master

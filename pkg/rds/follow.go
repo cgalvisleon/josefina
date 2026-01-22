@@ -10,6 +10,8 @@ import (
 
 type Follow struct{}
 
+var follow *Follow
+
 /**
 * ping
 * @return error
@@ -26,7 +28,7 @@ func (s *Follow) ping() error {
 		return err
 	}
 
-	logs.Debugf("%s:%s", response, node.master)
+	logs.Logf(packageName, "%s:%s", response, node.master)
 	return nil
 }
 

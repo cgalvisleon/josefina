@@ -51,8 +51,10 @@ func loadMaster(version string) error {
 		return err
 	}
 
-	services := new(Master)
-	err = node.mount(services)
+	if master == nil {
+		master = new(Master)
+	}
+	err = node.mount(master)
 	if err != nil {
 		return err
 	}
@@ -87,15 +89,17 @@ func loadFollow(version string) error {
 	node = newNode(FOLLOW, host, port, path, version)
 	node.master = master
 
-	services := new(Follow)
-	err = node.mount(services)
+	if follow == nil {
+		follow = new(Follow)
+	}
+	err = node.mount(follow)
 	if err != nil {
 		return err
 	}
 
 	go node.start()
 
-	err = services.ping()
+	err = follow.ping()
 	if err != nil {
 		return err
 	}
