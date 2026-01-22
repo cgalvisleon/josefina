@@ -198,7 +198,13 @@ func (s *Node) getDb(name string) (*DB, error) {
 	}
 
 	if s.master != "" {
-		return methods.getDB(name)
+		result, err := methods.getDB(name)
+		if err != nil {
+			return nil, err
+		}
+
+		s.dbs[name] = result
+		return result, nil
 	}
 
 	result, err := getDB(name)

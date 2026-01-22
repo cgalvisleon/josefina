@@ -62,10 +62,6 @@ func getModel(database, schema, model string) (*Model, error) {
 		return nil, fmt.Errorf("node not initialized")
 	}
 
-	if node.Type == FOLLOW {
-		return follow.getModel(database, schema, model)
-	}
-
 	db, err := getDB(database)
 	if err != nil {
 		return nil, err
