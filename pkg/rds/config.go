@@ -2,13 +2,15 @@ package rds
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type Config struct {
-	Leader string   `json:"leader"`
+	Leader int      `json:"leader"`
 	Nodes  []string `json:"nodes"`
 }
 
@@ -87,5 +89,10 @@ func getLeader() (string, error) {
 		return "", err
 	}
 
-	return config.Leader, nil
+	if config.Leader >= len(config.Nodes) {
+		return "", fmt.Errorf(msg.MSG_NODE_NOT_FOUND)
+	}
+
+	result := config.Nodes[config.Leader]
+	return result, nil
 }
