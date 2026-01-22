@@ -7,6 +7,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
@@ -80,6 +81,9 @@ func loadFollow(version string) error {
 	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	port := envar.GetInt("RPC_PORT", 4200)
 	master := envar.GetStr("MASTER_HOST", "")
+	if master == "" {
+		return fmt.Errorf(msg.MSG_MASTER_HOST_REQUIRED)
+	}
 	node = newNode(FOLLOW, host, port, path, version)
 	node.master = master
 
