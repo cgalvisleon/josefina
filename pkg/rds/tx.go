@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var transactions *Model
@@ -39,7 +41,7 @@ func initTransactions() error {
 }
 
 /**
-* setTransaction: Sets a transaction
+* setTransaction: Sets a Transaction
 * @param key string, data et.Json
 * @return string, error
 **/
@@ -56,7 +58,7 @@ func setTransaction(key string, data et.Json) (string, error) {
 	return key, nil
 }
 
-type record struct {
+type Record struct {
 	tx      *Tx
 	Command Command `json:"command"`
 	Idx     string  `json:"idx"`
@@ -65,29 +67,29 @@ type record struct {
 }
 
 /**
-* commit: Commits the transaction
+* commit: Commits the Transaction
 **/
-func (s *record) commit() error {
+func (s *Record) commit() error {
 	s.Status = Processed
 	return s.tx.save()
 }
 
 /**
-* newTransaction: Creates a new transaction
+* newTransaction: Creates a new Transaction
 * @param model *Model
-* @return *transaction
+* @return *Transaction
 **/
-type transaction struct {
+type Transaction struct {
 	tx      *Tx
 	Model   *Model    `json:"model"`
-	Records []*record `json:"records"`
+	Records []*Record `json:"records"`
 }
 
 /**
 * getFrom: Gets the from
 * @return *From
 **/
-func (s *transaction) toJson() et.Json {
+func (s *Transaction) toJson() et.Json {
 	records := []et.Json{}
 	for _, record := range s.Records {
 		records = append(records, et.Json{
@@ -111,12 +113,12 @@ func (s *transaction) toJson() et.Json {
 }
 
 /**
-* add: Adds data to the transaction
+* add: Adds data to the Transaction
 * @param cmd Command, idx string, data et.Json
 * @return void
 **/
-func (s *transaction) add(cmd Command, idx string, data et.Json) error {
-	item := &record{
+func (s *Transaction) add(cmd Command, idx string, data et.Json) error {
+	item := &Record{
 		tx:      s.tx,
 		Command: cmd,
 		Idx:     idx,
@@ -128,15 +130,15 @@ func (s *transaction) add(cmd Command, idx string, data et.Json) error {
 }
 
 /**
-* newTransaction: Creates a new transaction
+* newTransaction: Creates a new Transaction
 * @param model *Model
-* @return *transaction
+* @return *Transaction
 **/
-func newTransaction(tx *Tx, model *Model) *transaction {
-	return &transaction{
+func newTransaction(tx *Tx, model *Model) *Transaction {
+	return &Transaction{
 		tx:      tx,
 		Model:   model,
-		Records: make([]*record, 0),
+		Records: make([]*Record, 0),
 	}
 }
 
@@ -144,12 +146,12 @@ type Tx struct {
 	StartedAt    time.Time      `json:"startedAt"`
 	EndedAt      time.Time      `json:"endedAt"`
 	Id           string         `json:"id"`
-	Transactions []*transaction `json:"transactions"`
+	Transactions []*Transaction `json:"transactions"`
 	isDebug      bool           `json:"-"`
 }
 
 /**
-* getTx: Returns the transaction for the session
+* getTx: Returns the Transaction for the session
 * @param tx *Tx
 * @return (*Tx, bool)
 **/
@@ -163,7 +165,7 @@ func getTx(tx *Tx) (*Tx, bool) {
 		StartedAt:    timezone.Now(),
 		EndedAt:      time.Time{},
 		Id:           id,
-		Transactions: make([]*transaction, 0),
+		Transactions: make([]*Transaction, 0),
 	}
 	return tx, true
 }
@@ -206,13 +208,13 @@ func (s *Tx) save() error {
 }
 
 /**
-* getTx: Gets the transaction
+* getTx: Gets the Transaction
 * @return error
 **/
-func (s *Tx) getRecors(name string) []*record {
-	idx := slices.IndexFunc(s.Transactions, func(item *transaction) bool { return item.Model.Name == name })
+func (s *Tx) getRecors(name string) []*Record {
+	idx := slices.IndexFunc(s.Transactions, func(item *Transaction) bool { return item.Model.Name == name })
 	if idx == -1 {
-		return []*record{}
+		return []*Record{}
 	}
 
 	tra := s.Transactions[idx]
@@ -220,12 +222,12 @@ func (s *Tx) getRecors(name string) []*record {
 }
 
 /**
-* add: Adds data to the transaction
+* add: Adds data to the Transaction
 * @param name string, data et.Json
 **/
 func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
-	var tx *transaction
-	idx := slices.IndexFunc(s.Transactions, func(t *transaction) bool { return t.Model.Name == model.Name })
+	var tx *Transaction
+	idx := slices.IndexFunc(s.Transactions, func(t *Transaction) bool { return t.Model.Name == model.Name })
 	if idx == -1 {
 		tx = newTransaction(s, model)
 		s.Transactions = append(s.Transactions, tx)
@@ -237,13 +239,13 @@ func (s *Tx) add(model *Model, cmd Command, key string, data et.Json) error {
 }
 
 /**
-* commit: Commits the transaction
+* commit: Commits the Transaction
 * @return error
 **/
 func (s *Tx) commit() error {
-	for _, tx := range s.Transactions {
-		model := tx.Model
-		for _, record := range tx.Records {
+	for _, tr := range s.Transactions {
+		model := tr.Model
+		for _, record := range tr.Records {
 			cmd := record.Command
 			idx := record.Idx
 			if cmd == DELETE {
@@ -262,6 +264,45 @@ func (s *Tx) commit() error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+/**
+* commit: Commits the Transaction
+* @param tr *Transaction
+* @return error
+**/
+func commit(tr *Transaction) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	model := tr.Model
+	if model.Host() != node.host {
+		return methods.commit(model.Host(), tr)
+	}
+
+	for _, record := range tr.Records {
+		cmd := record.Command
+		idx := record.Idx
+		if cmd == DELETE {
+			err := model.removeData(idx)
+			if err != nil {
+				return err
+			}
+		} else {
+			data := record.Data
+			err := model.putData(idx, data)
+			if err != nil {
+				return err
+			}
+		}
+		err := record.commit()
+		if err != nil {
+			return err
 		}
 	}
 

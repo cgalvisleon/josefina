@@ -268,8 +268,8 @@ func (s *Methods) SaveModel(require *Model, response *Session) error {
 }
 
 /**
-* saveModel
-* @param model *Model
+* setRecord
+* @param schema, model, key string
 * @return error
 **/
 func (s *Methods) setRecord(schema, model, key string) error {
@@ -305,6 +305,43 @@ func (s *Methods) SetRecord(require et.Json, response *Session) error {
 	model := require.Str("model")
 	key := require.Str("key")
 	err := setRecord(schema, model, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* commit
+* @param to string, tx *Transaction
+* @return error
+**/
+func (s *Methods) commit(to string, tx *Transaction) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	var reply string
+	err := jrpc.CallRpc(to, "Methods.Commit", tx, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Commit
+* @param require *Transaction, response *Session
+* @return error
+**/
+func (s *Methods) Commit(require *Transaction, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := commit(require)
 	if err != nil {
 		return err
 	}

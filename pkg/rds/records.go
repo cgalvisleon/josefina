@@ -78,7 +78,25 @@ func setRecord(schema, model, key string) error {
 * @return error
 **/
 func deleteRecord(schema, model, key string) error {
-	_, err := records.
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_FOUND)
+	}
+
+	if node.leader != "" {
+		err := methods.setRecord(schema, model, key)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initRecords()
+	if err != nil {
+		return err
+	}
+
+	_, err = records.
 		Delete().
 		Where(Eq("schema", schema)).
 		And(Eq("model", model)).
