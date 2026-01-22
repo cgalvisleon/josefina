@@ -19,7 +19,6 @@ var (
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	votes = &Votes{
 		votes: make(map[string]string),
 		mu:    sync.Mutex{},
@@ -45,6 +44,13 @@ func makeVote(tag string) (string, error) {
 	if methods == nil {
 		return "", fmt.Errorf(msg.MSG_METHODS_NOT_INITIALIZED)
 	}
+
+	heartbeat := 100 * time.Millisecond
+	minElection := 10 * heartbeat // 1s
+	maxElection := 20 * heartbeat // 2s
+
+	timeout := randomElectionTimeout(minElection, maxElection)
+	time.Sleep(timeout)
 
 	go vote(tag, node.host)
 
