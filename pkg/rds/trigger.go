@@ -14,11 +14,11 @@ type Trigger struct {
 type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 /**
-* addBeforeInsert
+* AddBeforeInsert
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addBeforeInsert(name string, fn []byte) {
+func (s *Model) AddBeforeInsert(name string, fn []byte) {
 	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.BeforeInserts[idx].Definition = fn
@@ -27,11 +27,11 @@ func (s *Model) addBeforeInsert(name string, fn []byte) {
 }
 
 /**
-* addAfterInsert
+* AddAfterInsert
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addAfterInsert(name string, fn []byte) {
+func (s *Model) AddAfterInsert(name string, fn []byte) {
 	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.AfterInserts[idx].Definition = fn
@@ -40,11 +40,11 @@ func (s *Model) addAfterInsert(name string, fn []byte) {
 }
 
 /**
-* addBeforeUpdate
+* AddBeforeUpdate
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addBeforeUpdate(name string, fn []byte) {
+func (s *Model) AddBeforeUpdate(name string, fn []byte) {
 	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.BeforeUpdates[idx].Definition = fn
@@ -53,11 +53,11 @@ func (s *Model) addBeforeUpdate(name string, fn []byte) {
 }
 
 /**
-* addAfterUpdate
+* AddAfterUpdate
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addAfterUpdate(name string, fn []byte) {
+func (s *Model) AddAfterUpdate(name string, fn []byte) {
 	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.AfterUpdates[idx].Definition = fn
@@ -66,11 +66,11 @@ func (s *Model) addAfterUpdate(name string, fn []byte) {
 }
 
 /**
-* addBeforeDelete
+* AddBeforeDelete
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addBeforeDelete(name string, fn []byte) {
+func (s *Model) AddBeforeDelete(name string, fn []byte) {
 	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.BeforeDeletes[idx].Definition = fn
@@ -79,11 +79,11 @@ func (s *Model) addBeforeDelete(name string, fn []byte) {
 }
 
 /**
-* addAfterDelete
+* AddAfterDelete
 * @param name string, fn []byte
 * @return void
 **/
-func (s *Model) addAfterDelete(name string, fn []byte) {
+func (s *Model) AddAfterDelete(name string, fn []byte) {
 	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
 		s.AfterDeletes[idx].Definition = fn

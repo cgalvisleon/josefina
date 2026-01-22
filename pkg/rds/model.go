@@ -8,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
@@ -96,35 +95,6 @@ type Model struct {
 	data          map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	changed       bool                        `json:"-"`
-}
-
-/**
-* newModel: Returns a new model
-* @param name string, isCore bool, version int
-* @return *Model
-**/
-func newModel(database, schema, name string, isCore bool, version int) (*Model, error) {
-	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-	if !utility.ValidStr(database, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	db, ok := node.dbs[database]
-	if !ok {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
-	}
-
-	result, err := db.newModel(schema, name, isCore, version)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 /**
