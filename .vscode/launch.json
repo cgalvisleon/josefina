@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "leader",
+      "name": "node1",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -12,19 +12,22 @@
       "envFile": "${workspaceFolder}/.env"
     },
     {
-      "name": "follow",
+      "name": "node2",
       "type": "go",
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": [
-        "-port",
-        "3600",
-        "-rpc",
-        "4300",
-        "-leader",
-        "Cesars-MacBook-Pro.local:4200"
-      ],
+      "args": ["-port", "3600", "-rpc", "4201"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "node3",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/server",
+      "args": ["-port", "3600", "-rpc", "4202"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     }
@@ -32,7 +35,7 @@
   "compounds": [
     {
       "name": "cluster",
-      "configurations": ["leader", "follow"],
+      "configurations": ["node1", "node2", "node3"],
       "stopAll": true
     }
   ]
