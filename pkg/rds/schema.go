@@ -31,13 +31,11 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 
 	name = utility.Normalize(name)
-	host := node.host
 	result = &Model{
 		From: &From{
 			Database: s.Database,
 			Schema:   s.Name,
 			Name:     name,
-			Host:     host,
 			Fields:   make(map[string]*Field, 0),
 		},
 		Indexes:       make([]string, 0),
