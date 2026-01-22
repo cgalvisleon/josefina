@@ -136,7 +136,7 @@ func (s *Node) mount(services any) error {
 			outputs = append(outputs, paramType.String())
 		}
 
-		logs.Debug(et.Json{
+		logs.Log("rpc", et.Json{
 			"method":  metodo,
 			"inputs":  inputs,
 			"outputs": outputs,
