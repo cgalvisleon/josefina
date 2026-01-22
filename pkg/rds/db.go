@@ -2,7 +2,6 @@ package rds
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
@@ -138,50 +137,29 @@ func (s *DB) save() error {
 * @param name string
 * @return *Schema
 **/
-func (s *DB) getSchema(name string) (*Schema, error) {
+func (s *DB) getSchema(name string) *Schema {
+	name = utility.Normalize(name)
 	result, ok := s.Schemas[name]
 	if !ok {
-		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+		result = &Schema{
+			Database: s.Name,
+			Name:     name,
+			Models:   make(map[string]*Model, 0),
+			db:       s,
+		}
 	}
 
-	return result, nil
+	return result
 }
 
 /**
 * getModel: Returns a model by schema and name
-* @param schema, name string
+* @param schema, name, host string
 * @return *Model, error
 **/
-func (s *DB) getModel(schema, name string) (*Model, error) {
-	sch, err := s.getSchema(schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return sch.getModel(name)
-}
-
-/**
-* newSchema: Creates a new schema
-* @param name string
-* @return *Schema
-**/
-func (s *DB) newSchema(name string) *Schema {
-	name = utility.Normalize(name)
-	result, ok := s.Schemas[name]
-	if ok {
-		return result
-	}
-
-	result = &Schema{
-		Database: s.Name,
-		Name:     name,
-		Models:   make(map[string]*Model, 0),
-		db:       s,
-	}
-
-	s.Schemas[name] = result
-	return result
+func (s *DB) getModel(schema, name, host string) (*Model, error) {
+	sch := s.getSchema(schema)
+	return sch.getModel(name, host)
 }
 
 /**
@@ -190,6 +168,6 @@ func (s *DB) newSchema(name string) *Schema {
 * @return *Model, error
 **/
 func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
-	sch := s.newSchema(schema)
+	sch := s.getSchema(schema)
 	return sch.newModel(name, isCore, version)
 }

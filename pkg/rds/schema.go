@@ -72,12 +72,30 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 
 /**
 * getModel: Returns a model
-* @param name string
+* @param name, host string
 * @return *Model
 **/
-func (s *Schema) getModel(name string) (*Model, error) {
+func (s *Schema) getModel(name, host string) (*Model, error) {
+	name = utility.Normalize(name)
 	result, ok := s.Models[name]
 	if ok {
+		return result, nil
+	}
+
+	err := initModels()
+	if err != nil {
+		return nil, err
+	}
+
+	key := modelKey(s.Database, s.Name, name)
+	exists, err := models.get(key, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		result.Host = host
+		s.Models[name] = result
 		return result, nil
 	}
 

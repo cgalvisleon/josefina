@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -281,4 +282,19 @@ func getBetweenRange(v any) (min any, max any, ok bool) {
 	}
 
 	return nil, nil, false
+}
+
+/**
+* Key
+* @return string
+**/
+func modelKey(database, schema, name string) string {
+	result := name
+	if schema != "" {
+		result = fmt.Sprintf("%s.%s", schema, result)
+	}
+	if database != "" {
+		result = fmt.Sprintf("%s.%s", database, result)
+	}
+	return result
 }

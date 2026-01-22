@@ -22,15 +22,18 @@ var (
 
 /**
 * initModels: Initializes the models model
-* @param db *DB
 * @return error
 **/
-func initModels(db *DB) error {
+func initModels() error {
 	if models != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
 	models, err = db.newModel("", "models", true, 1)
 	if err != nil {
 		return err
@@ -149,21 +152,6 @@ func (s *Model) toJson() (et.Json, error) {
 }
 
 /**
-* Key
-* @return string
-**/
-func (s *Model) key() string {
-	result := s.Name
-	if s.Schema != "" {
-		result = fmt.Sprintf("%s.%s", s.Schema, result)
-	}
-	if s.Database != "" {
-		result = fmt.Sprintf("%s.%s", s.Database, result)
-	}
-	return result
-}
-
-/**
 * save: Saves the model
 * @return error
 **/
@@ -181,7 +169,7 @@ func (s *Model) save() error {
 		return err
 	}
 
-	key := s.key()
+	key := modelKey(s.Database, s.Schema, s.Name)
 	err = models.put(key, scr)
 	if err != nil {
 		return err

@@ -180,14 +180,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	key := name
-	if schema != "" {
-		key = fmt.Sprintf("%s.%s", schema, key)
-	}
-	if database != "" {
-		key = fmt.Sprintf("%s.%s", database, key)
-	}
-
+	key := modelKey(database, schema, name)
 	result, ok := s.models[key]
 	if ok {
 		return result, nil
@@ -210,8 +203,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return nil, err
 	}
 
-
-	result, err = getModel(database, schema, model)
+	result, err = db.getModel(schema, name, host)
 	if err != nil {
 		return nil, err
 	}
