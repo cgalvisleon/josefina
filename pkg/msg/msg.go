@@ -43,7 +43,8 @@ var (
 	MSG_AUTHENTICATION_FAILED      = "authentication failed"
 	MSG_NODE_NOT_INITIALIZED       = "node not initialized"
 	MSG_METHODS_NOT_INITIALIZED    = "methods not initialized"
-	MSG_MASTER_HOST_REQUIRED       = "master host required"
+	MSG_LEADER_HOST_REQUIRED       = "leader host required"
+	MSG_FOLLOW_HOST_REQUIRED       = "follow host required"
 )
 
 func init() {
@@ -89,6 +90,7 @@ func init() {
 		MSG_AUTHENTICATION_FAILED = "autenticación fallida"
 		MSG_NODE_NOT_INITIALIZED = "nodo no inicializado"
 		MSG_METHODS_NOT_INITIALIZED = "methods no inicializado"
-		MSG_MASTER_HOST_REQUIRED = "master host es requerido"
+		MSG_LEADER_HOST_REQUIRED = "leader host es requerido"
+		MSG_FOLLOW_HOST_REQUIRED = "follow host es requerido"
 	}
 }

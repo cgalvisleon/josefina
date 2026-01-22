@@ -17,23 +17,23 @@ var methods *Methods
 * ping
 * @return error
 **/
-func (s *Methods) ping() error {
+func (s *Methods) ping(to string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var response string
-	err := jrpc.CallRpc(node.leader, "Methods.Ping", node.host, &response)
+	err := jrpc.CallRpc(to, "Methods.Ping", node.host, &response)
 	if err != nil {
 		return err
 	}
 
-	logs.Logf(packageName, "%s:%s", response, node.leader)
+	logs.Logf(packageName, "%s:%s", response, to)
 	return nil
 }
 
 /**
-* Ping: Pings the master
+* Ping: Pings the leader
 * @param response *string
 * @return error
 **/

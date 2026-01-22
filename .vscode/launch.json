@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "master",
+      "name": "leader",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -22,7 +22,7 @@
         "3600",
         "-rpc",
         "4300",
-        "-master",
+        "-leader",
         "Cesars-MacBook-Pro.local:4200"
       ],
       "cwd": "${workspaceFolder}",
@@ -32,7 +32,7 @@
   "compounds": [
     {
       "name": "cluster",
-      "configurations": ["master", "follow"],
+      "configurations": ["leader", "follow"],
       "stopAll": true
     }
   ]
