@@ -229,3 +229,22 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 	*response = *result
 	return nil
 }
+
+/**
+* saveModel
+* @param model *Model
+* @return error
+**/
+func (s *Methods) saveModel(model *Model) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	var reply string
+	err := jrpc.CallRpc(node.leader, "Methods.SaveModel", model, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

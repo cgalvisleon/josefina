@@ -138,6 +138,19 @@ func (s *Model) save() error {
 		return nil
 	}
 
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_FOUND)
+	}
+
+	if node.leader != "" {
+		err := methods.saveModel(s)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if models == nil {
 		return nil
 	}
