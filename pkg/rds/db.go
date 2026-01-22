@@ -18,12 +18,17 @@ var databases *Model
 * @param db *DB
 * @return error
 **/
-func initDatabases(db *DB) error {
+func initDatabases() error {
 	if databases != nil {
 		return nil
 	}
 
-	var err error
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
+	node.dbs[packageName] = db
 	databases, err = db.newModel("", "databases", true, 1)
 	if err != nil {
 		return err
@@ -185,14 +190,30 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *DB, error
 **/
 func getDB(name string) (*DB, error) {
-	
-	if node.Type == FOLLOW {
-		return follow.getDB(name)
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	result, err := node.getDb(name)
+	err := initDatabases()
 	if err != nil {
 		return nil, err
+	}
+
+	if name == packageName {
+		result, ok := node.dbs[name]
+		if ok {
+			return result, nil
+		}
+	}
+
+	var result *DB
+	exists, err := databases.get(name, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
 	}
 
 	return result, nil

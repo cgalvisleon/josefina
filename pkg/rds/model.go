@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
@@ -92,18 +94,17 @@ type Model struct {
 * @return *Model
 **/
 func newModel(database, schema, name string, isCore bool, version int) (*Model, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
 	}
-
-	result, ok := s.Models[name]
-	if ok {
-		return result, nil
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
-	host := fmt.Sprintf(`%s:%d`, node.Host, node.Port)
-	result = &Model{
+	port := envar.GetInt("RPC_PORT", 4200)
+	host := fmt.Sprintf(`%s:%d`, hostname, port)
+	result := &Model{
 		From: &From{
 			Database: database,
 			Schema:   schema,
@@ -312,11 +313,11 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* getObjet: Gets the model as object
-* @param key string
-* @return et.Json, error
+* get: Gets the model
+* @param key string, dest any
+* @return bool, error
 **/
-func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
+func (s *Model) get(key string, dest any) (bool, error) {
 	source, err := s.source()
 	if err != nil {
 		return false, err
@@ -332,6 +333,15 @@ func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
 	}
 
 	return true, nil
+}
+
+/**
+* getObjet: Gets the model as object
+* @param key string
+* @return et.Json, error
+**/
+func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
+	return s.get(key, &dest)
 }
 
 /**

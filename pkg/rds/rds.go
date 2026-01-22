@@ -12,7 +12,12 @@ import (
 var (
 	packageName = "josefina"
 	node        *Node
+	hostname    string
 )
+
+func init() {
+	hostname, _ = os.Hostname()
+}
 
 /**
 * LoadMaster: Initializes the josefina
@@ -21,11 +26,6 @@ var (
 func loadMaster(version string) error {
 	if node != nil {
 		return nil
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		return err
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
@@ -74,11 +74,6 @@ func loadMaster(version string) error {
 func loadFollow(version string) error {
 	if node != nil {
 		return nil
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		return err
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)

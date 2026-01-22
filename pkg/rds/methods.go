@@ -38,12 +38,31 @@ func (s *Methods) ping() error {
 **/
 func (s *Methods) getDB(name string) (*DB, error) {
 	var response DB
-	err := callRpc(node.master, "Master.GetDB", name, &response)
+	err := callRpc(node.master, "Methods.GetDB", name, &response)
 	if err != nil {
 		return nil, err
 	}
 
 	return &response, nil
+}
+
+/**
+* GetDB: Returns a database by name
+* @param require string, response *DB
+* @return error
+**/
+func (s *Methods) GetDB(require string, response *DB) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	result, err := node.getDb(require)
+	if err != nil {
+		return err
+	}
+
+	*response = *result
+	return nil
 }
 
 /**
