@@ -33,6 +33,21 @@ func (s *Follow) ping() error {
 }
 
 /**
+* getDB
+* @param name string
+* @return *DB, error
+**/
+func (s *Follow) getDB(name string) (*DB, error) {
+	var response *DB
+	err := callRpc(node.master, "Master.GetDB", name, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
 * Select
 * @params require et.Json, response *et.Item
 * @return error

@@ -131,6 +131,10 @@ func getDB(name string) (*DB, error) {
 		return nil, fmt.Errorf("node not initialized")
 	}
 
+	if node.Type == FOLLOW {
+		return follow.getDB(name)
+	}
+
 	result, err := node.getDb(name)
 	if err != nil {
 		return nil, err
