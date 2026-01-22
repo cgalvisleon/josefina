@@ -38,10 +38,11 @@ func (s *Master) GetDB(require string, response *DB) error {
 	}
 
 	var err error
-	response, err = node.getDb(require)
+	result, err := node.getDb(require)
 	if err != nil {
 		return err
 	}
 
+	*response = *result
 	return nil
 }

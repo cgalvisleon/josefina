@@ -183,4 +183,7 @@ func init() {
 	gob.Register(et.Item{})
 	gob.Register(et.Items{})
 	gob.Register(et.List{})
+	gob.Register(&DB{})
+	gob.Register(&Schema{})
+	gob.Register(&Model{})
 }

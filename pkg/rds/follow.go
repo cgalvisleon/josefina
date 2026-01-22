@@ -38,13 +38,13 @@ func (s *Follow) ping() error {
 * @return *DB, error
 **/
 func (s *Follow) getDB(name string) (*DB, error) {
-	var response *DB
+	var response DB
 	err := callRpc(node.master, "Master.GetDB", name, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return response, nil
+	return &response, nil
 }
 
 /**

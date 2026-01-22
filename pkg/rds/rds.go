@@ -117,7 +117,7 @@ func loadFollow(version string) error {
 	if err != nil {
 		return err
 	}
-	logs.Logf("db:", data.ToString())
+	logs.Debug("db:", data.ToString())
 
 	return nil
 }
