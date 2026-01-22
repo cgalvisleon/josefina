@@ -240,6 +240,14 @@ func (s *Model) count() int {
 }
 
 /**
+* genKey: Returns a new key for the model
+* @return string
+**/
+func (s *Model) genKey() string {
+	return reg.GenUUId(s.Name)
+}
+
+/**
 * source: Returns the source
 * @return *store.FileStore, error
 **/
@@ -319,14 +327,6 @@ func (s *Model) isExisted(name, key string) (bool, error) {
 	}
 
 	return source.IsExist(key), nil
-}
-
-/**
-* getKey: Returns a new key for the model
-* @return string
-**/
-func (s *Model) getKey() string {
-	return reg.GenUUId(s.Name)
 }
 
 /**

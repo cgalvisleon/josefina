@@ -45,7 +45,7 @@ func initTransactions() error {
 **/
 func setTransaction(key string, data et.Json) (string, error) {
 	if key == "" {
-		key = transactions.getKey()
+		key = transactions.genKey()
 	}
 
 	err := transactions.putData(key, data)
