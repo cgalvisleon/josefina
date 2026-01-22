@@ -13,6 +13,35 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
+var nodes *Model
+
+/**
+* initNodes: Initializes the nodes model
+* @param db *DB
+* @return error
+**/
+func initNodes() error {
+	if nodes != nil {
+		return nil
+	}
+
+	db, err := newDb(packageName, node.version)
+	if err != nil {
+		return err
+	}
+
+	node.dbs[packageName] = db
+	databases, err = db.newModel("", "databases", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := databases.init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type Node struct {
 	host    string          `json:"-"`
 	port    int             `json:"-"`
@@ -99,7 +128,6 @@ func (s *Node) mount(services any) error {
 			"inputs":  inputs,
 			"outputs": outputs,
 		}.ToString())
-
 	}
 
 	rpc.Register(services)

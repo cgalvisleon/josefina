@@ -20,14 +20,30 @@ func (s *Methods) ping() error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	address := fmt.Sprintf(`%s:%d`, node.Host, node.Port)
+	address := fmt.Sprintf(`%s:%d`, node.host, node.port)
 	var response string
-	err := callRpc(node.master, "Master.Ping", address, &response)
+	err := callRpc(node.master, "Methods.Ping", address, &response)
 	if err != nil {
 		return err
 	}
 
 	logs.Logf(packageName, "%s:%s", response, node.master)
+	return nil
+}
+
+/**
+* Ping: Pings the master
+* @param response *string
+* @return error
+**/
+func (s *Methods) Ping(require string, response *string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	node.addNode(require)
+	logs.Log(packageName, "ping:", require)
+	*response = "pong"
 	return nil
 }
 
@@ -65,11 +81,17 @@ func (s *Methods) GetDB(require string, response *DB) error {
 	return nil
 }
 
+
+
 /**
 * SignIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/
 func SignIn(device, database, username, password string) (*Session, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	return signIn(device, database, username, password)
 }

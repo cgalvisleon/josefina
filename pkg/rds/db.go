@@ -28,7 +28,6 @@ func initDatabases() error {
 		return err
 	}
 
-	node.dbs[packageName] = db
 	databases, err = db.newModel("", "databases", true, 1)
 	if err != nil {
 		return err
@@ -47,19 +46,30 @@ type DB struct {
 	Schemas map[string]*Schema `json:"schemas"`
 }
 
+/**
+* newDb: Creates a new database
+* @param name string, version string
+* @return *DB, error
+**/
 func newDb(name, version string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
 	name = utility.Normalize(name)
-	result := &DB{
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	path := envar.GetStr("TENNANT_PATH_DATA", "./data")
+	result = &DB{
 		Name:    name,
 		Version: version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
+	node.dbs[name] = result
 
 	return result, nil
 }
