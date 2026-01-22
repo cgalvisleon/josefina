@@ -52,8 +52,17 @@ func getVote(tag, host string) (string, error) {
 		return "", err
 	}
 
+	results := make(map[string]int)
 	for _, host := range nodes {
-		methods.getVote(tag, host)
+		if host == node.host {
+			continue
+		}
+		
+		res, err := methods.getVote(tag, host)
+		if err != nil {
+			continue
+		}
+		results[res]++
 	}
 
 	return result, nil

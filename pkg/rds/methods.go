@@ -22,9 +22,8 @@ func (s *Methods) ping() error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	address := fmt.Sprintf(`%s:%d`, node.host, node.rpcPort)
 	var response string
-	err := jrpc.CallRpc(node.master, "Methods.Ping", address, &response)
+	err := jrpc.CallRpc(node.master, "Methods.Ping", node.host, &response)
 	if err != nil {
 		return err
 	}

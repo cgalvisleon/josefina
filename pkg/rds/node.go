@@ -28,7 +28,7 @@ func getNodes() ([]string, error) {
 
 type Node struct {
 	host    string             `json:"-"`
-	rpcPort int                `json:"-"`
+	port    int                `json:"-"`
 	version string             `json:"-"`
 	master  string             `json:"-"`
 	rpcs    map[string]et.Json `json:"-"`
@@ -39,13 +39,14 @@ type Node struct {
 
 /**
 * newNode
-* @param tp TypeNode, host string, port int, version string
+* @param host string, port int, version string
 * @return *Node
 **/
-func newNode(host string, rpcPort int, version string) *Node {
+func newNode(host string, port int, version string) *Node {
+	address := fmt.Sprintf(`%s:%d`, host, port)
 	return &Node{
-		host:    host,
-		rpcPort: rpcPort,
+		host:    address,
+		port:    port,
 		version: version,
 		rpcs:    make(map[string]et.Json),
 		dbs:     make(map[string]*DB),
@@ -60,7 +61,6 @@ func newNode(host string, rpcPort int, version string) *Node {
 func (s *Node) toJson() et.Json {
 	return et.Json{
 		"host":    s.host,
-		"rpcPort": s.rpcPort,
 		"version": s.version,
 	}
 }
@@ -74,7 +74,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	address := fmt.Sprintf(`:%d`, s.rpcPort)
+	address := fmt.Sprintf(`:%d`, s.port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		logs.Fatal(err)
@@ -127,77 +127,11 @@ func (s *Node) mount(services any) error {
 			"outputs": outputs,
 		}
 
-		logs.Logf("rpc", "RPC:/%s:%d/%s", s.host, s.rpcPort, name)
+		logs.Logf("rpc", "RPC:/%s/%s", s.host, name)
 	}
 
 	rpc.Register(services)
 	return nil
-}
-
-/**
-* addNode
-* @param node string
-**/
-func (s *Node) addNode(host string, port int, version string) error {
-	err := initNodes()
-	if err != nil {
-		return err
-	}
-
-	key := fmt.Sprintf("%s:%d", host, port)
-	data := et.Json{
-		"host":    host,
-		"rpcPort": port,
-		"version": version,
-	}
-	err = nodes.putData(key, data)
-	if err != nil {
-		return err
-	}
-
-	s.nodes[key] = true
-	return nil
-}
-
-/**
-* removeNode
-* @param node string
-**/
-func (s *Node) removeNode(host string, port int) error {
-	err := initNodes()
-	if err != nil {
-		return err
-	}
-
-	key := fmt.Sprintf("%s:%d", host, port)
-	err = nodes.removeData(key)
-	if err != nil {
-		return err
-	}
-
-	delete(s.nodes, key)
-	return nil
-}
-
-/**
-* getNodes
-* @return map[string]bool
-**/
-func (s *Node) getNodes() (map[string]bool, error) {
-	if s.master != "" {
-		result, err := methods.getNodes()
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	result, err := getNodes()
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
 }
 
 /**
