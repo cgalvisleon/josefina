@@ -41,6 +41,10 @@ func initNodes() error {
 	return nil
 }
 
+func getNodes() (map[string]bool, error) {
+	return nil, nil
+}
+
 type Node struct {
 	host    string             `json:"-"`
 	rpcPort int                `json:"-"`
@@ -194,6 +198,27 @@ func (s *Node) removeNode(host string, port int) error {
 
 	delete(s.nodes, key)
 	return nil
+}
+
+/**
+* getNodes
+* @return map[string]bool
+**/
+func (s *Node) getNodes() (map[string]bool, error) {
+	if s.master != "" {
+		result, err := methods.getNodes()
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	result, err := getNodes()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 /**

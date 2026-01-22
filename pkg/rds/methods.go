@@ -61,6 +61,40 @@ func (s *Methods) Ping(require et.Json, response *string) error {
 }
 
 /**
+* getNodes
+* @param name string
+* @return *DB, error
+**/
+func (s *Methods) getNodes() (map[string]bool, error) {
+	var response map[string]bool
+	err := jrpc.CallRpc(node.master, "Methods.GetNodes", nil, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetNodes: Returns a database by name
+* @param require string, response *DB
+* @return error
+**/
+func (s *Methods) GetNodes(require interface{}, response map[string]bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	result, err := node.getNodes()
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
+}
+
+/**
 * getDB
 * @param name string
 * @return *DB, error
