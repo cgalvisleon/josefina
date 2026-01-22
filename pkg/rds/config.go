@@ -20,7 +20,7 @@ func getConfig() (*Config, error) {
 	if err != nil {
 		// Si no existe, crearlo con valores por defecto
 		if os.IsNotExist(err) {
-			cfg := Config{} // TODO: pon aquí tus valores por defecto
+			cfg := Config{Nodes: []string{}}
 
 			b, err := json.MarshalIndent(cfg, "", "  ")
 			if err != nil {
