@@ -7,10 +7,10 @@ import (
 )
 
 func main() {
-	envar.SetIntByArg("port", "PORT", 3300)
-	envar.SetIntByArg("rpc", "RPC_PORT", 4200)
-	envar.SetStrByArg("mode", "MODE", "master")
-	envar.SetStrByArg("master", "MASTER_HOST", "")
+	envar.SetIntByArg("-port", "PORT", 3300)
+	envar.SetIntByArg("-rpc", "RPC_PORT", 4200)
+	envar.SetStrByArg("-mode", "MODE", "master")
+	envar.SetStrByArg("-master", "MASTER_HOST", "")
 
 	srv, err := serv.New()
 	if err != nil {
