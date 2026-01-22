@@ -135,7 +135,7 @@ func (s *Node) getDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	if s.leader != "" {
+	if s.leader != s.host {
 		result, err := methods.getDB(name)
 		if err != nil {
 			return nil, err
@@ -186,7 +186,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return result, nil
 	}
 
-	if s.leader != "" {
+	if s.leader != s.host {
 		result, err := methods.getModel(database, schema, name, s.host)
 		if err != nil {
 			return nil, err
@@ -225,7 +225,7 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	if s.leader != "" {
+	if s.leader != s.host {
 		result, err := methods.signIn(device, database, username, password)
 		if err != nil {
 			return nil, err

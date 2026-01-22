@@ -33,7 +33,9 @@ func Load(version string) error {
 
 	port := envar.GetInt("RPC_PORT", 4200)
 	node = newNode(hostname, port, version)
-	if node.host != leader {
+	if leader == "" {
+		node.leader = node.host
+	} else if node.host != leader {
 		node.leader = leader
 	}
 
