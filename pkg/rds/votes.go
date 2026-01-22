@@ -37,6 +37,8 @@ func makeVote(tag string) (string, error) {
 		return "", fmt.Errorf(msg.MSG_METHODS_NOT_INITIALIZED)
 	}
 
+	go vote(tag, node.host)
+
 	nodes, err := getNodes()
 	if err != nil {
 		return "", err

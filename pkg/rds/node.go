@@ -13,24 +13,11 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
-/**
-* getNodes: Returns the nodes
-* @return []string, error
-**/
-func getNodes() ([]string, error) {
-	config, err := getConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config.Nodes, nil
-}
-
 type Node struct {
 	host    string             `json:"-"`
 	port    int                `json:"-"`
 	version string             `json:"-"`
-	master  string             `json:"-"`
+	leader  string             `json:"-"`
 	rpcs    map[string]et.Json `json:"-"`
 	dbs     map[string]*DB     `json:"-"`
 	models  map[string]*Model  `json:"-"`
@@ -145,7 +132,7 @@ func (s *Node) getDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	if s.master != "" {
+	if s.leader != "" {
 		result, err := methods.getDB(name)
 		if err != nil {
 			return nil, err
@@ -183,7 +170,7 @@ func (s *Node) getModel(database, schema, model string) (*Model, error) {
 		return result, nil
 	}
 
-	if s.master != "" {
+	if s.leader != "" {
 		result, err := methods.getModel(database, schema, model)
 		if err != nil {
 			return nil, err

@@ -23,12 +23,12 @@ func (s *Methods) ping() error {
 	}
 
 	var response string
-	err := jrpc.CallRpc(node.master, "Methods.Ping", node.host, &response)
+	err := jrpc.CallRpc(node.leader, "Methods.Ping", node.host, &response)
 	if err != nil {
 		return err
 	}
 
-	logs.Logf(packageName, "%s:%s", response, node.master)
+	logs.Logf(packageName, "%s:%s", response, node.leader)
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (s *Methods) GetVote(require string, response *string) error {
 **/
 func (s *Methods) getDB(name string) (*DB, error) {
 	var response DB
-	err := jrpc.CallRpc(node.master, "Methods.GetDB", name, &response)
+	err := jrpc.CallRpc(node.leader, "Methods.GetDB", name, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *Methods) GetDB(require string, response *DB) error {
 **/
 func (s *Methods) getModel(database, schema, model string) (*Model, error) {
 	var response Model
-	err := jrpc.CallRpc(node.master, "Methods.GetModel", et.Json{
+	err := jrpc.CallRpc(node.leader, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"model":    model,

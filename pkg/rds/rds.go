@@ -26,22 +26,26 @@ func Load(version string) error {
 		return nil
 	}
 
+	leader, err := getLeader()
+	if err != nil {
+		return err
+	}
+
 	port := envar.GetInt("RPC_PORT", 4200)
-	master := envar.GetStr("MASTER_HOST", "")
 	node = newNode(hostname, port, version)
-	node.master = master
+	node.leader = leader
 
 	if methods == nil {
 		methods = new(Methods)
 	}
-	err := node.mount(methods)
+	err = node.mount(methods)
 	if err != nil {
 		return err
 	}
 
 	go node.start()
 
-	if node.master != "" {
+	if node.leader != "" {
 		err = methods.ping()
 		if err != nil {
 			return err
