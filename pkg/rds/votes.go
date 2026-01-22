@@ -51,7 +51,7 @@ func makeVote(tag string) (string, error) {
 			continue
 		}
 
-		methods.vote(tag, host)
+		methods.vote(host, tag, node.host)
 	}
 
 	results := make(map[string]int)
@@ -61,7 +61,7 @@ func makeVote(tag string) (string, error) {
 			continue
 		}
 
-		res, err := methods.getVote(tag, host)
+		res, err := methods.getVote(host, tag)
 		if err != nil {
 			continue
 		}
@@ -85,14 +85,27 @@ func makeVote(tag string) (string, error) {
 * @param tag string
 * @return string, error
 **/
-func vote(tag, host string) string {
+func vote(tag, host string) {
 	votes.mu.Lock()
-	defer votes.mu.Unlock()
-
 	_, ok := votes.votes[tag]
 	if !ok {
 		votes.votes[tag] = host
 	}
+	votes.mu.Unlock()
+}
 
-	return votes.votes[tag]
+/**
+* vote: Returns the votes for a tag
+* @param tag string
+* @return string, error
+**/
+func getVote(tag string) string {
+	votes.mu.Lock()
+	result, ok := votes.votes[tag]
+	if !ok {
+		result = ""
+	}
+	votes.mu.Unlock()
+
+	return result
 }

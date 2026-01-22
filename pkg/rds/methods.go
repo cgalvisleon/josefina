@@ -84,13 +84,9 @@ func (s *Methods) Vote(require et.Json, response *string) error {
 * @param tag, host string
 * @return error
 **/
-func (s *Methods) getVote(to, tag, host string) (string, error) {
-	data := et.Json{
-		"tag":  tag,
-		"host": host,
-	}
+func (s *Methods) getVote(to, tag string) (string, error) {
 	var response string
-	err := jrpc.CallRpc(to, "Methods.GetVote", data, &response)
+	err := jrpc.CallRpc(to, "Methods.GetVote", tag, &response)
 	if err != nil {
 		return "", err
 	}
@@ -100,15 +96,14 @@ func (s *Methods) getVote(to, tag, host string) (string, error) {
 
 /**
 * GetVote: Returns the votes for a tag
-* @param require interface{}, response *string
+* @param require string, response *string
 * @return error
 **/
-func (s *Methods) GetVote(require et.Json, response *string) error {
-	tag := require.Str("tag")
-	host := require.Str("host")
+func (s *Methods) GetVote(require string, response *string) error {
+	tag := require
 	result := make(chan string)
 	go func() {
-		res := vote(tag, host)
+		res := getVote(tag)
 		result <- res
 	}()
 
