@@ -22,13 +22,9 @@ func (s *Methods) ping() error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	data := et.Json{
-		"host":    node.host,
-		"rpcPort": node.rpcPort,
-		"version": node.version,
-	}
+	address := fmt.Sprintf(`%s:%d`, node.host, node.rpcPort)
 	var response string
-	err := jrpc.CallRpc(node.master, "Methods.Ping", data, &response)
+	err := jrpc.CallRpc(node.master, "Methods.Ping", address, &response)
 	if err != nil {
 		return err
 	}
@@ -42,17 +38,9 @@ func (s *Methods) ping() error {
 * @param response *string
 * @return error
 **/
-func (s *Methods) Ping(require et.Json, response *string) error {
+func (s *Methods) Ping(require string, response *string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	host := require.Str("host")
-	port := require.Int("port")
-	version := require.Str("version")
-	err := node.addNode(host, port, version)
-	if err != nil {
-		return err
 	}
 
 	logs.Log(packageName, "ping:", require)
@@ -61,36 +49,38 @@ func (s *Methods) Ping(require et.Json, response *string) error {
 }
 
 /**
-* getNodes
-* @param name string
-* @return *DB, error
+* getVote
+* @param tag, host string
+* @return string, error
 **/
-func (s *Methods) getNodes() (map[string]bool, error) {
-	var response map[string]bool
-	err := jrpc.CallRpc(node.master, "Methods.GetNodes", nil, &response)
+func (s *Methods) getVote(tag, host string) (string, error) {
+	data := et.Json{
+		"tag":  tag,
+		"host": host,
+	}
+	var response string
+	err := jrpc.CallRpc(node.master, "Methods.GetVote", data, &response)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return response, nil
 }
 
 /**
-* GetNodes: Returns a database by name
-* @param require string, response *DB
+* GetVote: Returns the votes for a tag
+* @param require et.Json, response *string
 * @return error
 **/
-func (s *Methods) GetNodes(require interface{}, response map[string]bool) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	result, err := node.getNodes()
+func (s *Methods) GetVote(require et.Json, response *string) error {
+	tag := require.Str("tag")
+	host := require.Str("host")
+	result, err := getVote(tag, host)
 	if err != nil {
 		return err
 	}
 
-	response = result
+	*response = result
 	return nil
 }
 

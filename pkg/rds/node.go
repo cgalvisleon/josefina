@@ -13,36 +13,17 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
-var nodes *Model
-
 /**
-* initNodes: Initializes the nodes model
-* @param db *DB
-* @return error
+* getNodes: Returns the nodes
+* @return []string, error
 **/
-func initNodes() error {
-	if nodes != nil {
-		return nil
-	}
-
-	db, err := newDb(packageName, node.version)
+func getNodes() ([]string, error) {
+	config, err := getConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	nodes, err = db.newModel("", "nodes", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := nodes.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getNodes() (map[string]bool, error) {
-	return nil, nil
+	return config.Nodes, nil
 }
 
 type Node struct {
@@ -53,7 +34,6 @@ type Node struct {
 	rpcs    map[string]et.Json `json:"-"`
 	dbs     map[string]*DB     `json:"-"`
 	models  map[string]*Model  `json:"-"`
-	nodes   map[string]bool    `json:"-"`
 	started bool               `json:"-"`
 }
 
@@ -70,7 +50,6 @@ func newNode(host string, rpcPort int, version string) *Node {
 		rpcs:    make(map[string]et.Json),
 		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
-		nodes:   make(map[string]bool),
 	}
 }
 
