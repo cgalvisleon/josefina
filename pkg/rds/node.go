@@ -42,14 +42,15 @@ func initNodes() error {
 }
 
 type Node struct {
-	host    string            `json:"-"`
-	port    int               `json:"-"`
-	version string            `json:"-"`
-	master  string            `json:"-"`
-	dbs     map[string]*DB    `json:"-"`
-	models  map[string]*Model `json:"-"`
-	nodes   map[string]bool   `json:"-"`
-	started bool              `json:"-"`
+	host    string             `json:"-"`
+	port    int                `json:"-"`
+	version string             `json:"-"`
+	master  string             `json:"-"`
+	rpcs    map[string]et.Json `json:"-"`
+	dbs     map[string]*DB     `json:"-"`
+	models  map[string]*Model  `json:"-"`
+	nodes   map[string]bool    `json:"-"`
+	started bool               `json:"-"`
 }
 
 /**
@@ -62,6 +63,7 @@ func newNode(host string, port int, version string) *Node {
 		host:    host,
 		port:    port,
 		version: version,
+		rpcs:    make(map[string]et.Json),
 		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
 		nodes:   make(map[string]bool),
@@ -136,11 +138,13 @@ func (s *Node) mount(services any) error {
 			outputs = append(outputs, paramType.String())
 		}
 
-		logs.Log("rpc", et.Json{
-			"method":  metodo,
+		name := fmt.Sprintf("%s.%s", structName, metodo.Name)
+		s.rpcs[name] = et.Json{
 			"inputs":  inputs,
 			"outputs": outputs,
-		}.ToString())
+		}
+
+		logs.Logf("rpc", "RPC:%s", name)
 	}
 
 	rpc.Register(services)
