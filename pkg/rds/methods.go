@@ -3,6 +3,7 @@ package rds
 import (
 	"fmt"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -20,9 +21,13 @@ func (s *Methods) ping() error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	address := fmt.Sprintf(`%s:%d`, node.host, node.port)
+	data := et.Json{
+		"host":    node.host,
+		"port":    node.port,
+		"version": node.version,
+	}
 	var response string
-	err := callRpc(node.master, "Methods.Ping", address, &response)
+	err := callRpc(node.master, "Methods.Ping", data, &response)
 	if err != nil {
 		return err
 	}
@@ -36,12 +41,19 @@ func (s *Methods) ping() error {
 * @param response *string
 * @return error
 **/
-func (s *Methods) Ping(require string, response *string) error {
+func (s *Methods) Ping(require et.Json, response *string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	node.addNode(require)
+	host := require.Str("host")
+	port := require.Int("port")
+	version := require.Str("version")
+	err := node.addNode(host, port, version)
+	if err != nil {
+		return err
+	}
+
 	logs.Log(packageName, "ping:", require)
 	*response = "pong"
 	return nil
@@ -80,8 +92,6 @@ func (s *Methods) GetDB(require string, response *DB) error {
 	*response = *result
 	return nil
 }
-
-
 
 /**
 * SignIn: Sign in a user
