@@ -192,7 +192,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 			return nil, err
 		}
 
-		if result.Host == s.host {
+		if result.Host() == s.host {
 			s.models[key] = result
 		}
 		return result, nil

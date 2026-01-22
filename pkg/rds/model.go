@@ -49,9 +49,9 @@ type From struct {
 	Database string            `json:"database"`
 	Schema   string            `json:"schema"`
 	Name     string            `json:"name"`
-	Host     string            `json:"host"`
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
+	host     string            `json:"-"`
 }
 
 /**
@@ -60,6 +60,14 @@ type From struct {
 **/
 func (s *From) getJid() string {
 	return reg.GenULID(s.Name)
+}
+
+/**
+* Host: Gets the host
+* @return string
+**/
+func (s *From) Host() string {
+	return s.host
 }
 
 type Model struct {

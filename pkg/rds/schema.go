@@ -79,6 +79,9 @@ func (s *Schema) getModel(name, host string) (*Model, error) {
 	name = utility.Normalize(name)
 	result, ok := s.Models[name]
 	if ok {
+		if result.host == host {
+			result.host = host
+		}
 		return result, nil
 	}
 
@@ -94,7 +97,7 @@ func (s *Schema) getModel(name, host string) (*Model, error) {
 	}
 
 	if exists {
-		result.Host = host
+		result.host = host
 		s.Models[name] = result
 		return result, nil
 	}
