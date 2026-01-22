@@ -248,3 +248,21 @@ func (s *Methods) saveModel(model *Model) error {
 
 	return nil
 }
+
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) SaveModel(require *Model, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := saveModel(require)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

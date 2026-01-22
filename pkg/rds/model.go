@@ -130,46 +130,6 @@ func (s *Model) toJson() (et.Json, error) {
 }
 
 /**
-* save: Saves the model
-* @return error
-**/
-func (s *Model) save() error {
-	if s.IsCore {
-		return nil
-	}
-
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_FOUND)
-	}
-
-	if node.leader != "" {
-		err := methods.saveModel(s)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	if models == nil {
-		return nil
-	}
-
-	scr, err := s.serialize()
-	if err != nil {
-		return err
-	}
-
-	key := modelKey(s.Database, s.Schema, s.Name)
-	err = models.put(key, scr)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * prepared: Prepares the model
 * @return error
 **/
@@ -223,7 +183,10 @@ func (s *Model) init() error {
 	}
 
 	s.isInit = true
-	return s.save()
+	if s.IsCore {
+		return nil
+	}
+	return saveModel(s)
 }
 
 /**
@@ -618,4 +581,41 @@ func getModel(from *From) (*Model, error) {
 		return nil, err
 	}
 	return db.getModel(from.Schema, from.Name, node.host)
+}
+
+/**
+* save: Saves the model
+* @return error
+**/
+func saveModel(model *Model) error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_FOUND)
+	}
+
+	if node.leader != "" {
+		err := methods.saveModel(model)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initModels()
+	if err != nil {
+		return err
+	}
+
+	src, err := model.serialize()
+	if err != nil {
+		return err
+	}
+
+	key := modelKey(model.Database, model.Schema, model.Name)
+	err = models.put(key, src)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
