@@ -79,19 +79,18 @@ func makeVote(tag string) (string, error) {
 }
 
 /**
-* getVote: Returns the votes for a tag
+* vote: Returns the votes for a tag
 * @param tag string
 * @return string, error
 **/
-func getVote(tag, host string) string {
+func vote(tag, host string) string {
 	votes.mu.Lock()
 	defer votes.mu.Unlock()
 
-	result, ok := votes.votes[tag]
-	if ok {
-		return result
+	_, ok := votes.votes[tag]
+	if !ok {
+		votes.votes[tag] = host
 	}
 
-	votes.votes[tag] = host
-	return host
+	return votes.votes[tag]
 }
