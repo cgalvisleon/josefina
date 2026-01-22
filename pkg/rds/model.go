@@ -330,6 +330,50 @@ func (s *Model) getKey() string {
 }
 
 /**
+* put: Puts the model
+* @param idx string, valu any
+* @return error
+**/
+func (s *Model) put(key string, value any) error {
+	source, err := s.source()
+	if err != nil {
+		return err
+	}
+
+	err = source.Put(key, value)
+	if err != nil {
+		return err
+	}
+	if !s.IsCore {
+		return setRecord(s.Schema, s.Name, key)
+	}
+
+	return nil
+}
+
+/**
+* remove: Removes the model
+* @param key string
+* @return error
+**/
+func (s *Model) remove(key string) error {
+	source, err := s.source()
+	if err != nil {
+		return err
+	}
+
+	_, err = source.Delete(key)
+	if err != nil {
+		return err
+	}
+	if !s.IsCore {
+		return deleteRecord(s.Schema, s.Name, key)
+	}
+
+	return nil
+}
+
+/**
 * putIndex
 * @param store *store.FileStore, id string, idx any
 * @return error
@@ -469,50 +513,6 @@ func (s *Model) removeData(idx string) error {
 			}
 		}
 	}
-	return nil
-}
-
-/**
-* put: Puts the model
-* @param idx string, valu any
-* @return error
-**/
-func (s *Model) put(key string, value any) error {
-	source, err := s.source()
-	if err != nil {
-		return err
-	}
-
-	err = source.Put(key, value)
-	if err != nil {
-		return err
-	}
-	if !s.IsCore {
-		return setRecord(s.Schema, s.Name, key)
-	}
-
-	return nil
-}
-
-/**
-* remove: Removes the model
-* @param key string
-* @return error
-**/
-func (s *Model) remove(key string) error {
-	source, err := s.source()
-	if err != nil {
-		return err
-	}
-
-	_, err = source.Delete(key)
-	if err != nil {
-		return err
-	}
-	if !s.IsCore {
-		return deleteRecord(s.Schema, s.Name, key)
-	}
-
 	return nil
 }
 
