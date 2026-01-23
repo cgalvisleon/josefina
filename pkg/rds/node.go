@@ -44,67 +44,6 @@ func newNode(host string, port int, version string) *Node {
 }
 
 /**
-* leader
-* @return (string, bool, error)
-**/
-func (s *Node) leader() (string, bool, error) {
-	if methods == nil {
-		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	config, err := getConfig()
-	if err != nil {
-		return "", false, err
-	}
-
-	t := len(config.Nodes)
-	if t == 0 {
-		return s.host, false, nil
-	}
-
-	leader := config.Leader
-	if leader >= t {
-		leader = 0
-	}
-
-	for {
-		if leader >= t {
-			break
-		}
-
-		result := config.Nodes[leader]
-		ok := s.ping(result)
-		if ok {
-			config.Leader = leader
-			err = writeConfig(config)
-			if err != nil {
-				return "", false, err
-			}
-
-			return result, true, nil
-		}
-
-		leader++
-	}
-
-	return "", false, fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
-}
-
-/**
-* ping
-* @param to string
-* @return bool
-**/
-func (s *Node) ping(to string) bool {
-	err := methods.ping(to)
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
-/**
 * toJson: Converts the node to a json
 * @return et.Json
 **/
@@ -198,6 +137,67 @@ func (s *Node) start() error {
 
 		go rpc.ServeConn(conn)
 	}
+}
+
+/**
+* leader
+* @return (string, bool, error)
+**/
+func (s *Node) leader() (string, bool, error) {
+	if methods == nil {
+		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	config, err := getConfig()
+	if err != nil {
+		return "", false, err
+	}
+
+	t := len(config.Nodes)
+	if t == 0 {
+		return s.host, false, nil
+	}
+
+	leader := config.Leader
+	if leader >= t {
+		leader = 0
+	}
+
+	for {
+		if leader >= t {
+			break
+		}
+
+		result := config.Nodes[leader]
+		ok := s.ping(result)
+		if ok {
+			config.Leader = leader
+			err = writeConfig(config)
+			if err != nil {
+				return "", false, err
+			}
+
+			return result, true, nil
+		}
+
+		leader++
+	}
+
+	return "", false, fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
+}
+
+/**
+* ping
+* @param to string
+* @return bool
+**/
+func (s *Node) ping(to string) bool {
+	err := methods.ping(to)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 /**

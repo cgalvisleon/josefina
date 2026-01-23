@@ -61,7 +61,7 @@ func initUsers() error {
 * @param username, password string
 * @return error
 **/
-func createUser(username, password string) error {
+func (s *Node) createUser(username, password string) error {
 	if users == nil {
 		return errors.New(msg.MSG_USERS_NOT_FOUND)
 	}
