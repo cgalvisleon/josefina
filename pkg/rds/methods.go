@@ -133,13 +133,12 @@ func (s *Methods) GetVote(require string, response *string) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getModel(to, database, schema, name, host string) (*Model, error) {
+func (s *Methods) getModel(to, database, schema, name string) (*Model, error) {
 	var response Model
 	err := jrpc.CallRpc(to, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"name":     name,
-		"host":     host,
 	}, &response)
 	if err != nil {
 		return nil, err
@@ -161,8 +160,7 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
-	host := require.Str("host")
-	result, err := node.getModel(database, schema, name, host)
+	result, err := node.getModel(database, schema, name)
 	if err != nil {
 		return err
 	}
@@ -176,14 +174,14 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 * @param to string, model *Model
 * @return error
 **/
-func (s *Methods) saveModel(to string, model *Model) error {
-	var response string
+func (s *Methods) saveModel(to string, model *Model) (bool, error) {
+	var response bool
 	err := jrpc.CallRpc(to, "Methods.SaveModel", model, &response)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return response, nil
 }
 
 /**
@@ -196,12 +194,46 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	err := node.saveModel(require)
+	result, err := node.saveModel(require)
 	if err != nil {
 		return err
 	}
 
-	*response = true
+	*response = result
+	return nil
+}
+
+/**
+* reserveModel
+* @param to string, model *Model
+* @return error
+**/
+func (s *Methods) reserveModel(to string, model *Model) (bool, error) {
+	var response bool
+	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
+	if err != nil {
+		return false, err
+	}
+
+	return response, nil
+}
+
+/**
+* ReserveModel
+* @param model *Model
+* @return bool, error
+**/
+func (s *Methods) ReserveModel(require *Model, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	result, err := node.reserveModel(require)
+	if err != nil {
+		return err
+	}
+
+	*response = result
 	return nil
 }
 
@@ -210,9 +242,9 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Methods) signIn(device, database, username, password string) (*Session, error) {
+func (s *Methods) signIn(to, device, database, username, password string) (*Session, error) {
 	var response Session
-	err := jrpc.CallRpc(node.leader, "Methods.SignIn", et.Json{
+	err := jrpc.CallRpc(to, "Methods.SignIn", et.Json{
 		"device":   device,
 		"database": database,
 		"username": username,
@@ -253,7 +285,7 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 * @param schema, model, key string
 * @return error
 **/
-func (s *Methods) setRecord(schema, model, key string) error {
+func (s *Methods) setRecord(to, schema, model, key string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -264,7 +296,7 @@ func (s *Methods) setRecord(schema, model, key string) error {
 		"key":    key,
 	}
 	var reply string
-	err := jrpc.CallRpc(node.leader, "Methods.SetRecord", data, &reply)
+	err := jrpc.CallRpc(to, "Methods.SetRecord", data, &reply)
 	if err != nil {
 		return err
 	}
@@ -298,7 +330,7 @@ func (s *Methods) SetRecord(require et.Json, response *string) error {
 * @param name, tag, format string, value int
 * @return error
 **/
-func (s *Methods) createSerie(name, tag, format string, value int) error {
+func (s *Methods) createSerie(to, name, tag, format string, value int) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -310,7 +342,7 @@ func (s *Methods) createSerie(name, tag, format string, value int) error {
 		"value":  value,
 	}
 	var reply string
-	err := jrpc.CallRpc(node.leader, "Methods.CreateSerie", data, &reply)
+	err := jrpc.CallRpc(to, "Methods.CreateSerie", data, &reply)
 	if err != nil {
 		return err
 	}

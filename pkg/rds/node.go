@@ -202,10 +202,21 @@ func (s *Node) start() error {
 
 /**
 * getModel
-* @param database, schema, name, host string
+* @param database, schema, name string
 * @return *Model, error
 **/
-func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
+func (s *Node) getModel(database, schema, name string) (*Model, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.getModelRetry(database, schema, name, false)
+}
+
+/**
+* getModelRetry
+* @param database, schema, name string
+* @return *Model, error
+**/
+func (s *Node) getModelRetry(database, schema, name string, retried bool) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -216,37 +227,38 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	key := modelKey(database, schema, name)
-	s.mu.Lock()
-	result, ok := s.models[key]
-	s.mu.Unlock()
-	if ok {
-		return result, nil
-	}
-
 	leader, isCluster, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
 
 	if leader != s.host {
-		result, err := methods.getModel(leader, database, schema, name, host)
+		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
 		}
 
-		ok, err = s.loadModel(result)
+		loaded, err := s.loadModel(result)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
-			return s.getModel(database, schema, name, host)
+		if !loaded {
+			if retried {
+				return nil, fmt.Errorf(msg.MSG_MODEL_NOT_LOAD)
+			}
+			return s.getModelRetry(database, schema, name, true)
 		}
 
 		return result, nil
 	}
 
-	err = initModels(s.host)
+	key := modelKey(database, schema, name)
+	result, ok := s.models[key]
+	if ok {
+		return result, nil
+	}
+
+	err = initModels()
 	if err != nil {
 		return nil, err
 	}
@@ -267,9 +279,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		}
 	}
 
-	s.mu.Lock()
 	s.models[key] = result
-	s.mu.Unlock()
 	return result, nil
 }
 
@@ -289,7 +299,7 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 
 	model.IsInit = true
 	model.Host = s.host
-	ok, err := s.saveModel(model)
+	ok, err := s.reserveModel(model)
 	if err != nil {
 		return false, err
 	}
@@ -303,11 +313,54 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 		return false, err
 	}
 
-	s.mu.Lock()
 	s.models[model.key()] = model
-	s.mu.Unlock()
 
 	return true, nil
+}
+
+/**
+* reserveModel: Saves the model
+* @param model *Model
+* @return error
+**/
+func (s *Node) reserveModel(model *Model) (bool, error) {
+	if !s.started {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if model.IsCore {
+		return false, nil
+	}
+
+	leader, _, err := s.leader()
+	if err != nil {
+		return false, err
+	}
+
+	if leader != s.host {
+		ok, err := methods.reserveModel(leader, model)
+		if err != nil {
+			return false, err
+		}
+
+		return ok, nil
+	}
+
+	key := model.key()
+	result, ok := s.models[key]
+	if !ok {
+		s.models[key] = model
+		return true, nil
+	}
+
+	if result.Host == "" {
+		result.Host = model.Host
+		result.IsInit = model.IsInit
+		s.models[key] = result
+		return true, nil
+	}
+
+	return false, nil
 }
 
 /**
@@ -315,7 +368,7 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 * @param model *Model
 * @return error
 **/
-func (s *Node) saveModel(model *Model) (bool, error) {
+func (s *Node) saveModel(model *Model) error {
 	if !s.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -330,7 +383,7 @@ func (s *Node) saveModel(model *Model) (bool, error) {
 	}
 
 	if leader != s.host {
-		err := methods.saveModel(leader, model)
+		ok, err := methods.saveModel(leader, model)
 		if err != nil {
 			return err
 		}
@@ -354,23 +407,24 @@ func (s *Node) saveModel(model *Model) (bool, error) {
 		return err
 	}
 
-	s.models[key] = model
-
 	return nil
 }
 
 /**
-* getDB
-* @param name string
-* @return *DB, error
+* signIn: Sign in a user
+* @param device, username, password string
+* @return *Session, error
 **/
-func (s *Node) getDB(name string) (*DB, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+func (s *Node) signIn(device, database, username, password string) (*Session, error) {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
+	}
+	if !utility.ValidStr(password, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	if s.leader() != s.host {
-		result, err := methods.getDB(name)
+	if s.leader != s.host {
+		result, err := methods.signIn(device, database, username, password)
 		if err != nil {
 			return nil, err
 		}
@@ -378,25 +432,22 @@ func (s *Node) getDB(name string) (*DB, error) {
 		return result, nil
 	}
 
-	result, ok := s.dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	err := initDatabases()
+	err := initUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	exists, err := databases.get(name, &result)
+	item, err := users.
+		Selects().
+		Where(Eq("username", username)).
+		And(Eq("password", password)).
+		Rows(nil)
 	if err != nil {
 		return nil, err
 	}
-
-	if !exists {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+	if len(item) == 0 {
+		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	s.dbs[name] = result
-	return result, nil
+	return newSession(device, username)
 }
