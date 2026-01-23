@@ -204,13 +204,13 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 }
 
 /**
-* reserveModel
+* loadModel
 * @param to string, model *Model
 * @return error
 **/
-func (s *Methods) reserveModel(to string, model *Model) (bool, error) {
+func (s *Methods) loadModel(to string, model *Model) (bool, error) {
 	var response bool
-	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
+	err := jrpc.CallRpc(to, "Methods.LoadModel", model, &response)
 	if err != nil {
 		return false, err
 	}
@@ -219,16 +219,16 @@ func (s *Methods) reserveModel(to string, model *Model) (bool, error) {
 }
 
 /**
-* ReserveModel
+* LoadModel
 * @param model *Model
 * @return bool, error
 **/
-func (s *Methods) ReserveModel(require *Model, response *bool) error {
+func (s *Methods) LoadModel(require *Model, response *bool) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	result, err := node.reserveModel(require)
+	result, err := node.loadModel(require)
 	if err != nil {
 		return err
 	}

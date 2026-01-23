@@ -293,39 +293,7 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if model.IsInit {
-		return true, nil
-	}
-
-	model.Host = s.host
-	ok, err := s.reserveModel(model)
-	if err != nil {
-		return false, err
-	}
-
-	model.IsInit = ok
-	
-	err = model.load()
-	if err != nil {
-		return false, err
-	}
-
-	s.models[model.key()] = model
-
-	return true, nil
-}
-
-/**
-* reserveModel: Saves the model
-* @param model *Model
-* @return error
-**/
-func (s *Node) reserveModel(model *Model) (bool, error) {
-	if !s.started {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if model.IsCore {
+	if model.Host != "" {
 		return false, nil
 	}
 
@@ -335,7 +303,7 @@ func (s *Node) reserveModel(model *Model) (bool, error) {
 	}
 
 	if leader != s.host {
-		ok, err := methods.reserveModel(leader, model)
+		ok, err := methods.loadModel(leader, model)
 		if err != nil {
 			return false, err
 		}
@@ -352,7 +320,6 @@ func (s *Node) reserveModel(model *Model) (bool, error) {
 
 	if result.Host == "" {
 		result.Host = model.Host
-		result.IsInit = model.IsInit
 		s.models[key] = result
 		return true, nil
 	}
