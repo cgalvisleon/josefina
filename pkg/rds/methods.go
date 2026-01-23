@@ -186,14 +186,14 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 * @param to string, model *Model
 * @return error
 **/
-func (s *Methods) saveModel(to string, model *Model) (bool, error) {
+func (s *Methods) saveModel(to string, model *Model) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Methods.SaveModel", model, &response)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return response, nil
+	return nil
 }
 
 /**
