@@ -238,37 +238,52 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return result, nil
 	}
 
+	type modelResult struct {
+		result *Model
+		err    error
+	}
+	ch := make(chan modelResult, 1)
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	key := modelKey(database, schema, name)
-	result, ok := s.models[key]
-	if ok {
-		return result, nil
-	}
-
-	err = initModels()
-	if err != nil {
-		return nil, err
-	}
-
-	exists, err := models.get(key, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	if !isCluster {
-		err = result.init()
-		if err != nil {
-			return nil, err
+	go func() {
+		defer s.mu.Unlock()
+		key := modelKey(database, schema, name)
+		result, ok := s.models[key]
+		if ok {
+			ch <- modelResult{result: result, err: nil}
+			return
 		}
-	}
 
-	s.models[key] = result
-	return result, nil
+		err = initModels()
+		if err != nil {
+			ch <- modelResult{result: nil, err: err}
+			return
+		}
+
+		exists, err := models.get(key, &result)
+		if err != nil {
+			ch <- modelResult{result: nil, err: err}
+			return
+		}
+
+		if !exists {
+			ch <- modelResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
+			return
+		}
+
+		if !isCluster {
+			err = result.init()
+			if err != nil {
+				ch <- modelResult{result: nil, err: err}
+				return
+			}
+		}
+
+		s.models[key] = result
+		ch <- modelResult{result: result, err: nil}
+	}()
+
+	res := <-ch
+	return res.result, res.err
 }
 
 /**
@@ -299,20 +314,35 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 		return ok, nil
 	}
 
-	key := model.key()
-	result, ok := s.models[key]
-	if !ok {
-		s.models[key] = model
-		return true, nil
+	type boolResult struct {
+		result bool
+		err    error
 	}
 
-	if result.Host == "" {
-		result.Host = model.Host
-		s.models[key] = result
-		return true, nil
-	}
+	ch := make(chan boolResult, 1)
+	s.mu.Lock()
+	go func() {
+		defer s.mu.Unlock()
+		key := model.key()
+		result, ok := s.models[key]
+		if !ok {
+			s.models[key] = model
+			ch <- boolResult{result: true, err: nil}
+			return
+		}
 
-	return false, nil
+		if result.Host == "" {
+			result.Host = model.Host
+			s.models[key] = result
+			ch <- boolResult{result: true, err: nil}
+			return
+		}
+
+		ch <- boolResult{result: false, err: nil}
+	}()
+
+	res := <-ch
+	return res.result, res.err
 }
 
 /**
@@ -375,8 +405,13 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	if s.leader != s.host {
-		result, err := methods.signIn(device, database, username, password)
+	leader, _, err := s.leader()
+	if err != nil {
+		return nil, err
+	}
+
+	if leader != s.host {
+		result, err := methods.signIn(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
 		}
@@ -384,7 +419,7 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return result, nil
 	}
 
-	err := initUsers()
+	err = initUsers()
 	if err != nil {
 		return nil, err
 	}

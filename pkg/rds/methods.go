@@ -157,27 +157,15 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	type modelResult struct {
-		result *Model
-		err    error
-	}
-
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
-
-	ch := make(chan modelResult, 1)
-	go func() {
-		result, err := node.getModel(database, schema, name)
-		ch <- modelResult{result: result, err: err}
-	}()
-
-	result := <-ch
-	if result.err != nil {
-		return result.err
+	result, err := node.getModel(database, schema, name)
+	if err != nil {
+		return err
 	}
 
-	*response = *result.result
+	response = result
 	return nil
 }
 
@@ -240,23 +228,12 @@ func (s *Methods) LoadModel(require *Model, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	type boolResult struct {
-		result bool
-		err    error
+	result, err := node.loadModel(require)
+	if err != nil {
+		return err
 	}
 
-	ch := make(chan boolResult, 1)
-	go func() {
-		result, err := node.loadModel(require)
-		ch <- boolResult{result: result, err: err}
-	}()
-
-	result := <-ch
-	if result.err != nil {
-		return result.err
-	}
-
-	*response = result.result
+	*response = result
 	return nil
 }
 
