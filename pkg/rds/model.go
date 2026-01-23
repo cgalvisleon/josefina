@@ -25,7 +25,7 @@ var (
 * initModels: Initializes the models model
 * @return error
 **/
-func initModels(host string) error {
+func initModels() error {
 	if models != nil {
 		return nil
 	}
