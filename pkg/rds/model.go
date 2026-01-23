@@ -363,7 +363,7 @@ func (s *Model) put(key string, value any) error {
 		return err
 	}
 	if !s.IsCore {
-		return setRecord(s.Schema, s.Name, key)
+		return node.setRecord(s.Schema, s.Name, key)
 	}
 
 	return nil
@@ -385,7 +385,7 @@ func (s *Model) remove(key string) error {
 		return err
 	}
 	if !s.IsCore {
-		return deleteRecord(s.Schema, s.Name, key)
+		return node.deleteRecord(s.Schema, s.Name, key)
 	}
 
 	return nil
@@ -481,7 +481,7 @@ func (s *Model) putData(idx string, data et.Json) error {
 				return err
 			}
 			if !s.IsCore {
-				return setRecord(s.Schema, s.Name, key)
+				return node.setRecord(s.Schema, s.Name, key)
 			}
 		} else {
 			err := s.putIndex(source, key, idx)
@@ -522,7 +522,7 @@ func (s *Model) removeData(idx string) error {
 				return err
 			}
 			if !s.IsCore {
-				return deleteRecord(s.Schema, s.Name, key)
+				return node.deleteRecord(s.Schema, s.Name, key)
 			}
 		} else {
 			err := s.removeIndex(source, key, idx)

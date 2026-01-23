@@ -420,9 +420,9 @@ func (s *Methods) setRecord(to, schema, model, key string) error {
 }
 
 /**
-* getModel
-* @param database, schema, model string
-* @return *Model, error
+* SetRecord
+* @param require et.Json, response *string
+* @return error
 **/
 func (s *Methods) SetRecord(require et.Json, response *string) error {
 	if node == nil {
@@ -432,7 +432,52 @@ func (s *Methods) SetRecord(require et.Json, response *string) error {
 	schema := require.Str("schema")
 	model := require.Str("model")
 	key := require.Str("key")
-	err := setRecord(schema, model, key)
+	err := node.setRecord(schema, model, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* deleteRecord
+* @param schema, model, key string
+* @return error
+**/
+func (s *Methods) deleteRecord(to, schema, model, key string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"scgema": schema,
+		"model":  model,
+		"key":    key,
+	}
+	var reply string
+	err := jrpc.CallRpc(to, "Methods.DeleteRecord", data, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* DeleteRecord
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) DeleteRecord(require et.Json, response *string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	schema := require.Str("schema")
+	model := require.Str("model")
+	key := require.Str("key")
+	err := node.deleteRecord(schema, model, key)
 	if err != nil {
 		return err
 	}

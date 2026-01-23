@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -35,7 +36,7 @@ func getDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	path := node.path
+	path := envar.GetStr("DATA_PATH", "./data")
 	result = &DB{
 		Name:    name,
 		Version: Version,
