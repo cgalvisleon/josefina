@@ -101,13 +101,14 @@ func (s *Node) ping(to string) bool {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
-	leader, err := s.leader()
+	leader, cluster, err := s.leader()
 	if err != nil {
 		leader = err.Error()
 	}
 	return et.Json{
 		"host":    s.host,
 		"leader":  leader,
+		"cluster": cluster,
 		"version": s.version,
 		"rpcs":    s.rpcs,
 		"models":  s.models,
@@ -210,7 +211,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return result, nil
 	}
 
-	leader, err := s.leader()
+	leader, isCluster, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
@@ -245,13 +246,12 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, err
 	}
 
-	if exists {
-		return result, nil
+	if !exists {
+		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	result, err = db.getModel(schema, name, host)
-	if err != nil {
-		return nil, err
+	if isCluster {
+		return result, ErrorModelNotLoad
 	}
 
 	s.models[key] = result

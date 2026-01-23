@@ -146,16 +146,6 @@ func (s *DB) getSchema(name string) *Schema {
 }
 
 /**
-* getModel: Returns a model by schema and name
-* @param schema, name, host string
-* @return *Model, error
-**/
-func (s *DB) getModel(schema, name, host string) (*Model, error) {
-	sch := s.getSchema(schema)
-	return sch.getModel(name, host)
-}
-
-/**
 * newModel: Creates a new model
 * @param schema string, name string, isCore bool, version int
 * @return *Model, error
