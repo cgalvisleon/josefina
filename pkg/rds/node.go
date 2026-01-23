@@ -206,17 +206,6 @@ func (s *Node) start() error {
 * @return *Model, error
 **/
 func (s *Node) getModel(database, schema, name string) (*Model, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.getModelRetry(database, schema, name, false)
-}
-
-/**
-* getModelRetry
-* @param database, schema, name string
-* @return *Model, error
-**/
-func (s *Node) getModelRetry(database, schema, name string, retried bool) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -242,16 +231,15 @@ func (s *Node) getModelRetry(database, schema, name string, retried bool) (*Mode
 		if err != nil {
 			return nil, err
 		}
-		if !loaded {
-			if retried {
-				return nil, fmt.Errorf(msg.MSG_MODEL_NOT_LOAD)
-			}
-			return s.getModelRetry(database, schema, name, true)
+		if loaded {
+			result.load()
 		}
 
 		return result, nil
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	key := modelKey(database, schema, name)
 	result, ok := s.models[key]
 	if ok {
