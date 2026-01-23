@@ -1,12 +1,12 @@
 package rds
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/rpc"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
@@ -21,6 +21,7 @@ type Node struct {
 	rpcs    map[string]et.Json `json:"-"`
 	models  map[string]*Model  `json:"-"`
 	started bool               `json:"-"`
+	mu      sync.Mutex         `json:"-"`
 }
 
 /**
@@ -36,9 +37,14 @@ func newNode(host string, port int, version string) *Node {
 		version: version,
 		rpcs:    make(map[string]et.Json),
 		models:  make(map[string]*Model),
+		mu:      sync.Mutex{},
 	}
 }
 
+/**
+* leader
+* @return (string, bool, error)
+**/
 func (s *Node) leader() (string, bool, error) {
 	if methods == nil {
 		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
@@ -65,18 +71,18 @@ func (s *Node) leader() (string, bool, error) {
 		}
 
 		result := config.Nodes[leader]
-		if result == s.host {
-			leader++
-			continue
-		}
-
 		ok := s.ping(result)
-		if !ok {
-			leader++
-			continue
+		if ok {
+			config.Leader = leader
+			err = writeConfig(config)
+			if err != nil {
+				return "", false, err
+			}
+
+			return result, true, nil
 		}
 
-		return result, true, nil
+		leader++
 	}
 
 	return "", false, fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
@@ -194,10 +200,10 @@ func (s *Node) start() error {
 
 /**
 * getModel
-* @param database, schema, name string
+* @param database, schema, name, host string
 * @return *Model, error
 **/
-func (s *Node) getModel(database, schema, name string) (*Model, error) {
+func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 	if !utility.ValidStr(database, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
 	}
@@ -217,19 +223,13 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 
 	if leader != s.host {
-		result, err := methods.getModel(leader, database, schema, name)
-		if err != nil && errors.Is(err, ErrorModelNotLoad) {
-			if result == nil {
-				return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-			}
+		result, err := methods.getModel(leader, database, schema, name, host)
+		if err != nil {
+			return nil, err
+		}
 
-			err := result.init()
-			if err != nil {
-				return nil, err
-			}
-
-			s.models[key] = result
-		} else if err != nil {
+		err = s.loadModel(result)
+		if err != nil {
 			return nil, err
 		}
 
@@ -250,16 +250,32 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
 	}
 
+	s.models[key] = result
 	if isCluster {
-		return result, ErrorModelNotLoad
+		return result, nil
 	}
 
-	s.models[key] = result
+	err = result.init()
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
 /**
-* save: Saves the model
+* loadModel
+* @param model *Model
+* @return error
+**/
+func (s *Node) loadModel(model *Model) error {
+
+	return nil
+}
+
+/**
+* saveModel: Saves the model
+* @param model *Model
 * @return error
 **/
 func (s *Node) saveModel(model *Model) error {
@@ -271,7 +287,21 @@ func (s *Node) saveModel(model *Model) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	err := initModels()
+	leader, _, err := s.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != s.host {
+		err := methods.saveModel(model)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err = initModels()
 	if err != nil {
 		return err
 	}
@@ -286,6 +316,8 @@ func (s *Node) saveModel(model *Model) error {
 	if err != nil {
 		return err
 	}
+
+	s.models[key] = model
 
 	return nil
 }

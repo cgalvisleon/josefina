@@ -133,12 +133,13 @@ func (s *Methods) GetVote(require string, response *string) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getModel(to, database, schema, model string) (*Model, error) {
+func (s *Methods) getModel(to, database, schema, name, host string) (*Model, error) {
 	var response Model
 	err := jrpc.CallRpc(to, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
-		"model":    model,
+		"name":     name,
+		"host":     host,
 	}, &response)
 	if err != nil {
 		return nil, err
@@ -159,8 +160,9 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 
 	database := require.Str("database")
 	schema := require.Str("schema")
-	model := require.Str("model")
-	result, err := node.getModel(database, schema, model)
+	name := require.Str("name")
+	host := require.Str("host")
+	result, err := node.getModel(database, schema, name, host)
 	if err != nil {
 		return err
 	}

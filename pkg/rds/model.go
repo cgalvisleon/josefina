@@ -17,7 +17,6 @@ var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
-	ErrorModelNotLoad        = errors.New(msg.MSG_MODEL_NOT_LOAD)
 	models                   *Model
 )
 
@@ -52,7 +51,7 @@ type From struct {
 	Name     string            `json:"name"`
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
-	host     string            `json:"-"`
+	Host     string            `json:"-"`
 }
 
 /**
@@ -61,14 +60,6 @@ type From struct {
 **/
 func (s *From) getJid() string {
 	return reg.GenULID(s.Name)
-}
-
-/**
-* Host: Gets the host
-* @return string
-**/
-func (s *From) Host() string {
-	return s.host
 }
 
 type Model struct {
@@ -91,9 +82,9 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
+	IsInit        bool                        `json:"-"`
 	isDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
-	isInit        bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	changed       bool                        `json:"-"`
@@ -212,7 +203,7 @@ func (s *Model) getPath() (string, error) {
 * @return error
 **/
 func (s *Model) init() error {
-	if s.isInit {
+	if s.IsInit {
 		return nil
 	}
 
@@ -234,8 +225,8 @@ func (s *Model) init() error {
 		s.stores[name] = fStore
 	}
 
-	s.isInit = true
-	return node.saveModel(s)
+	s.Host = node.host
+	s.IsInit = true
 }
 
 /**
