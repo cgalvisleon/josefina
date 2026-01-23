@@ -18,6 +18,10 @@ var users *Model
 * @return error
 **/
 func initUsers() error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
 	if users != nil {
 		return nil
 	}
@@ -47,7 +51,7 @@ func initUsers() error {
 	if count == 0 {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
-		err := createUser(useranme, password)
+		err := node.createUser(useranme, password)
 		if err != nil {
 			return err
 		}
@@ -86,7 +90,7 @@ func (s *Node) createUser(username, password string) error {
 * @param username string
 * @return error
 **/
-func dropUser(username string) error {
+func (s *Node) dropUser(username string) error {
 	if users == nil {
 		return errors.New(msg.MSG_USERS_NOT_FOUND)
 	}
@@ -106,7 +110,7 @@ func dropUser(username string) error {
 * @param username, password string
 * @return error
 **/
-func changuePassword(username, password string) error {
+func (s *Node) changuePassword(username, password string) error {
 	if users == nil {
 		return errors.New(msg.MSG_USERS_NOT_FOUND)
 	}

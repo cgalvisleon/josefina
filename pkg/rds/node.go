@@ -398,6 +398,9 @@ func (s *Node) saveModel(model *Model) error {
 * @return *Session, error
 **/
 func (s *Node) signIn(device, database, username, password string) (*Session, error) {
+	if !s.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
 	}
