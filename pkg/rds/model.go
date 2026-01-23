@@ -250,6 +250,14 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
+* key: Returns the key of the model
+* @return string
+**/
+func (s *Model) key() string {
+	return modelKey(s.Database, s.Schema, s.Name)
+}
+
+/**
 * count: Counts the model
 * @return int, error
 **/

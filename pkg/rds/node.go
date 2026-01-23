@@ -217,7 +217,9 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 	}
 
 	key := modelKey(database, schema, name)
+	s.mu.Lock()
 	result, ok := s.models[key]
+	s.mu.Unlock()
 	if ok {
 		return result, nil
 	}
@@ -233,9 +235,12 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 			return nil, err
 		}
 
-		err = s.loadModel(result)
+		ok, err = s.loadModel(result)
 		if err != nil {
 			return nil, err
+		}
+		if !ok {
+			return s.getModel(database, schema, name, host)
 		}
 
 		return result, nil
@@ -256,13 +261,15 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 	}
 
 	if !isCluster {
-		err = result.init(s.host)
+		err = result.init()
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	s.mu.Lock()
 	s.models[key] = result
+	s.mu.Unlock()
 	return result, nil
 }
 
@@ -271,31 +278,36 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 * @param model *Model
 * @return error
 **/
-func (s *Node) loadModel(model *Model) error {
+func (s *Node) loadModel(model *Model) (bool, error) {
 	if !s.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if model.IsInit {
-		return nil
+		return true, nil
 	}
 
 	model.IsInit = true
 	model.Host = s.host
-
-	leader, _, err := s.leader()
+	ok, err := s.saveModel(model)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	if leader != s.host {
-		err := methods.saveModel(leader, model)
-		if err != nil {
-			return err
-		}
+	if !ok {
+		return false, nil
 	}
 
-	return nil
+	err = model.load()
+	if err != nil {
+		return false, err
+	}
+
+	s.mu.Lock()
+	s.models[model.key()] = model
+	s.mu.Unlock()
+
+	return true, nil
 }
 
 /**
@@ -303,7 +315,7 @@ func (s *Node) loadModel(model *Model) error {
 * @param model *Model
 * @return error
 **/
-func (s *Node) saveModel(model *Model) error {
+func (s *Node) saveModel(model *Model) (bool, error) {
 	if !s.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
