@@ -5,7 +5,6 @@ import (
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-	"github.com/cgalvisleon/josefina/pkg/store"
 )
 
 type Schema struct {

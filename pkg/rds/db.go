@@ -4,38 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
-
-var databases *Model
-
-/**
-* initDatabases: Initializes the databases model
-* @return error
-**/
-func initDatabases() error {
-	if databases != nil {
-		return nil
-	}
-
-	db, err := newDb(packageName, node.version)
-	if err != nil {
-		return err
-	}
-
-	databases, err = db.newModel("", "databases", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := databases.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 type DB struct {
 	Name    string             `json:"name"`
@@ -45,23 +17,32 @@ type DB struct {
 }
 
 /**
-* newDb: Creates a new database
-* @param name string, version string
+* getDb: Returns a database by name
+* @param name string
 * @return *DB, error
 **/
-func newDb(name string) (*DB, error) {
+func getDb(name string) (*DB, error) {
+	if !node.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
-	path := envar.GetStr("PATH_DATA", "./data")
-	result := &DB{
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	path := node.path
+	result = &DB{
 		Name:    name,
 		Version: Version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
+	node.dbs[name] = result
 
 	return result, nil
 }
@@ -99,33 +80,6 @@ func (s *DB) toJson() (et.Json, error) {
 }
 
 /**
-* save: Saves the database
-* @return error
-**/
-func (s *DB) save() error {
-	if databases == nil {
-		return nil
-	}
-
-	if !databases.isInit {
-		return nil
-	}
-
-	scr, err := s.serialize()
-	if err != nil {
-		return err
-	}
-
-	key := fmt.Sprintf("%s", s.Name)
-	err = databases.put(key, scr)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * getSchema: Returns a schema by name
 * @param name string
 * @return *Schema
@@ -133,24 +87,32 @@ func (s *DB) save() error {
 func (s *DB) getSchema(name string) *Schema {
 	name = utility.Normalize(name)
 	result, ok := s.Schemas[name]
-	if !ok {
-		result = &Schema{
-			Database: s.Name,
-			Name:     name,
-			Models:   make(map[string]*Model, 0),
-			db:       s,
-		}
+	if ok {
+		return result
 	}
+
+	result = &Schema{
+		Database: s.Name,
+		Name:     name,
+		Models:   make(map[string]*Model, 0),
+		db:       s,
+	}
+	s.Schemas[name] = result
 
 	return result
 }
 
 /**
 * newModel: Creates a new model
-* @param schema string, name string, isCore bool, version int
+* @param name string, schema string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
+func (s *DB) newModel(name string, schema string, isCore bool, version int) (*Model, error) {
 	sch := s.getSchema(schema)
-	return sch.newModel(name, isCore, version)
+	model, err := sch.newModel(name, isCore, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
 }

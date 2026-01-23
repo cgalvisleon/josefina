@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
@@ -29,7 +30,7 @@ func initModels(host string) error {
 		return nil
 	}
 
-	db, err := newDb(packageName)
+	db, err := getDb(packageName)
 	if err != nil {
 		return err
 	}
@@ -64,30 +65,31 @@ func (s *From) getJid() string {
 
 type Model struct {
 	*From         `json:"from"`
-	Indexes       []string                    `json:"indexes"`
-	PrimaryKeys   []string                    `json:"primary_keys"`
-	Unique        []string                    `json:"unique"`
-	Required      []string                    `json:"required"`
-	Hidden        []string                    `json:"hidden"`
-	References    map[string]*Detail          `json:"references"`
-	Details       map[string]*Detail          `json:"details"`
-	Rollups       map[string]*Detail          `json:"rollups"`
-	Relations     map[string]*Detail          `json:"relations"`
-	Calcs         map[string][]byte           `json:"calcs"`
-	BeforeInserts []*Trigger                  `json:"before_inserts"`
-	BeforeUpdates []*Trigger                  `json:"before_updates"`
-	BeforeDeletes []*Trigger                  `json:"before_deletes"`
-	AfterInserts  []*Trigger                  `json:"after_inserts"`
-	AfterUpdates  []*Trigger                  `json:"after_updates"`
-	AfterDeletes  []*Trigger                  `json:"after_deletes"`
-	Version       int                         `json:"version"`
-	IsCore        bool                        `json:"is_core"`
-	IsInit        bool                        `json:"-"`
-	isDebug       bool                        `json:"-"`
-	db            *DB                         `json:"-"`
-	stores        map[string]*store.FileStore `json:"-"`
-	triggers      map[string]*Vm              `json:"-"`
-	changed       bool                        `json:"-"`
+	Path          string             `json:"path"`
+	Indexes       []string           `json:"indexes"`
+	PrimaryKeys   []string           `json:"primary_keys"`
+	Unique        []string           `json:"unique"`
+	Required      []string           `json:"required"`
+	Hidden        []string           `json:"hidden"`
+	References    map[string]*Detail `json:"references"`
+	Details       map[string]*Detail `json:"details"`
+	Rollups       map[string]*Detail `json:"rollups"`
+	Relations     map[string]*Detail `json:"relations"`
+	Calcs         map[string][]byte  `json:"calcs"`
+	BeforeInserts []*Trigger         `json:"before_inserts"`
+	BeforeUpdates []*Trigger         `json:"before_updates"`
+	BeforeDeletes []*Trigger         `json:"before_deletes"`
+	AfterInserts  []*Trigger         `json:"after_inserts"`
+	AfterUpdates  []*Trigger         `json:"after_updates"`
+	AfterDeletes  []*Trigger         `json:"after_deletes"`
+	Version       int                `json:"version"`
+	IsCore        bool               `json:"is_core"`
+	IsInit        bool               `json:"-"`
+	isDebug       bool               `json:"-"`
+	// db            *DB                         `json:"-"`
+	stores   map[string]*store.FileStore `json:"-"`
+	triggers map[string]*Vm              `json:"-"`
+	changed  bool                        `json:"-"`
 }
 
 /**
@@ -188,14 +190,17 @@ func (s *Model) prepared() error {
 * getPath: Returns the path
 * @return string, error
 **/
-func (s *Model) getPath() (string, error) {
-	if s.db == nil {
-		return "", errors.New(msg.MSG_DB_NOT_FOUND)
+func (s *Model) getPath() error {
+	if s.Database == "" {
+		return errors.New(msg.MSG_DATABASE_REQUIRED)
 	}
 
-	result := strs.Append(s.db.Path, s.Schema, "/")
+	path := envar.GetStr("DATA_PATH", "./data")
+	path = fmt.Sprintf("%s/%s", path, s.Database)
+	result := strs.Append(path, s.Schema, "/")
 	result = fmt.Sprintf("%s/%s", result, s.Name)
-	return result, nil
+	s.Path = result
+	return nil
 }
 
 /**
@@ -212,13 +217,13 @@ func (s *Model) init(host string) error {
 		return err
 	}
 
-	path, err := s.getPath()
+	err = s.getPath()
 	if err != nil {
 		return err
 	}
 
 	for _, name := range s.Indexes {
-		fStore, err := store.Open(path, name, s.isDebug)
+		fStore, err := store.Open(s.Path, name, s.isDebug)
 		if err != nil {
 			return err
 		}

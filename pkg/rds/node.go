@@ -19,6 +19,7 @@ type Node struct {
 	port    int                `json:"-"`
 	version string             `json:"-"`
 	rpcs    map[string]et.Json `json:"-"`
+	dbs     map[string]*DB     `json:"-"`
 	models  map[string]*Model  `json:"-"`
 	started bool               `json:"-"`
 	mu      sync.Mutex         `json:"-"`
@@ -36,6 +37,7 @@ func newNode(host string, port int, version string) *Node {
 		port:    port,
 		version: version,
 		rpcs:    make(map[string]et.Json),
+		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
 		mu:      sync.Mutex{},
 	}
@@ -204,6 +206,9 @@ func (s *Node) start() error {
 * @return *Model, error
 **/
 func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
+	if !s.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
 	if !utility.ValidStr(database, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
 	}
@@ -267,6 +272,13 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 * @return error
 **/
 func (s *Node) loadModel(model *Model) error {
+	if !s.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if model.IsInit {
+		return nil
+	}
 
 	return nil
 }
@@ -277,12 +289,12 @@ func (s *Node) loadModel(model *Model) error {
 * @return error
 **/
 func (s *Node) saveModel(model *Model) error {
-	if model.IsCore {
-		return nil
+	if !s.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	if model.IsCore {
+		return nil
 	}
 
 	leader, _, err := s.leader()
