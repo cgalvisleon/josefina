@@ -172,6 +172,40 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 }
 
 /**
+* saveModel
+* @param to string, model *Model
+* @return error
+**/
+func (s *Methods) saveModel(to string, model *Model) error {
+	var response string
+	err := jrpc.CallRpc(to, "Methods.SaveModel", model, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SaveModel
+* @param model *Model
+* @return bool, error
+**/
+func (s *Methods) SaveModel(require *Model, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := node.saveModel(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * signIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error

@@ -24,12 +24,12 @@ var (
 * initModels: Initializes the models model
 * @return error
 **/
-func initModels() error {
+func initModels(host string) error {
 	if models != nil {
 		return nil
 	}
 
-	db, err := newDb(packageName, node.version)
+	db, err := newDb(packageName)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func initModels() error {
 	if err != nil {
 		return err
 	}
-	if err := models.init(); err != nil {
+	if err := models.init(host); err != nil {
 		return err
 	}
 
@@ -202,7 +202,7 @@ func (s *Model) getPath() (string, error) {
 * init: Initializes the model
 * @return error
 **/
-func (s *Model) init() error {
+func (s *Model) init(host string) error {
 	if s.IsInit {
 		return nil
 	}
@@ -225,8 +225,9 @@ func (s *Model) init() error {
 		s.stores[name] = fStore
 	}
 
-	s.Host = node.host
+	s.Host = host
 	s.IsInit = true
+	return nil
 }
 
 /**
@@ -315,9 +316,9 @@ func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
 * @return bool, error
 **/
 func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) {
-	index, ok := s.index(field)
-	if !ok {
-		return false, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	index, err := s.store(field)
+	if err != nil {
+		return false, err
 	}
 
 	exists, err := index.Get(key, &dest)
@@ -338,9 +339,9 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 * @return bool, error
 **/
 func (s *Model) isExisted(name, key string) (bool, error) {
-	source, ok := s.data[name]
-	if !ok {
-		return false, errors.New(msg.MSG_INDEX_NOT_FOUND)
+	source, err := s.store(name)
+	if err != nil {
+		return false, err
 	}
 
 	return source.IsExist(key), nil
@@ -473,7 +474,7 @@ func (s *Model) putData(idx string, data et.Json) error {
 			continue
 		}
 
-		source := s.data[name]
+		source := s.stores[name]
 		if name == INDEX {
 			err := source.Put(key, data)
 			if err != nil {
@@ -514,7 +515,7 @@ func (s *Model) removeData(idx string) error {
 			continue
 		}
 
-		source := s.data[name]
+		source := s.stores[name]
 		if name == INDEX {
 			_, err := source.Delete(key)
 			if err != nil {

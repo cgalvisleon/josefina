@@ -49,7 +49,7 @@ type DB struct {
 * @param name string, version string
 * @return *DB, error
 **/
-func newDb(name, version string) (*DB, error) {
+func newDb(name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -58,7 +58,7 @@ func newDb(name, version string) (*DB, error) {
 	path := envar.GetStr("PATH_DATA", "./data")
 	result := &DB{
 		Name:    name,
-		Version: version,
+		Version: Version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}

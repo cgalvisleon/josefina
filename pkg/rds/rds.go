@@ -8,6 +8,7 @@ import (
 
 var (
 	packageName = "josefina"
+	Version     = "0.0.1"
 	node        *Node
 	hostname    string
 )
