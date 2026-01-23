@@ -198,6 +198,7 @@ func (s *Model) load() error {
 		s.stores[name] = fStore
 	}
 
+	s.IsInit = true
 	return nil
 }
 
@@ -218,7 +219,6 @@ func (s *Model) init() error {
 	if node != nil {
 		s.Host = node.host
 	}
-	s.IsInit = true
 	return nil
 }
 

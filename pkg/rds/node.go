@@ -297,17 +297,14 @@ func (s *Node) loadModel(model *Model) (bool, error) {
 		return true, nil
 	}
 
-	model.IsInit = true
 	model.Host = s.host
 	ok, err := s.reserveModel(model)
 	if err != nil {
 		return false, err
 	}
 
-	if !ok {
-		return false, nil
-	}
-
+	model.IsInit = ok
+	
 	err = model.load()
 	if err != nil {
 		return false, err
