@@ -1,13 +1,11 @@
 package rds
 
 import (
-	"encoding/gob"
 	"fmt"
 	"net"
 	"net/rpc"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
@@ -252,18 +250,4 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 	}
 
 	return newSession(device, username)
-}
-
-func init() {
-	gob.Register(time.Time{})
-	gob.Register(et.Json{})
-	gob.Register([]et.Json{})
-	gob.Register(et.Item{})
-	gob.Register(et.Items{})
-	gob.Register(et.List{})
-	gob.Register(&DB{})
-	gob.Register(&Schema{})
-	gob.Register(&Model{})
-	gob.Register(&Session{})
-	gob.Register(&Tx{})
 }

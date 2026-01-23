@@ -1,13 +1,30 @@
 package rds
 
 import (
+	"encoding/gob"
 	"fmt"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
+
+func init() {
+	gob.Register(time.Time{})
+	gob.Register(et.Json{})
+	gob.Register([]et.Json{})
+	gob.Register(et.Item{})
+	gob.Register(et.Items{})
+	gob.Register(et.List{})
+	gob.Register(&DB{})
+	gob.Register(&Schema{})
+	gob.Register(&Model{})
+	gob.Register(&Session{})
+	gob.Register(&Tx{})
+	gob.Register(&Transaction{})
+}
 
 type Methods struct{}
 
@@ -254,7 +271,7 @@ func (s *Methods) saveModel(model *Model) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) SaveModel(require *Model, response *Session) error {
+func (s *Methods) SaveModel(require *Model, response *string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -296,7 +313,7 @@ func (s *Methods) setRecord(schema, model, key string) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) SetRecord(require et.Json, response *Session) error {
+func (s *Methods) SetRecord(require et.Json, response *string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -336,12 +353,59 @@ func (s *Methods) commit(to string, tx *Transaction) error {
 * @param require *Transaction, response *Session
 * @return error
 **/
-func (s *Methods) Commit(require *Transaction, response *Session) error {
+func (s *Methods) Commit(require *Transaction, response *string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := commit(require)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* createSerie
+* @param name, tag, format string, value int
+* @return error
+**/
+func (s *Methods) createSerie(name, tag, format string, value int) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"name":   name,
+		"tag":    tag,
+		"format": format,
+		"value":  value,
+	}
+	var reply string
+	err := jrpc.CallRpc(node.leader, "Methods.CreateSerie", data, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* CreateSerie
+* @param require *Transaction, response *Session
+* @return error
+**/
+func (s *Methods) CreateSerie(require et.Json, response *string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	name := require.Str("name")
+	tag := require.Str("tag")
+	format := require.Str("format")
+	value := require.Int("value")
+	err := createSerie(name, tag, format, value)
 	if err != nil {
 		return err
 	}
