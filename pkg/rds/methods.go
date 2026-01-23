@@ -239,6 +239,131 @@ func (s *Methods) LoadModel(require *Model, response *bool) error {
 
 /**
 * signIn: Sign in a user
+* @param to, username, password string
+* @return *Session, error
+**/
+func (s *Methods) createUser(to, username, password string) (*Session, error) {
+	var response Session
+	err := jrpc.CallRpc(to, "Methods.CreateUser", et.Json{
+		"username": username,
+		"password": password,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+/**
+* CreateUser
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) CreateUser(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	username := require.Str("username")
+	password := require.Str("password")
+	err := node.createUser(username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
+* signIn: Sign in a user
+* @param device, username, password string
+* @return *Session, error
+**/
+func (s *Methods) dropUser(to, device, database, username, password string) (*Session, error) {
+	var response Session
+	err := jrpc.CallRpc(to, "Methods.DropUser", et.Json{
+		"device":   device,
+		"database": database,
+		"username": username,
+		"password": password,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+/**
+* getModel
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) DropUser(require et.Json, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	device := require.Str("device")
+	database := require.Str("database")
+	username := require.Str("username")
+	password := require.Str("password")
+	result, err := node.signIn(device, database, username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = *result
+	return nil
+}
+
+/**
+* changuePassword: Sign in a user
+* @param device, username, password string
+* @return *Session, error
+**/
+func (s *Methods) changuePassword(to, device, database, username, password string) (*Session, error) {
+	var response Session
+	err := jrpc.CallRpc(to, "Methods.SignIn", et.Json{
+		"device":   device,
+		"database": database,
+		"username": username,
+		"password": password,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+/**
+* ChanguePassword
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) ChanguePassword(require et.Json, response *Session) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	device := require.Str("device")
+	database := require.Str("database")
+	username := require.Str("username")
+	password := require.Str("password")
+	result, err := node.signIn(device, database, username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = *result
+	return nil
+}
+
+/**
+* signIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/

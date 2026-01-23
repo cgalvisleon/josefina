@@ -1,12 +1,9 @@
 package rds
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -58,82 +55,4 @@ func initUsers() error {
 	}
 
 	return nil
-}
-
-/**
-* createUser: Creates a new user
-* @param username, password string
-* @return error
-**/
-func (s *Node) createUser(username, password string) error {
-	if users == nil {
-		return errors.New(msg.MSG_USERS_NOT_FOUND)
-	}
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(password, 3, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
-	}
-
-	_, err := users.
-		Insert(et.Json{
-			"username": username,
-			"password": password,
-		}).
-		Execute(nil)
-	return err
-}
-
-/**
-* dropUser: Drops a user
-* @param username string
-* @return error
-**/
-func (s *Node) dropUser(username string) error {
-	if users == nil {
-		return errors.New(msg.MSG_USERS_NOT_FOUND)
-	}
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-
-	_, err := users.
-		Delete().
-		Where(Eq("username", username)).
-		Execute(nil)
-	return err
-}
-
-/**
-* changuePassword: Changues the password of a user
-* @param username, password string
-* @return error
-**/
-func (s *Node) changuePassword(username, password string) error {
-	if users == nil {
-		return errors.New(msg.MSG_USERS_NOT_FOUND)
-	}
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(password, 6, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
-	}
-
-	ok, err := users.isExisted("username", username)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return errors.New(msg.MSG_USER_NOT_FOUND)
-	}
-
-	_, err = users.
-		Update(et.Json{
-			"password": password,
-		}).
-		Where(Eq("username", username)).
-		Execute(nil)
-	return err
 }
