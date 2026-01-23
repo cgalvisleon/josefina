@@ -236,7 +236,7 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return result, nil
 	}
 
-	err = initModels()
+	err = initModels(s.host)
 	if err != nil {
 		return nil, err
 	}
@@ -250,16 +250,14 @@ func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
 	}
 
+	if !isCluster {
+		err = result.init(s.host)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	s.models[key] = result
-	if isCluster {
-		return result, nil
-	}
-
-	err = result.init()
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
