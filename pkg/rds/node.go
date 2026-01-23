@@ -335,7 +335,7 @@ func (s *Node) saveModel(model *Model) error {
 	}
 
 	if leader != s.host {
-		ok, err := methods.saveModel(leader, model)
+		err := methods.saveModel(leader, model)
 		if err != nil {
 			return err
 		}
