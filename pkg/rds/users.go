@@ -22,7 +22,7 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := newDb(packageName, node.version)
+	db, err := getDb(packageName)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,12 @@ func initUsers() error {
 		return err
 	}
 
-	if users.count() == 0 {
+	count, err := users.count()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
 		err := createUser(useranme, password)
