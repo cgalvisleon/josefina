@@ -55,19 +55,13 @@ func newDb(name, version string) (*DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	result, ok := node.dbs[name]
-	if ok {
-		return result, nil
-	}
-
 	path := envar.GetStr("PATH_DATA", "./data")
-	result = &DB{
+	result := &DB{
 		Name:    name,
 		Version: version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
-	node.dbs[name] = result
 
 	return result, nil
 }

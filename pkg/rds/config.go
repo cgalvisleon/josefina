@@ -2,11 +2,9 @@ package rds
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type Config struct {
@@ -77,22 +75,4 @@ func getNodes() ([]string, error) {
 	}
 
 	return config.Nodes, nil
-}
-
-/**
-* getLeader: Returns the leader
-* @return string, error
-**/
-func getLeader() (string, error) {
-	config, err := getConfig()
-	if err != nil {
-		return "", err
-	}
-
-	if config.Leader >= len(config.Nodes) {
-		return "", fmt.Errorf(msg.MSG_NODE_NOT_FOUND)
-	}
-
-	result := config.Nodes[config.Leader]
-	return result, nil
 }

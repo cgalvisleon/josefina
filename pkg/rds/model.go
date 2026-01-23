@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
@@ -16,6 +17,7 @@ var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	ErrorModelNotLoad        = errors.New(msg.MSG_MODEL_NOT_LOAD)
 	models                   *Model
 )
 
@@ -92,9 +94,59 @@ type Model struct {
 	isDebug       bool                        `json:"-"`
 	db            *DB                         `json:"-"`
 	isInit        bool                        `json:"-"`
-	data          map[string]*store.FileStore `json:"-"`
+	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	changed       bool                        `json:"-"`
+}
+
+/**
+* newModel
+* @param database, schema, name string, isCore bool, version int
+* @return *Model
+**/
+func newModel(database, schema, name string, isCore bool, version int) (*Model, error) {
+	if !utility.ValidStr(database, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	result := &Model{
+		From: &From{
+			Database: database,
+			Schema:   schema,
+			Name:     name,
+			Fields:   make(map[string]*Field, 0),
+		},
+		Indexes:       make([]string, 0),
+		PrimaryKeys:   make([]string, 0),
+		Unique:        make([]string, 0),
+		Required:      make([]string, 0),
+		Hidden:        make([]string, 0),
+		References:    make(map[string]*Detail, 0),
+		Details:       make(map[string]*Detail, 0),
+		Rollups:       make(map[string]*Detail, 0),
+		Relations:     make(map[string]*Detail, 0),
+		Calcs:         make(map[string][]byte, 0),
+		BeforeInserts: make([]*Trigger, 0),
+		BeforeUpdates: make([]*Trigger, 0),
+		BeforeDeletes: make([]*Trigger, 0),
+		AfterInserts:  make([]*Trigger, 0),
+		AfterUpdates:  make([]*Trigger, 0),
+		AfterDeletes:  make([]*Trigger, 0),
+		Version:       version,
+		IsCore:        isCore,
+		stores:        make(map[string]*store.FileStore, 0),
+		triggers:      make(map[string]*Vm, 0),
+	}
+	_, err := result.defineIndexField()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -179,40 +231,51 @@ func (s *Model) init() error {
 		if err != nil {
 			return err
 		}
-		s.data[name] = fStore
+		s.stores[name] = fStore
 	}
 
 	s.isInit = true
-	if s.IsCore {
-		return nil
-	}
-	return saveModel(s)
+	return node.saveModel(s)
 }
 
 /**
-* index: Returns the index
+* store: Returns the index
 * @param name string
 * @return *store.FileStore, bool
 **/
-func (s *Model) index(name string) (*store.FileStore, bool) {
-	data, ok := s.data[name]
+func (s *Model) store(name string) (*store.FileStore, error) {
+	result, ok := s.stores[name]
 	if !ok {
-		return nil, false
+		return nil, errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
-	return data, true
+
+	return result, nil
+}
+
+/**
+* source: Returns the source
+* @return *store.FileStore, error
+**/
+func (s *Model) source() (*store.FileStore, error) {
+	result, err := s.store(INDEX)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
 * count: Counts the model
-* @return int
+* @return int, error
 **/
-func (s *Model) count() int {
-	data, ok := s.index(INDEX)
-	if !ok {
-		return 0
+func (s *Model) count() (int, error) {
+	result, err := s.source()
+	if err != nil {
+		return 0, err
 	}
 
-	return data.Count()
+	return result.Count(), nil
 }
 
 /**
@@ -221,19 +284,6 @@ func (s *Model) count() int {
 **/
 func (s *Model) genKey() string {
 	return reg.GenUUId(s.Name)
-}
-
-/**
-* source: Returns the source
-* @return *store.FileStore, error
-**/
-func (s *Model) source() (*store.FileStore, error) {
-	result, ok := s.index(INDEX)
-	if !ok {
-		return nil, errors.New(msg.MSG_INDEX_NOT_FOUND)
-	}
-
-	return result, nil
 }
 
 /**
@@ -564,58 +614,4 @@ func (s *Model) Selects(fields ...string) *Wheres {
 		result.selects = append(result.selects, field)
 	}
 	return result
-}
-
-/**
-* getModel
-* @param from *From
-* @return *Model, error
-**/
-func getModel(from *From) (*Model, error) {
-	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := node.getDb(from.Database)
-	if err != nil {
-		return nil, err
-	}
-	return db.getModel(from.Schema, from.Name, node.host)
-}
-
-/**
-* save: Saves the model
-* @return error
-**/
-func saveModel(model *Model) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_FOUND)
-	}
-
-	if node.leader != node.host {
-		err := methods.saveModel(model)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	err := initModels()
-	if err != nil {
-		return err
-	}
-
-	src, err := model.serialize()
-	if err != nil {
-		return err
-	}
-
-	key := modelKey(model.Database, model.Schema, model.Name)
-	err = models.put(key, src)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

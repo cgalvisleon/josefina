@@ -129,47 +129,13 @@ func (s *Methods) GetVote(require string, response *string) error {
 }
 
 /**
-* getDB
-* @param name string
-* @return *DB, error
-**/
-func (s *Methods) getDB(name string) (*DB, error) {
-	var response DB
-	err := jrpc.CallRpc(node.leader, "Methods.GetDB", name, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
-}
-
-/**
-* GetDB: Returns a database by name
-* @param require string, response *DB
-* @return error
-**/
-func (s *Methods) GetDB(require string, response *DB) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	result, err := node.getDb(require)
-	if err != nil {
-		return err
-	}
-
-	*response = *result
-	return nil
-}
-
-/**
 * getModel
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getModel(database, schema, model, host string) (*Model, error) {
+func (s *Methods) getModel(to, database, schema, model string) (*Model, error) {
 	var response Model
-	err := jrpc.CallRpc(node.leader, "Methods.GetModel", et.Json{
+	err := jrpc.CallRpc(to, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"model":    model,
@@ -194,8 +160,7 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	model := require.Str("model")
-	host := require.Str("host")
-	result, err := node.getModel(database, schema, model, host)
+	result, err := node.getModel(database, schema, model)
 	if err != nil {
 		return err
 	}
@@ -248,43 +213,6 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 }
 
 /**
-* saveModel
-* @param model *Model
-* @return error
-**/
-func (s *Methods) saveModel(model *Model) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	var reply string
-	err := jrpc.CallRpc(node.leader, "Methods.SaveModel", model, &reply)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* getModel
-* @param database, schema, model string
-* @return *Model, error
-**/
-func (s *Methods) SaveModel(require *Model, response *string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	err := saveModel(require)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * setRecord
 * @param schema, model, key string
 * @return error
@@ -322,43 +250,6 @@ func (s *Methods) SetRecord(require et.Json, response *string) error {
 	model := require.Str("model")
 	key := require.Str("key")
 	err := setRecord(schema, model, key)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* commit
-* @param to string, tx *Transaction
-* @return error
-**/
-func (s *Methods) commit(to string, tx *Transaction) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	var reply string
-	err := jrpc.CallRpc(to, "Methods.Commit", tx, &reply)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* Commit
-* @param require *Transaction, response *Session
-* @return error
-**/
-func (s *Methods) Commit(require *Transaction, response *string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	err := commit(require)
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,7 @@ var (
 
 func init() {
 	hostname, _ = os.Hostname()
+	node = &Node{}
 }
 
 /**
@@ -22,33 +23,13 @@ func init() {
 * @return error
 **/
 func Load(version string) error {
-	if node != nil {
+	if node.started {
 		return nil
-	}
-
-	leader, err := getLeader()
-	if err != nil {
-		return err
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
 	node = newNode(hostname, port, version)
-	if leader == "" {
-		node.leader = node.host
-	} else if node.host != leader {
-		node.leader = leader
-	}
-
 	go node.start()
-
-	if methods == nil {
-		methods = new(Methods)
-	}
-
-	err = node.mount(methods)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

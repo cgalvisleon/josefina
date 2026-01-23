@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var transactions *Model
@@ -264,45 +262,6 @@ func (s *Tx) commit() error {
 			if err != nil {
 				return err
 			}
-		}
-	}
-
-	return nil
-}
-
-/**
-* commit: Commits the Transaction
-* @param tr *Transaction
-* @return error
-**/
-func commit(tr *Transaction) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	model := tr.Model
-	if model.Host() != node.host {
-		return methods.commit(model.Host(), tr)
-	}
-
-	for _, record := range tr.Records {
-		cmd := record.Command
-		idx := record.Idx
-		if cmd == DELETE {
-			err := model.removeData(idx)
-			if err != nil {
-				return err
-			}
-		} else {
-			data := record.Data
-			err := model.putData(idx, data)
-			if err != nil {
-				return err
-			}
-		}
-		err := record.commit()
-		if err != nil {
-			return err
 		}
 	}
 

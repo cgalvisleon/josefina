@@ -1,6 +1,7 @@
 package rds
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/rpc"
@@ -13,15 +14,11 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var nodes []string
-
 type Node struct {
 	host    string             `json:"-"`
 	port    int                `json:"-"`
 	version string             `json:"-"`
-	leader  string             `json:"-"`
 	rpcs    map[string]et.Json `json:"-"`
-	dbs     map[string]*DB     `json:"-"`
 	models  map[string]*Model  `json:"-"`
 	started bool               `json:"-"`
 }
@@ -38,9 +35,65 @@ func newNode(host string, port int, version string) *Node {
 		port:    port,
 		version: version,
 		rpcs:    make(map[string]et.Json),
-		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
 	}
+}
+
+func (s *Node) leader() (string, bool, error) {
+	if methods == nil {
+		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	config, err := getConfig()
+	if err != nil {
+		return "", false, err
+	}
+
+	t := len(config.Nodes)
+	if t == 0 {
+		return s.host, false, nil
+	}
+
+	leader := config.Leader
+	if leader >= t {
+		leader = 0
+	}
+
+	for {
+		if leader >= t {
+			break
+		}
+
+		result := config.Nodes[leader]
+		if result == s.host {
+			leader++
+			continue
+		}
+
+		ok := s.ping(result)
+		if !ok {
+			leader++
+			continue
+		}
+
+		return result, true, nil
+	}
+
+	return "", false, fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
+}
+
+/**
+* ping
+* @param to string
+* @return bool
+**/
+func (s *Node) ping(to string) bool {
+	err := methods.ping(to)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 /**
@@ -48,38 +101,16 @@ func newNode(host string, port int, version string) *Node {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
+	leader, err := s.leader()
+	if err != nil {
+		leader = err.Error()
+	}
 	return et.Json{
 		"host":    s.host,
+		"leader":  leader,
 		"version": s.version,
-	}
-}
-
-/**
-* start
-* @return error
-**/
-func (s *Node) start() error {
-	if s.started {
-		return nil
-	}
-
-	address := fmt.Sprintf(`:%d`, s.port)
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		logs.Fatal(err)
-	}
-
-	s.started = true
-	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			logs.Panic(err)
-			continue
-		}
-
-		go rpc.ServeConn(conn)
+		"rpcs":    s.rpcs,
+		"models":  s.models,
 	}
 }
 
@@ -119,21 +150,157 @@ func (s *Node) mount(services any) error {
 		logs.Logf("rpc", "RPC:/%s/%s", s.host, name)
 	}
 
-	rpc.Register(services)
-	return nil
+	return rpc.Register(services)
 }
 
 /**
-* getDb
-* @param name string
-* @return *DB, error
+* start
+* @return error
 **/
-func (s *Node) getDb(name string) (*DB, error) {
+func (s *Node) start() error {
+	if s.started {
+		return nil
+	}
+
+	if methods == nil {
+		methods = new(Methods)
+	}
+
+	err := s.mount(methods)
+	if err != nil {
+		return err
+	}
+
+	address := fmt.Sprintf(`:%d`, s.port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		logs.Fatal(err)
+	}
+
+	s.started = true
+	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			logs.Panic(err)
+			continue
+		}
+
+		go rpc.ServeConn(conn)
+	}
+}
+
+/**
+* getModel
+* @param database, schema, name string
+* @return *Model, error
+**/
+func (s *Node) getModel(database, schema, name string) (*Model, error) {
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	if s.leader != s.host {
+	key := modelKey(database, schema, name)
+	result, ok := s.models[key]
+	if ok {
+		return result, nil
+	}
+
+	leader, err := s.leader()
+	if err != nil {
+		return nil, err
+	}
+
+	if leader != s.host {
+		result, err := methods.getModel(leader, database, schema, name)
+		if err != nil && errors.Is(err, ErrorModelNotLoad) {
+			if result == nil {
+				return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+			}
+
+			err := result.init()
+			if err != nil {
+				return nil, err
+			}
+
+			s.models[key] = result
+		} else if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	err = initModels()
+	if err != nil {
+		return nil, err
+	}
+
+	exists, err := models.get(key, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return result, nil
+	}
+
+	result, err = db.getModel(schema, name, host)
+	if err != nil {
+		return nil, err
+	}
+
+	s.models[key] = result
+	return result, nil
+}
+
+/**
+* save: Saves the model
+* @return error
+**/
+func (s *Node) saveModel(model *Model) error {
+	if model.IsCore {
+		return nil
+	}
+
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	err := initModels()
+	if err != nil {
+		return err
+	}
+
+	src, err := model.serialize()
+	if err != nil {
+		return err
+	}
+
+	key := modelKey(model.Database, model.Schema, model.Name)
+	err = models.put(key, src)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* getDB
+* @param name string
+* @return *DB, error
+**/
+func (s *Node) getDB(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	if s.leader() != s.host {
 		result, err := methods.getDB(name)
 		if err != nil {
 			return nil, err
@@ -163,91 +330,4 @@ func (s *Node) getDb(name string) (*DB, error) {
 
 	s.dbs[name] = result
 	return result, nil
-}
-
-/**
-* getModel
-* @param database, schema, name, host string
-* @return *Model, error
-**/
-func (s *Node) getModel(database, schema, name, host string) (*Model, error) {
-	if !utility.ValidStr(database, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	key := modelKey(database, schema, name)
-	result, ok := s.models[key]
-	if ok {
-		return result, nil
-	}
-
-	if s.leader != s.host {
-		result, err := methods.getModel(database, schema, name, s.host)
-		if err != nil {
-			return nil, err
-		}
-
-		if result.Host() == s.host {
-			s.models[key] = result
-		}
-		return result, nil
-	}
-
-	db, err := s.getDb(database)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err = db.getModel(schema, name, host)
-	if err != nil {
-		return nil, err
-	}
-
-	s.models[key] = result
-	return result, nil
-}
-
-/**
-* signIn: Sign in a user
-* @param device, username, password string
-* @return *Session, error
-**/
-func (s *Node) signIn(device, database, username, password string) (*Session, error) {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
-	}
-	if !utility.ValidStr(password, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
-	}
-
-	if s.leader != s.host {
-		result, err := methods.signIn(device, database, username, password)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	err := initUsers()
-	if err != nil {
-		return nil, err
-	}
-
-	item, err := users.
-		Selects().
-		Where(Eq("username", username)).
-		And(Eq("password", password)).
-		Rows(nil)
-	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
-	}
-
-	return newSession(device, username)
 }
