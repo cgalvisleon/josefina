@@ -39,7 +39,7 @@ func initModels(host string) error {
 	if err != nil {
 		return err
 	}
-	if err := models.init(host); err != nil {
+	if err := models.init(); err != nil {
 		return err
 	}
 
@@ -105,7 +105,13 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
+	database = utility.Normalize(database)
+	schema = utility.Normalize(schema)
 	name = utility.Normalize(name)
+	path := envar.GetStr("DATA_PATH", "./data")
+	path = fmt.Sprintf("%s/%s", path, database)
+	path = strs.Append(path, schema, "/")
+	path = fmt.Sprintf("%s/%s", path, name)
 	result := &Model{
 		From: &From{
 			Database: database,
@@ -113,6 +119,7 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 			Name:     name,
 			Fields:   make(map[string]*Field, 0),
 		},
+		Path:          path,
 		Indexes:       make([]string, 0),
 		PrimaryKeys:   make([]string, 0),
 		Unique:        make([]string, 0),
@@ -178,48 +185,9 @@ func (s *Model) toJson() (et.Json, error) {
 * prepared: Prepares the model
 * @return error
 **/
-func (s *Model) prepared() error {
+func (s *Model) load() error {
 	if len(s.Indexes) == 0 {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
-	}
-
-	return nil
-}
-
-/**
-* getPath: Returns the path
-* @return string, error
-**/
-func (s *Model) getPath() error {
-	if s.Database == "" {
-		return errors.New(msg.MSG_DATABASE_REQUIRED)
-	}
-
-	path := envar.GetStr("DATA_PATH", "./data")
-	path = fmt.Sprintf("%s/%s", path, s.Database)
-	result := strs.Append(path, s.Schema, "/")
-	result = fmt.Sprintf("%s/%s", result, s.Name)
-	s.Path = result
-	return nil
-}
-
-/**
-* init: Initializes the model
-* @return error
-**/
-func (s *Model) init(host string) error {
-	if s.IsInit {
-		return nil
-	}
-
-	err := s.prepared()
-	if err != nil {
-		return err
-	}
-
-	err = s.getPath()
-	if err != nil {
-		return err
 	}
 
 	for _, name := range s.Indexes {
@@ -230,7 +198,26 @@ func (s *Model) init(host string) error {
 		s.stores[name] = fStore
 	}
 
-	s.Host = host
+	return nil
+}
+
+/**
+* init: Initializes the model
+* @return error
+**/
+func (s *Model) init() error {
+	if s.IsInit {
+		return nil
+	}
+
+	err := s.load()
+	if err != nil {
+		return err
+	}
+
+	if node != nil {
+		s.Host = node.host
+	}
 	s.IsInit = true
 	return nil
 }

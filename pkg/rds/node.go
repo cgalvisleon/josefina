@@ -280,6 +280,21 @@ func (s *Node) loadModel(model *Model) error {
 		return nil
 	}
 
+	model.IsInit = true
+	model.Host = s.host
+
+	leader, _, err := s.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != s.host {
+		err := methods.saveModel(leader, model)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
