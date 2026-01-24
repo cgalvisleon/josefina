@@ -221,23 +221,18 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 
-		to, err := s.getModel(detail.To)
-		if err != nil {
-			return nil, err
-		}
-
 		fk, ok := detail.Keys[name]
 		if !ok {
 			return nil, fmt.Errorf(msg.MSG_FOREIGN_KEY_NOT_FOUND, name)
 		}
 
 		key := fmt.Sprintf("%v", new[name])
-		ok, err = to.isExisted(fk, key)
+		exists, err := IsExisted(detail.To, fk, key)
 		if err != nil {
 			return nil, err
 		}
 
-		if !ok {
+		if !exists {
 			return nil, fmt.Errorf(msg.MSG_VIOLATE_FOREIGN_KEY, name)
 		}
 	}
