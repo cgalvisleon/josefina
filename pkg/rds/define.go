@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Model) setChanged() {
-	if !s.isInit {
+	if !s.IsInit {
 		return
 	}
 	s.changed = true

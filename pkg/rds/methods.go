@@ -65,13 +65,13 @@ func (s *Methods) Ping(require string, response *string) error {
 }
 
 /**
-* getFrom
+* getModel
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getFrom(to, database, schema, name string) (*From, error) {
-	var response From
-	err := jrpc.CallRpc(to, "Methods.GetFrom", et.Json{
+func (s *Methods) getModel(to, database, schema, name string) (*Model, error) {
+	var response Model
+	err := jrpc.CallRpc(to, "Methods.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"name":     name,
@@ -85,10 +85,10 @@ func (s *Methods) getFrom(to, database, schema, name string) (*From, error) {
 
 /**
 * GetFrom
-* @param require et.Json, response *From
+* @param require et.Json, response *Model
 * @return error
 **/
-func (s *Methods) GetFrom(require et.Json, response *From) error {
+func (s *Methods) GetModel(require et.Json, response *Model) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -96,7 +96,7 @@ func (s *Methods) GetFrom(require et.Json, response *From) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
-	result, err := node.getFrom(database, schema, name)
+	result, err := node.getModel(database, schema, name)
 	if err != nil {
 		return err
 	}
@@ -110,9 +110,9 @@ func (s *Methods) GetFrom(require et.Json, response *From) error {
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) reserveModel(to string, from *From) (*Reserve, error) {
+func (s *Methods) reserveModel(to string, model *Model) (*Reserve, error) {
 	var response Reserve
-	err := jrpc.CallRpc(to, "Methods.ReserveModel", from, &response)
+	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -122,10 +122,10 @@ func (s *Methods) reserveModel(to string, from *From) (*Reserve, error) {
 
 /**
 * ReserveModel
-* @param require *From, response *Reserve
+* @param require *Model, response *Reserve
 * @return error
 **/
-func (s *Methods) ReserveModel(require *From, response *Reserve) error {
+func (s *Methods) ReserveModel(require *Model, response *Reserve) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}

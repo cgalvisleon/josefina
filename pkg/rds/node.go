@@ -205,11 +205,11 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
-* getFrom
+* getModel
 * @param database, schema, name string
 * @return *Model, error
 **/
-func (s *Node) getFrom(database, schema, name string) (*From, error) {
+func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -226,7 +226,7 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 	}
 
 	if leader != s.host {
-		result, err := methods.getFrom(leader, database, schema, name)
+		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
 		}
@@ -234,12 +234,12 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 		return result, nil
 	}
 
-	type fromResult struct {
-		result *From
+	type modelResult struct {
+		result *Model
 		err    error
 	}
 
-	ch := make(chan fromResult)
+	ch := make(chan modelResult)
 	s.mu.Lock()
 	go func() {
 		defer s.mu.Unlock()
@@ -247,29 +247,29 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 		key := modelKey(database, schema, name)
 		result, ok := s.models[key]
 		if ok {
-			ch <- fromResult{result: result.From, err: nil}
+			ch <- modelResult{result: result, err: nil}
 			return
 		}
 
 		err = initModels()
 		if err != nil {
-			ch <- fromResult{result: nil, err: err}
+			ch <- modelResult{result: nil, err: err}
 			return
 		}
 
 		exists, err := models.get(key, &result)
 		if err != nil {
-			ch <- fromResult{result: nil, err: err}
+			ch <- modelResult{result: nil, err: err}
 			return
 		}
 
 		if !exists {
-			ch <- fromResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
+			ch <- modelResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
 			return
 		}
 
 		s.models[key] = result
-		ch <- fromResult{result: result.From, err: nil}
+		ch <- modelResult{result: result, err: nil}
 	}()
 
 	res := <-ch
@@ -277,11 +277,11 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 }
 
 /**
-* resolveFrom
+* resolveModel
 * @param database, schema, name string
 * @return *From, error
 **/
-func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
+func (s *Node) resolveModel(database, schema, name string) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -292,52 +292,52 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	type fromResult struct {
-		result *From
+	type modelResult struct {
+		result *Model
 		err    error
 	}
 
-	ch := make(chan fromResult)
+	ch := make(chan modelResult)
 	go func() {
 		key := modelKey(database, schema, name)
 		result, ok := s.models[key]
 		if ok {
-			ch <- fromResult{result: result.From, err: nil}
+			ch <- modelResult{result: result, err: nil}
 			return
 		}
 
-		from, err := s.getFrom(database, schema, name)
+		model, err := s.getModel(database, schema, name)
 		if err != nil {
-			ch <- fromResult{result: nil, err: err}
+			ch <- modelResult{result: nil, err: err}
 			return
 		}
 
-		if from.Host != "" {
-			ch <- fromResult{result: from, err: nil}
+		if model.Host != "" {
+			ch <- modelResult{result: model, err: nil}
 			return
 		}
 
-		from.Host = s.host
-		reserve, err := s.reserveModel(from)
+		model.Host = s.host
+		reserve, err := s.reserveModel(model)
 		if err != nil {
-			ch <- fromResult{result: nil, err: err}
+			ch <- modelResult{result: nil, err: err}
 			return
 		}
 
 		if !reserve.Ok {
-			ch <- fromResult{result: reserve.Model.From, err: nil}
+			ch <- modelResult{result: reserve.Model, err: nil}
 			return
 		}
 
 		result = reserve.Model
 		err = result.init()
 		if err != nil {
-			ch <- fromResult{result: nil, err: err}
+			ch <- modelResult{result: nil, err: err}
 			return
 		}
 
 		s.models[key] = result
-		ch <- fromResult{result: result.From, err: nil}
+		ch <- modelResult{result: result, err: nil}
 	}()
 
 	res := <-ch
@@ -346,10 +346,10 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 
 /**
 * reserveModel
-* @param from *From
+* @param model *Model
 * @return error
 **/
-func (s *Node) reserveModel(from *From) (*Reserve, error) {
+func (s *Node) reserveModel(model *Model) (*Reserve, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -360,7 +360,7 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 	}
 
 	if leader != s.host {
-		result, err := methods.reserveModel(leader, from)
+		result, err := methods.reserveModel(leader, model)
 		if err != nil {
 			return nil, err
 		}
@@ -378,7 +378,7 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 	go func() {
 		defer s.mu.Unlock()
 
-		key := from.key()
+		key := model.key()
 		result, ok := s.models[key]
 		if !ok {
 			ch <- reserveResult{result: nil, err: fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)}
@@ -394,7 +394,7 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 			return
 		}
 
-		result.Host = from.Host
+		result.Host = model.Host
 		s.models[key] = result
 
 		reserve := &Reserve{
