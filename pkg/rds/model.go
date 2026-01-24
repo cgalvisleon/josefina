@@ -50,6 +50,7 @@ type From struct {
 	Fields   map[string]*Field `json:"fields"`
 	IsStrict bool              `json:"is_strict"`
 	Host     string            `json:"-"`
+	IsInit   bool              `json:"-"`
 }
 
 type TypeModel string
@@ -81,7 +82,6 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
-	IsInit        bool                        `json:"-"`
 	isDebug       bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
