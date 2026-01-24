@@ -96,7 +96,6 @@ func (s *DB) getSchema(name string) *Schema {
 		Database: s.Name,
 		Name:     name,
 		Models:   make(map[string]*Model, 0),
-		db:       s,
 	}
 	s.Schemas[name] = result
 

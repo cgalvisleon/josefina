@@ -11,7 +11,6 @@ type Schema struct {
 	Database string            `json:"database"`
 	Name     string            `json:"name"`
 	Models   map[string]*Model `json:"models"`
-	db       *DB               `json:"-"`
 }
 
 /**
@@ -29,40 +28,11 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		return result, nil
 	}
 
-	s.Models[name] = result
-	s.db.Schemas[s.Name] = s
-	return result, nil
-}
-
-/**
-* getModel: Returns a model
-* @param name, host string, model *Model
-* @return bool, error
-**/
-func (s *Schema) getModel(name, host string, model *Model) (bool, error) {
-	name = utility.Normalize(name)
-	result, ok := s.Models[name]
-	if ok {
-		model = result
-		return true, nil
-	}
-
-	err := initModels()
-	if err != nil {
-		return false, err
-	}
-
-	key := modelKey(s.Database, s.Name, name)
-	exists, err := models.get(key, &result)
+	result, err := newModel(s.Database, s.Name, name, isCore, version)
 	if err != nil {
 		return nil, err
 	}
+	s.Models[name] = result
 
-	if exists {
-		result.host = host
-		s.Models[name] = result
-		return result, nil
-	}
-
-	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	return result, nil
 }

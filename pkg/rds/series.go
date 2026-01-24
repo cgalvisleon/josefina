@@ -48,7 +48,7 @@ func initSeries() error {
 * @return error
 **/
 func (s *Node) createSerie(name, tag, format string, value int) error {
-	if s.i == nil {
+	if s. == nil {
 		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
