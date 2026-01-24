@@ -321,6 +321,7 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 			return
 		}
 
+		from.Host = s.host
 		reserve, err := s.sererveModel(from)
 		if err != nil {
 			ch <- fromResult{result: nil, err: err}
@@ -370,19 +371,27 @@ func (s *Node) sererveModel(from *From) (*Reserve, error) {
 		key := from.key()
 		result, ok := s.models[key]
 		if !ok {
-			s.models[key] = from
-			ch <- reserveResult{result: &Reserve{Ok: true, Model: from}, err: nil}
+			ch <- reserveResult{result: nil, err: fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)}
 			return
 		}
 
-		if result.Host == "" {
-			result.Host = model.Host
-			s.models[key] = result
-			ch <- boolResult{result: true, err: nil}
+		if result.Host != "" {
+			reserve := &Reserve{
+				Ok:    false,
+				Model: result,
+			}
+			ch <- reserveResult{result: reserve, err: nil}
 			return
 		}
 
-		ch <- boolResult{result: false, err: nil}
+		result.Host = from.Host
+		s.models[key] = result
+
+		reserve := &Reserve{
+			Ok:    true,
+			Model: result,
+		}
+		ch <- reserveResult{result: reserve, err: nil}
 	}()
 
 	res := <-ch

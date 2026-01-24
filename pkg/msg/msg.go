@@ -52,6 +52,7 @@ var (
 	MSG_INDEX_NOT_DEFINED          = "index not defined"
 	MSG_SESSION_NOT_FOUND          = "session not found"
 	MSG_STORE_NOT_FOUND            = "store not found"
+	MSG_GET_FROM_NOT_USED          = "getFrom not used"
 )
 
 func init() {
@@ -106,5 +107,6 @@ func init() {
 		MSG_INDEX_NOT_DEFINED = "index no definido"
 		MSG_SESSION_NOT_FOUND = "session no encontrado"
 		MSG_STORE_NOT_FOUND = "store no econtrado"
+		MSG_GET_FROM_NOT_USED = "getFrom no usado"
 	}
 }
