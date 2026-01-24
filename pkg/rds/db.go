@@ -96,6 +96,7 @@ func (s *DB) getSchema(name string) *Schema {
 		Database: s.Name,
 		Name:     name,
 		Models:   make(map[string]*Model, 0),
+		db:       s,
 	}
 	s.Schemas[name] = result
 
@@ -104,10 +105,10 @@ func (s *DB) getSchema(name string) *Schema {
 
 /**
 * newModel: Creates a new model
-* @param name string, schema string, isCore bool, version int
+* @param schema, name	string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) newModel(name string, schema string, isCore bool, version int) (*Model, error) {
+func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch := s.getSchema(schema)
 	model, err := sch.newModel(name, isCore, version)
 	if err != nil {

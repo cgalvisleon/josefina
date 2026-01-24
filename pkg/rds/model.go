@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
@@ -103,47 +101,6 @@ func newModel(database, schema, name string, isCore bool, version int) (*Model, 
 	}
 	if !utility.ValidStr(name, 1, []string{}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	database = utility.Normalize(database)
-	schema = utility.Normalize(schema)
-	name = utility.Normalize(name)
-	path := envar.GetStr("DATA_PATH", "./data")
-	path = fmt.Sprintf("%s/%s", path, database)
-	path = strs.Append(path, schema, "/")
-	path = fmt.Sprintf("%s/%s", path, name)
-	result := &Model{
-		From: &From{
-			Database: database,
-			Schema:   schema,
-			Name:     name,
-			Fields:   make(map[string]*Field, 0),
-		},
-		Path:          path,
-		Indexes:       make([]string, 0),
-		PrimaryKeys:   make([]string, 0),
-		Unique:        make([]string, 0),
-		Required:      make([]string, 0),
-		Hidden:        make([]string, 0),
-		References:    make(map[string]*Detail, 0),
-		Details:       make(map[string]*Detail, 0),
-		Rollups:       make(map[string]*Detail, 0),
-		Relations:     make(map[string]*Detail, 0),
-		Calcs:         make(map[string][]byte, 0),
-		BeforeInserts: make([]*Trigger, 0),
-		BeforeUpdates: make([]*Trigger, 0),
-		BeforeDeletes: make([]*Trigger, 0),
-		AfterInserts:  make([]*Trigger, 0),
-		AfterUpdates:  make([]*Trigger, 0),
-		AfterDeletes:  make([]*Trigger, 0),
-		Version:       version,
-		IsCore:        isCore,
-		stores:        make(map[string]*store.FileStore, 0),
-		triggers:      make(map[string]*Vm, 0),
-	}
-	_, err := result.defineIndexField()
-	if err != nil {
-		return nil, err
 	}
 
 	return result, nil
