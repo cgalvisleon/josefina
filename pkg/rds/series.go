@@ -21,7 +21,7 @@ func initSeries() error {
 		return nil
 	}
 
-	db, err := newDb(packageName, node.version)
+	db, err := getDb(packageName)
 	if err != nil {
 		return err
 	}
@@ -47,8 +47,8 @@ func initSeries() error {
 * @param name, tag, format string, value int
 * @return error
 **/
-func createSerie(name, tag, format string, value int) error {
-	if node == nil {
+func (s *Node) createSerie(name, tag, format string, value int) error {
+	if s.i == nil {
 		return errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
