@@ -205,11 +205,11 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
-* getModel
+* findModel
 * @param database, schema, name string
 * @return *Model, error
 **/
-func (s *Node) getModel(database, schema, name string) (*Model, error) {
+func (s *Node) findModel(database, schema, name string) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -277,11 +277,11 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 }
 
 /**
-* resolveModel
+* getModel
 * @param database, schema, name string
 * @return *From, error
 **/
-func (s *Node) resolveModel(database, schema, name string) (*Model, error) {
+func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -306,7 +306,7 @@ func (s *Node) resolveModel(database, schema, name string) (*Model, error) {
 			return
 		}
 
-		model, err := s.getModel(database, schema, name)
+		model, err := s.findModel(database, schema, name)
 		if err != nil {
 			ch <- modelResult{result: nil, err: err}
 			return
