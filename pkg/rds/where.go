@@ -331,7 +331,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		}
 
 		field := con.Field
-		index, ok := model.index(field)
+		index, ok := model.stores[field]
 		if !ok {
 			onlyKeys = false
 			continue

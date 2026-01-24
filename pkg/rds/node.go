@@ -1,7 +1,6 @@
 package rds
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/rpc"
@@ -391,56 +390,6 @@ func (s *Node) saveModel(model *Model) error {
 	}
 
 	return nil
-}
-
-/**
-* signIn: Sign in a user
-* @param device, username, password string
-* @return *Session, error
-**/
-func (s *Node) signIn(device, database, username, password string) (*Session, error) {
-	if !s.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
-	}
-	if !utility.ValidStr(password, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
-	}
-
-	leader, _, err := s.leader()
-	if err != nil {
-		return nil, err
-	}
-
-	if leader != s.host {
-		result, err := methods.signIn(leader, device, database, username, password)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	err = initUsers()
-	if err != nil {
-		return nil, err
-	}
-
-	item, err := users.
-		Selects().
-		Where(Eq("username", username)).
-		And(Eq("password", password)).
-		Rows(nil)
-	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
-	}
-
-	return newSession(device, username)
 }
 
 /**

@@ -50,6 +50,7 @@ var (
 	MSG_FOLLOW_HOST_REQUIRED       = "follow host required"
 	MSG_NO_LEADER_FOUND            = "no leader found"
 	MSG_INDEX_NOT_DEFINED          = "index not defined"
+	MSG_SESSION_NOT_FOUND          = "session not found"
 )
 
 func init() {
@@ -102,5 +103,6 @@ func init() {
 		MSG_FOLLOW_HOST_REQUIRED = "follow host es requerido"
 		MSG_NO_LEADER_FOUND = "no se encontró leader"
 		MSG_INDEX_NOT_DEFINED = "index no definido"
+		MSG_SESSION_NOT_FOUND = "session no encontrado"
 	}
 }
