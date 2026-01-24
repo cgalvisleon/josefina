@@ -51,6 +51,14 @@ type From struct {
 	IsInit   bool   `json:"-"`
 }
 
+/**
+* key: Returns the key of the model
+* @return string
+**/
+func (s *From) key() string {
+	return modelKey(s.Database, s.Schema, s.Name)
+}
+
 type TypeModel string
 
 const (
@@ -166,14 +174,6 @@ func (s *Model) init() error {
 	s.IsInit = true
 
 	return nil
-}
-
-/**
-* key: Returns the key of the model
-* @return string
-**/
-func (s *Model) key() string {
-	return modelKey(s.Database, s.Schema, s.Name)
 }
 
 /**

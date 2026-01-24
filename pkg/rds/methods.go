@@ -65,77 +65,13 @@ func (s *Methods) Ping(require string, response *string) error {
 }
 
 /**
-* vote
-* @param tag, host string
-* @return error
-**/
-func (s *Methods) vote(to, tag, host string) error {
-	data := et.Json{
-		"tag":  tag,
-		"host": host,
-	}
-	var response string
-	err := jrpc.CallRpc(to, "Methods.Vote", data, &response)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* GetVote: Returns the votes for a tag
-* @param require et.Json, response *string
-* @return error
-**/
-func (s *Methods) Vote(require et.Json, response *string) error {
-	tag := require.Str("tag")
-	host := require.Str("host")
-	go vote(tag, host)
-
-	return nil
-}
-
-/**
-* vote
-* @param tag, host string
-* @return error
-**/
-func (s *Methods) getVote(to, tag string) (string, error) {
-	var response string
-	err := jrpc.CallRpc(to, "Methods.GetVote", tag, &response)
-	if err != nil {
-		return "", err
-	}
-
-	return response, nil
-}
-
-/**
-* GetVote: Returns the votes for a tag
-* @param require string, response *string
-* @return error
-**/
-func (s *Methods) GetVote(require string, response *string) error {
-	tag := require
-	result := make(chan string)
-	go func() {
-		res := getVote(tag)
-		result <- res
-	}()
-
-	*response = <-result
-	return nil
-}
-
-/**
-* getModel
+* getFrom
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) getModel(to, database, schema, name string) (*Model, error) {
-	var response Model
-	err := jrpc.CallRpc(to, "Methods.GetModel", et.Json{
+func (s *Methods) getFrom(to, database, schema, name string) (*From, error) {
+	var response From
+	err := jrpc.CallRpc(to, "Methods.GetFrom", et.Json{
 		"database": database,
 		"schema":   schema,
 		"name":     name,
@@ -148,11 +84,11 @@ func (s *Methods) getModel(to, database, schema, name string) (*Model, error) {
 }
 
 /**
-* getModel
-* @param database, schema, model string
-* @return *Model, error
+* GetFrom
+* @param require et.Json, response *From
+* @return error
 **/
-func (s *Methods) GetModel(require et.Json, response *Model) error {
+func (s *Methods) GetFrom(require et.Json, response *From) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -160,7 +96,7 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
-	result, err := node.getModel(database, schema, name)
+	result, err := node.getFrom(database, schema, name)
 	if err != nil {
 		return err
 	}

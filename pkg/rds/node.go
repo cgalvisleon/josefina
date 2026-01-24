@@ -14,6 +14,11 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
+type Reserve struct {
+	Model *Model `json:"model"`
+	Ok    bool   `json:"ok"`
+}
+
 type Node struct {
 	host    string             `json:"-"`
 	port    int                `json:"-"`
@@ -201,11 +206,11 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
-* getModel
+* getFrom
 * @param database, schema, name string
 * @return *Model, error
 **/
-func (s *Node) getModel(database, schema, name string) (*Model, error) {
+func (s *Node) getFrom(database, schema, name string) (*From, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -216,70 +221,56 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	leader, isCluster, err := s.leader()
+	leader, _, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
 
 	if leader != s.host {
-		result, err := methods.getModel(leader, database, schema, name)
+		result, err := methods.getFrom(leader, database, schema, name)
 		if err != nil {
 			return nil, err
-		}
-
-		loaded, err := s.loadModel(result)
-		if err != nil {
-			return nil, err
-		}
-		if loaded {
-			result.load()
 		}
 
 		return result, nil
 	}
 
-	type modelResult struct {
-		result *Model
+	type fromResult struct {
+		result *From
 		err    error
 	}
-	ch := make(chan modelResult, 1)
+
+	ch := make(chan fromResult, 1)
 	s.mu.Lock()
 	go func() {
 		defer s.mu.Unlock()
+
 		key := modelKey(database, schema, name)
 		result, ok := s.models[key]
 		if ok {
-			ch <- modelResult{result: result, err: nil}
+			ch <- fromResult{result: result.From, err: nil}
 			return
 		}
 
 		err = initModels()
 		if err != nil {
-			ch <- modelResult{result: nil, err: err}
+			ch <- fromResult{result: nil, err: err}
 			return
 		}
 
 		exists, err := models.get(key, &result)
 		if err != nil {
-			ch <- modelResult{result: nil, err: err}
+			ch <- fromResult{result: nil, err: err}
 			return
 		}
 
 		if !exists {
-			ch <- modelResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
+			ch <- fromResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
 			return
 		}
 
-		if !isCluster {
-			err = result.init()
-			if err != nil {
-				ch <- modelResult{result: nil, err: err}
-				return
-			}
-		}
-
 		s.models[key] = result
-		ch <- modelResult{result: result, err: nil}
+		ch <- fromResult{result: result.From, err: nil}
 	}()
 
 	res := <-ch
@@ -287,47 +278,100 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 }
 
 /**
-* loadModel
-* @param model *Model
-* @return error
+* resolveFrom
+* @param database, schema, name string
+* @return *From, error
 **/
-func (s *Node) loadModel(model *Model) (bool, error) {
+func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 	if !s.started {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	if model.Host != "" {
-		return false, nil
-	}
-
-	leader, _, err := s.leader()
-	if err != nil {
-		return false, err
-	}
-
-	if leader != s.host {
-		ok, err := methods.loadModel(leader, model)
-		if err != nil {
-			return false, err
-		}
-
-		return ok, nil
-	}
-
-	type boolResult struct {
-		result bool
+	type fromResult struct {
+		result *From
 		err    error
 	}
 
-	ch := make(chan boolResult, 1)
+	ch := make(chan fromResult, 1)
 	s.mu.Lock()
 	go func() {
 		defer s.mu.Unlock()
-		key := model.key()
+
+		key := modelKey(database, schema, name)
+		result, ok := s.models[key]
+		if ok {
+			ch <- fromResult{result: result.From, err: nil}
+			return
+		}
+
+		from, err := s.getFrom(database, schema, name)
+		if err != nil {
+			ch <- fromResult{result: nil, err: err}
+			return
+		}
+
+		if from.Host != "" {
+			ch <- fromResult{result: from, err: nil}
+			return
+		}
+
+		reserve, err := s.sererveModel(from)
+		if err != nil {
+			ch <- fromResult{result: nil, err: err}
+			return
+		}
+
+		if !reserve.Ok {
+			ch <- fromResult{result: reserve.Model.From, err: nil}
+			return
+		}
+
+		result = reserve.Model
+		err = result.init()
+		if err != nil {
+			ch <- fromResult{result: nil, err: err}
+			return
+		}
+
+		s.models[key] = result
+		ch <- fromResult{result: result.From, err: nil}
+	}()
+
+	res := <-ch
+	return res.result, res.err
+}
+
+/**
+* sererveModel
+* @param from *From
+* @return error
+**/
+func (s *Node) sererveModel(from *From) (*Reserve, error) {
+	if !s.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	type reserveResult struct {
+		result *Reserve
+		err    error
+	}
+
+	ch := make(chan reserveResult, 1)
+	s.mu.Lock()
+	go func() {
+		defer s.mu.Unlock()
+
+		key := from.key()
 		result, ok := s.models[key]
 		if !ok {
-			s.models[key] = model
-			ch <- boolResult{result: true, err: nil}
+			s.models[key] = from
+			ch <- reserveResult{result: &Reserve{Ok: true, Model: from}, err: nil}
 			return
 		}
 
