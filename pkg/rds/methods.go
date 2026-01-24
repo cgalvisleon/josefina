@@ -106,13 +106,13 @@ func (s *Methods) GetFrom(require et.Json, response *From) error {
 }
 
 /**
-* getFrom
+* reserveModel
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) sererveModel(to string, from *From) (*Reserve, error) {
+func (s *Methods) reserveModel(to string, from *From) (*Reserve, error) {
 	var response Reserve
-	err := jrpc.CallRpc(to, "Methods.SererveModel", from, &response)
+	err := jrpc.CallRpc(to, "Methods.ReserveModel", from, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -121,11 +121,11 @@ func (s *Methods) sererveModel(to string, from *From) (*Reserve, error) {
 }
 
 /**
-* GetFrom
+* ReserveModel
 * @param require *From, response *Reserve
 * @return error
 **/
-func (s *Methods) SererveModel(require *From, response *Reserve) error {
+func (s *Methods) ReserveModel(require *From, response *Reserve) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -170,40 +170,6 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 	}
 
 	*response = true
-	return nil
-}
-
-/**
-* loadModel
-* @param to string, model *Model
-* @return error
-**/
-func (s *Methods) loadModel(to string, model *Model) (bool, error) {
-	var response bool
-	err := jrpc.CallRpc(to, "Methods.LoadModel", model, &response)
-	if err != nil {
-		return false, err
-	}
-
-	return response, nil
-}
-
-/**
-* LoadModel
-* @param model *Model
-* @return bool, error
-**/
-func (s *Methods) LoadModel(require *Model, response *bool) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	result, err := node.loadModel(require)
-	if err != nil {
-		return err
-	}
-
-	*response = result
 	return nil
 }
 
@@ -366,96 +332,6 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 }
 
 /**
-* setRecord
-* @param schema, model, key string
-* @return error
-**/
-func (s *Methods) setRecord(to, schema, model, key string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	data := et.Json{
-		"scgema": schema,
-		"model":  model,
-		"key":    key,
-	}
-	var reply string
-	err := jrpc.CallRpc(to, "Methods.SetRecord", data, &reply)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* SetRecord
-* @param require et.Json, response *string
-* @return error
-**/
-func (s *Methods) SetRecord(require et.Json, response *string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	schema := require.Str("schema")
-	model := require.Str("model")
-	key := require.Str("key")
-	err := node.setRecord(schema, model, key)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* deleteRecord
-* @param schema, model, key string
-* @return error
-**/
-func (s *Methods) deleteRecord(to, schema, model, key string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	data := et.Json{
-		"scgema": schema,
-		"model":  model,
-		"key":    key,
-	}
-	var reply string
-	err := jrpc.CallRpc(to, "Methods.DeleteRecord", data, &reply)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* DeleteRecord
-* @param database, schema, model string
-* @return *Model, error
-**/
-func (s *Methods) DeleteRecord(require et.Json, response *string) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	schema := require.Str("schema")
-	model := require.Str("model")
-	key := require.Str("key")
-	err := node.deleteRecord(schema, model, key)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * createSerie
 * @param name, tag, format string, value int
 * @return error
@@ -494,10 +370,144 @@ func (s *Methods) CreateSerie(require et.Json, response *string) error {
 	tag := require.Str("tag")
 	format := require.Str("format")
 	value := require.Int("value")
-	err := node.createSerie(name, tag, format, value)
+	err := createSerie(name, tag, format, value)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+/**
+* dropSerie
+* @param name, tag string
+* @return error
+**/
+func (s *Methods) dropSerie(to, name, tag string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"name": name,
+		"tag":  tag,
+	}
+	var reply string
+	err := jrpc.CallRpc(to, "Methods.DropSerie", data, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* DropSerie
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) DropSerie(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	name := require.Str("name")
+	tag := require.Str("tag")
+	err := dropSerie(name, tag)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
+* setSerie
+* @param to, name, tag string, value int
+* @return error
+**/
+func (s *Methods) setSerie(to, name, tag string, value int) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"name":  name,
+		"tag":   tag,
+		"value": value,
+	}
+	var reply string
+	err := jrpc.CallRpc(to, "Methods.SetSerie", data, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SetSerie
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) SetSerie(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	name := require.Str("name")
+	tag := require.Str("tag")
+	value := require.Int("value")
+	err := setSerie(name, tag, value)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
+* getSerie
+* @param to, name, tag string, value int
+* @return error
+**/
+func (s *Methods) getSerie(to, name, tag string) (et.Json, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"name": name,
+		"tag":  tag,
+	}
+	var reply et.Json
+	err := jrpc.CallRpc(to, "Methods.GetSerie", data, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
+/**
+* GetSerie
+* @param require et.Json, response *et.Json
+* @return error
+**/
+func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	name := require.Str("name")
+	tag := require.Str("tag")
+	result, err := getSerie(name, tag)
+	if err != nil {
+		return err
+	}
+
+	*response = result
 	return nil
 }

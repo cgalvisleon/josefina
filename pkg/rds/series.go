@@ -98,8 +98,8 @@ func createSerie(name, tag, format string, value int) error {
 * @return error
 **/
 func dropSerie(name, tag string) error {
-	if series == nil {
-		return errors.New(msg.MSG_SERIES_NOT_FOUND)
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -108,7 +108,26 @@ func dropSerie(name, tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	_, err := series.
+	leader, err := node.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != node.host {
+		err := methods.dropSerie(leader, name, tag)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err = initSeries()
+	if err != nil {
+		return err
+	}
+
+	_, err = series.
 		Delete().
 		Where(Eq("name", name)).
 		And(Eq("tag", tag)).
@@ -122,8 +141,8 @@ func dropSerie(name, tag string) error {
 * @return error
 **/
 func setSerie(name, tag string, value int) error {
-	if series == nil {
-		return errors.New(msg.MSG_SERIES_NOT_FOUND)
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -132,7 +151,26 @@ func setSerie(name, tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	_, err := series.
+	leader, err := node.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != node.host {
+		err := methods.setSerie(leader, name, tag, value)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err = initSeries()
+	if err != nil {
+		return err
+	}
+
+	_, err = series.
 		Update(et.Json{
 			"value": value,
 		}).
@@ -148,14 +186,33 @@ func setSerie(name, tag string, value int) error {
 * @return et.Json, error
 **/
 func getSerie(name, tag string) (et.Json, error) {
-	if series == nil {
-		return et.Json{}, errors.New(msg.MSG_SERIES_NOT_FOUND)
+	if !node.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
-		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
-		return et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	leader, err := node.leader()
+	if err != nil {
+		return nil, err
+	}
+
+	if leader != node.host {
+		result, err := methods.getSerie(leader, name, tag)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	err = initSeries()
+	if err != nil {
+		return nil, err
 	}
 
 	items, err := series.

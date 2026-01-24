@@ -360,7 +360,7 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 	}
 
 	if leader != s.host {
-		result, err := methods.sererveModel(leader, from)
+		result, err := methods.reserveModel(leader, from)
 		if err != nil {
 			return nil, err
 		}
