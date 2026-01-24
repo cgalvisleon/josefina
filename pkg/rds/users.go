@@ -51,7 +51,11 @@ func initUsers() error {
 	if count == 0 {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
-		err := node.createUser(useranme, password)
+		idx := users.genKey()
+		err := users.putObject(idx, et.Json{
+			"username": useranme,
+			"password": password,
+		})
 		if err != nil {
 			return err
 		}
