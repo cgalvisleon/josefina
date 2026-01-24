@@ -17,7 +17,6 @@ const (
 )
 
 type Cmd struct {
-	db                   *DB               `json:"-"`
 	model                *Model            `json:"-"`
 	data                 et.Json           `json:"-"`
 	command              Command           `json:"-"`
@@ -44,7 +43,6 @@ type Cmd struct {
 **/
 func newCmd(model *Model) *Cmd {
 	result := &Cmd{
-		db:                   model.db,
 		model:                model,
 		data:                 et.Json{},
 		wheres:               newWhere(),
@@ -116,6 +114,15 @@ func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
 func (s *Cmd) IsDebug() *Cmd {
 	s.isDebug = true
 	return s
+}
+
+/**
+* getModel
+* @param from *From
+* @return *Model
+**/
+func (s *Cmd) getModel(from *From) (*Model, error) {
+	return s.model, nil
 }
 
 /**
@@ -208,7 +215,10 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		if _, ok := new[name]; !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
-		source := model.data[name]
+		source, ok := model.stores[name]
+		if !ok {
+			return nil, fmt.Errorf(msg.MSG_STORE_NOT_FOUND, name)
+		}
 		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
 			return nil, fmt.Errorf(msg.MSG_RECORD_EXISTS)
@@ -220,7 +230,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
 
-		to, err := getModel(detail.To)
+		to, err := s.getModel(detail.To)
 		if err != nil {
 			return nil, err
 		}
@@ -456,7 +466,7 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 
 	exists := true
 	for _, name := range model.PrimaryKeys {
-		source, ok := model.data[name]
+		source, ok := model.stores[name]
 		if !ok {
 			return nil, errorPrimaryKeysNotFound
 		}
