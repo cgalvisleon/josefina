@@ -524,7 +524,7 @@ func (s *Methods) CreateSerie(require et.Json, response *string) error {
 	tag := require.Str("tag")
 	format := require.Str("format")
 	value := require.Int("value")
-	err := createSerie(name, tag, format, value)
+	err := node.createSerie(name, tag, format, value)
 	if err != nil {
 		return err
 	}
