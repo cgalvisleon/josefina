@@ -60,6 +60,14 @@ func (s *From) getJid() string {
 	return reg.GenULID(s.Name)
 }
 
+type TypeModel string
+
+const (
+	KeyValueModel TypeModel = "keyvalue"
+	ObjectModel   TypeModel = "object"
+	GraphModel    TypeModel = "graph"
+)
+
 type Model struct {
 	*From         `json:"from"`
 	Path          string                      `json:"path"`
@@ -123,7 +131,7 @@ func (s *Model) serialize() ([]byte, error) {
 * ToJson
 * @return et.Json, error
 **/
-func (s *Model) toJson() (et.Json, error) {
+func (s *Model) ToJson() (et.Json, error) {
 	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
@@ -139,12 +147,20 @@ func (s *Model) toJson() (et.Json, error) {
 }
 
 /**
-* prepared: Prepares the model
+* init: Initializes the model
 * @return error
 **/
-func (s *Model) load() error {
+func (s *Model) init() error {
+	if s.IsInit {
+		return nil
+	}
+
 	if len(s.Indexes) == 0 {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
+	}
+
+	if node != nil {
+		s.Host = node.host
 	}
 
 	for _, name := range s.Indexes {
@@ -156,26 +172,7 @@ func (s *Model) load() error {
 	}
 
 	s.IsInit = true
-	return nil
-}
 
-/**
-* init: Initializes the model
-* @return error
-**/
-func (s *Model) init() error {
-	if s.IsInit {
-		return nil
-	}
-
-	err := s.load()
-	if err != nil {
-		return err
-	}
-
-	if node != nil {
-		s.Host = node.host
-	}
 	return nil
 }
 
