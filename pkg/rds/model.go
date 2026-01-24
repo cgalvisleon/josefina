@@ -147,6 +147,61 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
+* saveModel: Saves the model
+* @param model *Model
+* @return error
+**/
+func (s *Model) save() error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+	if s.IsCore {
+		return nil
+	}
+
+	leader, err := node.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != node.host {
+		err := methods.saveModel(leader, s)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	ch := make(chan error)
+	go func() {
+		err = initModels()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		bt, err := s.serialize()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		key := s.key()
+		err = models.put(key, bt)
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		ch <- nil
+	}()
+
+	res := <-ch
+	return res
+}
+
+/**
 * init: Initializes the model
 * @return error
 **/
