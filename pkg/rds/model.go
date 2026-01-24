@@ -52,14 +52,6 @@ type From struct {
 	Host     string            `json:"-"`
 }
 
-/**
-* getJid: Gets the jid
-* @return string
-**/
-func (s *From) getJid() string {
-	return reg.GenULID(s.Name)
-}
-
 type TypeModel string
 
 const (
@@ -177,6 +169,22 @@ func (s *Model) init() error {
 }
 
 /**
+* key: Returns the key of the model
+* @return string
+**/
+func (s *Model) key() string {
+	return modelKey(s.Database, s.Schema, s.Name)
+}
+
+/**
+* genKey: Returns a new key for the model
+* @return string
+**/
+func (s *Model) genKey() string {
+	return reg.GenUUId(s.Name)
+}
+
+/**
 * store: Returns the index
 * @param name string
 * @return *store.FileStore, bool
@@ -204,11 +212,17 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* key: Returns the key of the model
-* @return string
+* isExisted: Check if index exists in model
+* @param name string, key string
+* @return bool, error
 **/
-func (s *Model) key() string {
-	return modelKey(s.Database, s.Schema, s.Name)
+func (s *Model) isExisted(name, key string) (bool, error) {
+	source, err := s.store(name)
+	if err != nil {
+		return false, err
+	}
+
+	return source.IsExist(key), nil
 }
 
 /**
@@ -222,14 +236,6 @@ func (s *Model) count() (int, error) {
 	}
 
 	return result.Count(), nil
-}
-
-/**
-* genKey: Returns a new key for the model
-* @return string
-**/
-func (s *Model) genKey() string {
-	return reg.GenUUId(s.Name)
 }
 
 /**
@@ -288,20 +294,6 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 }
 
 /**
-* isExisted: Check if index exists in model
-* @param name string, key string
-* @return bool, error
-**/
-func (s *Model) isExisted(name, key string) (bool, error) {
-	source, err := s.store(name)
-	if err != nil {
-		return false, err
-	}
-
-	return source.IsExist(key), nil
-}
-
-/**
 * put: Puts the model
 * @param idx string, valu any
 * @return error
@@ -315,9 +307,6 @@ func (s *Model) put(key string, value any) error {
 	err = source.Put(key, value)
 	if err != nil {
 		return err
-	}
-	if !s.IsCore {
-		return node.setRecord(s.Schema, s.Name, key)
 	}
 
 	return nil
@@ -338,121 +327,63 @@ func (s *Model) remove(key string) error {
 	if err != nil {
 		return err
 	}
-	if !s.IsCore {
-		return node.deleteRecord(s.Schema, s.Name, key)
-	}
 
 	return nil
 }
 
 /**
-* putIndex
-* @param store *store.FileStore, id string, idx any
-* @return error
-**/
-func (s *Model) putIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, &result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		result = map[string]bool{}
-	}
-
-	key := fmt.Sprintf("%v", idx)
-	_, ok := result[key]
-	if ok {
-		return nil
-	}
-
-	result[key] = true
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* removeIndex
-* @param store *store.FileStore, id string, idx any
-* @return error
-**/
-func (s *Model) removeIndex(store *store.FileStore, id string, idx any) error {
-	result := map[string]bool{}
-	exists, err := store.Get(id, &result)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	key := fmt.Sprintf("%v", idx)
-	_, ok := result[key]
-	if !ok {
-		return nil
-	}
-
-	delete(result, key)
-	if len(result) == 0 {
-		_, err = store.Delete(id)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	err = store.Put(id, result)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* putData: Puts the model
+* putObject: Puts the model
 * @param idx string, data et.Json
 * @return error
 **/
-func (s *Model) putData(idx string, data et.Json) error {
-	data[INDEX] = idx
+func (s *Model) putObject(idx string, object et.Json) error {
+	object[INDEX] = idx
 	for _, name := range s.Indexes {
-		key := fmt.Sprintf("%v", data[name])
+		key := fmt.Sprintf("%v", object[name])
 		if key == "" {
 			continue
 		}
 
-		source := s.stores[name]
+		store := s.stores[name]
 		if name == INDEX {
-			err := source.Put(key, data)
+			err := store.Put(key, object)
 			if err != nil {
 				return err
-			}
-			if !s.IsCore {
-				return node.setRecord(s.Schema, s.Name, key)
 			}
 		} else {
-			err := s.putIndex(source, key, idx)
+			index := map[string]bool{}
+			exists, err := store.Get(key, &index)
 			if err != nil {
 				return err
 			}
+
+			if !exists {
+				index = map[string]bool{}
+			}
+
+			_, ok := index[idx]
+			if ok {
+				return nil
+			}
+
+			index[idx] = true
+			err = store.Put(key, index)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
 	}
 	return nil
 }
 
 /**
-* removeData: Removes the model
+* removeObject: Removes the model
 * @param idx string
 * @return error
 **/
-func (s *Model) removeData(idx string) error {
+func (s *Model) removeObject(idx string) error {
 	data := et.Json{}
 	exists, err := s.getObjet(idx, data)
 	if err != nil {
@@ -469,20 +400,43 @@ func (s *Model) removeData(idx string) error {
 			continue
 		}
 
-		source := s.stores[name]
+		store := s.stores[name]
 		if name == INDEX {
-			_, err := source.Delete(key)
+			_, err := store.Delete(key)
 			if err != nil {
 				return err
-			}
-			if !s.IsCore {
-				return node.deleteRecord(s.Schema, s.Name, key)
 			}
 		} else {
-			err := s.removeIndex(source, key, idx)
+			index := map[string]bool{}
+			exists, err := store.Get(key, &index)
 			if err != nil {
 				return err
 			}
+
+			if !exists {
+				return nil
+			}
+
+			_, ok := index[idx]
+			if !ok {
+				return nil
+			}
+
+			delete(index, key)
+			if len(index) == 0 {
+				_, err = store.Delete(key)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			err = store.Put(key, index)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
 	}
 	return nil
