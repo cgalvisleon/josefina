@@ -239,61 +239,6 @@ func (s *Model) count() (int, error) {
 }
 
 /**
-* get: Gets the model
-* @param key string, dest any
-* @return bool, error
-**/
-func (s *Model) get(key string, dest any) (bool, error) {
-	source, err := s.source()
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := source.Get(key, &dest)
-	if err != nil {
-		return false, err
-	}
-
-	if !exists {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-/**
-* getObjet: Gets the model as object
-* @param key string
-* @return et.Json, error
-**/
-func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
-	return s.get(key, &dest)
-}
-
-/**
-* getIndex: Gets the index
-* @param field, key string, dest map[string]bool
-* @return bool, error
-**/
-func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) {
-	index, err := s.store(field)
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := index.Get(key, &dest)
-	if err != nil {
-		return false, err
-	}
-
-	if !exists {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-/**
 * put: Puts the model
 * @param idx string, valu any
 * @return error
@@ -329,6 +274,29 @@ func (s *Model) remove(key string) error {
 	}
 
 	return nil
+}
+
+/**
+* get: Gets the model
+* @param key string, dest any
+* @return bool, error
+**/
+func (s *Model) get(key string, dest any) (bool, error) {
+	source, err := s.source()
+	if err != nil {
+		return false, err
+	}
+
+	exists, err := source.Get(key, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 /**
@@ -379,13 +347,22 @@ func (s *Model) putObject(idx string, object et.Json) error {
 }
 
 /**
+* getObjet: Gets the model as object
+* @param key string
+* @return et.Json, error
+**/
+func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
+	return s.get(key, &dest)
+}
+
+/**
 * removeObject: Removes the model
 * @param idx string
 * @return error
 **/
 func (s *Model) removeObject(idx string) error {
 	data := et.Json{}
-	exists, err := s.getObjet(idx, data)
+	exists, err := s.get(idx, &data)
 	if err != nil {
 		return err
 	}
@@ -440,6 +417,29 @@ func (s *Model) removeObject(idx string) error {
 		}
 	}
 	return nil
+}
+
+/**
+* getIndex: Gets the index
+* @param field, key string, dest map[string]bool
+* @return bool, error
+**/
+func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) {
+	index, err := s.store(field)
+	if err != nil {
+		return false, err
+	}
+
+	exists, err := index.Get(key, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 /**
