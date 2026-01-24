@@ -47,11 +47,10 @@ func initSeries() error {
 * @param name, tag, format string, value int
 * @return error
 **/
-func (s *Node) createSerie(name, tag, format string, value int) error {
-	if s. == nil {
-		return errors.New(msg.MSG_NODE_NOT_FOUND)
+func createSerie(name, tag, format string, value int) error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
-
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -59,8 +58,13 @@ func (s *Node) createSerie(name, tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	if node.leader != node.host {
-		err := methods.createSerie(name, tag, format, value)
+	leader, err := node.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != node.host {
+		err := methods.createSerie(leader, name, tag, format, value)
 		if err != nil {
 			return err
 		}
@@ -68,7 +72,7 @@ func (s *Node) createSerie(name, tag, format string, value int) error {
 		return nil
 	}
 
-	err := initSeries()
+	err = initSeries()
 	if err != nil {
 		return err
 	}
