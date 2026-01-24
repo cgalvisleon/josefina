@@ -147,12 +147,11 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
-* saveModel: Saves the model
-* @param model *Model
+* save: Saves the model
 * @return error
 **/
 func (s *Model) save() error {
-	return saveModel(s)
+	return node.saveModel(s)
 }
 
 /**
