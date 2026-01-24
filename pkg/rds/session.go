@@ -22,7 +22,7 @@ func initSessions() error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if users != nil {
+	if sessions != nil {
 		return nil
 	}
 
@@ -65,10 +65,7 @@ func (s *Session) ToJson() et.Json {
 * @param device, username string
 * @return *Session, error
 **/
-func (s *Node) createSession(device, username string) (*Session, error) {
-	if !s.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
+func createSession(device, username string) (*Session, error) {
 	if !utility.ValidStr(device, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
 	}
@@ -76,21 +73,7 @@ func (s *Node) createSession(device, username string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return nil, err
-	}
-
-	if leader != s.host {
-		err := methods.createSession(leader, device, username)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, nil
-	}
-
-	err = initSessions()
+	err := initSessions()
 	if err != nil {
 		return nil, err
 	}
@@ -115,33 +98,16 @@ func (s *Node) createSession(device, username string) (*Session, error) {
 }
 
 /**
-* get: Get a session
+* getSession: Get a session
 * @param token string
 * @return *Session
 **/
-func (s *Node) getSession(token string) (*Session, error) {
-	if !s.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
+func getSession(token string) (*Session, error) {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return nil, err
-	}
-
-	if leader != s.host {
-		result, err := methods.getSession(leader, token)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	err = initSessions()
+	err := initSessions()
 	if err != nil {
 		return nil, err
 	}
@@ -160,33 +126,16 @@ func (s *Node) getSession(token string) (*Session, error) {
 }
 
 /**
-* dropUser: Drops a user
+* dropSession: Drops a user
 * @param username string
 * @return error
 **/
-func (s *Node) dropSession(token string) error {
-	if !s.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
+func dropSession(token string) error {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return err
-	}
-
-	if leader != s.host {
-		err := methods.dropSession(leader, token)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	err = initSessions()
+	err := initSessions()
 	if err != nil {
 		return err
 	}
@@ -195,12 +144,12 @@ func (s *Node) dropSession(token string) error {
 }
 
 /**
-* signIn: Sign in a user
+* SignIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Node) signIn(device, database, username, password string) (*Session, error) {
-	if !s.started {
+func SignIn(device, database, username, password string) (*Session, error) {
+	if !node.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -210,12 +159,12 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	leader, err := s.leader()
+	leader, err := node.leader()
 	if err != nil {
 		return nil, err
 	}
 
-	if leader != s.host {
+	if leader != node.host {
 		result, err := methods.signIn(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
@@ -241,18 +190,5 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	return s.createSession(device, username)
-}
-
-/**
-* SignIn: Sign in a user
-* @param device, username, password string
-* @return *Session, error
-**/
-func SignIn(device, database, username, password string) (*Session, error) {
-	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	return node.signIn(device, database, username, password)
+	return createSession(device, username)
 }

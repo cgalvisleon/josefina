@@ -322,7 +322,7 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 	database := require.Str("database")
 	username := require.Str("username")
 	password := require.Str("password")
-	result, err := node.signIn(device, database, username, password)
+	result, err := SignIn(device, database, username, password)
 	if err != nil {
 		return err
 	}
