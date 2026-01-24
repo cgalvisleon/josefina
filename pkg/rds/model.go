@@ -44,13 +44,11 @@ func initModels() error {
 }
 
 type From struct {
-	Database string            `json:"database"`
-	Schema   string            `json:"schema"`
-	Name     string            `json:"name"`
-	Fields   map[string]*Field `json:"fields"`
-	IsStrict bool              `json:"is_strict"`
-	Host     string            `json:"-"`
-	IsInit   bool              `json:"-"`
+	Database string `json:"database"`
+	Schema   string `json:"schema"`
+	Name     string `json:"name"`
+	Host     string `json:"-"`
+	IsInit   bool   `json:"-"`
 }
 
 type TypeModel string
@@ -63,6 +61,7 @@ const (
 
 type Model struct {
 	*From         `json:"from"`
+	Fields        map[string]*Field           `json:"fields"`
 	Path          string                      `json:"path"`
 	Indexes       []string                    `json:"indexes"`
 	PrimaryKeys   []string                    `json:"primary_keys"`
@@ -82,6 +81,7 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"after_deletes"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
+	IsStrict      bool                        `json:"is_strict"`
 	isDebug       bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
