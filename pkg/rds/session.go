@@ -76,7 +76,7 @@ func (s *Node) createSession(device, username string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (s *Node) getSession(token string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (s *Node) dropSession(token string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (s *Node) signIn(device, database, username, password string) (*Session, er
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return nil, err
 	}

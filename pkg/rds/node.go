@@ -53,14 +53,13 @@ func newNode(host string, port int, version string) *Node {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
-	leader, cluster, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		leader = err.Error()
 	}
 	return et.Json{
 		"host":    s.host,
 		"leader":  leader,
-		"cluster": cluster,
 		"version": s.version,
 		"rpcs":    s.rpcs,
 		"models":  s.models,
@@ -146,21 +145,21 @@ func (s *Node) start() error {
 
 /**
 * leader
-* @return (string, bool, error)
+* @return string, error
 **/
-func (s *Node) leader() (string, bool, error) {
+func (s *Node) leader() (string, error) {
 	if methods == nil {
-		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return "", fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	config, err := getConfig()
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	t := len(config.Nodes)
 	if t == 0 {
-		return s.host, false, nil
+		return s.host, nil
 	}
 
 	leader := config.Leader
@@ -179,16 +178,16 @@ func (s *Node) leader() (string, bool, error) {
 			config.Leader = leader
 			err = writeConfig(config)
 			if err != nil {
-				return "", false, err
+				return "", err
 			}
 
-			return result, true, nil
+			return result, nil
 		}
 
 		leader++
 	}
 
-	return "", false, fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
+	return "", fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
 }
 
 /**
@@ -221,7 +220,7 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +411,7 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return err
 	}

@@ -76,7 +76,7 @@ func (s *Node) createUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (s *Node) dropUser(username string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (s *Node) changuePassword(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, _, err := s.leader()
+	leader, err := s.leader()
 	if err != nil {
 		return err
 	}
