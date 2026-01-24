@@ -212,33 +212,6 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* isExisted: Check if index exists in model
-* @param name string, key string
-* @return bool, error
-**/
-func (s *Model) isExisted(name, key string) (bool, error) {
-	source, err := s.store(name)
-	if err != nil {
-		return false, err
-	}
-
-	return source.IsExist(key), nil
-}
-
-/**
-* count: Counts the model
-* @return int, error
-**/
-func (s *Model) count() (int, error) {
-	result, err := s.source()
-	if err != nil {
-		return 0, err
-	}
-
-	return result.Count(), nil
-}
-
-/**
 * put: Puts the model
 * @param idx string, valu any
 * @return error
@@ -440,6 +413,33 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 	}
 
 	return true, nil
+}
+
+/**
+* isExisted: Check if index exists in model
+* @param name string, key string
+* @return bool, error
+**/
+func (s *Model) isExisted(field, key string) (bool, error) {
+	source, err := s.store(field)
+	if err != nil {
+		return false, err
+	}
+
+	return source.IsExist(key), nil
+}
+
+/**
+* Count: Counts the model
+* @return int, error
+**/
+func (s *Model) count() (int, error) {
+	result, err := s.source()
+	if err != nil {
+		return 0, err
+	}
+
+	return result.Count(), nil
 }
 
 /**

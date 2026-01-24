@@ -117,15 +117,6 @@ func (s *Cmd) IsDebug() *Cmd {
 }
 
 /**
-* getModel
-* @param from *From
-* @return *Model
-**/
-func (s *Cmd) getModel(from *From) (*Model, error) {
-	return s.model, nil
-}
-
-/**
 * BeforeInsert
 * @param fn TriggerFunction
 * @return *Cmd
