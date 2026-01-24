@@ -321,7 +321,7 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 		}
 
 		from.Host = s.host
-		reserve, err := s.sererveModel(from)
+		reserve, err := s.reserveModel(from)
 		if err != nil {
 			ch <- fromResult{result: nil, err: err}
 			return
@@ -348,13 +348,27 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 }
 
 /**
-* sererveModel
+* reserveModel
 * @param from *From
 * @return error
 **/
-func (s *Node) sererveModel(from *From) (*Reserve, error) {
+func (s *Node) reserveModel(from *From) (*Reserve, error) {
 	if !s.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	leader, err := s.leader()
+	if err != nil {
+		return nil, err
+	}
+
+	if leader != s.host {
+		result, err := methods.sererveModel(leader, from)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
 	type reserveResult struct {

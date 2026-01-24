@@ -106,6 +106,40 @@ func (s *Methods) GetFrom(require et.Json, response *From) error {
 }
 
 /**
+* getFrom
+* @param database, schema, model string
+* @return *Model, error
+**/
+func (s *Methods) sererveModel(to string, from *From) (*Reserve, error) {
+	var response Reserve
+	err := jrpc.CallRpc(to, "Methods.SererveModel", from, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+/**
+* GetFrom
+* @param require *From, response *Reserve
+* @return error
+**/
+func (s *Methods) SererveModel(require *From, response *Reserve) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	result, err := node.reserveModel(require)
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
+}
+
+/**
 * saveModel
 * @param to string, model *Model
 * @return error
