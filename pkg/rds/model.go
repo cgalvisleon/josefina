@@ -7,7 +7,6 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/store"
 )
@@ -96,11 +95,13 @@ type Model struct {
 * @return *Model
 **/
 func newModel(database, schema, name string, isCore bool, version int) (*Model, error) {
-	if !utility.ValidStr(database, 1, []string{}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	db, err := getDb(database)
+	if err != nil {
+		return nil, err
 	}
-	if !utility.ValidStr(name, 1, []string{}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	result, err := db.newModel(schema, name, isCore, version)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
