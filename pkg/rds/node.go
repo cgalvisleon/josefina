@@ -239,7 +239,7 @@ func (s *Node) getFrom(database, schema, name string) (*From, error) {
 		err    error
 	}
 
-	ch := make(chan fromResult, 1)
+	ch := make(chan fromResult)
 	s.mu.Lock()
 	go func() {
 		defer s.mu.Unlock()
@@ -297,11 +297,8 @@ func (s *Node) resolveFrom(database, schema, name string) (*From, error) {
 		err    error
 	}
 
-	ch := make(chan fromResult, 1)
-	s.mu.Lock()
+	ch := make(chan fromResult)
 	go func() {
-		defer s.mu.Unlock()
-
 		key := modelKey(database, schema, name)
 		result, ok := s.models[key]
 		if ok {
@@ -376,7 +373,7 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 		err    error
 	}
 
-	ch := make(chan reserveResult, 1)
+	ch := make(chan reserveResult)
 	s.mu.Lock()
 	go func() {
 		defer s.mu.Unlock()
@@ -439,21 +436,30 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	err = initModels()
-	if err != nil {
-		return err
-	}
+	ch := make(chan error)
+	go func() {
+		err = initModels()
+		if err != nil {
+			ch <- err
+			return
+		}
 
-	src, err := model.serialize()
-	if err != nil {
-		return err
-	}
+		src, err := model.serialize()
+		if err != nil {
+			ch <- err
+			return
+		}
 
-	key := modelKey(model.Database, model.Schema, model.Name)
-	err = models.put(key, src)
-	if err != nil {
-		return err
-	}
+		key := modelKey(model.Database, model.Schema, model.Name)
+		err = models.put(key, src)
+		if err != nil {
+			ch <- err
+			return
+		}
 
-	return nil
+		ch <- nil
+	}()
+
+	res := <-ch
+	return res
 }
