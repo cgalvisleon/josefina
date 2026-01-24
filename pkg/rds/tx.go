@@ -30,7 +30,6 @@ func initTransactions() error {
 	if err != nil {
 		return err
 	}
-	transactions.definePrimaryKey(INDEX)
 	if err := transactions.init(); err != nil {
 		return err
 	}
@@ -48,7 +47,7 @@ func setTransaction(key string, data et.Json) (string, error) {
 		key = transactions.genKey()
 	}
 
-	err := transactions.putData(key, data)
+	err := transactions.putObject(key, data)
 	if err != nil {
 		return "", err
 	}
@@ -247,13 +246,13 @@ func (s *Tx) commit() error {
 			cmd := record.Command
 			idx := record.Idx
 			if cmd == DELETE {
-				err := model.removeData(idx)
+				err := model.removeObject(idx)
 				if err != nil {
 					return err
 				}
 			} else {
 				data := record.Data
-				err := model.putData(idx, data)
+				err := model.putObject(idx, data)
 				if err != nil {
 					return err
 				}
