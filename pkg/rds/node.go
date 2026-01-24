@@ -407,3 +407,58 @@ func (s *Node) reserveModel(from *From) (*Reserve, error) {
 	res := <-ch
 	return res.result, res.err
 }
+
+/**
+* saveModel: Saves the model
+* @param model *Model
+* @return error
+**/
+func (s *Node) saveModel(model *Model) error {
+	if !s.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+	if model.IsCore {
+		return nil
+	}
+
+	leader, err := s.leader()
+	if err != nil {
+		return err
+	}
+
+	if leader != s.host {
+		err := methods.saveModel(leader, model)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	ch := make(chan error)
+	go func() {
+		err = initModels()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		bt, err := model.serialize()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		key := model.key()
+		err = models.put(key, bt)
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		ch <- nil
+	}()
+
+	res := <-ch
+	return res
+}

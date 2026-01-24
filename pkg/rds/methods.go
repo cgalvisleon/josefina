@@ -164,7 +164,7 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	err := node.saveModel(require)
+	err := saveModel(require)
 	if err != nil {
 		return err
 	}
