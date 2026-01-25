@@ -69,8 +69,8 @@ func initUsers() error {
 * @param username, password string
 * @return error
 **/
-func (s *Node) createUser(username, password string) error {
-	if !s.started {
+func createUser(username, password string) error {
+	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -80,13 +80,8 @@ func (s *Node) createUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return err
-	}
-
-	if leader != s.host {
-		err := methods.createUser(leader, username, password)
+	if node.leader != node.host {
+		err := methods.createUser(node.leader, username, password)
 		if err != nil {
 			return err
 		}
@@ -94,7 +89,7 @@ func (s *Node) createUser(username, password string) error {
 		return nil
 	}
 
-	err = initUsers()
+	err := initUsers()
 	if err != nil {
 		return err
 	}
@@ -113,21 +108,16 @@ func (s *Node) createUser(username, password string) error {
 * @param username string
 * @return error
 **/
-func (s *Node) dropUser(username string) error {
-	if !s.started {
+func dropUser(username string) error {
+	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return err
-	}
-
-	if leader != s.host {
-		err := methods.dropUser(leader, username)
+	if node.leader != node.host {
+		err := methods.dropUser(node.leader, username)
 		if err != nil {
 			return err
 		}
@@ -135,7 +125,7 @@ func (s *Node) dropUser(username string) error {
 		return nil
 	}
 
-	err = initUsers()
+	err := initUsers()
 	if err != nil {
 		return err
 	}
@@ -152,8 +142,8 @@ func (s *Node) dropUser(username string) error {
 * @param username, password string
 * @return error
 **/
-func (s *Node) changuePassword(username, password string) error {
-	if !s.started {
+func changuePassword(username, password string) error {
+	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -163,13 +153,8 @@ func (s *Node) changuePassword(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return err
-	}
-
-	if leader != s.host {
-		err := methods.changuePassword(leader, username, password)
+	if node.leader != node.host {
+		err := methods.changuePassword(node.leader, username, password)
 		if err != nil {
 			return err
 		}
@@ -177,7 +162,7 @@ func (s *Node) changuePassword(username, password string) error {
 		return nil
 	}
 
-	err = initUsers()
+	err := initUsers()
 	if err != nil {
 		return err
 	}

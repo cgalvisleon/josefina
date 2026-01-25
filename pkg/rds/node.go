@@ -26,6 +26,7 @@ type Node struct {
 	rpcs    map[string]et.Json `json:"-"`
 	dbs     map[string]*DB     `json:"-"`
 	models  map[string]*Model  `json:"-"`
+	leader  string             `json:"-"`
 	nodes   []string           `json:"-"`
 	turn    int                `json:"-"`
 	started bool               `json:"-"`
@@ -55,13 +56,9 @@ func newNode(host string, port int, version string) *Node {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
-	leader, err := s.leader()
-	if err != nil {
-		leader = err.Error()
-	}
 	return et.Json{
 		"host":    s.host,
-		"leader":  leader,
+		"leader":  s.leader,
 		"version": s.version,
 		"rpcs":    s.rpcs,
 		"models":  s.models,
@@ -134,6 +131,55 @@ func (s *Node) nextNode() string {
 }
 
 /**
+* getLeader
+* @return error
+**/
+func (s *Node) getLeader() error {
+	if methods == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	config, err := getConfig()
+	if err != nil {
+		return err
+	}
+
+	t := len(config.Nodes)
+	if t == 0 {
+		s.leader = s.host
+		return nil
+	}
+
+	leader := config.Leader
+	if leader >= t {
+		leader = 0
+	}
+
+	for {
+		if leader >= t {
+			break
+		}
+
+		result := config.Nodes[leader]
+		ok := s.ping(result)
+		if ok {
+			config.Leader = leader
+			err = writeConfig(config)
+			if err != nil {
+				return err
+			}
+
+			s.leader = result
+			return nil
+		}
+
+		leader++
+	}
+
+	return fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
+}
+
+/**
 * start
 * @return error
 **/
@@ -157,6 +203,11 @@ func (s *Node) start() error {
 		logs.Fatal(err)
 	}
 
+	err = s.getLeader()
+	if err != nil {
+		return err
+	}
+
 	s.started = true
 	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
 
@@ -169,53 +220,6 @@ func (s *Node) start() error {
 
 		go rpc.ServeConn(conn)
 	}
-}
-
-/**
-* leader
-* @return string, error
-**/
-func (s *Node) leader() (string, error) {
-	if methods == nil {
-		return "", fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	config, err := getConfig()
-	if err != nil {
-		return "", err
-	}
-
-	t := len(config.Nodes)
-	if t == 0 {
-		return s.host, nil
-	}
-
-	leader := config.Leader
-	if leader >= t {
-		leader = 0
-	}
-
-	for {
-		if leader >= t {
-			break
-		}
-
-		result := config.Nodes[leader]
-		ok := s.ping(result)
-		if ok {
-			config.Leader = leader
-			err = writeConfig(config)
-			if err != nil {
-				return "", err
-			}
-
-			return result, nil
-		}
-
-		leader++
-	}
-
-	return "", fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
 }
 
 /**
@@ -248,13 +252,8 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return nil, err
-	}
-
-	if leader != s.host {
-		result, err := methods.getModel(leader, database, schema, name)
+	if s.leader != s.host {
+		result, err := methods.getModel(s.leader, database, schema, name)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +277,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 			return
 		}
 
-		err = initModels()
+		err := initModels()
 		if err != nil {
 			ch <- modelResult{result: nil, err: err}
 			return
@@ -361,13 +360,8 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	leader, err := s.leader()
-	if err != nil {
-		return err
-	}
-
-	if leader != s.host {
-		err := methods.saveModel(leader, model)
+	if s.leader != s.host {
+		err := methods.saveModel(s.leader, model)
 		if err != nil {
 			return err
 		}
@@ -377,7 +371,7 @@ func (s *Node) saveModel(model *Model) error {
 
 	ch := make(chan error)
 	go func() {
-		err = initModels()
+		err := initModels()
 		if err != nil {
 			ch <- err
 			return
