@@ -14,17 +14,15 @@ import (
 
 type Router struct {
 	ctx         context.Context
-	Version     string
 	PackageName string
 	PackagePath string
 	Hostname    string
 }
 
-func newRouter(name, version string) *Router {
+func newRouter(name string) *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
-		Version:     version,
 		PackageName: name,
 		PackagePath: envar.GetStr("PATH_URL", "/api/josefina"),
 		Hostname:    hostname,

@@ -66,9 +66,10 @@ func newNode(host string, port int, version string) *Node {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
+	leader := s.getLeader()
 	return et.Json{
 		"host":    s.host,
-		"leader":  s.leaderID,
+		"leader":  leader,
 		"version": s.version,
 		"rpcs":    s.rpcs,
 		"peers":   s.peers,

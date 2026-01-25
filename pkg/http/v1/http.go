@@ -9,7 +9,6 @@ import (
 
 var (
 	PackageName = "josefina"
-	Version     = "1.0.0"
 )
 
 /**
@@ -17,13 +16,13 @@ var (
 * @return error
 **/
 func Init() (http.Handler, error) {
-	err := jdb.Load(Version)
+	err := jdb.Load()
 	if err != nil {
 		return nil, err
 	}
 
 	r := chi.NewRouter()
-	server := newRouter(PackageName, Version)
+	server := newRouter(PackageName)
 	r.Mount(server.PackagePath, server.Routes())
 
 	return r, nil

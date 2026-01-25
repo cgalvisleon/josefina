@@ -5,6 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/josefina/pkg/jdb"
 	rds "github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
@@ -14,15 +15,8 @@ import (
 * @return error
 **/
 func (s *Router) version(w http.ResponseWriter, r *http.Request) {
-	version := et.Json{
-		"service": s.PackageName,
-		"version": s.Version,
-		"host":    s.Hostname,
-		"company": "",
-		"web":     "",
-	}
-
-	response.JSON(w, r, http.StatusOK, version)
+	version := jdb.HelpCheck()
+	response.ITEM(w, r, http.StatusOK, version)
 }
 
 /**
