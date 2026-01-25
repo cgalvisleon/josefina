@@ -65,14 +65,18 @@ type HeartbeatReply struct {
 func (n *Node) electionLoop() {
 	for {
 		timeout := randomBetween(1500, 3000)
-		time.Sleep(timeout)
+		time.Sleep(100 * time.Millisecond)
 
 		n.mu.Lock()
+		if n.state == Leader {
+			n.mu.Unlock()
+			continue
+		}
+
 		elapsed := time.Since(n.lastHeartbeat)
-		state := n.state
 		n.mu.Unlock()
 
-		if state != Leader && elapsed > timeout {
+		if elapsed >= timeout {
 			n.startElection()
 		}
 	}
@@ -122,9 +126,11 @@ func (n *Node) startElection() {
 * becomeLeader
 **/
 func (n *Node) becomeLeader() {
+	n.mu.Lock()
 	n.state = Leader
 	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
+	n.mu.Unlock()
 
 	go n.heartbeatLoop()
 }
@@ -189,6 +195,9 @@ func (n *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 	if n.votedFor == "" || n.votedFor == args.CandidateID {
 		n.votedFor = args.CandidateID
 		reply.VoteGranted = true
+
+		//reinicia el timer de elección
+		n.lastHeartbeat = time.Now()
 	} else {
 		reply.VoteGranted = false
 	}
@@ -217,7 +226,10 @@ func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 		n.votedFor = ""
 	}
 
-	n.state = Follower
+	if args.LeaderID != n.host {
+		n.state = Follower
+	}
+
 	n.leaderID = args.LeaderID
 	n.lastHeartbeat = time.Now()
 
