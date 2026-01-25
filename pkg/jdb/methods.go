@@ -24,6 +24,10 @@ func init() {
 	gob.Register(&Session{})
 	gob.Register(&Tx{})
 	gob.Register(&Transaction{})
+	gob.Register(&RequestVoteArgs{})
+	gob.Register(&RequestVoteReply{})
+	gob.Register(&HeartbeatArgs{})
+	gob.Register(&HeartbeatReply{})
 }
 
 type Methods struct{}
@@ -70,11 +74,13 @@ func (s *Methods) Ping(require string, response *string) error {
 * @return error
 **/
 func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) bool {
-	err := jrpc.CallRpc(to, "Methods.RequestVote", require, response)
+	var res RequestVoteReply
+	err := jrpc.CallRpc(to, "Methods.RequestVote", require, &res)
 	if err != nil {
 		return false
 	}
 
+	*response = res
 	return true
 }
 
@@ -98,11 +104,13 @@ func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteRep
 * @return error
 **/
 func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) bool {
-	err := jrpc.CallRpc(to, "Methods.Heartbeat", require, response)
+	var res HeartbeatReply
+	err := jrpc.CallRpc(to, "Methods.Heartbeat", require, &res)
 	if err != nil {
 		return false
 	}
 
+	*response = res
 	return true
 }
 
