@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/cgalvisleon/et/logs"
 )
 
 var (
@@ -62,8 +64,11 @@ type HeartbeatReply struct {
 **/
 func (n *Node) electionLoop() {
 	for {
-		timeout := randomBetween(1500, 3000) * time.Millisecond
-		time.Sleep(50 * time.Millisecond)
+		timeout := randomBetween(1500, 3000)
+		logs.Log("Raft", "[", n.host, "] Election timeout:", timeout)
+
+		time.Sleep(timeout)
+		// time.Sleep(50 * time.Millisecond)
 		n.mu.Lock()
 		elapsed := time.Since(n.lastHeartbeat)
 		state := n.state
@@ -86,6 +91,8 @@ func (n *Node) startElection() {
 	n.votedFor = n.host
 	votes := 1
 	n.mu.Unlock()
+
+	logs.Log("Raft", "[", n.host, "] START ELECTION term=", term)
 
 	for _, peer := range n.peers {
 		go func(peer string) {
@@ -122,6 +129,8 @@ func (n *Node) becomeLeader() {
 	n.state = Leader
 	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
+
+	logs.Log("Raft", "[", n.host, "] BECOME LEADER term=", n.term)
 
 	go n.heartbeatLoop()
 }

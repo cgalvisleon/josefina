@@ -39,7 +39,7 @@ type Node struct {
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
 	mu            sync.Mutex         `json:"-"`
-	modelMu       sync.RWMutex       `json:"-"` // índice en memoria
+	modelMu       sync.RWMutex       `json:"-"`
 }
 
 /**
@@ -217,6 +217,7 @@ func (s *Node) start() error {
 	}
 
 	s.startRPC(listener)
+
 	s.mu.Lock()
 	s.state = Follower
 	s.lastHeartbeat = time.Now()
