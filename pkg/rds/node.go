@@ -187,6 +187,15 @@ func (s *Node) start() error {
 		return err
 	}
 
+	nodes, err := getNodes()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range nodes {
+		s.addNode(node)
+	}
+
 	address := fmt.Sprintf(`:%d`, s.port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {

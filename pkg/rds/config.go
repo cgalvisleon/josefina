@@ -8,8 +8,7 @@ import (
 )
 
 type Config struct {
-	Leader int      `json:"leader"`
-	Nodes  []string `json:"nodes"`
+	Nodes []string `json:"nodes"`
 }
 
 func getConfig() (*Config, error) {
