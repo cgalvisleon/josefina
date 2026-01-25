@@ -78,6 +78,19 @@ func (s *Node) toJson() et.Json {
 }
 
 /**
+* helpCheck: Returns the help check
+* @return et.Json
+**/
+func (s *Node) helpCheck() et.Json {
+	return et.Json{
+		"host":    s.host,
+		"leader":  s.leaderID,
+		"version": s.version,
+		"peers":   s.peers,
+	}
+}
+
+/**
 * mount
 * @param services any
 * @return error

@@ -52,6 +52,6 @@ func HelpCheck() et.Item {
 
 	return et.Item{
 		Ok:     true,
-		Result: node.toJson(),
+		Result: node.helpCheck(),
 	}
 }
