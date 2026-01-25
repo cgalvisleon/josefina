@@ -189,6 +189,7 @@ func (n *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 	if n.votedFor == "" || n.votedFor == args.CandidateID {
 		n.votedFor = args.CandidateID
 		reply.VoteGranted = true
+		n.lastHeartbeat = time.Now()
 	} else {
 		reply.VoteGranted = false
 	}
