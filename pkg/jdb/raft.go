@@ -90,11 +90,6 @@ func (n *Node) startElection() {
 	votes := 1
 	n.mu.Unlock()
 
-	if len(n.peers) == 0 {
-		n.becomeLeader()
-		return
-	}
-
 	for _, peer := range n.peers {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: n.host}
