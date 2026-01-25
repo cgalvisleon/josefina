@@ -39,6 +39,7 @@ type Node struct {
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
 	mu            sync.Mutex         `json:"-"`
+	modelMu       sync.RWMutex       `json:"-"` // índice en memoria
 }
 
 /**
@@ -56,6 +57,7 @@ func newNode(host string, port int, version string) *Node {
 		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
 		mu:      sync.Mutex{},
+		modelMu: sync.RWMutex{},
 	}
 }
 
@@ -69,6 +71,7 @@ func (s *Node) toJson() et.Json {
 		"leader":  s.leaderID,
 		"version": s.version,
 		"rpcs":    s.rpcs,
+		"peers":   s.peers,
 		"models":  s.models,
 	}
 }
@@ -249,11 +252,11 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 
 	ch := make(chan modelResult)
-	s.mu.Lock()
 	go func() {
-		defer s.mu.Unlock()
 		key := modelKey(database, schema, name)
+		s.modelMu.RLock()
 		result, ok := s.models[key]
+		s.modelMu.RUnlock()
 		if ok {
 			ch <- modelResult{result: result, err: nil}
 			return
@@ -285,7 +288,10 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 
 		result.Host = to
 		result.IsInit = true
+
+		s.modelMu.Lock()
 		s.models[key] = result
+		s.modelMu.Unlock()
 		ch <- modelResult{result: result, err: nil}
 	}()
 
@@ -304,10 +310,7 @@ func (s *Node) loadModel(model *Model) error {
 	}
 
 	ch := make(chan error)
-	s.mu.Lock()
 	go func() {
-		defer s.mu.Unlock()
-
 		err := model.init()
 		if err != nil {
 			ch <- err
@@ -315,13 +318,17 @@ func (s *Node) loadModel(model *Model) error {
 		}
 
 		key := model.key()
+		s.modelMu.RLock()
 		result, ok := s.models[key]
+		s.modelMu.RUnlock()
 		if !ok {
 			ch <- fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)
 			return
 		}
 
+		s.modelMu.Lock()
 		s.models[key] = result
+		s.modelMu.Unlock()
 		ch <- nil
 	}()
 
