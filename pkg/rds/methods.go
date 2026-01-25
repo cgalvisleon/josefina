@@ -65,6 +65,62 @@ func (s *Methods) Ping(require string, response *string) error {
 }
 
 /**
+* RequestVote
+* @param require et.Json, response *Model
+* @return error
+**/
+func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) bool {
+	err := jrpc.CallRpc(to, "Methods.RequestVote", require, response)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+/**
+* RequestVote
+* @param require et.Json, response *Model
+* @return error
+**/
+func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) bool {
+	if node == nil {
+		return false
+	}
+
+	err := node.RequestVote(require, response)
+	return err == nil
+}
+
+/**
+* heartbeat
+* @param require et.Json, response *Model
+* @return error
+**/
+func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) bool {
+	err := jrpc.CallRpc(to, "Methods.Heartbeat", require, response)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+/**
+* HeartbeatHeartbeHeartbeatat
+* @param require et.Json, response *Model
+* @return error
+**/
+func (s *Methods) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) bool {
+	if node == nil {
+		return false
+	}
+
+	err := node.Heartbeat(require, response)
+	return err == nil
+}
+
+/**
 * getModel
 * @param database, schema, model string
 * @return *Model, error
@@ -111,7 +167,7 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 * @return *Model, error
 **/
 func (s *Methods) loadModel(to string, model *Model) error {
-	var response Reserve
+	var response bool
 	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
 	if err != nil {
 		return err

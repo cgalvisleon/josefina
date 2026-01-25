@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
@@ -14,23 +15,30 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-type Reserve struct {
-	Model *Model `json:"model"`
-	Ok    bool   `json:"ok"`
-}
+type NodeState int
+
+const (
+	Follower NodeState = iota
+	Candidate
+	Leader
+)
 
 type Node struct {
-	host    string             `json:"-"`
-	port    int                `json:"-"`
-	version string             `json:"-"`
-	rpcs    map[string]et.Json `json:"-"`
-	dbs     map[string]*DB     `json:"-"`
-	models  map[string]*Model  `json:"-"`
-	leader  string             `json:"-"`
-	nodes   []string           `json:"-"`
-	turn    int                `json:"-"`
-	started bool               `json:"-"`
-	mu      sync.Mutex         `json:"-"`
+	host          string             `json:"-"`
+	port          int                `json:"-"`
+	version       string             `json:"-"`
+	rpcs          map[string]et.Json `json:"-"`
+	dbs           map[string]*DB     `json:"-"`
+	models        map[string]*Model  `json:"-"`
+	peers         []string           `json:"-"`
+	state         NodeState          `json:"-"`
+	term          int                `json:"-"`
+	votedFor      string             `json:"-"`
+	leader        string             `json:"-"`
+	lastHeartbeat time.Time          `json:"-"`
+	turn          int                `json:"-"`
+	started       bool               `json:"-"`
+	mu            sync.Mutex         `json:"-"`
 }
 
 /**
@@ -109,7 +117,7 @@ func (s *Node) mount(services any) error {
 * @param node string
 **/
 func (s *Node) addNode(node string) {
-	s.nodes = append(s.nodes, node)
+	s.peers = append(s.peers, node)
 }
 
 /**
@@ -117,7 +125,7 @@ func (s *Node) addNode(node string) {
 * @return string
 **/
 func (s *Node) nextNode() string {
-	t := len(s.nodes)
+	t := len(s.peers)
 	if t == 0 {
 		return s.host
 	}
@@ -127,7 +135,7 @@ func (s *Node) nextNode() string {
 		s.turn = 1
 	}
 
-	return s.nodes[s.turn]
+	return s.peers[s.turn]
 }
 
 /**
@@ -163,13 +171,14 @@ func (s *Node) getLeader() error {
 		result := config.Nodes[leader]
 		ok := s.ping(result)
 		if ok {
+
+			s.leader = result
 			config.Leader = leader
 			err = writeConfig(config)
 			if err != nil {
 				return err
 			}
 
-			s.leader = result
 			return nil
 		}
 
