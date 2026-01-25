@@ -522,3 +522,15 @@ func (s *Model) Selects(fields ...string) *Wheres {
 	}
 	return result
 }
+
+/**
+* getModel: Gets the model
+* @param from *From
+* @return *Model, error
+**/
+func getModel(from *From) (*Model, error) {
+	if !node.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+	return node.getModel(from.Database, from.Schema, from.Name)
+}

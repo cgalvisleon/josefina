@@ -189,6 +189,24 @@ func (s *Node) getLeader() error {
 }
 
 /**
+* startRPC
+* @param listener net.Listener
+**/
+func (n *Node) startRPC(listener net.Listener) {
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				logs.Error(err)
+				continue
+			}
+
+			go rpc.ServeConn(conn)
+		}
+	}()
+}
+
+/**
 * start
 * @return error
 **/
@@ -217,18 +235,17 @@ func (s *Node) start() error {
 		return err
 	}
 
+	s.startRPC(listener)
+	s.mu.Lock()
+	s.state = Follower
+	s.lastHeartbeat = time.Now()
 	s.started = true
+	s.mu.Unlock()
+
+	go s.electionLoop()
+
 	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			logs.Panic(err)
-			continue
-		}
-
-		go rpc.ServeConn(conn)
-	}
+	return nil
 }
 
 /**
