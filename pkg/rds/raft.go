@@ -148,11 +148,11 @@ func (n *Node) heartbeatLoop() {
 }
 
 /**
-* RequestVote
+* requestVote
 * @param args *RequestVoteArgs, reply *RequestVoteReply
 * @return error
 **/
-func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
+func (n *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -180,11 +180,11 @@ func (n *Node) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 }
 
 /**
-* Heartbeat
+* heartbeat
 * @param args *HeartbeatArgs, reply *HeartbeatReply
 * @return error
 **/
-func (n *Node) Heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
+func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 

@@ -88,7 +88,7 @@ func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteRep
 		return false
 	}
 
-	err := node.RequestVote(require, response)
+	err := node.requestVote(require, response)
 	return err == nil
 }
 
@@ -116,7 +116,7 @@ func (s *Methods) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) bo
 		return false
 	}
 
-	err := node.Heartbeat(require, response)
+	err := node.heartbeat(require, response)
 	return err == nil
 }
 
