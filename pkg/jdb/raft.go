@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/cgalvisleon/et/logs"
 )
 
 var (
@@ -70,7 +72,7 @@ func (n *Node) electionLoop() {
 		state := n.state
 		n.mu.Unlock()
 
-		if state != Leader && elapsed > timeout {
+		if n.leaderID == "" && state != Leader && elapsed > timeout {
 			n.startElection()
 		}
 	}
@@ -87,6 +89,11 @@ func (n *Node) startElection() {
 	n.votedFor = n.host
 	votes := 1
 	n.mu.Unlock()
+
+	if len(n.peers) == 0 {
+		n.becomeLeader()
+		return
+	}
 
 	for _, peer := range n.peers {
 		go func(peer string) {
@@ -120,11 +127,9 @@ func (n *Node) startElection() {
 * becomeLeader
 **/
 func (n *Node) becomeLeader() {
-	n.mu.Lock()
 	n.state = Leader
 	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
-	n.mu.Unlock()
 
 	go n.heartbeatLoop()
 }
@@ -220,6 +225,10 @@ func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	n.state = Follower
 	n.leaderID = args.LeaderID
 	n.lastHeartbeat = time.Now()
+
+	if n.host == n.leaderID {
+		logs.Logf("Raft", "[%s] I am now the leader vote: %d\n", n.host, n.term)
+	}
 
 	reply.Term = n.term
 	reply.Ok = true
