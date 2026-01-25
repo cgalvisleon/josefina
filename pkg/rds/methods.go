@@ -106,36 +106,36 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 }
 
 /**
-* reserveModel
+* loadModel
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) reserveModel(to string, model *Model) (*Reserve, error) {
+func (s *Methods) loadModel(to string, model *Model) error {
 	var response Reserve
 	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return &response, nil
-}
-
-/**
-* ReserveModel
-* @param require *Model, response *Reserve
-* @return error
-**/
-func (s *Methods) ReserveModel(require *Model, response *Reserve) error {
-	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	result, err := node.reserveModel(require)
 	if err != nil {
 		return err
 	}
 
-	response = result
+	return nil
+}
+
+/**
+* LoadModel
+* @param require *Model, response true
+* @return error
+**/
+func (s *Methods) LoadModel(require *Model, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := node.loadModel(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
 	return nil
 }
 

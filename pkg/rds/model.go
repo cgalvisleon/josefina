@@ -167,10 +167,6 @@ func (s *Model) init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	if node != nil {
-		s.Host = node.host
-	}
-
 	for _, name := range s.Indexes {
 		fStore, err := store.Open(s.Path, name, s.isDebug)
 		if err != nil {
@@ -180,6 +176,9 @@ func (s *Model) init() error {
 	}
 
 	s.IsInit = true
+	if node != nil {
+		s.Host = node.host
+	}
 
 	return nil
 }
