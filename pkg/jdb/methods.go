@@ -81,7 +81,7 @@ func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *Req
 	}
 
 	*response = res
-	return true
+	return err == nil
 }
 
 /**
@@ -89,13 +89,13 @@ func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *Req
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) bool {
+func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
 	if node == nil {
-		return false
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.requestVote(require, response)
-	return err == nil
+	return err
 }
 
 /**
@@ -111,7 +111,7 @@ func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *Heartbe
 	}
 
 	*response = res
-	return true
+	return err == nil
 }
 
 /**
@@ -119,13 +119,13 @@ func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *Heartbe
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Methods) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) bool {
+func (s *Methods) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	if node == nil {
-		return false
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.heartbeat(require, response)
-	return err == nil
+	return err
 }
 
 /**
