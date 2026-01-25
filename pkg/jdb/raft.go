@@ -65,10 +65,8 @@ type HeartbeatReply struct {
 func (n *Node) electionLoop() {
 	for {
 		timeout := randomBetween(1500, 3000)
-		logs.Log("Raft", "[", n.host, "] Election timeout:", timeout)
-
 		time.Sleep(timeout)
-		// time.Sleep(50 * time.Millisecond)
+
 		n.mu.Lock()
 		elapsed := time.Since(n.lastHeartbeat)
 		state := n.state
@@ -91,8 +89,6 @@ func (n *Node) startElection() {
 	n.votedFor = n.host
 	votes := 1
 	n.mu.Unlock()
-
-	logs.Log("Raft", "[", n.host, "] START ELECTION term=", term)
 
 	for _, peer := range n.peers {
 		go func(peer string) {
@@ -129,8 +125,6 @@ func (n *Node) becomeLeader() {
 	n.state = Leader
 	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
-
-	logs.Log("Raft", "[", n.host, "] BECOME LEADER term=", n.term)
 
 	go n.heartbeatLoop()
 }
@@ -226,6 +220,10 @@ func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	n.state = Follower
 	n.leaderID = args.LeaderID
 	n.lastHeartbeat = time.Now()
+
+	if n.host == n.leaderID {
+		logs.Log("Raft", "[", n.host, "] I am now the leader vote:", n.term)
+	}
 
 	reply.Term = n.term
 	reply.Ok = true
