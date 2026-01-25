@@ -203,7 +203,7 @@ func (s *Methods) CreateUser(require et.Json, response *bool) error {
 
 	username := require.Str("username")
 	password := require.Str("password")
-	err := node.createUser(username, password)
+	err := createUser(username, password)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (s *Methods) DropUser(require et.Json, response *Session) error {
 	}
 
 	username := require.Str("username")
-	err := node.dropUser(username)
+	err := dropUser(username)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func (s *Methods) ChanguePassword(require et.Json, response *bool) error {
 
 	username := require.Str("username")
 	password := require.Str("password")
-	err := node.changuePassword(username, password)
+	err := changuePassword(username, password)
 	if err != nil {
 		return err
 	}
