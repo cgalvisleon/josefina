@@ -58,8 +58,9 @@ func createSerie(name, tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	if node.leader != node.host {
-		err := methods.createSerie(node.leader, name, tag, format, value)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.createSerie(leader, name, tag, format, value)
 		if err != nil {
 			return err
 		}
@@ -103,8 +104,9 @@ func dropSerie(name, tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	if node.leader != node.host {
-		err := methods.dropSerie(node.leader, name, tag)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.dropSerie(leader, name, tag)
 		if err != nil {
 			return err
 		}
@@ -141,8 +143,9 @@ func setSerie(name, tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	if node.leader != node.host {
-		err := methods.setSerie(node.leader, name, tag, value)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.setSerie(leader, name, tag, value)
 		if err != nil {
 			return err
 		}
@@ -181,8 +184,9 @@ func getSerie(name, tag string) (et.Json, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	if node.leader != node.host {
-		result, err := methods.getSerie(node.leader, name, tag)
+	leader := node.getLeader()
+	if leader != node.host {
+		result, err := methods.getSerie(leader, name, tag)
 		if err != nil {
 			return nil, err
 		}

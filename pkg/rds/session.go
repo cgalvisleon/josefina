@@ -159,8 +159,9 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	if node.leader != node.host {
-		result, err := methods.signIn(node.leader, device, database, username, password)
+	leader := node.getLeader()
+	if leader != node.host {
+		result, err := methods.signIn(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
 		}

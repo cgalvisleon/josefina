@@ -34,7 +34,7 @@ type Node struct {
 	state         NodeState          `json:"-"`
 	term          int                `json:"-"`
 	votedFor      string             `json:"-"`
-	leader        string             `json:"-"`
+	leaderID      string             `json:"-"`
 	lastHeartbeat time.Time          `json:"-"`
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
@@ -66,7 +66,7 @@ func newNode(host string, port int, version string) *Node {
 func (s *Node) toJson() et.Json {
 	return et.Json{
 		"host":    s.host,
-		"leader":  s.leader,
+		"leader":  s.leaderID,
 		"version": s.version,
 		"rpcs":    s.rpcs,
 		"models":  s.models,
@@ -140,52 +140,12 @@ func (s *Node) nextNode() string {
 
 /**
 * getLeader
-* @return error
+* @return string
 **/
-func (s *Node) getLeader() error {
-	if methods == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	config, err := getConfig()
-	if err != nil {
-		return err
-	}
-
-	t := len(config.Nodes)
-	if t == 0 {
-		s.leader = s.host
-		return nil
-	}
-
-	leader := config.Leader
-	if leader >= t {
-		leader = 0
-	}
-
-	for {
-		if leader >= t {
-			break
-		}
-
-		result := config.Nodes[leader]
-		ok := s.ping(result)
-		if ok {
-
-			s.leader = result
-			config.Leader = leader
-			err = writeConfig(config)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		leader++
-	}
-
-	return fmt.Errorf(msg.MSG_NO_LEADER_FOUND)
+func (n *Node) getLeader() string {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.leaderID
 }
 
 /**
@@ -228,11 +188,6 @@ func (s *Node) start() error {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		logs.Fatal(err)
-	}
-
-	err = s.getLeader()
-	if err != nil {
-		return err
 	}
 
 	s.startRPC(listener)
@@ -278,8 +233,9 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	if s.leader != s.host {
-		result, err := methods.getModel(s.leader, database, schema, name)
+	leader := s.getLeader()
+	if leader != s.host {
+		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
 		}
@@ -386,8 +342,9 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	if s.leader != s.host {
-		err := methods.saveModel(s.leader, model)
+	leader := s.getLeader()
+	if leader != s.host {
+		err := methods.saveModel(leader, model)
 		if err != nil {
 			return err
 		}

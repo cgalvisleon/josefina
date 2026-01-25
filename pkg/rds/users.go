@@ -80,8 +80,9 @@ func createUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	if node.leader != node.host {
-		err := methods.createUser(node.leader, username, password)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.createUser(leader, username, password)
 		if err != nil {
 			return err
 		}
@@ -116,8 +117,9 @@ func dropUser(username string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	if node.leader != node.host {
-		err := methods.dropUser(node.leader, username)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.dropUser(leader, username)
 		if err != nil {
 			return err
 		}
@@ -153,8 +155,9 @@ func changuePassword(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	if node.leader != node.host {
-		err := methods.changuePassword(node.leader, username, password)
+	leader := node.getLeader()
+	if leader != node.host {
+		err := methods.changuePassword(leader, username, password)
 		if err != nil {
 			return err
 		}

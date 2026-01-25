@@ -105,7 +105,7 @@ func (n *Node) startElection() {
 **/
 func (n *Node) becomeLeader() {
 	n.state = Leader
-	n.leader = n.host
+	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
 
 	go n.heartbeatLoop()
@@ -200,7 +200,7 @@ func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	}
 
 	n.state = Follower
-	n.leader = args.LeaderID
+	n.leaderID = args.LeaderID
 	n.lastHeartbeat = time.Now()
 
 	reply.Term = n.term
