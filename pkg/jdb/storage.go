@@ -1,4 +1,4 @@
-package rds
+package jdb
 
 import (
 	"encoding/binary"

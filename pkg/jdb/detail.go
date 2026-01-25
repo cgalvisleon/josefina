@@ -1,4 +1,4 @@
-package rds
+package jdb
 
 type Detail struct {
 	To              *From             `json:"to"`
