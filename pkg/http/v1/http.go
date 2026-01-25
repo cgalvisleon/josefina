@@ -3,7 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/josefina/pkg/rds"
+	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -17,7 +17,7 @@ var (
 * @return error
 **/
 func Init() (http.Handler, error) {
-	err := rds.Load(Version)
+	err := jdb.Load(Version)
 	if err != nil {
 		return nil, err
 	}

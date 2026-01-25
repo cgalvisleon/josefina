@@ -59,14 +59,6 @@ func (s *From) key() string {
 	return modelKey(s.Database, s.Schema, s.Name)
 }
 
-type TypeModel string
-
-const (
-	KeyValueModel TypeModel = "keyvalue"
-	ObjectModel   TypeModel = "object"
-	GraphModel    TypeModel = "graph"
-)
-
 type Model struct {
 	*From         `json:"from"`
 	Fields        map[string]*Field           `json:"fields"`
