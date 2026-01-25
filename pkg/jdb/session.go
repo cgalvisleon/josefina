@@ -160,7 +160,7 @@ func SignIn(device, database, username, password string) (*Session, error) {
 	}
 
 	leader := node.getLeader()
-	if leader != node.host {
+	if leader != node.host && leader != "" {
 		result, err := methods.signIn(leader, device, database, username, password)
 		if err != nil {
 			return nil, err

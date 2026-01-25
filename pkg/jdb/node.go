@@ -261,7 +261,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 
 	leader := s.getLeader()
-	if leader != s.host {
+	if leader != s.host && leader != "" {
 		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
@@ -374,7 +374,7 @@ func (s *Node) saveModel(model *Model) error {
 	}
 
 	leader := s.getLeader()
-	if leader != s.host {
+	if leader != s.host && leader != "" {
 		err := methods.saveModel(leader, model)
 		if err != nil {
 			return err

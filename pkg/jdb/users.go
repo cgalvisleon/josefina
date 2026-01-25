@@ -81,7 +81,7 @@ func createUser(username, password string) error {
 	}
 
 	leader := node.getLeader()
-	if leader != node.host {
+	if leader != node.host && leader != "" {
 		err := methods.createUser(leader, username, password)
 		if err != nil {
 			return err
@@ -118,7 +118,7 @@ func dropUser(username string) error {
 	}
 
 	leader := node.getLeader()
-	if leader != node.host {
+	if leader != node.host && leader != "" {
 		err := methods.dropUser(leader, username)
 		if err != nil {
 			return err
@@ -156,7 +156,7 @@ func changuePassword(username, password string) error {
 	}
 
 	leader := node.getLeader()
-	if leader != node.host {
+	if leader != node.host && leader != "" {
 		err := methods.changuePassword(leader, username, password)
 		if err != nil {
 			return err
