@@ -11,6 +11,11 @@ var (
 	rng   = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
+/**
+* randomBetween
+* @param minMs, maxMs int
+* @return time.Duration
+**/
 func randomBetween(minMs, maxMs int) time.Duration {
 	if minMs >= maxMs {
 		return time.Duration(minMs) * time.Millisecond
@@ -21,6 +26,15 @@ func randomBetween(minMs, maxMs int) time.Duration {
 	rngMu.Unlock()
 
 	return time.Duration(n) * time.Millisecond
+}
+
+/**
+* majority
+* @param n int
+* @return int
+**/
+func majority(n int) int {
+	return (n / 2) + 1
 }
 
 type RequestVoteArgs struct {
@@ -91,7 +105,8 @@ func (n *Node) startElection() {
 
 				if n.state == Candidate && reply.VoteGranted && term == n.term {
 					votes++
-					if votes >= 2 {
+					needed := majority(len(n.peers) + 1) // +1 porque tú eres un nodo
+					if votes >= needed {
 						n.becomeLeader()
 					}
 				}
