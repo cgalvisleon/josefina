@@ -61,10 +61,9 @@ func jqlIsExisted(to *From, field, key string) (bool, error) {
 }
 
 /**
-* query
-* @param token string, jqls []et.Json
-* @return (et.Json, error)
+* Jql
+* @param request Request, response *Response
 **/
-func query(token string, jqls []et.Json) (et.Json, error) {
-	return et.Json{}, nil
+func Jql(request Request, response *Response) {
+
 }
