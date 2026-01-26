@@ -271,43 +271,43 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return result, nil
 	}
 
-	type modelResult struct {
+	type Result struct {
 		result *Model
 		err    error
 	}
 
-	ch := make(chan modelResult)
+	ch := make(chan Result)
 	go func() {
 		key := modelKey(database, schema, name)
 		s.modelMu.RLock()
 		result, ok := s.models[key]
 		s.modelMu.RUnlock()
 		if ok {
-			ch <- modelResult{result: result, err: nil}
+			ch <- Result{result: result, err: nil}
 			return
 		}
 
 		err := initModels()
 		if err != nil {
-			ch <- modelResult{result: nil, err: err}
+			ch <- Result{result: nil, err: err}
 			return
 		}
 
 		exists, err := models.get(key, &result)
 		if err != nil {
-			ch <- modelResult{result: nil, err: err}
+			ch <- Result{result: nil, err: err}
 			return
 		}
 
 		if !exists {
-			ch <- modelResult{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
+			ch <- Result{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
 			return
 		}
 
 		to := s.nextNode()
 		err = methods.loadModel(to, result)
 		if err != nil {
-			ch <- modelResult{result: nil, err: err}
+			ch <- Result{result: nil, err: err}
 			return
 		}
 
@@ -317,7 +317,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		s.modelMu.Lock()
 		s.models[key] = result
 		s.modelMu.Unlock()
-		ch <- modelResult{result: result, err: nil}
+		ch <- Result{result: result, err: nil}
 	}()
 
 	res := <-ch

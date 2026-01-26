@@ -250,6 +250,40 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 }
 
 /**
+* getDb
+* @param to string, name string
+* @return *DB, error
+**/
+func (s *Methods) getDb(to string, name string) (*DB, error) {
+	var response *DB
+	err := jrpc.CallRpc(to, "Methods.GetDb", name, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetDb
+* @param model *DB
+* @return bool, error
+**/
+func (s *Methods) GetDb(require string, response *DB) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := getDb(require)
+	if err != nil {
+		return err
+	}
+
+	*response = *db
+	return nil
+}
+
+/**
 * saveDb
 * @param to string, db *DB
 * @return error
@@ -266,7 +300,7 @@ func (s *Methods) saveDb(to string, db *DB) error {
 
 /**
 * SaveDb
-* @param model *Model
+* @param model *DB
 * @return bool, error
 **/
 func (s *Methods) SaveDb(require *DB, response *bool) error {

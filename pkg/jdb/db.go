@@ -136,22 +136,61 @@ func getDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	name = utility.Normalize(name)
-	result, ok := node.dbs[name]
-	if ok {
+	leader := node.getLeader()
+	if leader != node.host && leader != "" {
+		result, err := methods.getDb(leader, name)
+		if err != nil {
+			return nil, err
+		}
+
 		return result, nil
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
-	result = &DB{
-		Name:    name,
-		Version: Version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
+	type Result struct {
+		result *DB
+		err    error
 	}
-	node.dbs[name] = result
 
-	return result, nil
+	ch := make(chan Result)
+	go func() {
+		name = utility.Normalize(name)
+		result, ok := node.dbs[name]
+		if ok {
+			ch <- Result{result: result, err: nil}
+			return
+		}
+
+		err := initDbs()
+		if err != nil {
+			ch <- Result{result: nil, err: err}
+			return
+		}
+
+		exists, err := dbs.get(name, &result)
+		if err != nil {
+			ch <- Result{result: nil, err: err}
+			return
+		}
+
+		if exists {
+			ch <- Result{result: result, err: nil}
+			return
+		}
+
+		path := envar.GetStr("DATA_PATH", "./data")
+		result = &DB{
+			Name:    name,
+			Version: Version,
+			Path:    fmt.Sprintf("%s/%s", path, name),
+			Schemas: make(map[string]*Schema, 0),
+		}
+		node.dbs[name] = result
+
+		ch <- Result{result: result, err: nil}
+	}()
+
+	res := <-ch
+	return res.result, res.err
 }
 
 /**
