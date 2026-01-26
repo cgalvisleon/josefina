@@ -98,7 +98,7 @@ func (s *Node) startElection() {
 	votes := 1
 	s.mu.Unlock()
 
-	logs.Debugf("Raft: %d", s.term)
+	logs.Debugf("Raft election: %d", s.term)
 
 	total := len(s.peers) + 1 // +1 porque tú eres un nodo
 	for _, peer := range s.peers {
