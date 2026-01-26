@@ -149,15 +149,15 @@ func DropSession(token string) error {
 * @return Handler
 **/
 func authenticate(next Handler) Handler {
-	return HandlerFunc(func(request et.Json, response et.Json) {
-		token := request.Str("token")
+	return HandlerFunc(func(request Request, response *Response) {
+		token := request.Token
 		session, err := getSession(token)
 		if err != nil {
 			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
 			return
 		}
 
-		response.Set("session", session)
+		request.Set("session", session)
 		next.Execute(request, response)
 	})
 }

@@ -7,28 +7,45 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-type HandlerFunc func(et.Json, et.Json)
+type Request struct {
+	et.Json
+	Token string `json:"token"`
+}
+
+type Response struct {
+	Error  error     `json:"error"`
+	Result []et.Json `json:"result"`
+}
+
+/**
+* Add: Adds an item to the result
+* @param item et.Json
+**/
+func (s *Response) Add(item et.Json) {
+	s.Result = append(s.Result, item)
+}
+
+type HandlerFunc func(Request, *Response)
 
 /**
 * Execute
-* @param request et.Json, response et.Json
+* @param request Request, response *Response
 **/
-func (s HandlerFunc) Execute(request et.Json, response et.Json) {
+func (s HandlerFunc) Execute(request Request, response *Response) {
 	s(request, response)
 }
 
 type Handler interface {
-	Execute(et.Json, et.Json)
+	Execute(Request, *Response)
 }
 
 /**
 * errorResponse: Creates an error response
-* @param code string, err error
-* @return et.Json
+* @param msg msg.MessageError, err error, response *Response
 **/
-func errorResponse(msg msg.MessageError, err error, response et.Json) {
-	response.Set("ok", false)
-	response.Set("result", et.Json{
+func errorResponse(msg msg.MessageError, err error, response *Response) {
+	response.Error = err
+	response.Add(et.Json{
 		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
 		"code":  msg.Code,
 	})
