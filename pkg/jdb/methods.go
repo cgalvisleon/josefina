@@ -250,6 +250,40 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 }
 
 /**
+* reportModels
+* @param to string, models map[string]*Model
+* @return error
+**/
+func (s *Methods) reportModels(to string, models map[string]*Model) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Methods.ReportModels", models, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* ReportModels
+* @param model *Model
+* @return bool, error
+**/
+func (s *Methods) ReportModels(require map[string]*Model, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := node.reportModels(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * getDb
 * @param to string, name string
 * @return *DB, error
