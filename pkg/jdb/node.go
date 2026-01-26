@@ -413,6 +413,35 @@ func (s *Node) saveModel(model *Model) error {
 }
 
 /**
+* reportModels: Reports the models
+* @param models map[string]*Model
+* @return error
+**/
+func (s *Node) reportModels(models map[string]*Model) error {
+	leader := s.getLeader()
+	if leader != s.host && leader != "" {
+		err := methods.reportModels(leader, models)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	ch := make(chan error)
+	go func() {
+		for key, model := range models {
+			s.mu.Lock()
+			s.models[key] = model
+			s.mu.Unlock()
+		}
+		ch <- nil
+	}()
+
+	return <-ch
+}
+
+/**
 * saveDb: Saves the model
 * @param db *DB
 * @return error
