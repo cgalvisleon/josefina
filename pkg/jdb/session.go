@@ -148,7 +148,7 @@ func DropSession(token string) error {
 * @param code string, err error
 * @return et.Json
 **/
-func errorResponse(msg msg.MessageError, err error, response *et.Json) {
+func errorResponse(msg msg.MessageError, err error, response et.Json) {
 	response.Set("ok", false)
 	response.Set("result", et.Json{
 		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
@@ -158,17 +158,22 @@ func errorResponse(msg msg.MessageError, err error, response *et.Json) {
 
 /**
 * authenticate: Authenticates a user
-* @param request *jql, response *et.Json
-* @return
+* @param next Handler
+* @return Handler
 **/
-func authenticate(request *jql, response *et.Json) {
-	session, err := getSession(request.Token)
-	if err != nil {
-		errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
-		return
-	}
+func authenticate(next Handler) Handler {
+	return Handler(next)
+	// return HandlerFunc(func(request et.Json, response et.Json) {
+	// 	token := request.Str("token")
+	// 	session, err := getSession(token)
+	// 	if err != nil {
+	// 		errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
+	// 		return
+	// 	}
+	// 	response.Set("session", session)
 
-	response.Set("session", session)
+	// 	next.Execute(request, response)
+	// })
 }
 
 /**
