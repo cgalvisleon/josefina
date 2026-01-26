@@ -79,7 +79,6 @@ func (s *Node) electionLoop() {
 		state := s.state
 		s.mu.Unlock()
 
-		// s.leaderID == "" &&
 		if elapsed > heartbeatInterval && state != Leader {
 			s.startElection()
 		}
@@ -97,8 +96,6 @@ func (s *Node) startElection() {
 	s.votedFor = s.host
 	votes := 1
 	s.mu.Unlock()
-
-	logs.Debugf("Raft election: %d", s.term)
 
 	total := len(s.peers) + 1 // +1 porque tú eres un nodo
 	for _, peer := range s.peers {
@@ -244,7 +241,7 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	s.lastHeartbeat = timezone.Now()
 
 	if oldLeader != args.LeaderID {
-		logs.Debugf("Set leader %s in %s", args.LeaderID, s.host)
+		logs.Logf("Set leader %s in %s", args.LeaderID, s.host)
 	}
 
 	reply.Term = s.term
