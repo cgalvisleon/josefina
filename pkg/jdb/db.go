@@ -198,7 +198,7 @@ func getDb(name string) (*DB, error) {
 * @param name string, isStrict bool
 * @return *DB, error
 **/
-func createDb(name string, isStrict bool) (*DB, error) {
+func CreateDb(name string, isStrict bool) (*DB, error) {
 	db, err := getDb(name)
 	if err != nil {
 		return nil, err
