@@ -238,9 +238,14 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 		s.votedFor = ""
 	}
 
+	oldLeader := s.leaderID
 	s.state = Follower
 	s.leaderID = args.LeaderID
 	s.lastHeartbeat = timezone.Now()
+
+	if oldLeader != args.LeaderID {
+		logs.Debugf("Set leader %s in %s", args.LeaderID, s.host)
+	}
 
 	reply.Term = s.term
 	reply.Ok = true
