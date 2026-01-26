@@ -158,10 +158,10 @@ func errorResponse(msg msg.MessageError, err error, response *et.Json) {
 
 /**
 * authenticate: Authenticates a user
-* @param request *jqls, response *et.Json
+* @param request *jql, response *et.Json
 * @return
 **/
-func authenticate(request *jqls, response *et.Json) {
+func authenticate(request *jql, response *et.Json) {
 	session, err := getSession(request.Token)
 	if err != nil {
 		errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)

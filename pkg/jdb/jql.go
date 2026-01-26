@@ -2,7 +2,7 @@ package jdb
 
 import "github.com/cgalvisleon/et/et"
 
-type jqls struct {
+type jql struct {
 	Token string    `json:"token"`
 	Jqls  []et.Json `json:"jqls"`
 }
