@@ -130,7 +130,7 @@ func getSession(token string) (*Session, error) {
 * @param username string
 * @return error
 **/
-func dropSession(token string) error {
+func DropSession(token string) error {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
@@ -141,6 +141,34 @@ func dropSession(token string) error {
 	}
 
 	return sessions.remove(token)
+}
+
+/**
+* errorResponse: Creates an error response
+* @param code string, err error
+* @return et.Json
+**/
+func errorResponse(msg msg.MessageError, err error, response *et.Json) {
+	response.Set("ok", false)
+	response.Set("result", et.Json{
+		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
+		"code":  msg.Code,
+	})
+}
+
+/**
+* authenticate: Authenticates a user
+* @param request *Jql, response *et.Json
+* @return
+**/
+func authenticate(request *Jql, response *et.Json) {
+	session, err := getSession(request.Token)
+	if err != nil {
+		errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
+		return
+	}
+
+	response.Set("session", session)
 }
 
 /**
