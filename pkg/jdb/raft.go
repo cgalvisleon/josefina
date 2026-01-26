@@ -130,9 +130,11 @@ func (n *Node) startElection() {
 * becomeLeader
 **/
 func (n *Node) becomeLeader() {
+	n.mu.Lock()
 	n.state = Leader
 	n.leaderID = n.host
 	n.lastHeartbeat = time.Now()
+	n.mu.Unlock()
 
 	go n.heartbeatLoop()
 }
