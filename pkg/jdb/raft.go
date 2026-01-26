@@ -136,11 +136,11 @@ func (s *Node) startElection() {
 * becomeLeader
 **/
 func (s *Node) becomeLeader() {
-	s.mu.Lock()
 	s.state = Leader
 	s.leaderID = s.host
 	s.lastHeartbeat = timezone.Now()
-	s.mu.Unlock()
+
+	logs.Debugf("I am leader %s", s.host)
 
 	go s.heartbeatLoop()
 }
@@ -162,6 +162,10 @@ func (s *Node) heartbeatLoop() {
 		s.mu.Unlock()
 
 		for _, peer := range s.peers {
+			if peer == s.host {
+				continue
+			}
+
 			go func(peer string) {
 				args := HeartbeatArgs{Term: term, LeaderID: s.host}
 				var reply HeartbeatReply
