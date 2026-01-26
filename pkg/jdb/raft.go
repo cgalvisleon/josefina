@@ -242,9 +242,20 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 
 	if oldLeader != args.LeaderID {
 		logs.Logf("Set leader %s in %s", args.LeaderID, s.host)
+		s.onChangeLeader()
 	}
 
 	reply.Term = s.term
 	reply.Ok = true
 	return nil
+}
+
+/**
+* onChangeLeader
+**/
+func (s *Node) onChangeLeader() {
+	err := s.reportModels(s.models)
+	if err != nil {
+		logs.Errorf("onChangeLeader: %s", err)
+	}
 }
