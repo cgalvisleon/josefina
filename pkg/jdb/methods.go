@@ -73,15 +73,21 @@ func (s *Methods) Ping(require string, response *string) error {
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) bool {
+func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) *ResponseBool {
 	var res RequestVoteReply
 	err := jrpc.CallRpc(to, "Methods.RequestVote", require, &res)
 	if err != nil {
-		return false
+		return &ResponseBool{
+			Ok:    false,
+			Error: err,
+		}
 	}
 
 	*response = res
-	return err == nil
+	return &ResponseBool{
+		Ok:    true,
+		Error: nil,
+	}
 }
 
 /**
@@ -103,15 +109,21 @@ func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteRep
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) bool {
+func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
 	var res HeartbeatReply
 	err := jrpc.CallRpc(to, "Methods.Heartbeat", require, &res)
 	if err != nil {
-		return false
+		return &ResponseBool{
+			Ok:    false,
+			Error: err,
+		}
 	}
 
 	*response = res
-	return err == nil
+	return &ResponseBool{
+		Ok:    true,
+		Error: nil,
+	}
 }
 
 /**

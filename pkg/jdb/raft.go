@@ -4,13 +4,12 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-
-	"github.com/cgalvisleon/et/logs"
 )
 
 var (
-	rngMu sync.Mutex
-	rng   = rand.New(rand.NewSource(time.Now().UnixNano()))
+	rngMu             sync.Mutex
+	rng               = rand.New(rand.NewSource(time.Now().UnixNano()))
+	heartbeatInterval = 250 * time.Millisecond
 )
 
 /**
@@ -37,6 +36,11 @@ func randomBetween(minMs, maxMs int) time.Duration {
 **/
 func majority(n int) int {
 	return (n / 2) + 1
+}
+
+type ResponseBool struct {
+	Ok    bool
+	Error error
 }
 
 type RequestVoteArgs struct {
@@ -90,12 +94,16 @@ func (n *Node) startElection() {
 	votes := 1
 	n.mu.Unlock()
 
+	total := len(n.peers) + 1 // +1 porque tú eres un nodo
 	for _, peer := range n.peers {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: n.host}
 			var reply RequestVoteReply
-			ok := methods.requestVote(peer, &args, &reply)
-			if ok {
+			res := methods.requestVote(peer, &args, &reply)
+			if res.Error != nil {
+				total--
+			}
+			if res.Ok {
 				n.mu.Lock()
 				defer n.mu.Unlock()
 
@@ -108,7 +116,7 @@ func (n *Node) startElection() {
 
 				if n.state == Candidate && reply.VoteGranted && term == n.term {
 					votes++
-					needed := majority(len(n.peers) + 1) // +1 porque tú eres un nodo
+					needed := majority(total)
 					if votes >= needed {
 						n.becomeLeader()
 					}
@@ -133,7 +141,7 @@ func (n *Node) becomeLeader() {
 * heartbeatLoop
 **/
 func (n *Node) heartbeatLoop() {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -149,8 +157,8 @@ func (n *Node) heartbeatLoop() {
 			go func(peer string) {
 				args := HeartbeatArgs{Term: term, LeaderID: n.host}
 				var reply HeartbeatReply
-				ok := methods.heartbeat(peer, &args, &reply)
-				if ok {
+				res := methods.heartbeat(peer, &args, &reply)
+				if res.Ok {
 					n.mu.Lock()
 					defer n.mu.Unlock()
 
@@ -221,10 +229,6 @@ func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	n.state = Follower
 	n.leaderID = args.LeaderID
 	n.lastHeartbeat = time.Now()
-
-	if n.host == n.leaderID {
-		logs.Logf("Raft", "[%s] I am now the leader vote: %d\n", n.host, n.term)
-	}
 
 	reply.Term = n.term
 	reply.Ok = true
