@@ -10,42 +10,39 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-type DB struct {
-	Name    string             `json:"name"`
-	Version string             `json:"version"`
-	Path    string             `json:"path"`
-	Schemas map[string]*Schema `json:"schemas"`
-}
+var dbs *Model
 
 /**
-* getDb: Returns a database by name
-* @param name string
-* @return *DB, error
+* initDbs: Initializes the dbs model
+* @return error
 **/
-func getDb(name string) (*DB, error) {
-	if !node.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+func initDbs() error {
+	if dbs != nil {
+		return nil
 	}
 
-	name = utility.Normalize(name)
-	result, ok := node.dbs[name]
-	if ok {
-		return result, nil
+	db, err := getDb(packageName)
+	if err != nil {
+		return err
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
-	result = &DB{
-		Name:    name,
-		Version: Version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
+	dbs, err = db.newModel("", "dbs", true, 1)
+	if err != nil {
+		return err
 	}
-	node.dbs[name] = result
+	if err := dbs.init(); err != nil {
+		return err
+	}
 
-	return result, nil
+	return nil
+}
+
+type DB struct {
+	Name     string             `json:"name"`
+	Version  string             `json:"version"`
+	Path     string             `json:"path"`
+	Schemas  map[string]*Schema `json:"schemas"`
+	IsStrict bool               `json:"is_strict"`
 }
 
 /**
@@ -62,10 +59,10 @@ func (s *DB) serialize() ([]byte, error) {
 }
 
 /**
-* toJson
+* ToJson
 * @return et.Json, error
 **/
-func (s *DB) toJson() (et.Json, error) {
+func (s *DB) ToJson() (et.Json, error) {
 	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
@@ -78,6 +75,14 @@ func (s *DB) toJson() (et.Json, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* save
+* @return error
+**/
+func (s *DB) save() error {
+	return node.saveDb(s)
 }
 
 /**
@@ -116,4 +121,51 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 	}
 
 	return model, nil
+}
+
+/**
+* getDb: Returns a database by name
+* @param name string
+* @return *DB, error
+**/
+func getDb(name string) (*DB, error) {
+	if !node.started {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	path := envar.GetStr("DATA_PATH", "./data")
+	result = &DB{
+		Name:    name,
+		Version: Version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
+	node.dbs[name] = result
+
+	return result, nil
+}
+
+/**
+* createDb: Creates a new database
+* @param name string, isStrict bool
+* @return *DB, error
+**/
+func createDb(name string, isStrict bool) (*DB, error) {
+	db, err := getDb(name)
+	if err != nil {
+		return nil, err
+	}
+
+	db.IsStrict = isStrict
+
+	return db, nil
 }

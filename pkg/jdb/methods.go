@@ -250,6 +250,40 @@ func (s *Methods) SaveModel(require *Model, response *bool) error {
 }
 
 /**
+* saveDb
+* @param to string, db *DB
+* @return error
+**/
+func (s *Methods) saveDb(to string, db *DB) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Methods.SaveDb", db, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SaveDb
+* @param model *Model
+* @return bool, error
+**/
+func (s *Methods) SaveDb(require *DB, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	err := node.saveDb(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * signIn: Sign in a user
 * @param to, username, password string
 * @return *Session, error

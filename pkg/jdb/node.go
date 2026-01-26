@@ -411,3 +411,51 @@ func (s *Node) saveModel(model *Model) error {
 	res := <-ch
 	return res
 }
+
+/**
+* saveDb: Saves the model
+* @param db *DB
+* @return error
+**/
+func (s *Node) saveDb(db *DB) error {
+	if !s.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	leader := s.getLeader()
+	if leader != s.host && leader != "" {
+		err := methods.saveDb(leader, db)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	ch := make(chan error)
+	go func() {
+		err := initDbs()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		bt, err := db.serialize()
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		key := db.Name
+		err = dbs.put(key, bt)
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		ch <- nil
+	}()
+
+	res := <-ch
+	return res
+}
