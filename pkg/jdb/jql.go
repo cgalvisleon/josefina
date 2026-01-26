@@ -1,6 +1,11 @@
 package jdb
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"fmt"
+
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
 
 type HandlerFunc func(et.Json, et.Json)
 
@@ -14,6 +19,19 @@ func (s HandlerFunc) Execute(request et.Json, response et.Json) {
 
 type Handler interface {
 	Execute(et.Json, et.Json)
+}
+
+/**
+* errorResponse: Creates an error response
+* @param code string, err error
+* @return et.Json
+**/
+func errorResponse(msg msg.MessageError, err error, response et.Json) {
+	response.Set("ok", false)
+	response.Set("result", et.Json{
+		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
+		"code":  msg.Code,
+	})
 }
 
 /**

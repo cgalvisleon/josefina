@@ -144,36 +144,22 @@ func DropSession(token string) error {
 }
 
 /**
-* errorResponse: Creates an error response
-* @param code string, err error
-* @return et.Json
-**/
-func errorResponse(msg msg.MessageError, err error, response et.Json) {
-	response.Set("ok", false)
-	response.Set("result", et.Json{
-		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
-		"code":  msg.Code,
-	})
-}
-
-/**
 * authenticate: Authenticates a user
 * @param next Handler
 * @return Handler
 **/
 func authenticate(next Handler) Handler {
-	return Handler(next)
-	// return HandlerFunc(func(request et.Json, response et.Json) {
-	// 	token := request.Str("token")
-	// 	session, err := getSession(token)
-	// 	if err != nil {
-	// 		errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
-	// 		return
-	// 	}
-	// 	response.Set("session", session)
+	return HandlerFunc(func(request et.Json, response et.Json) {
+		token := request.Str("token")
+		session, err := getSession(token)
+		if err != nil {
+			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
+			return
+		}
 
-	// 	next.Execute(request, response)
-	// })
+		response.Set("session", session)
+		next.Execute(request, response)
+	})
 }
 
 /**
