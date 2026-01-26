@@ -166,6 +166,7 @@ func createDb(name string, isStrict bool) (*DB, error) {
 	}
 
 	db.IsStrict = isStrict
+	db.save()
 
 	return db, nil
 }
