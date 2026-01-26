@@ -4,12 +4,15 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/timezone"
 )
 
 var (
 	rngMu             sync.Mutex
 	rng               = rand.New(rand.NewSource(time.Now().UnixNano()))
-	heartbeatInterval = 250 * time.Millisecond
+	heartbeatInterval = 500 * time.Millisecond
 )
 
 /**
@@ -66,18 +69,19 @@ type HeartbeatReply struct {
 /**
 * electionLoop
 **/
-func (n *Node) electionLoop() {
+func (s *Node) electionLoop() {
 	for {
 		timeout := randomBetween(1500, 3000)
 		time.Sleep(timeout)
 
-		n.mu.Lock()
-		elapsed := time.Since(n.lastHeartbeat)
-		state := n.state
-		n.mu.Unlock()
+		s.mu.Lock()
+		elapsed := time.Since(s.lastHeartbeat)
+		state := s.state
+		s.mu.Unlock()
 
-		if n.leaderID == "" && state != Leader && elapsed > timeout {
-			n.startElection()
+		// s.leaderID == "" &&
+		if elapsed > heartbeatInterval && state != Leader {
+			s.startElection()
 		}
 	}
 }
@@ -85,40 +89,42 @@ func (n *Node) electionLoop() {
 /**
 * startElection
 **/
-func (n *Node) startElection() {
-	n.mu.Lock()
-	n.state = Candidate
-	n.term++
-	term := n.term
-	n.votedFor = n.host
+func (s *Node) startElection() {
+	s.mu.Lock()
+	s.state = Candidate
+	s.term++
+	term := s.term
+	s.votedFor = s.host
 	votes := 1
-	n.mu.Unlock()
+	s.mu.Unlock()
 
-	total := len(n.peers) + 1 // +1 porque tú eres un nodo
-	for _, peer := range n.peers {
+	logs.Debugf("Raft: %d", s.term)
+
+	total := len(s.peers) + 1 // +1 porque tú eres un nodo
+	for _, peer := range s.peers {
 		go func(peer string) {
-			args := RequestVoteArgs{Term: term, CandidateID: n.host}
+			args := RequestVoteArgs{Term: term, CandidateID: s.host}
 			var reply RequestVoteReply
 			res := methods.requestVote(peer, &args, &reply)
 			if res.Error != nil {
 				total--
 			}
 			if res.Ok {
-				n.mu.Lock()
-				defer n.mu.Unlock()
+				s.mu.Lock()
+				defer s.mu.Unlock()
 
-				if reply.Term > n.term {
-					n.term = reply.Term
-					n.state = Follower
-					n.votedFor = ""
+				if reply.Term > s.term {
+					s.term = reply.Term
+					s.state = Follower
+					s.votedFor = ""
 					return
 				}
 
-				if n.state == Candidate && reply.VoteGranted && term == n.term {
+				if s.state == Candidate && reply.VoteGranted && term == s.term {
 					votes++
 					needed := majority(total)
 					if votes >= needed {
-						n.becomeLeader()
+						s.becomeLeader()
 					}
 				}
 			}
@@ -129,45 +135,45 @@ func (n *Node) startElection() {
 /**
 * becomeLeader
 **/
-func (n *Node) becomeLeader() {
-	n.mu.Lock()
-	n.state = Leader
-	n.leaderID = n.host
-	n.lastHeartbeat = time.Now()
-	n.mu.Unlock()
+func (s *Node) becomeLeader() {
+	s.mu.Lock()
+	s.state = Leader
+	s.leaderID = s.host
+	s.lastHeartbeat = timezone.Now()
+	s.mu.Unlock()
 
-	go n.heartbeatLoop()
+	go s.heartbeatLoop()
 }
 
 /**
 * heartbeatLoop
 **/
-func (n *Node) heartbeatLoop() {
+func (s *Node) heartbeatLoop() {
 	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		n.mu.Lock()
-		if n.state != Leader {
-			n.mu.Unlock()
+		s.mu.Lock()
+		if s.state != Leader {
+			s.mu.Unlock()
 			return
 		}
-		term := n.term
-		n.mu.Unlock()
+		term := s.term
+		s.mu.Unlock()
 
-		for _, peer := range n.peers {
+		for _, peer := range s.peers {
 			go func(peer string) {
-				args := HeartbeatArgs{Term: term, LeaderID: n.host}
+				args := HeartbeatArgs{Term: term, LeaderID: s.host}
 				var reply HeartbeatReply
 				res := methods.heartbeat(peer, &args, &reply)
 				if res.Ok {
-					n.mu.Lock()
-					defer n.mu.Unlock()
+					s.mu.Lock()
+					defer s.mu.Unlock()
 
-					if reply.Term > n.term {
-						n.term = reply.Term
-						n.state = Follower
-						n.votedFor = ""
+					if reply.Term > s.term {
+						s.term = reply.Term
+						s.state = Follower
+						s.votedFor = ""
 					}
 				}
 			}(peer)
@@ -180,31 +186,31 @@ func (n *Node) heartbeatLoop() {
 * @param args *RequestVoteArgs, reply *RequestVoteReply
 * @return error
 **/
-func (n *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
-	n.mu.Lock()
-	defer n.mu.Unlock()
+func (s *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if args.Term < n.term {
-		reply.Term = n.term
+	if args.Term < s.term {
+		reply.Term = s.term
 		reply.VoteGranted = false
 		return nil
 	}
 
-	if args.Term > n.term {
-		n.term = args.Term
-		n.state = Follower
-		n.votedFor = ""
+	if args.Term > s.term {
+		s.term = args.Term
+		s.state = Follower
+		s.votedFor = ""
 	}
 
-	if n.votedFor == "" || n.votedFor == args.CandidateID {
-		n.votedFor = args.CandidateID
+	if s.votedFor == "" || s.votedFor == args.CandidateID {
+		s.votedFor = args.CandidateID
 		reply.VoteGranted = true
-		n.lastHeartbeat = time.Now()
+		s.lastHeartbeat = timezone.Now()
 	} else {
 		reply.VoteGranted = false
 	}
 
-	reply.Term = n.term
+	reply.Term = s.term
 	return nil
 }
 
@@ -213,26 +219,26 @@ func (n *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 * @param args *HeartbeatArgs, reply *HeartbeatReply
 * @return error
 **/
-func (n *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
-	n.mu.Lock()
-	defer n.mu.Unlock()
+func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if args.Term < n.term {
-		reply.Term = n.term
+	if args.Term < s.term {
+		reply.Term = s.term
 		reply.Ok = false
 		return nil
 	}
 
-	if args.Term > n.term {
-		n.term = args.Term
-		n.votedFor = ""
+	if args.Term > s.term {
+		s.term = args.Term
+		s.votedFor = ""
 	}
 
-	n.state = Follower
-	n.leaderID = args.LeaderID
-	n.lastHeartbeat = time.Now()
+	s.state = Follower
+	s.leaderID = args.LeaderID
+	s.lastHeartbeat = timezone.Now()
 
-	reply.Term = n.term
+	reply.Term = s.term
 	reply.Ok = true
 	return nil
 }

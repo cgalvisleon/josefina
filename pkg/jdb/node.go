@@ -11,6 +11,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -220,7 +221,7 @@ func (s *Node) start() error {
 
 	s.mu.Lock()
 	s.state = Follower
-	s.lastHeartbeat = time.Now()
+	s.lastHeartbeat = timezone.Now()
 	s.started = true
 	s.mu.Unlock()
 
