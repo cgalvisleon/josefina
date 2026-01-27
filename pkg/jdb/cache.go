@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -110,7 +109,7 @@ func DeleteCache(key string) (bool, error) {
 **/
 func GetCache(key string) (*mem.Item, bool) {
 	value, err := mem.GetItem(key)
-	if errors.Is(err, errNotExists) {
+	if err.Error() == errNotExists.Error() {
 		leader := node.getLeader()
 		if leader != node.host && leader != "" {
 			result, err := methods.getCache(leader, key)
