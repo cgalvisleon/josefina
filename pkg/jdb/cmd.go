@@ -293,7 +293,7 @@ func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 	}
 
 	s.wheres.SetOwner(model)
-	items, err := s.wheres.Rows(tx)
+	items, err := s.wheres.Run(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 	}
 
 	s.wheres.SetOwner(model)
-	items, err := s.wheres.Rows(tx)
+	items, err := s.wheres.Run(tx)
 	if err != nil {
 		return nil, err
 	}

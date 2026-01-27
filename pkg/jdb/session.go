@@ -197,7 +197,7 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		Selects().
 		Where(Eq("username", username)).
 		And(Eq("password", password)).
-		Rows(nil)
+		Run(nil)
 	if err != nil {
 		return nil, err
 	}

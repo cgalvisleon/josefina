@@ -223,11 +223,11 @@ func (s *Wheres) Limit(page int, rows int) *Wheres {
 }
 
 /**
-* Rows
+* Run
 * @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
+func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	tx, _ = getTx(tx)
 	result := []et.Json{}
 	model := s.owner
@@ -318,13 +318,13 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 		switch v := value.(type) {
 		case *Wheres:
 			var err error
-			con.Value, err = v.Rows(tx)
+			con.Value, err = v.Run(tx)
 			if err != nil {
 				return nil, err
 			}
 		case Wheres:
 			var err error
-			con.Value, err = v.Rows(tx)
+			con.Value, err = v.Run(tx)
 			if err != nil {
 				return nil, err
 			}
@@ -437,7 +437,7 @@ func (s *Wheres) Rows(tx *Tx) ([]et.Json, error) {
 * @return et.Json, error
 **/
 func (s *Wheres) One(tx *Tx) (et.Json, error) {
-	rows, err := s.Rows(tx)
+	rows, err := s.Run(tx)
 	if err != nil {
 		return et.Json{}, err
 	}
