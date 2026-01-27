@@ -63,7 +63,8 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 	query.SetToken(token)
 	query.SetBody(body)
 	var res jdb.Response
-	jdb.Jql(query, &res)
+	auth := jdb.Authenticate(&jdb.JqlHandler{})
+	auth.Execute(query, &res)
 	if res.Error != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, res.Error.Error())
 		return

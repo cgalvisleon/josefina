@@ -81,11 +81,15 @@ func jqlIsExisted(to *From, field, key string) (bool, error) {
 	return false, nil
 }
 
+type JqlHandler struct{}
+
+func (s *JqlHandler) Execute(request *Request, response *Response) {
+	Jql(request, response)
+}
+
 /**
 * Jql
 * @param request *Request, response *Response
 **/
 func Jql(request *Request, response *Response) {
-	authenticate()
-
 }
