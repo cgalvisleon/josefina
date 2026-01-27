@@ -63,10 +63,10 @@ func newNode(host string, port int, version string) *Node {
 }
 
 /**
-* toJson: Converts the node to a json
+* ToJson: Converts the node to a json
 * @return et.Json
 **/
-func (s *Node) toJson() et.Json {
+func (s *Node) ToJson() et.Json {
 	leader := s.getLeader()
 	return et.Json{
 		"host":    s.host,
