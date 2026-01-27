@@ -771,3 +771,41 @@ func (s *Methods) GetCache(require string, response *mem.Item) bool {
 	response = result
 	return exists
 }
+
+/**
+* deleteCache
+* @param to, key string
+* @return error
+**/
+func (s *Methods) deleteCache(to, key string) (bool, error) {
+	if node == nil {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	var reply bool
+	err := jrpc.CallRpc(to, "Methods.DeleteCache", key, &reply)
+	if err != nil {
+		return false, err
+	}
+
+	return reply, nil
+}
+
+/**
+* DeleteCache
+* @param require string, response *mem.Item
+* @return error
+**/
+func (s *Methods) DeleteCache(require string, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	result, err := DeleteCache(require)
+	if err != nil {
+		return err
+	}
+
+	*response = result
+	return nil
+}

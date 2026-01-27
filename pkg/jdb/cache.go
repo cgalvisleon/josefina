@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 )
 
@@ -72,6 +73,37 @@ func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item,
 }
 
 /**
+* DeleteCache: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func DeleteCache(key string) (bool, error) {
+	result := mem.Delete(key)
+
+	leader := node.getLeader()
+	if leader != node.host && leader != "" {
+		result, err := methods.deleteCache(leader, key)
+		if err != nil {
+			return false, err
+		}
+
+		return result, nil
+	}
+
+	err := initCache()
+	if err != nil {
+		return false, err
+	}
+
+	err = cache.remove(key)
+	if err != nil {
+		return false, err
+	}
+
+	return result, nil
+}
+
+/**
 * GetCache: Gets a cache value
 * @param key string
 * @return *mem.Item
@@ -111,4 +143,130 @@ func GetCache(key string) (*mem.Item, bool) {
 	}
 
 	return value, true
+}
+
+/**
+* GetCacheStr: Gets a cache value as a string
+* @param key string
+* @return string, bool
+**/
+func GetCacheStr(key string) (string, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Str(), true
+	}
+
+	return "", false
+}
+
+/**
+* GetCacheInt: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func GetCacheInt(key string) (int, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Int(), true
+	}
+
+	return 0, false
+}
+
+/**
+* GetCacheInt64: Gets a cache value as an int64
+* @param key string
+* @return int64, bool
+**/
+func GetCacheInt64(key string) (int64, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Int64(), true
+	}
+
+	return 0, false
+}
+
+/**
+* GetCacheFloat: Gets a cache value as a float64
+* @param key string
+* @return float64, bool
+**/
+func GetCacheFloat64(key string) (float64, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Float(), true
+	}
+
+	return 0, false
+}
+
+/**
+* GetCacheBool: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func GetCacheBool(key string) (bool, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Bool(), true
+	}
+
+	return false, false
+}
+
+/**
+* GetCacheTime: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func GetCacheTime(key string) (time.Time, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Time(), true
+	}
+
+	return time.Time{}, false
+}
+
+/**
+* GetCacheDuration: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func GetCacheDuration(key string) (time.Duration, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Duration(), true
+	}
+
+	return 0, false
+}
+
+/**
+* GetCacheJson: Gets a cache value as a json
+* @param key string
+* @return et.Json, bool
+**/
+func GetCacheJson(key string) (et.Json, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.Json(), true
+	}
+
+	return nil, false
+}
+
+/**
+* GetCacheArrayJson: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func GetCacheArrayJson(key string) ([]et.Json, bool) {
+	item, exists := GetCache(key)
+	if exists {
+		return item.ArrayJson(), true
+	}
+
+	return []et.Json{}, false
 }
