@@ -21,11 +21,19 @@ func initDbs() error {
 		return nil
 	}
 
-	db, err := getDb(packageName)
-	if err != nil {
-		return err
+	db, ok := node.dbs[packageName]
+	if !ok {
+		path := envar.GetStr("DATA_PATH", "./data")
+		db = &DB{
+			Name:    packageName,
+			Version: Version,
+			Path:    fmt.Sprintf("%s/%s", path, packageName),
+			Schemas: make(map[string]*Schema, 0),
+		}
+		node.dbs[packageName] = db
 	}
 
+	var err error
 	dbs, err = db.newModel("", "dbs", true, 1)
 	if err != nil {
 		return err

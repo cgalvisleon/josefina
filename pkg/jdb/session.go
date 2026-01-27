@@ -178,6 +178,9 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
 	}
 
+	if database == "" {
+		database = packageName
+	}
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
 		result, err := methods.signIn(leader, device, database, username, password)
