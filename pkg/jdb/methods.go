@@ -689,3 +689,49 @@ func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 	*response = result
 	return nil
 }
+
+/**
+* setCache
+* @param to, key string, value interface{}, duration time.Duration
+* @return error
+**/
+func (s *Methods) setCache(to, key string, value interface{}, duration time.Duration) (interface{}, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	data := et.Json{
+		"key":      key,
+		"value":    value,
+		"duration": duration,
+	}
+	var reply interface{}
+	err := jrpc.CallRpc(to, "Methods.SetCache", data, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
+/**
+* SetCache
+* @param require et.Json, response *interface{}
+* @return error
+**/
+func (s *Methods) SetCache(require et.Json, response *interface{}) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	key := require.Str("key")
+	value := require.Str("value")
+	duration := time.Duration(require.Int("duration"))
+	result, err := SetCache(key, value, duration)
+	if err != nil {
+		return err
+	}
+
+	*response = result
+	return nil
+}
