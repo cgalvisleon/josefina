@@ -232,11 +232,11 @@ func (s *Node) start() error {
 }
 
 /**
-* ping
+* Ping
 * @param to string
 * @return bool
 **/
-func (s *Node) ping(to string) bool {
+func (s *Node) Ping(to string) bool {
 	err := methods.ping(to)
 	if err != nil {
 		return false

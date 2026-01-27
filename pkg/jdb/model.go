@@ -139,10 +139,10 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
-* save: Saves the model
+* Save: Saves the model
 * @return error
 **/
-func (s *Model) save() error {
+func (s *Model) Save() error {
 	return node.saveModel(s)
 }
 

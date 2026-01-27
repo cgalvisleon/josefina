@@ -10,38 +10,6 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var sessions *Model
-
-/**
-* initUsers: Initializes the users model
-* @param db *DB
-* @return error
-**/
-func initSessions() error {
-	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if sessions != nil {
-		return nil
-	}
-
-	db, err := getDb(packageName)
-	if err != nil {
-		return err
-	}
-
-	sessions, err = db.newModel("", "sessions", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := sessions.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type Session struct {
 	CreatedAt time.Time `json:"created_at"`
 	Username  string    `json:"username"`
@@ -73,11 +41,6 @@ func createSession(device, username string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	err := initSessions()
-	if err != nil {
-		return nil, err
-	}
-
 	token, err := claim.NewToken(packageName, device, username, et.Json{}, 0)
 	if err != nil {
 		return nil, err
@@ -89,40 +52,7 @@ func createSession(device, username string) (*Session, error) {
 		Token:     token,
 	}
 
-	err = sessions.put(result.Token, result)
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
-}
-
-/**
-* getSession: Get a session
-* @param token string
-* @return *Session
-**/
-func getSession(token string) (*Session, error) {
-	if !utility.ValidStr(token, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
-	}
-
-	err := initSessions()
-	if err != nil {
-		return nil, err
-	}
-
-	var result Session
-	exists, err := sessions.get(token, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf(msg.MSG_SESSION_NOT_FOUND)
-	}
-
-	return &result, nil
 }
 
 /**
@@ -135,12 +65,18 @@ func DropSession(token string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "token")
 	}
 
-	err := initSessions()
+	result, err := claim.ParceToken(token)
 	if err != nil {
 		return err
 	}
 
-	return sessions.remove(token)
+	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
+	_, err = DeleteCache(key)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
