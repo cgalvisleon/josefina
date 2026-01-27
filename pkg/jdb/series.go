@@ -185,7 +185,7 @@ func getSerie(tag string) (et.Json, error) {
 
 	items, err := series.
 		Update(et.Json{}).
-		BeforeUpdate(func(tx *Tx, old, new et.Json) error {
+		BeforeUpdateFn(func(tx *Tx, old, new et.Json) error {
 			value := old.Int("value")
 			new["value"] = value + 1
 			return nil

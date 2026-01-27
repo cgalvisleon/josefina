@@ -117,62 +117,146 @@ func (s *Cmd) IsDebug() *Cmd {
 }
 
 /**
-* BeforeInsert
+* BeforeInsertFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeInsert(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeInsertFn(fn TriggerFunction) *Cmd {
 	s.beforeInserts = append(s.beforeInserts, fn)
 	return s
 }
 
 /**
-* AfterInsert
+* AfterInsertFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterInsert(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterInsertFn(fn TriggerFunction) *Cmd {
 	s.afterInserts = append(s.afterInserts, fn)
 	return s
 }
 
 /**
-* BeforeUpdate
+* BeforeUpdateFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeUpdate(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeUpdateFn(fn TriggerFunction) *Cmd {
 	s.beforeUpdates = append(s.beforeUpdates, fn)
 	return s
 }
 
 /**
-* AfterUpdate
+* AfterUpdateFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterUpdate(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterUpdateFn(fn TriggerFunction) *Cmd {
 	s.afterUpdates = append(s.afterUpdates, fn)
 	return s
 }
 
 /**
-* BeforeDelete
+* BeforeDeleteFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeDelete(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeDeleteFn(fn TriggerFunction) *Cmd {
 	s.beforeDeletes = append(s.beforeDeletes, fn)
 	return s
 }
 
 /**
-* AfterDelete
+* AfterDeleteFn
 * @param fn TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterDelete(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterDeleteFn(fn TriggerFunction) *Cmd {
 	s.afterDeletes = append(s.afterDeletes, fn)
+	return s
+}
+
+/**
+* BeforeInsert
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) BeforeInsert(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.beforeTriggerInserts = append(s.beforeTriggerInserts, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
+	return s
+}
+
+/**
+* AfterInsert
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) AfterInsert(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.afterTriggerInserts = append(s.afterTriggerInserts, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
+	return s
+}
+
+/**
+* BeforeUpdate
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) BeforeUpdate(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.beforeTriggerUpdates = append(s.beforeTriggerUpdates, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
+	return s
+}
+
+/**
+* AfterUpdate
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) AfterUpdate(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.afterTriggerUpdates = append(s.afterTriggerUpdates, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
+	return s
+}
+
+/**
+* BeforeDelete
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) BeforeDelete(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.beforeTriggerDeletes = append(s.beforeTriggerDeletes, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
+	return s
+}
+
+/**
+* AfterDelete
+* @param name, definition string
+* @return *Cmd
+**/
+func (s *Cmd) AfterDelete(name, definition string) *Cmd {
+	definitionBytes := []byte(definition)
+	s.afterTriggerDeletes = append(s.afterTriggerDeletes, &Trigger{
+		Name:       name,
+		Definition: definitionBytes,
+	})
 	return s
 }
 
