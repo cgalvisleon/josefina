@@ -6,7 +6,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
-	rds "github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
 /**
@@ -35,7 +34,7 @@ func (s *Router) signIn(w http.ResponseWriter, r *http.Request) {
 	database := body.Str("database")
 	username := body.Str("username")
 	password := body.Str("password")
-	session, err := rds.SignIn(device, database, username, password)
+	session, err := jdb.SignIn(device, database, username, password)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
