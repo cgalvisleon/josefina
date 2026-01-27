@@ -30,7 +30,6 @@ func initSeries() error {
 	if err != nil {
 		return err
 	}
-	series.DefineAtrib("name", TpText, "")
 	series.DefineAtrib("tag", TpText, "")
 	series.DefineAtrib("value", TpInt, 0)
 	series.DefineAtrib("format", TpText, "")
@@ -44,15 +43,12 @@ func initSeries() error {
 
 /**
 * createSerie: Creates a new serie
-* @param name, tag, format string, value int
+* @param tag, format string, value int
 * @return error
 **/
-func createSerie(name, tag, format string, value int) error {
+func createSerie(tag, format string, value int) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -60,7 +56,7 @@ func createSerie(name, tag, format string, value int) error {
 
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
-		err := methods.createSerie(leader, name, tag, format, value)
+		err := methods.createSerie(leader, tag, format, value)
 		if err != nil {
 			return err
 		}
@@ -79,7 +75,6 @@ func createSerie(name, tag, format string, value int) error {
 
 	_, err = series.
 		Insert(et.Json{
-			"name":   name,
 			"tag":    tag,
 			"value":  value,
 			"format": format,
@@ -90,15 +85,12 @@ func createSerie(name, tag, format string, value int) error {
 
 /**
 * dropSerie: Drops a serie
-* @param name, tag string
+* @param tag string
 * @return error
 **/
-func dropSerie(name, tag string) error {
+func dropSerie(tag string) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -106,7 +98,7 @@ func dropSerie(name, tag string) error {
 
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
-		err := methods.dropSerie(leader, name, tag)
+		err := methods.dropSerie(leader, tag)
 		if err != nil {
 			return err
 		}
@@ -121,23 +113,19 @@ func dropSerie(name, tag string) error {
 
 	_, err = series.
 		Delete().
-		Where(Eq("name", name)).
-		And(Eq("tag", tag)).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
 
 /**
 * setSerie: Sets a serie
-* @param name, tag string, value int
+* @param tag string, value int
 * @return error
 **/
-func setSerie(name, tag string, value int) error {
+func setSerie(tag string, value int) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -145,7 +133,7 @@ func setSerie(name, tag string, value int) error {
 
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
-		err := methods.setSerie(leader, name, tag, value)
+		err := methods.setSerie(leader, tag, value)
 		if err != nil {
 			return err
 		}
@@ -162,23 +150,19 @@ func setSerie(name, tag string, value int) error {
 		Update(et.Json{
 			"value": value,
 		}).
-		Where(Eq("name", name)).
-		And(Eq("tag", tag)).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
 
 /**
 * getSerie: Gets a serie
-* @param name, tag string
+* @param tag string
 * @return et.Json, error
 **/
-func getSerie(name, tag string) (et.Json, error) {
+func getSerie(tag string) (et.Json, error) {
 	if !node.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
-	}
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -186,7 +170,7 @@ func getSerie(name, tag string) (et.Json, error) {
 
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
-		result, err := methods.getSerie(leader, name, tag)
+		result, err := methods.getSerie(leader, tag)
 		if err != nil {
 			return nil, err
 		}
@@ -206,8 +190,7 @@ func getSerie(name, tag string) (et.Json, error) {
 			new["value"] = value + 1
 			return nil
 		}).
-		Where(Eq("name", name)).
-		And(Eq("tag", tag)).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	if err != nil {
 		return et.Json{}, err

@@ -513,16 +513,15 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 
 /**
 * createSerie
-* @param name, tag, format string, value int
+* @param to, tag, format string, value int
 * @return error
 **/
-func (s *Methods) createSerie(to, name, tag, format string, value int) error {
+func (s *Methods) createSerie(to, tag, format string, value int) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
-		"name":   name,
 		"tag":    tag,
 		"format": format,
 		"value":  value,
@@ -546,11 +545,10 @@ func (s *Methods) CreateSerie(require et.Json, response *string) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	name := require.Str("name")
 	tag := require.Str("tag")
 	format := require.Str("format")
 	value := require.Int("value")
-	err := createSerie(name, tag, format, value)
+	err := createSerie(tag, format, value)
 	if err != nil {
 		return err
 	}
@@ -560,17 +558,16 @@ func (s *Methods) CreateSerie(require et.Json, response *string) error {
 
 /**
 * dropSerie
-* @param name, tag string
+* @param tag string
 * @return error
 **/
-func (s *Methods) dropSerie(to, name, tag string) error {
+func (s *Methods) dropSerie(to, tag string) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
-		"name": name,
-		"tag":  tag,
+		"tag": tag,
 	}
 	var reply string
 	err := jrpc.CallRpc(to, "Methods.DropSerie", data, &reply)
@@ -591,9 +588,8 @@ func (s *Methods) DropSerie(require et.Json, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	name := require.Str("name")
 	tag := require.Str("tag")
-	err := dropSerie(name, tag)
+	err := dropSerie(tag)
 	if err != nil {
 		return err
 	}
@@ -604,16 +600,15 @@ func (s *Methods) DropSerie(require et.Json, response *bool) error {
 
 /**
 * setSerie
-* @param to, name, tag string, value int
+* @param to, tag string, value int
 * @return error
 **/
-func (s *Methods) setSerie(to, name, tag string, value int) error {
+func (s *Methods) setSerie(to, tag string, value int) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
-		"name":  name,
 		"tag":   tag,
 		"value": value,
 	}
@@ -636,10 +631,9 @@ func (s *Methods) SetSerie(require et.Json, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	name := require.Str("name")
 	tag := require.Str("tag")
 	value := require.Int("value")
-	err := setSerie(name, tag, value)
+	err := setSerie(tag, value)
 	if err != nil {
 		return err
 	}
@@ -650,17 +644,16 @@ func (s *Methods) SetSerie(require et.Json, response *bool) error {
 
 /**
 * getSerie
-* @param to, name, tag string, value int
+* @param to, tag string
 * @return error
 **/
-func (s *Methods) getSerie(to, name, tag string) (et.Json, error) {
+func (s *Methods) getSerie(to, tag string) (et.Json, error) {
 	if node == nil {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
-		"name": name,
-		"tag":  tag,
+		"tag": tag,
 	}
 	var reply et.Json
 	err := jrpc.CallRpc(to, "Methods.GetSerie", data, &reply)
@@ -681,9 +674,8 @@ func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	name := require.Str("name")
 	tag := require.Str("tag")
-	result, err := getSerie(name, tag)
+	result, err := getSerie(tag)
 	if err != nil {
 		return err
 	}
