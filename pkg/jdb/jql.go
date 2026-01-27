@@ -101,6 +101,7 @@ func (s *JqlHandler) applyMiddleware(handler Handler) Handler {
 **/
 func (s *JqlHandler) Execute(request *Request, response *Response) {
 	logs.Ping()
+	response.Add(request.Json)
 	// jql(request, response)
 }
 
