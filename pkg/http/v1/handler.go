@@ -45,3 +45,33 @@ func (s *Router) signIn(w http.ResponseWriter, r *http.Request) {
 		Result: session.ToJson(),
 	})
 }
+
+/**
+* jql
+* @param w http.ResponseWriter, r *http.Request
+* @return error
+**/
+func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	token := r.Header.Get("Authorization")
+	query := jdb.Request{}
+	query.SetToken(token)
+	query.SetBody(body)
+	var res jdb.Response
+	jdb.Jql(query, &res)
+	if res.Error != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, res.Error.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, et.Items{
+		Ok:     true,
+		Result: res.Result,
+		Count:  len(res.Result),
+	})
+}

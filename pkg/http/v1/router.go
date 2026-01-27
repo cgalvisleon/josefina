@@ -40,6 +40,7 @@ func (s *Router) Routes() http.Handler {
 	r := chi.NewRouter()
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/signin", s.signIn, s.PackageName, s.PackagePath, host)
+	router.Public(r, router.Post, "/jql", s.jql, s.PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(s.PackageName)
 	return r

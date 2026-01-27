@@ -2,7 +2,9 @@ package jdb
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -10,6 +12,25 @@ import (
 type Request struct {
 	et.Json
 	Token string `json:"token"`
+}
+
+/**
+* SetToken
+* @param token string
+**/
+func (s *Request) SetToken(token string) {
+	prefix := envar.GetStr("TOKEN_PREFIX", "Bearer ")
+	if strings.HasPrefix(token, prefix) {
+		s.Token = strings.TrimPrefix(token, prefix)
+	}
+}
+
+/**
+* SetBody
+* @param values et.Json
+**/
+func (s *Request) SetBody(values et.Json) {
+	s.Json = values
 }
 
 type Response struct {
