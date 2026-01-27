@@ -108,10 +108,10 @@ func (s *JqlHandler) Execute(request *Request, response *Response) {
 }
 
 /**
-* Jql
+* JqlHttp
 * @param request *Request, response *Response
 **/
-func Jql(request *Request, response *Response) {
+func JqlHttp(request *Request, response *Response) {
 	handler := jqlHandler.applyMiddleware(jqlHandler)
 	if handler == nil {
 		response.Error = &msg.ERROR_INTERNAL_ERROR
