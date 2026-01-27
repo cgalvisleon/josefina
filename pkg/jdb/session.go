@@ -151,13 +151,32 @@ func DropSession(token string) error {
 func authenticate(next Handler) Handler {
 	return HandlerFunc(func(request Request, response *Response) {
 		token := request.Token
-		session, err := getSession(token)
+		if !utility.ValidStr(token, 0, []string{""}) {
+			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token"), response)
+			return
+		}
+
+		result, err := claim.ParceToken(token)
 		if err != nil {
 			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
 			return
 		}
 
-		request.Set("session", session)
+		key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
+		session, exists := GetCacheStr(key)
+		if !exists {
+			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_SESSION_NOT_FOUND), response)
+			return
+		}
+
+		if session != token {
+			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_SESSION_NOT_FOUND), response)
+			return
+		}
+
+		request.Set("app", result.App)
+		request.Set("device", result.Device)
+		request.Set("username", result.Username)
 		next.Execute(request, response)
 	})
 }
