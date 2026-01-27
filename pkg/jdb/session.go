@@ -208,5 +208,16 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	return createSession(device, username)
+	result, err := createSession(device, username)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", packageName, device, username)
+	_, err = SetCache(key, result.Token, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
