@@ -47,7 +47,22 @@ func setTransaction(key string, data et.Json) (string, error) {
 		key = transactions.genKey()
 	}
 
-	err := transactions.putObject(key, data)
+	leader := node.getLeader()
+	if leader != node.host && leader != "" {
+		result, err := methods.setTransaction(leader, key, data)
+		if err != nil {
+			return "", err
+		}
+
+		return result, nil
+	}
+
+	err := initTransactions()
+	if err != nil {
+		return "", err
+	}
+
+	err = transactions.putObject(key, data)
 	if err != nil {
 		return "", err
 	}

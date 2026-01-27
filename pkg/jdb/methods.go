@@ -685,6 +685,50 @@ func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 }
 
 /**
+* setTransaction
+* @param to, key string, data et.Json
+* @return error
+**/
+func (s *Methods) setTransaction(to, key string, data et.Json) (string, error) {
+	if node == nil {
+		return "", fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"key":  key,
+		"data": data,
+	}
+	var reply string
+	err := jrpc.CallRpc(to, "Methods.SetTransaction", args, &reply)
+	if err != nil {
+		return "", err
+	}
+
+	return reply, nil
+}
+
+/**
+* SetTransaction
+* @param require et.Json, response *string
+* @return error
+**/
+func (s *Methods) SetTransaction(require et.Json, response *string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	key := require.Str("key")
+	data := require.Json("data")
+	result, err := setTransaction(key, data)
+	if err != nil {
+		return err
+	}
+
+	*response = result
+	return nil
+}
+
+/**
 * setCache
 * @param to, key string, value interface{}, duration time.Duration
 * @return error
