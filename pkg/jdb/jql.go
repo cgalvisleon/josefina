@@ -46,18 +46,18 @@ func (s *Response) Add(item et.Json) {
 	s.Result = append(s.Result, item)
 }
 
-type HandlerFunc func(Request, *Response)
+type HandlerFunc func(*Request, *Response)
 
 /**
 * Execute
-* @param request Request, response *Response
+* @param request *Request, response *Response
 **/
-func (s HandlerFunc) Execute(request Request, response *Response) {
+func (s HandlerFunc) Execute(request *Request, response *Response) {
 	s(request, response)
 }
 
 type Handler interface {
-	Execute(Request, *Response)
+	Execute(*Request, *Response)
 }
 
 /**
@@ -83,8 +83,9 @@ func jqlIsExisted(to *From, field, key string) (bool, error) {
 
 /**
 * Jql
-* @param request Request, response *Response
+* @param request *Request, response *Response
 **/
-func Jql(request Request, response *Response) {
+func Jql(request *Request, response *Response) {
+	authenticate()
 
 }

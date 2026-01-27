@@ -59,7 +59,7 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := r.Header.Get("Authorization")
-	query := jdb.Request{}
+	query := &jdb.Request{}
 	query.SetToken(token)
 	query.SetBody(body)
 	var res jdb.Response

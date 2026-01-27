@@ -149,7 +149,7 @@ func DropSession(token string) error {
 * @return Handler
 **/
 func authenticate(next Handler) Handler {
-	return HandlerFunc(func(request Request, response *Response) {
+	return HandlerFunc(func(request *Request, response *Response) {
 		token := request.Token
 		if !utility.ValidStr(token, 0, []string{""}) {
 			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token"), response)
