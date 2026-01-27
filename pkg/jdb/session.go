@@ -148,7 +148,7 @@ func DropSession(token string) error {
 * @param next Handler
 * @return Handler
 **/
-func Authenticate(next Handler) Handler {
+func authenticate(next Handler) Handler {
 	return HandlerFunc(func(request *Request, response *Response) {
 		token := request.Token
 		if !utility.ValidStr(token, 0, []string{""}) {

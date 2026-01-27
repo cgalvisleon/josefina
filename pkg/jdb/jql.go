@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -47,6 +48,7 @@ func (s *Response) Add(item et.Json) {
 }
 
 type HandlerFunc func(*Request, *Response)
+type MiddlewareFunc func(Handler) Handler
 
 /**
 * Execute
@@ -72,19 +74,42 @@ func errorResponse(msg msg.MessageError, err error, response *Response) {
 	})
 }
 
-/**
-* jqlIsExisted
-* @param to *From, field string, key string
-* @return (bool, error)
-**/
-func jqlIsExisted(to *From, field, key string) (bool, error) {
-	return false, nil
+type JqlHandler struct {
+	middleware []MiddlewareFunc
 }
 
-type JqlHandler struct{}
+var jqlHandler *JqlHandler
 
+func init() {
+	jqlHandler = &JqlHandler{
+		middleware: []MiddlewareFunc{
+			authenticate,
+		},
+	}
+}
+
+/**
+* applyMiddleware
+* @param handler Handler
+* @return Handler
+**/
+func (s *JqlHandler) applyMiddleware(handler Handler) Handler {
+	for _, middleware := range s.middleware {
+		handler = middleware(handler)
+	}
+	return handler
+}
+
+/**
+* Execute
+* @param request *Request, response *Response
+**/
 func (s *JqlHandler) Execute(request *Request, response *Response) {
-	Jql(request, response)
+	logs.Ping()
+	// for _, middleware := range s.middleware {
+	// 	middleware(s).Execute(request, response)
+	// }
+	// jql(request, response)
 }
 
 /**
@@ -92,4 +117,15 @@ func (s *JqlHandler) Execute(request *Request, response *Response) {
 * @param request *Request, response *Response
 **/
 func Jql(request *Request, response *Response) {
+	handler := jqlHandler.applyMiddleware(jqlHandler)
+	handler.Execute(request, response)
+}
+
+/**
+* jqlIsExisted
+* @param to *From, field string, key string
+* @return (bool, error)
+**/
+func jqlIsExisted(to *From, field, key string) (bool, error) {
+	return false, nil
 }
