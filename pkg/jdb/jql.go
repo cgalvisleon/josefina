@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/cgalvisleon/et/envar"
@@ -35,8 +34,8 @@ func (s *Request) SetBody(values et.Json) {
 }
 
 type Response struct {
-	Error  error     `json:"error"`
-	Result []et.Json `json:"result"`
+	Error  *msg.MessageError `json:"error"`
+	Result []et.Json         `json:"result"`
 }
 
 /**
@@ -66,12 +65,8 @@ type Handler interface {
 * errorResponse: Creates an error response
 * @param msg msg.MessageError, err error, response *Response
 **/
-func errorResponse(msg msg.MessageError, err error, response *Response) {
-	response.Error = err
-	response.Add(et.Json{
-		"error": fmt.Sprintf(`%s - %s`, msg.Message, err.Error()),
-		"code":  msg.Code,
-	})
+func errorResponse(msg *msg.MessageError, response *Response) {
+	response.Error = msg
 }
 
 type JqlHandler struct {
@@ -118,6 +113,11 @@ func (s *JqlHandler) Execute(request *Request, response *Response) {
 **/
 func Jql(request *Request, response *Response) {
 	handler := jqlHandler.applyMiddleware(jqlHandler)
+	if handler == nil {
+		response.Error = &msg.ERROR_INTERNAL_ERROR
+		return
+	}
+
 	handler.Execute(request, response)
 }
 

@@ -58,6 +58,7 @@ var (
 	MSG_SESSION_NOT_FOUND           = "session not found"
 	MSG_STORE_NOT_FOUND             = "store not found"
 	MSG_GET_FROM_NOT_USED           = "getFrom not used"
+	ERROR_INTERNAL_ERROR            = MessageError{Code: 500, Message: "internal error"}
 	ERROR_CLIENT_NOT_AUTHENTICATION = MessageError{Code: 401, Message: "client not authentication"}
 )
 
@@ -114,6 +115,7 @@ func init() {
 		MSG_SESSION_NOT_FOUND = "session no encontrado"
 		MSG_STORE_NOT_FOUND = "store no econtrado"
 		MSG_GET_FROM_NOT_USED = "getFrom no usado"
+		ERROR_INTERNAL_ERROR = MessageError{Code: 500, Message: "internal error"}
 		ERROR_CLIENT_NOT_AUTHENTICATION = MessageError{Code: 401, Message: "cliente no autenticado"}
 	}
 }

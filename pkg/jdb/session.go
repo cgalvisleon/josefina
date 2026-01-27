@@ -152,25 +152,25 @@ func authenticate(next Handler) Handler {
 	return HandlerFunc(func(request *Request, response *Response) {
 		token := request.Token
 		if !utility.ValidStr(token, 0, []string{""}) {
-			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_ARG_REQUIRED, "token"), response)
+			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
 			return
 		}
 
 		result, err := claim.ParceToken(token)
 		if err != nil {
-			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, err, response)
+			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
 			return
 		}
 
 		key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
 		session, exists := GetCacheStr(key)
 		if !exists {
-			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_SESSION_NOT_FOUND), response)
+			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
 			return
 		}
 
 		if session != token {
-			errorResponse(msg.ERROR_CLIENT_NOT_AUTHENTICATION, fmt.Errorf(msg.MSG_SESSION_NOT_FOUND), response)
+			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
 			return
 		}
 
