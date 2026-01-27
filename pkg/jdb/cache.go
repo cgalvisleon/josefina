@@ -1,12 +1,17 @@
 package jdb
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cgalvisleon/et/mem"
 )
 
-var cache *Model
+var (
+	cache        *Model
+	errNotExists = fmt.Errorf("NotExists")
+)
 
 /**
 * initCache: Initializes the cache model
@@ -38,7 +43,7 @@ func initCache() error {
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func SetCache(key string, value interface{}, duration time.Duration) (interface{}, error) {
+func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	result := mem.Set(key, value, duration)
 
 	leader := node.getLeader()
@@ -69,12 +74,41 @@ func SetCache(key string, value interface{}, duration time.Duration) (interface{
 /**
 * GetCache: Gets a cache value
 * @param key string
-* @return interface{}
+* @return *mem.Item
 **/
-func GetCache(key string) interface{} {
-	value, err := mem.Get(key)
-	if err != nil {
-		return nil
+func GetCache(key string) (*mem.Item, bool) {
+	value, err := mem.GetItem(key)
+	if errors.Is(err, errNotExists) {
+		leader := node.getLeader()
+		if leader != node.host && leader != "" {
+			result, err := methods.getCache(leader, key)
+			if err != nil {
+				return nil, false
+			}
+
+			return result, true
+		}
+
+		err := initCache()
+		if err != nil {
+			return nil, false
+		}
+
+		result := mem.Item{}
+		exists, err := cache.get(key, &result)
+		if err != nil {
+			return nil, false
+		}
+
+		if !exists {
+			return nil, false
+		}
+
+		mem.Set(key, result.Value, 0)
+		return &result, true
+	} else if err != nil {
+		return nil, false
 	}
-	return value
+
+	return value, true
 }

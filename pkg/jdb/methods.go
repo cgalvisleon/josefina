@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -28,6 +29,7 @@ func init() {
 	gob.Register(&RequestVoteReply{})
 	gob.Register(&HeartbeatArgs{})
 	gob.Register(&HeartbeatReply{})
+	gob.Register(&mem.Item{})
 }
 
 type Methods struct{}
@@ -695,7 +697,7 @@ func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 * @param to, key string, value interface{}, duration time.Duration
 * @return error
 **/
-func (s *Methods) setCache(to, key string, value interface{}, duration time.Duration) (interface{}, error) {
+func (s *Methods) setCache(to, key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	if node == nil {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -705,7 +707,7 @@ func (s *Methods) setCache(to, key string, value interface{}, duration time.Dura
 		"value":    value,
 		"duration": duration,
 	}
-	var reply interface{}
+	var reply *mem.Item
 	err := jrpc.CallRpc(to, "Methods.SetCache", data, &reply)
 	if err != nil {
 		return nil, err
@@ -716,10 +718,10 @@ func (s *Methods) setCache(to, key string, value interface{}, duration time.Dura
 
 /**
 * SetCache
-* @param require et.Json, response *interface{}
+* @param require et.Json, response *mem.Item
 * @return error
 **/
-func (s *Methods) SetCache(require et.Json, response *interface{}) error {
+func (s *Methods) SetCache(require et.Json, response *mem.Item) error {
 	if node == nil {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -732,6 +734,40 @@ func (s *Methods) SetCache(require et.Json, response *interface{}) error {
 		return err
 	}
 
-	*response = result
+	response = result
 	return nil
+}
+
+/**
+* getCache
+* @param to, key string
+* @return error
+**/
+func (s *Methods) getCache(to, key string) (*mem.Item, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	var reply *mem.Item
+	err := jrpc.CallRpc(to, "Methods.GetCache", key, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
+/**
+* GetCache
+* @param require string, response *mem.Item
+* @return error
+**/
+func (s *Methods) GetCache(require string, response *mem.Item) bool {
+	if node == nil {
+		return false
+	}
+
+	result, exists := GetCache(require)
+	response = result
+	return exists
 }
