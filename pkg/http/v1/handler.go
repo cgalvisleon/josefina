@@ -69,9 +69,9 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.ITEMS(w, r, http.StatusOK, et.Items{
-		Ok:     true,
-		Result: res.Result,
-		Count:  len(res.Result),
-	})
+	result := et.Items{Result: []et.Json{}}
+	for _, item := range res.Result {
+		result.Result = append(result.Result, item)
+	}
+	response.ITEMS(w, r, http.StatusOK, result)
 }
