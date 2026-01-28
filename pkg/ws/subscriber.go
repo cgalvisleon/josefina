@@ -72,7 +72,7 @@ func (s *Subscriber) write() {
 * @param message []byte
 **/
 func (s *Subscriber) listener(messageType int, message []byte) {
-	msg, err := DecodeMessage(message)
+	msg, err := DecodeMessage(messageType, message)
 	if err != nil {
 		logs.Error(err)
 		return

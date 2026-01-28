@@ -10,6 +10,7 @@ import (
 
 type Message struct {
 	Created_at time.Time   `json:"created_at"`
+	Type       int         `json:"type"`
 	Id         string      `json:"id"`
 	From       et.Json     `json:"from"`
 	Channel    string      `json:"channel"`
@@ -65,15 +66,16 @@ func newMessage(from et.Json, to string, data interface{}) *Message {
 
 /**
 * DecodeMessage
-* @param []byte
+* @param messageType int, data []byte
 * @return Message
 **/
-func DecodeMessage(data []byte) (Message, error) {
-	var m Message
-	err := json.Unmarshal(data, &m)
+func DecodeMessage(messageType int, data []byte) (Message, error) {
+	var result Message
+	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return Message{}, err
 	}
+	result.Type = messageType
 
-	return m, nil
+	return result, nil
 }
