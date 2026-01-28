@@ -167,3 +167,23 @@ func (s *Hub) OnConnection(fn func(*Subscriber)) {
 func (s *Hub) OnDisconnection(fn func(*Subscriber)) {
 	s.onDisconnection = append(s.onDisconnection, fn)
 }
+
+/**
+* OnPublish
+* @param channel string, fn func(Message)
+**/
+func (s *Hub) OnPublish(channel string, fn func(Message)) {
+	s.onPublish[channel] = fn
+}
+
+/**
+* OnSubscribe
+* @param channel string, fn func(Message)
+**/
+func (s *Hub) OnSubscribe(channel string, fn func(Message)) {
+	s.onSubscribe[channel] = fn
+}
+
+func (s *Hub) OnStack(channel string, fn func(Message)) {
+	s.onStack[channel] = fn
+}
