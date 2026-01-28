@@ -12,13 +12,26 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	TextMessage   int = 1
+	BinaryMessage int = 2
+	CloseMessage  int = 8
+	PingMessage   int = 9
+	PongMessage   int = 10
+)
+
+type Outbound struct {
+	messageType int
+	message     []byte
+}
+
 type Subscriber struct {
 	Created_at time.Time           `json:"created_at"`
 	Name       string              `json:"name"`
 	Addr       string              `json:"addr"`
 	Channels   map[string]*Channel `json:"channels"`
 	socket     *websocket.Conn     `json:"-"`
-	outbound   chan []byte         `json:"-"`
+	outbound   chan Outbound       `json:"-"`
 	mutex      sync.RWMutex        `json:"-"`
 	hub        *Hub                `json:"-"`
 	ctx        context.Context     `json:"-"`
@@ -36,7 +49,7 @@ func newSubscriber(hub *Hub, ctx context.Context, username string, socket *webso
 		Addr:       socket.RemoteAddr().String(),
 		Channels:   make(map[string]*Channel),
 		socket:     socket,
-		outbound:   make(chan []byte),
+		outbound:   make(chan Outbound),
 		mutex:      sync.RWMutex{},
 		hub:        hub,
 		ctx:        ctx,
@@ -63,7 +76,7 @@ func (s *Subscriber) read() {
 **/
 func (s *Subscriber) write() {
 	for message := range s.outbound {
-		s.socket.WriteMessage(websocket.BinaryMessage, message)
+		s.socket.WriteMessage(message.messageType, message.message)
 	}
 
 	s.socket.WriteMessage(websocket.CloseMessage, []byte{})
@@ -87,8 +100,11 @@ func (s *Subscriber) listener(messageType int, message []byte) {
 * send
 * @param msg Message
 **/
-func (s *Subscriber) send(bt []byte) {
-	s.outbound <- bt
+func (s *Subscriber) send(tp int, bt []byte) {
+	s.outbound <- Outbound{
+		messageType: tp,
+		message:     bt,
+	}
 }
 
 /**
@@ -106,5 +122,6 @@ func (s *Subscriber) error(err error) {
 	if err != nil {
 		return
 	}
-	s.send(bt)
+
+	s.send(TextMessage, bt)
 }
