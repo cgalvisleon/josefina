@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/gorilla/websocket"
 )
@@ -33,4 +34,47 @@ func newSubscriber(name string, socket *websocket.Conn) *Subscriber {
 		outbound:   make(chan []byte),
 		mutex:      sync.RWMutex{},
 	}
+}
+
+/**
+* read
+**/
+func (s *Subscriber) read() {
+	defer func() {
+
+	}()
+
+	for {
+		_, message, err := s.socket.ReadMessage()
+		if err != nil {
+			break
+		}
+
+		s.listener(message)
+	}
+}
+
+/**
+* write
+**/
+func (s *Subscriber) write() {
+	for message := range s.outbound {
+		s.socket.WriteMessage(websocket.BinaryMessage, message)
+	}
+
+	s.socket.WriteMessage(websocket.CloseMessage, []byte{})
+}
+
+/**
+* listener
+* @param message []byte
+**/
+func (s *Subscriber) listener(message []byte) {
+	msg, err := DecodeMessage(message)
+	if err != nil {
+		logs.Error(err)
+		return
+	}
+
+	logs.Info(msg.ToString())
 }

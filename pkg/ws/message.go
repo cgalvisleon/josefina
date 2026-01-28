@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -15,6 +16,33 @@ type Message struct {
 	To         string      `json:"to"`
 	Ignored    []string    `json:"-"`
 	Data       interface{} `json:"data"`
+}
+
+/**
+* ToJson
+* @return et.Json
+**/
+func (s *Message) ToJson() et.Json {
+	bt, err := json.Marshal(s)
+	if err != nil {
+		return et.Json{}
+	}
+
+	var result et.Json
+	err = json.Unmarshal(bt, &result)
+	if err != nil {
+		return et.Json{}
+	}
+
+	return result
+}
+
+/**
+* ToString
+* @return string
+**/
+func (s *Message) ToString() string {
+	return s.ToJson().ToString()
 }
 
 /**
@@ -33,4 +61,19 @@ func newMessage(from et.Json, to string, data interface{}) *Message {
 		Ignored:    []string{},
 		Data:       data,
 	}
+}
+
+/**
+* DecodeMessage
+* @param []byte
+* @return Message
+**/
+func DecodeMessage(data []byte) (Message, error) {
+	var m Message
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return Message{}, err
+	}
+
+	return m, nil
 }
