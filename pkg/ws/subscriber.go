@@ -87,10 +87,10 @@ func (s *Subscriber) read() {
 **/
 func (s *Subscriber) write() {
 	for message := range s.outbound {
-		s.socket.WriteMessage(message.messageType, message.message)
+		s.socket.WriteMessage(TextMessage, message.message)
 	}
 
-	s.socket.WriteMessage(websocket.CloseMessage, []byte{})
+	s.socket.WriteMessage(CloseMessage, []byte{})
 }
 
 /**
@@ -157,5 +157,6 @@ func (s *Subscriber) close() {
 	}
 
 	s.send(TextMessage, bt)
+	s.socket.Close()
 	s.hub.onDisconnect(s)
 }
