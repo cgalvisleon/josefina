@@ -55,6 +55,6 @@ func (s *Router) Routes() http.Handler {
 **/
 func (s *Router) WsRouter() http.Handler {
 	r := chi.NewRouter()
-	r.Get("/ws", jdb.Ws)
+	r.Get("/ws", jdb.WsUpgrader)
 	return r
 }
