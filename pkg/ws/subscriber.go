@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ type Subscriber struct {
 	outbound   chan []byte         `json:"-"`
 	mutex      sync.RWMutex        `json:"-"`
 	hub        *Hub                `json:"-"`
+	ctx        context.Context     `json:"-"`
 }
 
 /**
@@ -25,16 +27,17 @@ type Subscriber struct {
 * @param name string, socket *websocket.Conn
 * @return *Subscriber
 **/
-func newSubscriber(hub *Hub, name string, socket *websocket.Conn) *Subscriber {
+func newSubscriber(hub *Hub, ctx context.Context, username string, socket *websocket.Conn) *Subscriber {
 	return &Subscriber{
 		Created_at: timezone.Now(),
-		Name:       name,
+		Name:       username,
 		Addr:       socket.RemoteAddr().String(),
 		Channels:   make(map[string]*Channel),
 		socket:     socket,
 		outbound:   make(chan []byte),
 		mutex:      sync.RWMutex{},
 		hub:        hub,
+		ctx:        ctx,
 	}
 }
 

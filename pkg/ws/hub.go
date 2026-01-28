@@ -1,14 +1,18 @@
 package ws
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/gorilla/websocket"
 )
 
-var Upgrader = websocket.Upgrader{
+var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -47,8 +51,18 @@ func NewWs() *Hub {
 }
 
 /**
-* run
+* Upgrader
+* @params w http.ResponseWriter, r *http.Request
+* @return  *websocket.Conn, error
 **/
+func Upgrader(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
+	return upgrader.Upgrade(w, r, nil)
+}
+
+/**
+* run
+*
+ */
 func (s *Hub) run() {
 	for {
 		select {
@@ -102,10 +116,15 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 
 /**
 * connect
-* @param socket *websocket.Conn, username string
+* @param socket *websocket.Conn, context.Context
 * @return *Subscriber, error
 **/
-func (s *Hub) connect(socket *websocket.Conn, username string) (*Subscriber, error) {
+func (s *Hub) Connect(socket *websocket.Conn, ctx context.Context) (*Subscriber, error) {
+	username := ctx.Value("username").(string)
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+
 	client, ok := s.subscribers[username]
 	if ok {
 		client.Addr = socket.RemoteAddr().String()
@@ -113,7 +132,7 @@ func (s *Hub) connect(socket *websocket.Conn, username string) (*Subscriber, err
 		return client, nil
 	}
 
-	client = newSubscriber(s, username, socket)
+	client = newSubscriber(s, ctx, username, socket)
 	s.register <- client
 
 	go client.write()

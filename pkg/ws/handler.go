@@ -13,7 +13,7 @@ import (
 * @param r *http.Request
 **/
 func (s *Hub) HttpConnect(w http.ResponseWriter, r *http.Request) {
-	conn, err := Upgrader.Upgrade(w, r, nil)
+	conn, err := Upgrader(w, r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -25,8 +25,7 @@ func (s *Hub) HttpConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	username := ctx.Value("username").(string)
-	_, err = s.connect(conn, username)
+	_, err = s.Connect(conn, ctx)
 	if err != nil {
 		logs.Alert(err)
 	}

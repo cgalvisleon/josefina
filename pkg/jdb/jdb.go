@@ -74,7 +74,7 @@ func Ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	conn, err := ws.Upgrader(w, r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -115,5 +115,5 @@ func Ws(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "device", result.Device)
 	ctx = context.WithValue(ctx, "username", result.Username)
 	r = r.WithContext(ctx)
-	node.ws.HttpConnect(w, r)
+	node.ws.Connect(conn, result.Username)
 }
