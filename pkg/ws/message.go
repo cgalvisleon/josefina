@@ -11,10 +11,10 @@ import (
 type TypeAction int
 
 const (
-	Publish           TypeAction = 0
-	Subscribe         TypeAction = 1
-	Stack             TypeAction = 2
-	SendMessageDirect TypeAction = 3
+	SendMessage TypeAction = 0
+	Publish     TypeAction = 1
+	Subscribe   TypeAction = 2
+	Stack       TypeAction = 3
 )
 
 type Message struct {

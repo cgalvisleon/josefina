@@ -208,7 +208,11 @@ func (s *Hub) SendTo(message Message) error {
 	for _, username := range to {
 		client, ok := s.subscribers[username]
 		if ok {
-			client.sendObject(message)
+			if len(message.Data) > 0 {
+				client.sendObject(message.Data)
+			} else if len(message.Message) > 0 {
+				client.sendText(message.Message)
+			}
 		}
 	}
 
