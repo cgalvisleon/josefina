@@ -590,6 +590,29 @@ func remove(from *From, idx string) error {
 }
 
 /**
+* get: Gets an object from the model
+* @param from *From, idx string, dest any
+* @return bool, error
+**/
+func get(from *From, idx string, dest any) (bool, error) {
+	if !node.started {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if node.host != from.Host {
+		return methods.get(from, idx, dest)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.get(idx, dest)
+}
+
+/**
 * removeObject: Removes an object from the model
 * @param model *Model, key string
 * @return error

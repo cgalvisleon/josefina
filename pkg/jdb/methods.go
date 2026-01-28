@@ -32,6 +32,11 @@ func init() {
 	gob.Register(&mem.Item{})
 }
 
+type AnyResult struct {
+	Dest any
+	Ok   bool
+}
+
 type Methods struct{}
 
 var methods *Methods
@@ -933,5 +938,54 @@ func (s *Methods) Remove(require et.Json, response *bool) error {
 	}
 
 	*response = true
+	return nil
+}
+
+/**
+* remove
+* @param to, key string, dest any
+* @return error
+**/
+func (s *Methods) get(from *From, idx string, dest any) (bool, error) {
+	if node == nil {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"from": from,
+		"idx":  idx,
+	}
+	var reply AnyResult
+	err := jrpc.CallRpc(from.Host, "Methods.Get", args, &reply)
+	if err != nil {
+		return false, err
+	}
+
+	dest = reply.Dest
+	return reply.Ok, nil
+}
+
+/**
+* Get
+* @param require et.Json, response *AnyResult
+* @return error
+**/
+func (s *Methods) Get(require et.Json, response *AnyResult) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	from := toFrom(require.Json("from"))
+	idx := require.Str("idx")
+	var dest any
+	ok, err := get(from, idx, &dest)
+	if err != nil {
+		return err
+	}
+
+	*response = AnyResult{
+		Dest: dest,
+		Ok:   ok,
+	}
 	return nil
 }
