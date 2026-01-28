@@ -121,7 +121,11 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 func (s *Hub) onUnregister(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.subscribers[client.Name].Status = Disconnected
+
+	_, ok := s.subscribers[client.Name]
+	if ok {
+		s.subscribers[client.Name].Status = Disconnected
+	}
 }
 
 /**
