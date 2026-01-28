@@ -8,6 +8,7 @@ type MessageError struct {
 }
 
 var (
+	MSG_JOSEFINA_NOT_STARTED        = "josefina is not started"
 	MSG_NOT_FOUND                   = "not found"
 	MSG_MAX_SEGMENT_BYTES           = "maxSegmentBytes must be at least 1 MB"
 	MSG_INVALID_ID_LENGTH           = "invalid id length"
@@ -67,6 +68,7 @@ func init() {
 	lang := envar.GetStr("LANG", "en")
 
 	if lang == "es" {
+		MSG_JOSEFINA_NOT_STARTED = "josefina no iniciado"
 		MSG_NOT_FOUND = "no encontrado"
 		MSG_MAX_SEGMENT_BYTES = "maxSegmentBytes debe ser al menos 1 MB"
 		MSG_INVALID_ID_LENGTH = "Longitud de ID inválida"

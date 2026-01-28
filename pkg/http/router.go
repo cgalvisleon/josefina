@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/middleware"
 	"github.com/cgalvisleon/et/router"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -41,6 +42,7 @@ func (s *Router) Routes() http.Handler {
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/signin", s.signIn, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/jql", s.jql, s.PackageName, s.PackagePath, host)
+	router.Public(r, router.Get, "/ws", jdb.Ws, s.PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(s.PackageName)
 	return r

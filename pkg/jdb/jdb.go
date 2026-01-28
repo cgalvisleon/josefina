@@ -1,10 +1,13 @@
 package jdb
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
@@ -54,4 +57,17 @@ func HelpCheck() et.Item {
 		Ok:     true,
 		Result: node.helpCheck(),
 	}
+}
+
+/**
+* Ws
+* @param w http.ResponseWriter, r *http.Request
+**/
+func Ws(w http.ResponseWriter, r *http.Request) {
+	if !node.started {
+		response.HTTPError(w, r, http.StatusBadRequest, msg.MSG_JOSEFINA_NOT_STARTED)
+		return
+	}
+
+	node.ws.HttpConnect(w, r)
 }
