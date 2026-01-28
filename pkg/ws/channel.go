@@ -8,6 +8,6 @@ const (
 )
 
 type Channel struct {
-	Type        TypeChannel     `json:"type"`
-	Subscribers map[string]bool `json:"subscribers"`
+	Type        TypeChannel `json:"type"`
+	Subscribers []string    `json:"subscribers"`
 }

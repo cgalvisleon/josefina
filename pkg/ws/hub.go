@@ -201,10 +201,9 @@ func (s *Hub) OnStack(channel string, fn func(Message)) {
 
 /**
 * SendTo
-* @param message Message
+* @param to []string, message Message
 **/
-func (s *Hub) SendTo(message Message) error {
-	to := message.To
+func (s *Hub) SendTo(to []string, message Message) {
 	for _, username := range to {
 		client, ok := s.subscribers[username]
 		if ok {
@@ -215,8 +214,6 @@ func (s *Hub) SendTo(message Message) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 /**
@@ -245,6 +242,7 @@ func (s *Hub) Publish(channel string, message Message) error {
 		// TODO: Implement queue logic
 	case TpTopic:
 		// TODO: Implement topic logic
+		s.SendTo(ch.Subscribers, message)
 	}
 
 	return nil

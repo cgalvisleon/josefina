@@ -113,7 +113,7 @@ func (s *Subscriber) listener(message []byte) {
 	} else if msg.Channel != "" {
 		s.hub.Publish(msg.Channel, msg)
 	} else if len(msg.To) > 0 {
-		s.hub.SendTo(msg)
+		s.hub.SendTo(msg.To, msg)
 	}
 
 	logs.Info(msg.ToString())
