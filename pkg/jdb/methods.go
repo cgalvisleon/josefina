@@ -1123,3 +1123,41 @@ func (s *Methods) IsExisted(require et.Json, response *bool) error {
 	*response = existed
 	return nil
 }
+
+/**
+* count
+* @param to, idx string, dest any
+* @return error
+**/
+func (s *Methods) count(from *From) (int, error) {
+	if node == nil {
+		return 0, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	var dest int
+	err := jrpc.CallRpc(from.Host, "Methods.Count", from, &dest)
+	if err != nil {
+		return 0, err
+	}
+
+	return dest, nil
+}
+
+/**
+* Count
+* @param require *From, response *int
+* @return error
+**/
+func (s *Methods) Count(require *From, response *int) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	existed, err := s.count(require)
+	if err != nil {
+		return err
+	}
+
+	*response = existed
+	return nil
+}

@@ -689,3 +689,26 @@ func isExisted(from *From, field, idx string) (bool, error) {
 
 	return model.isExisted(field, idx)
 }
+
+/**
+* count
+* @param from *From
+* @return (int, error)
+**/
+func count(from *From) (int, error) {
+	if !node.started {
+		return 0, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if node.host != from.Host && from.Host != "" {
+		return methods.count(from)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return 0, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.count()
+}
