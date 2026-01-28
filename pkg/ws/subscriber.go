@@ -2,9 +2,11 @@ package ws
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/gorilla/websocket"
@@ -74,9 +76,35 @@ func (s *Subscriber) write() {
 func (s *Subscriber) listener(messageType int, message []byte) {
 	msg, err := DecodeMessage(messageType, message)
 	if err != nil {
-		logs.Error(err)
+		s.error(err)
 		return
 	}
 
 	logs.Info(msg.ToString())
+}
+
+/**
+* send
+* @param msg Message
+**/
+func (s *Subscriber) send(bt []byte) {
+	s.outbound <- bt
+}
+
+/**
+* error
+* @param err error
+**/
+func (s *Subscriber) error(err error) {
+	msg := et.Item{
+		Ok: false,
+		Result: et.Json{
+			"message": err.Error(),
+		},
+	}
+	bt, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	s.send(bt)
 }

@@ -20,11 +20,24 @@ type Message struct {
 }
 
 /**
+* Bytes
+* @return ([]byte, error)
+**/
+func (s *Message) Bytes() ([]byte, error) {
+	bt, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return bt, nil
+}
+
+/**
 * ToJson
 * @return et.Json
 **/
 func (s *Message) ToJson() et.Json {
-	bt, err := json.Marshal(s)
+	bt, err := s.Bytes()
 	if err != nil {
 		return et.Json{}
 	}
