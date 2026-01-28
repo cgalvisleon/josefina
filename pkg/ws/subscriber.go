@@ -104,10 +104,16 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
-	if msg.Channel != "" {
+	if msg.Action == Subscribe {
 
+	} else if msg.Action == Queue {
+		
+	} else if msg.Action == Stack {
+
+	} else if msg.Channel != "" {
+		s.hub.Publish(msg.Channel, msg)
 	} else if len(msg.To) > 0 {
-
+		s.hub.SendTo(msg)
 	}
 
 	logs.Info(msg.ToString())

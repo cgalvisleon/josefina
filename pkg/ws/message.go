@@ -12,8 +12,8 @@ type TypeAction int
 
 const (
 	SendMessage TypeAction = 0
-	Publish     TypeAction = 1
-	Subscribe   TypeAction = 2
+	Subscribe   TypeAction = 1
+	Queue       TypeAction = 2
 	Stack       TypeAction = 3
 )
 

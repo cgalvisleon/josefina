@@ -220,6 +220,15 @@ func (s *Hub) SendTo(message Message) error {
 }
 
 /**
+* Subscribe
+* @param action TypeAction, cache string, message Message
+* @return error
+**/
+func (s *Hub) Subscribe(action TypeAction, cache string, message Message) error {
+	return nil
+}
+
+/**
 * Publish
 * @param channel string, message Message
 **/
