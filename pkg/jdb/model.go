@@ -553,7 +553,7 @@ func put(from *From, idx string, data any) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if node.host != from.Host {
+	if node.host != from.Host && from.Host != "" {
 		return methods.put(from, idx, data)
 	}
 
@@ -576,7 +576,7 @@ func remove(from *From, idx string) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if node.host != from.Host {
+	if node.host != from.Host && from.Host != "" {
 		return methods.remove(from, idx)
 	}
 
@@ -599,7 +599,7 @@ func get(from *From, idx string, dest any) (bool, error) {
 		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if node.host != from.Host {
+	if node.host != from.Host && from.Host != "" {
 		return methods.get(from, idx, dest)
 	}
 
@@ -613,6 +613,29 @@ func get(from *From, idx string, dest any) (bool, error) {
 }
 
 /**
+* putObject: Puts an object into the model
+* @param model *Model, idx string, data et.Json
+* @return error
+**/
+func putObject(from *From, idx string, data et.Json) error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if node.host != from.Host && from.Host != "" {
+		return methods.putObject(from, idx, data)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.putObject(idx, data)
+}
+
+/**
 * removeObject: Removes an object from the model
 * @param model *Model, key string
 * @return error
@@ -623,19 +646,6 @@ func removeObject(to *From, key string) error {
 		return err
 	}
 	return model.removeObject(key)
-}
-
-/**
-* putObject: Puts an object into the model
-* @param model *Model, key string, data et.Json
-* @return error
-**/
-func putObject(to *From, key string, data et.Json) error {
-	model, err := getModel(to)
-	if err != nil {
-		return err
-	}
-	return model.putObject(key, data)
 }
 
 /**
