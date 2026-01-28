@@ -42,7 +42,7 @@ type Node struct {
 	started       bool               `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
-	ws            *Ws                `json:"-"`
+	ws            *ws.Ws             `json:"-"`
 }
 
 /**
