@@ -544,11 +544,11 @@ func getModel(from *From) (*Model, error) {
 }
 
 /**
-* put: Puts an object into the model
+* Put: Puts an object into the model
 * @param from *From, key string, data any
 * @return error
 **/
-func put(from *From, idx string, data any) error {
+func Put(from *From, idx string, data any) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -567,11 +567,11 @@ func put(from *From, idx string, data any) error {
 }
 
 /**
-* remove: Removes an object from the model
+* Remove: Removes an object from the model
 * @param from *From, idx string
 * @return error
 **/
-func remove(from *From, idx string) error {
+func Remove(from *From, idx string) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -590,11 +590,11 @@ func remove(from *From, idx string) error {
 }
 
 /**
-* get: Gets an object from the model
+* Get: Gets an object from the model
 * @param from *From, idx string, dest any
 * @return bool, error
 **/
-func get(from *From, idx string, dest any) (bool, error) {
+func Get(from *From, idx string, dest any) (bool, error) {
 	if !node.started {
 		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -613,11 +613,11 @@ func get(from *From, idx string, dest any) (bool, error) {
 }
 
 /**
-* putObject: Puts an object into the model
+* PutObject: Puts an object into the model
 * @param model *Model, idx string, data et.Json
 * @return error
 **/
-func putObject(from *From, idx string, data et.Json) error {
+func PutObject(from *From, idx string, data et.Json) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -636,20 +636,20 @@ func putObject(from *From, idx string, data et.Json) error {
 }
 
 /**
-* getObjet: Gets the model as object
+* GetObjet: Gets the model as object
 * @param idx string
 * @return et.Json, error
 **/
-func getObjet(from *From, idx string, dest et.Json) (bool, error) {
-	return get(from, idx, &dest)
+func GetObjet(from *From, idx string, dest et.Json) (bool, error) {
+	return Get(from, idx, &dest)
 }
 
 /**
-* removeObject: Removes an object from the model
+* RemoveObject: Removes an object from the model
 * @param model *Model, key string
 * @return error
 **/
-func removeObject(from *From, idx string) error {
+func RemoveObject(from *From, idx string) error {
 	if !node.started {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -668,11 +668,11 @@ func removeObject(from *From, idx string) error {
 }
 
 /**
-* isExisted
+* IsExisted
 * @param from *From, field string, key string
 * @return (bool, error)
 **/
-func isExisted(from *From, field, idx string) (bool, error) {
+func IsExisted(from *From, field, idx string) (bool, error) {
 	if !node.started {
 		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -691,11 +691,11 @@ func isExisted(from *From, field, idx string) (bool, error) {
 }
 
 /**
-* count
+* Count
 * @param from *From
 * @return (int, error)
 **/
-func count(from *From) (int, error) {
+func Count(from *From) (int, error) {
 	if !node.started {
 		return 0, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}

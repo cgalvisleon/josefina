@@ -888,7 +888,7 @@ func (s *Methods) Put(require et.Json, response *bool) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Get("data")
-	err := put(from, idx, data)
+	err := Put(from, idx, data)
 	if err != nil {
 		return err
 	}
@@ -932,7 +932,7 @@ func (s *Methods) Remove(require et.Json, response *bool) error {
 
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
-	err := remove(from, idx)
+	err := Remove(from, idx)
 	if err != nil {
 		return err
 	}
@@ -978,7 +978,7 @@ func (s *Methods) Get(require et.Json, response *AnyResult) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	var dest any
-	ok, err := get(from, idx, &dest)
+	ok, err := Get(from, idx, &dest)
 	if err != nil {
 		return err
 	}
@@ -1025,7 +1025,7 @@ func (s *Methods) PutObject(require et.Json, response et.Json) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	var dest et.Json
-	err := putObject(from, idx, dest)
+	err := PutObject(from, idx, dest)
 	if err != nil {
 		return err
 	}
@@ -1069,7 +1069,7 @@ func (s *Methods) RemoveObject(require et.Json, response *bool) error {
 
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
-	err := removeObject(from, idx)
+	err := RemoveObject(from, idx)
 	if err != nil {
 		return err
 	}
@@ -1115,7 +1115,7 @@ func (s *Methods) IsExisted(require et.Json, response *bool) error {
 	from := toFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
-	existed, err := isExisted(from, field, idx)
+	existed, err := IsExisted(from, field, idx)
 	if err != nil {
 		return err
 	}
@@ -1153,7 +1153,7 @@ func (s *Methods) Count(require *From, response *int) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	existed, err := count(require)
+	existed, err := Count(require)
 	if err != nil {
 		return err
 	}
