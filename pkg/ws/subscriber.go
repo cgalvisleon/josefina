@@ -103,6 +103,10 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
+	if msg.Type == CloseMessage {
+		s.close()
+	}
+
 	logs.Info(msg.ToString())
 }
 
@@ -134,4 +138,23 @@ func (s *Subscriber) error(err error) {
 	}
 
 	s.send(TextMessage, bt)
+}
+
+/**
+* close
+**/
+func (s *Subscriber) close() {
+	msg := et.Item{
+		Ok: false,
+		Result: et.Json{
+			"message": "Bay",
+		},
+	}
+	bt, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+
+	s.send(TextMessage, bt)
+	s.hub.onDisconnect(s)
 }
