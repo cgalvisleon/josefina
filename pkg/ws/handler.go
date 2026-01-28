@@ -16,6 +16,12 @@ func (s *Hub) HttpConnect(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if conn == nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, "Connection is nil")
+		return
 	}
 
 	ctx := r.Context()
