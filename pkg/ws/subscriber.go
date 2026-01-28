@@ -17,6 +17,7 @@ type Subscriber struct {
 	socket     *websocket.Conn     `json:"-"`
 	outbound   chan []byte         `json:"-"`
 	mutex      sync.RWMutex        `json:"-"`
+	hub        *Hub                `json:"-"`
 }
 
 /**
@@ -45,12 +46,12 @@ func (s *Subscriber) read() {
 	}()
 
 	for {
-		_, message, err := s.socket.ReadMessage()
+		msgType, message, err := s.socket.ReadMessage()
 		if err != nil {
 			break
 		}
 
-		s.listener(message)
+		s.listener(msgType, message)
 	}
 }
 
@@ -69,7 +70,7 @@ func (s *Subscriber) write() {
 * listener
 * @param message []byte
 **/
-func (s *Subscriber) listener(message []byte) {
+func (s *Subscriber) listener(messageType int, message []byte) {
 	msg, err := DecodeMessage(message)
 	if err != nil {
 		logs.Error(err)

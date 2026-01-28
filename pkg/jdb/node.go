@@ -40,7 +40,7 @@ type Node struct {
 	lastHeartbeat time.Time          `json:"-"`
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
-	ws            *ws.Ws             `json:"-"`
+	ws            *ws.Hub            `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
 }
@@ -227,7 +227,7 @@ func (s *Node) start() error {
 	s.lastHeartbeat = timezone.Now()
 	s.started = true
 	s.mu.Unlock()
-	s.ws.S
+	s.ws.Start()
 
 	go s.electionLoop()
 

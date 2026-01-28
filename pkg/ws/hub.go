@@ -13,7 +13,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type Ws struct {
+type Hub struct {
 	host        string
 	channels    map[string]*Channel
 	subscribers map[string]*Subscriber
@@ -25,10 +25,10 @@ type Ws struct {
 
 /**
 * NewWs
-* @return *Ws
+* @return *Hub
 **/
-func NewWs() *Ws {
-	return &Ws{
+func NewWs() *Hub {
+	return &Hub{
 		channels:    make(map[string]*Channel),
 		subscribers: make(map[string]*Subscriber),
 		register:    make(chan *Subscriber),
@@ -39,9 +39,9 @@ func NewWs() *Ws {
 }
 
 /**
-* start
+* Start
 **/
-func (s *Ws) Start() {
+func (s *Hub) Start() {
 	s.isStart = true
 	for {
 		select {
@@ -57,7 +57,7 @@ func (s *Ws) Start() {
 * onConnect
 * @param *Subscriber client
 **/
-func (s *Ws) onConnect(client *Subscriber) {
+func (s *Hub) onConnect(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -68,7 +68,7 @@ func (s *Ws) onConnect(client *Subscriber) {
 * onDisconnect
 * @param *Subscriber client
 **/
-func (s *Ws) onDisconnect(client *Subscriber) {
+func (s *Hub) onDisconnect(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -80,7 +80,7 @@ func (s *Ws) onDisconnect(client *Subscriber) {
 * @param socket *websocket.Conn, username string
 * @return *Subscriber, error
 **/
-func (s *Ws) connect(socket *websocket.Conn, username string) (*Subscriber, error) {
+func (s *Hub) connect(socket *websocket.Conn, username string) (*Subscriber, error) {
 	client, ok := s.subscribers[username]
 	if ok {
 		client.Addr = socket.RemoteAddr().String()
