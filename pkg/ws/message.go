@@ -15,7 +15,6 @@ const (
 	Subscribe         TypeAction = 1
 	Stack             TypeAction = 2
 	SendMessageDirect TypeAction = 3
-	ActionBye         TypeAction = 4
 )
 
 type Message struct {

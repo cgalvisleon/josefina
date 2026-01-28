@@ -27,6 +27,9 @@ type Hub struct {
 	mutex           *sync.RWMutex
 	onConnection    []func(*Subscriber)
 	onDisconnection []func(*Subscriber)
+	onPublish       map[string]func(Message)
+	onSubscribe     map[string]func(Message)
+	onStack         map[string]func(Message)
 	isStart         bool
 }
 
@@ -45,6 +48,9 @@ func NewWs() *Hub {
 		mutex:           &sync.RWMutex{},
 		onConnection:    make([]func(*Subscriber), 0),
 		onDisconnection: make([]func(*Subscriber), 0),
+		onPublish:       make(map[string]func(Message)),
+		onSubscribe:     make(map[string]func(Message)),
+		onStack:         make(map[string]func(Message)),
 		isStart:         false,
 	}
 	return result
@@ -104,20 +110,6 @@ func (s *Hub) onConnect(client *Subscriber) {
 * defOnDisconnect
 * @param *Subscriber client
 **/
-func (s *Hub) onDisconnect(client *Subscriber) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	delete(s.subscribers, client.Name)
-	for _, fn := range s.onDisconnection {
-		fn(client)
-	}
-}
-
-/**
-* defOnDisconnect
-* @param *Subscriber client
-**/
 func (s *Hub) onUnregister(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -125,6 +117,11 @@ func (s *Hub) onUnregister(client *Subscriber) {
 	_, ok := s.subscribers[client.Name]
 	if ok {
 		s.subscribers[client.Name].Status = Disconnected
+		for _, fn := range s.onDisconnection {
+			fn(client)
+		}
+
+		delete(s.subscribers, client.Name)
 	}
 }
 

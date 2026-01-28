@@ -104,8 +104,10 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
-	if msg.Action == ActionBye {
-		s.close()
+	if msg.Channel != "" {
+
+	} else if len(msg.To) > 0 {
+
 	}
 
 	logs.Info(msg.ToString())
@@ -157,6 +159,5 @@ func (s *Subscriber) close() {
 	}
 
 	s.send(TextMessage, bt)
-	// s.socket.Close()
-	// s.hub.onDisconnect(s)
+	s.socket.Close()
 }
