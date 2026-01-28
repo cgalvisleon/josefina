@@ -41,7 +41,7 @@ func NewWs() *Ws {
 /**
 * start
 **/
-func (s *Ws) start() {
+func (s *Ws) Start() {
 	s.isStart = true
 	for {
 		select {

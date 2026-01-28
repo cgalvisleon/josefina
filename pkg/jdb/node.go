@@ -227,6 +227,7 @@ func (s *Node) start() error {
 	s.lastHeartbeat = timezone.Now()
 	s.started = true
 	s.mu.Unlock()
+	s.ws.S
 
 	go s.electionLoop()
 
