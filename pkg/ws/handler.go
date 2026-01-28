@@ -13,7 +13,7 @@ import (
 * @param r *http.Request
 **/
 func (s *Hub) HttpConnect(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return

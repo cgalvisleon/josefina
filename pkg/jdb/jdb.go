@@ -12,6 +12,7 @@ import (
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/pkg/ws"
 )
 
 var (
@@ -70,6 +71,17 @@ func HelpCheck() et.Item {
 func Ws(w http.ResponseWriter, r *http.Request) {
 	if !node.started {
 		response.HTTPError(w, r, http.StatusBadRequest, msg.MSG_JOSEFINA_NOT_STARTED)
+		return
+	}
+
+	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if conn == nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, "Connection is nil")
 		return
 	}
 

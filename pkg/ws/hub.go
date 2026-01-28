@@ -4,17 +4,18 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
+var Upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
 type Hub struct {
-	host            string
+	port            int
 	channels        map[string]*Channel
 	subscribers     map[string]*Subscriber
 	register        chan *Subscriber
@@ -30,7 +31,9 @@ type Hub struct {
 * @return *Hub
 **/
 func NewWs() *Hub {
+	port := envar.GetInt("WS_PORT", 3030)
 	result := &Hub{
+		port:            port,
 		channels:        make(map[string]*Channel),
 		subscribers:     make(map[string]*Subscriber),
 		register:        make(chan *Subscriber),
@@ -44,10 +47,9 @@ func NewWs() *Hub {
 }
 
 /**
-* Start
+* run
 **/
-func (s *Hub) Start() {
-	s.isStart = true
+func (s *Hub) run() {
 	for {
 		select {
 		case client := <-s.register:
@@ -56,6 +58,18 @@ func (s *Hub) Start() {
 			s.onDisconnect(client)
 		}
 	}
+}
+
+/**
+* Start
+**/
+func (s *Hub) Start() {
+	if s.isStart {
+		return
+	}
+
+	s.isStart = true
+	go s.run()
 }
 
 /**

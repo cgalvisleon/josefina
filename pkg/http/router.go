@@ -39,11 +39,22 @@ func (s *Router) Routes() http.Handler {
 	host = strs.Format("%s:%d", host, envar.GetInt("PORT", 3300))
 
 	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/signin", s.signIn, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/jql", s.jql, s.PackageName, s.PackagePath, host)
-	router.Public(r, router.Get, "/ws", jdb.Ws, s.PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(s.PackageName)
+	return r
+}
+
+/**
+* WsRouter
+* @return http.Handler
+**/
+func (s *Router) WsRouter() http.Handler {
+	r := chi.NewRouter()
+	r.Get("/ws", jdb.Ws)
 	return r
 }

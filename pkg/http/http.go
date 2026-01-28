@@ -24,6 +24,7 @@ func Init() (http.Handler, error) {
 	r := chi.NewRouter()
 	server := newRouter(PackageName)
 	r.Mount(server.PackagePath, server.Routes())
+	r.Mount("/", server.WsRouter())
 
 	return r, nil
 }
