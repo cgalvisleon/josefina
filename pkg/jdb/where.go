@@ -237,9 +237,9 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	add := func(item et.Json) bool {
 		if len(s.selects) == 0 {
-			item = item.Hidden(s.hidden)
+			item = Hidden(s.hidden, item)
 		} else {
-			item = item.Select(s.selects)
+			item = Select(s.selects, item)
 		}
 		result = append(result, item)
 		n := len(result)

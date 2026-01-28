@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	KEY        string = "id"
+	ID         string = "id"
 	INDEX      string = "_idx"
 	STATUS     string = "status"
 	VERSION    string = "version"

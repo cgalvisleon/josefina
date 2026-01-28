@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var Upgrader = websocket.Upgrader{
+var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -73,4 +73,21 @@ func (s *Ws) onDisconnect(client *Subscriber) {
 	defer s.mutex.Unlock()
 
 	delete(s.subscribers, client.Id)
+}
+
+func (s *Ws) connect(socket *websocket.Conn, clientId, name string) (*Subscriber, error) {
+	client := s.getClient(clientId)
+	if client != nil {
+		return client, nil
+	}
+
+	client, isNew := newSubscriber(s, socket, clientId, name)
+	if isNew {
+		h.register <- client
+
+		go client.write()
+		go client.read()
+	}
+
+	return client, nil
 }

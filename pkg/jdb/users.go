@@ -35,10 +35,12 @@ func initUsers() error {
 	if err != nil {
 		return err
 	}
+	users.DefineAtrib(ID, TpKey, "")
 	users.DefineAtrib("username", TpText, "")
 	users.DefineAtrib("password", TpText, "")
 	users.defineHidden("password")
 	users.definePrimaryKey("username")
+	users.defineUnique(ID)
 	if err := users.init(); err != nil {
 		return err
 	}
@@ -53,6 +55,7 @@ func initUsers() error {
 		password := envar.GetStr("PASSWORD", "admin")
 		idx := users.genKey()
 		err := users.putObject(idx, et.Json{
+			ID:         idx,
 			"username": useranme,
 			"password": password,
 		})
@@ -97,6 +100,7 @@ func createUser(username, password string) error {
 
 	_, err = users.
 		Insert(et.Json{
+			ID:         users.genKey(),
 			"username": username,
 			"password": password,
 		}).
