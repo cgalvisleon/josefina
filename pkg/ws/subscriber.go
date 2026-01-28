@@ -157,6 +157,6 @@ func (s *Subscriber) close() {
 	}
 
 	s.send(TextMessage, bt)
-	s.socket.Close()
-	s.hub.onDisconnect(s)
+	// s.socket.Close()
+	// s.hub.onDisconnect(s)
 }
