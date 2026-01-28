@@ -64,10 +64,11 @@ func (s *Message) ToString() string {
 * @param from et.Json, to []string, data et.Json
 * @return *Message
 **/
-func newMessage(from et.Json, to []string, data et.Json) *Message {
+func newMessage(from et.Json, to []string, tp int, data et.Json) *Message {
 	id := reg.UUID()
 	return &Message{
 		Created_at: time.Now(),
+		Type:       tp,
 		Id:         id,
 		From:       from,
 		Channel:    "",
@@ -82,13 +83,12 @@ func newMessage(from et.Json, to []string, data et.Json) *Message {
 * @param messageType int, data []byte
 * @return Message
 **/
-func DecodeMessage(messageType int, data []byte) (Message, error) {
+func DecodeMessage(data []byte) (Message, error) {
 	var result Message
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return Message{}, err
 	}
-	result.Type = messageType
 
 	return result, nil
 }

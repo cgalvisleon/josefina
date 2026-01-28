@@ -61,13 +61,13 @@ func newSubscriber(hub *Hub, ctx context.Context, username string, socket *webso
 **/
 func (s *Subscriber) read() {
 	for {
-		msgType, message, err := s.socket.ReadMessage()
+		_, message, err := s.socket.ReadMessage()
 		if err != nil {
 			s.hub.unregister <- s
 			break
 		}
 
-		s.listener(msgType, message)
+		s.listener(message)
 	}
 }
 
@@ -86,8 +86,8 @@ func (s *Subscriber) write() {
 * listener
 * @param message []byte
 **/
-func (s *Subscriber) listener(messageType int, message []byte) {
-	msg, err := DecodeMessage(messageType, message)
+func (s *Subscriber) listener(message []byte) {
+	msg, err := DecodeMessage(message)
 	if err != nil {
 		s.error(err)
 		return
