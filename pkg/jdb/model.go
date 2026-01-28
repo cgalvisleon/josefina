@@ -535,7 +535,7 @@ func (s *Model) Selects(fields ...string) *Wheres {
 * @param from *From
 * @return *Model, error
 **/
-func getModel(from *From) (*Model, error) {
+func etModel(from *From) (*Model, error) {
 	if !node.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}

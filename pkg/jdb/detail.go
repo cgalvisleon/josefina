@@ -10,12 +10,12 @@ type Detail struct {
 
 /**
 * newDetail
-* @param to *Model, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
+* @param to *From, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
-func newDetail(to *Model, keys map[string]string, selects []string, onDeleteCascade, onUpdateCascade bool) *Detail {
+func newDetail(to *From, keys map[string]string, selects []string, onDeleteCascade, onUpdateCascade bool) *Detail {
 	return &Detail{
-		To:              to.From,
+		To:              to,
 		Keys:            keys,
 		Selects:         selects,
 		OnDeleteCascade: onDeleteCascade,
