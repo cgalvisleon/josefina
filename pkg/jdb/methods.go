@@ -1077,3 +1077,49 @@ func (s *Methods) RemoveObject(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* isExisted
+* @param to, idx string, dest any
+* @return error
+**/
+func (s *Methods) isExisted(from *From, field, idx string) (bool, error) {
+	if node == nil {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"from":  from,
+		"field": field,
+		"idx":   idx,
+	}
+	var dest bool
+	err := jrpc.CallRpc(from.Host, "Methods.IsExisted", args, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return dest, nil
+}
+
+/**
+* IsExisted
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) IsExisted(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	from := toFrom(require.Json("from"))
+	field := require.Str("field")
+	idx := require.Str("idx")
+	existed, err := isExisted(from, field, idx)
+	if err != nil {
+		return err
+	}
+
+	*response = existed
+	return nil
+}
