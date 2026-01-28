@@ -554,7 +554,7 @@ func put(from *From, idx string, data any) error {
 	}
 
 	if node.host != from.Host {
-		return node.put(from, idx, data)
+		return methods.put(from, idx, data)
 	}
 
 	key := from.key()
@@ -564,6 +564,29 @@ func put(from *From, idx string, data any) error {
 	}
 
 	return model.put(idx, data)
+}
+
+/**
+* remove: Removes an object from the model
+* @param from *From, idx string
+* @return error
+**/
+func remove(from *From, idx string) error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if node.host != from.Host {
+		return methods.remove(from, idx)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.remove(idx)
 }
 
 /**

@@ -891,3 +891,47 @@ func (s *Methods) Put(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* remove
+* @param to, key string
+* @return error
+**/
+func (s *Methods) remove(from *From, idx string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"from": from,
+		"idx":  idx,
+	}
+	var reply bool
+	err := jrpc.CallRpc(from.Host, "Methods.Remove", args, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Remove
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) Remove(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	from := toFrom(require.Json("from"))
+	idx := require.Str("idx")
+	err := remove(from, idx)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
