@@ -7,9 +7,15 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	packageName = "WebSocket"
+	version     = "0.0.1"
 )
 
 var upgrader = websocket.Upgrader{
@@ -101,6 +107,7 @@ func (s *Hub) onConnect(client *Subscriber) {
 	defer s.mutex.Unlock()
 
 	s.subscribers[client.Name] = client
+	logs.Logf(packageName, "Connected: %s", client.Name)
 	for _, fn := range s.onConnection {
 		fn(client)
 	}
@@ -126,7 +133,7 @@ func (s *Hub) onUnregister(client *Subscriber) {
 }
 
 /**
-* connect
+* Connect
 * @param socket *websocket.Conn, context.Context
 * @return *Subscriber, error
 **/
