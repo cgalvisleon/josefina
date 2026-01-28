@@ -221,10 +221,10 @@ func (s *Hub) SendTo(message Message) error {
 
 /**
 * Subscribe
-* @param action TypeAction, cache string, message Message
+* @param action TypeAction, cache string, subscribe string
 * @return error
 **/
-func (s *Hub) Subscribe(action TypeAction, cache string, message Message) error {
+func (s *Hub) Subscribe(action TypeAction, cache string, subscribe string) error {
 	return nil
 }
 
