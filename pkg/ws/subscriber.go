@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/gorilla/websocket"
 )
 
@@ -145,9 +146,9 @@ func (s *Subscriber) error(err error) {
 **/
 func (s *Subscriber) close() {
 	msg := et.Item{
-		Ok: false,
+		Ok: true,
 		Result: et.Json{
-			"message": "Bay",
+			"message": msg.MSG_BYE,
 		},
 	}
 	bt, err := json.Marshal(msg)
