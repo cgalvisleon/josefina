@@ -69,7 +69,7 @@ func (s *Hub) run() {
 		case client := <-s.register:
 			s.onConnect(client)
 		case client := <-s.unregister:
-			s.onDisconnect(client)
+			s.onUnregister(client)
 		}
 	}
 }
@@ -112,6 +112,16 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 	for _, fn := range s.onDisconnection {
 		fn(client)
 	}
+}
+
+/**
+* defOnDisconnect
+* @param *Subscriber client
+**/
+func (s *Hub) onUnregister(client *Subscriber) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.subscribers[client.Name].Status = Disconnected
 }
 
 /**

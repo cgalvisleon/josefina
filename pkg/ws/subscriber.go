@@ -12,6 +12,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Status string
+
+const (
+	Pending      Status = "pending"
+	Connected    Status = "connected"
+	Disconnected Status = "disconnected"
+)
+
 const (
 	TextMessage   int = 1
 	BinaryMessage int = 2
@@ -29,6 +37,7 @@ type Subscriber struct {
 	Created_at time.Time           `json:"created_at"`
 	Name       string              `json:"name"`
 	Addr       string              `json:"addr"`
+	Status     Status              `json:"status"`
 	Channels   map[string]*Channel `json:"channels"`
 	socket     *websocket.Conn     `json:"-"`
 	outbound   chan Outbound       `json:"-"`
@@ -45,6 +54,7 @@ type Subscriber struct {
 func newSubscriber(hub *Hub, ctx context.Context, username string, socket *websocket.Conn) *Subscriber {
 	return &Subscriber{
 		Created_at: timezone.Now(),
+		Status:     Pending,
 		Name:       username,
 		Addr:       socket.RemoteAddr().String(),
 		Channels:   make(map[string]*Channel),
