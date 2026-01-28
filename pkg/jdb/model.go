@@ -215,13 +215,13 @@ func (s *Model) source() (*store.FileStore, error) {
 * @param idx string, valu any
 * @return error
 **/
-func (s *Model) put(key string, value any) error {
+func (s *Model) put(idx string, value any) error {
 	source, err := s.source()
 	if err != nil {
 		return err
 	}
 
-	err = source.Put(key, value)
+	err = source.Put(idx, value)
 	if err != nil {
 		return err
 	}
@@ -231,16 +231,16 @@ func (s *Model) put(key string, value any) error {
 
 /**
 * remove: Removes the model
-* @param key string
+* @param idx string
 * @return error
 **/
-func (s *Model) remove(key string) error {
+func (s *Model) remove(idx string) error {
 	source, err := s.source()
 	if err != nil {
 		return err
 	}
 
-	_, err = source.Delete(key)
+	_, err = source.Delete(idx)
 	if err != nil {
 		return err
 	}
@@ -250,16 +250,16 @@ func (s *Model) remove(key string) error {
 
 /**
 * get: Gets the model
-* @param key string, dest any
+* @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) get(key string, dest any) (bool, error) {
+func (s *Model) get(idx string, dest any) (bool, error) {
 	source, err := s.source()
 	if err != nil {
 		return false, err
 	}
 
-	exists, err := source.Get(key, &dest)
+	exists, err := source.Get(idx, &dest)
 	if err != nil {
 		return false, err
 	}
@@ -320,11 +320,11 @@ func (s *Model) putObject(idx string, object et.Json) error {
 
 /**
 * getObjet: Gets the model as object
-* @param key string
+* @param idx string
 * @return et.Json, error
 **/
-func (s *Model) getObjet(key string, dest et.Json) (bool, error) {
-	return s.get(key, &dest)
+func (s *Model) getObjet(idx string, dest et.Json) (bool, error) {
+	return s.get(idx, &dest)
 }
 
 /**
@@ -524,7 +524,31 @@ func getModel(from *From) (*Model, error) {
 	if !node.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
+
 	return node.getModel(from.Database, from.Schema, from.Name)
+}
+
+/**
+* put: Puts an object into the model
+* @param from *From, key string, data any
+* @return error
+**/
+func put(from *From, idx string, data any) error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	if node.host != from.Host {
+		return node.put(from, idx, data)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.put(idx, data)
 }
 
 /**

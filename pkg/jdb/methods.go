@@ -845,3 +845,51 @@ func (s *Methods) DeleteCache(require string, response *bool) error {
 	*response = result
 	return nil
 }
+
+/**
+* put
+* @param to, key string
+* @return error
+**/
+func (s *Methods) put(from *From, idx string, data any) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"from": from,
+		"idx":  idx,
+		"data": data,
+	}
+	var reply bool
+	err := jrpc.CallRpc(from.Host, "Methods.Put", args, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Put
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) Put(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	from := &From{
+		Host: require.Str("from"),
+	}
+	idx := require.Str("idx")
+	data := require.Get("data")
+	err := put(from, idx, data)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}

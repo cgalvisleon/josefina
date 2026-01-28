@@ -488,3 +488,17 @@ func (s *Node) saveDb(db *DB) error {
 	res := <-ch
 	return res
 }
+
+/**
+* put: Puts an object into the model
+* @param from *From, idx string, data any
+* @return error
+**/
+func (s *Node) put(from *From, idx string, data any) error {
+	err := methods.put(from, idx, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
