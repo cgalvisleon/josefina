@@ -125,6 +125,26 @@ func (s *Subscriber) send(tp int, bt []byte) {
 }
 
 /**
+* SendText
+* @param message string
+**/
+func (s *Subscriber) sendText(message string) {
+	s.send(TextMessage, []byte(message))
+}
+
+/**
+* SendObject
+* @param message et.Json
+**/
+func (s *Subscriber) sendObject(message et.Json) {
+	bt, err := json.Marshal(message)
+	if err != nil {
+		return
+	}
+	s.send(BinaryMessage, bt)
+}
+
+/**
 * error
 * @param err error
 **/

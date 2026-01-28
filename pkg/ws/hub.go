@@ -30,12 +30,12 @@ type Hub struct {
 	subscribers     map[string]*Subscriber
 	register        chan *Subscriber
 	unregister      chan *Subscriber
-	mutex           *sync.RWMutex
 	onConnection    []func(*Subscriber)
 	onDisconnection []func(*Subscriber)
 	onPublish       map[string]func(Message)
 	onSubscribe     map[string]func(Message)
 	onStack         map[string]func(Message)
+	mu              *sync.RWMutex
 	isStart         bool
 }
 
@@ -51,12 +51,12 @@ func NewWs() *Hub {
 		subscribers:     make(map[string]*Subscriber),
 		register:        make(chan *Subscriber),
 		unregister:      make(chan *Subscriber),
-		mutex:           &sync.RWMutex{},
 		onConnection:    make([]func(*Subscriber), 0),
 		onDisconnection: make([]func(*Subscriber), 0),
 		onPublish:       make(map[string]func(Message)),
 		onSubscribe:     make(map[string]func(Message)),
 		onStack:         make(map[string]func(Message)),
+		mu:              &sync.RWMutex{},
 		isStart:         false,
 	}
 	return result
@@ -81,7 +81,7 @@ func (s *Hub) run() {
 		case client := <-s.register:
 			s.onConnect(client)
 		case client := <-s.unregister:
-			s.onUnregister(client)
+			s.onDisconnect(client)
 		}
 	}
 }
@@ -103,8 +103,8 @@ func (s *Hub) Start() {
 * @param *Subscriber client
 **/
 func (s *Hub) onConnect(client *Subscriber) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.subscribers[client.Name] = client
 	logs.Logf(packageName, "Connected: %s", client.Name)
@@ -114,12 +114,12 @@ func (s *Hub) onConnect(client *Subscriber) {
 }
 
 /**
-* defOnDisconnect
+* onDisconnect
 * @param *Subscriber client
 **/
-func (s *Hub) onUnregister(client *Subscriber) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *Hub) onDisconnect(client *Subscriber) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	_, ok := s.subscribers[client.Name]
 	if ok {
@@ -200,9 +200,39 @@ func (s *Hub) OnStack(channel string, fn func(Message)) {
 }
 
 /**
-* Publish
-* @param channel string, msg Message
+* SendTo
+* @param message Message
 **/
-func (s *Hub) Publish(channel string, msg Message) {
+func (s *Hub) SendTo(message Message) error {
+	to := message.To
+	for _, username := range to {
+		client, ok := s.subscribers[username]
+		if ok {
+			client.Send(message.Type, message.Body)
+		}
+	}
 
+	return nil
+}
+
+/**
+* Publish
+* @param channel string, message Message
+**/
+func (s *Hub) Publish(channel string, message Message) error {
+	s.mu.RLock()
+	ch, ok := s.channels[channel]
+	s.mu.RUnlock()
+	if !ok {
+		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
+	}
+
+	switch ch.Type {
+	case TpQueue:
+		// TODO: Implement queue logic
+	case TpTopic:
+		// TODO: Implement topic logic
+	}
+
+	return nil
 }
