@@ -25,6 +25,7 @@ type Message struct {
 	To         []string   `json:"to"`
 	Ignored    []string   `json:"-"`
 	Data       et.Json    `json:"data"`
+	Message    string     `json:"message"`
 	Action     TypeAction `json:"action"`
 }
 
@@ -83,6 +84,7 @@ func newMessage(from et.Json, to []string, action TypeAction, data et.Json) *Mes
 		To:         to,
 		Ignored:    []string{},
 		Data:       data,
+		Message:    "",
 		Action:     action,
 	}
 }
