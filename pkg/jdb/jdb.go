@@ -114,6 +114,5 @@ func Ws(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "app", result.App)
 	ctx = context.WithValue(ctx, "device", result.Device)
 	ctx = context.WithValue(ctx, "username", result.Username)
-	r = r.WithContext(ctx)
-	node.ws.Connect(conn, result.Username)
+	node.ws.Connect(conn, ctx)
 }
