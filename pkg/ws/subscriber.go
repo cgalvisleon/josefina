@@ -104,7 +104,7 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
-	if msg.Type == CloseMessage {
+	if msg.Action == ActionBye {
 		s.close()
 	}
 
