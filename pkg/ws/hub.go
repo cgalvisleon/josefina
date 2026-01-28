@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
+var Upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -24,10 +24,10 @@ type Ws struct {
 }
 
 /**
-* newWs
+* NewWs
 * @return *Ws
 **/
-func newWs() *Ws {
+func NewWs() *Ws {
 	return &Ws{
 		channels:    make(map[string]*Channel),
 		subscribers: make(map[string]*Subscriber),

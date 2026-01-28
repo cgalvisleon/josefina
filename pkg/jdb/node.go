@@ -40,9 +40,9 @@ type Node struct {
 	lastHeartbeat time.Time          `json:"-"`
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
+	ws            *ws.Ws             `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
-	ws            *ws.Ws             `json:"-"`
 }
 
 /**
@@ -59,6 +59,7 @@ func newNode(host string, port int, version string) *Node {
 		rpcs:    make(map[string]et.Json),
 		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
+		ws:      ws.NewWs(),
 		mu:      sync.Mutex{},
 		modelMu: sync.RWMutex{},
 	}
