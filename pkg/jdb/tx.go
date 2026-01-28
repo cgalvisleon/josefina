@@ -207,6 +207,21 @@ func (s *Tx) setStatus(idx int, status Status) error {
 }
 
 /**
+* getRecors: Returns the records for the from
+* @param from *From
+* @return []et.Json
+**/
+func (s *Tx) getRecors(from *From) []et.Json {
+	result := []et.Json{}
+	for _, transaction := range s.Transactions {
+		if transaction.From == from {
+			result = append(result, transaction.Data)
+		}
+	}
+	return result
+}
+
+/**
 * commit: Commits the Transaction
 * @return error
 **/

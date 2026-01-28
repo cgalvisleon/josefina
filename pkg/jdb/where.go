@@ -299,10 +299,8 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		}
 
 		// Items by cache
-		cache := tx.getRecors(model.Name)
-		for _, record := range cache {
-			item := record.Data
-
+		cache := tx.getRecors(model.From)
+		for _, item := range cache {
 			next = add(item)
 			if !next {
 				return result, nil
@@ -390,9 +388,8 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by cache
-	cache := tx.getRecors(model.Name)
-	for _, record := range cache {
-		item := record.Data
+	cache := tx.getRecors(model.From)
+	for _, item := range cache {
 		addItem(item)
 	}
 
