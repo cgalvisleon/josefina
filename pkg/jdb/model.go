@@ -434,13 +434,13 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 * @param name string, key string
 * @return bool, error
 **/
-func (s *Model) isExisted(field, key string) (bool, error) {
+func (s *Model) isExisted(field, idx string) (bool, error) {
 	source, err := s.store(field)
 	if err != nil {
 		return false, err
 	}
 
-	return source.IsExist(key), nil
+	return source.IsExist(idx), nil
 }
 
 /**
@@ -669,13 +669,23 @@ func removeObject(from *From, idx string) error {
 
 /**
 * isExisted
-* @param to *From, field string, key string
+* @param from *From, field string, key string
 * @return (bool, error)
 **/
-func isExisted(to *From, field, key string) (bool, error) {
-	model, err := getModel(to)
-	if err != nil {
-		return false, err
+func isExisted(from *From, field, idx string) (bool, error) {
+	if !node.started {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
-	return model.isExisted(field, key)
+
+	if node.host != from.Host && from.Host != "" {
+		return methods.isExisted(from, field, idx)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return model.isExisted(field, idx)
 }
