@@ -1033,3 +1033,47 @@ func (s *Methods) PutObject(require et.Json, response et.Json) error {
 	response = dest
 	return nil
 }
+
+/**
+* removeObject
+* @param to, idx string, dest any
+* @return error
+**/
+func (s *Methods) removeObject(from *From, idx string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"from": from,
+		"idx":  idx,
+	}
+	var dest bool
+	err := jrpc.CallRpc(from.Host, "Methods.RemoveObject", args, &dest)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* RemoveObject
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Methods) RemoveObject(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	from := toFrom(require.Json("from"))
+	idx := require.Str("idx")
+	err := removeObject(from, idx)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}

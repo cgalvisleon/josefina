@@ -636,15 +636,34 @@ func putObject(from *From, idx string, data et.Json) error {
 }
 
 /**
+* getObjet: Gets the model as object
+* @param idx string
+* @return et.Json, error
+**/
+func getObjet(from *From, idx string, dest et.Json) (bool, error) {
+	return get(from, idx, &dest)
+}
+
+/**
 * removeObject: Removes an object from the model
 * @param model *Model, key string
 * @return error
 **/
-func removeObject(to *From, key string) error {
-	model, err := getModel(to)
-	if err != nil {
-		return err
+func removeObject(from *From, idx string) error {
+	if !node.started {
+		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
+
+	if node.host != from.Host && from.Host != "" {
+		return methods.removeObject(from, idx)
+	}
+
+	key := from.key()
+	model, ok := node.models[key]
+	if !ok {
+		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
+
 	return model.removeObject(key)
 }
 
