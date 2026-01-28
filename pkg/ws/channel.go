@@ -8,5 +8,6 @@ const (
 )
 
 type Channel struct {
-	Type TypeChannel `json:"type"`
+	Type        TypeChannel            `json:"type"`
+	Subscribers map[string]*Subscriber `json:"subscribers"`
 }
