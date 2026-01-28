@@ -9,14 +9,14 @@ import (
 )
 
 type Message struct {
-	Created_at time.Time   `json:"created_at"`
-	Type       int         `json:"type"`
-	Id         string      `json:"id"`
-	From       et.Json     `json:"from"`
-	Channel    string      `json:"channel"`
-	To         string      `json:"to"`
-	Ignored    []string    `json:"-"`
-	Data       interface{} `json:"data"`
+	Created_at time.Time `json:"created_at"`
+	Type       int       `json:"type"`
+	Id         string    `json:"id"`
+	From       et.Json   `json:"from"`
+	Channel    string    `json:"channel"`
+	To         []string  `json:"to"`
+	Ignored    []string  `json:"-"`
+	Data       et.Json   `json:"data"`
 }
 
 /**
@@ -48,10 +48,10 @@ func (s *Message) ToString() string {
 
 /**
 * newMessage
-* @param from et.Json, to string, data interface{}
+* @param from et.Json, to []string, data et.Json
 * @return *Message
 **/
-func newMessage(from et.Json, to string, data interface{}) *Message {
+func newMessage(from et.Json, to []string, data et.Json) *Message {
 	id := reg.UUID()
 	return &Message{
 		Created_at: time.Now(),
