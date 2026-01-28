@@ -526,3 +526,42 @@ func getModel(from *From) (*Model, error) {
 	}
 	return node.getModel(from.Database, from.Schema, from.Name)
 }
+
+/**
+* removeObject: Removes an object from the model
+* @param model *Model, key string
+* @return error
+**/
+func removeObject(to *From, key string) error {
+	model, err := getModel(to)
+	if err != nil {
+		return err
+	}
+	return model.removeObject(key)
+}
+
+/**
+* putObject: Puts an object into the model
+* @param model *Model, key string, data et.Json
+* @return error
+**/
+func putObject(to *From, key string, data et.Json) error {
+	model, err := getModel(to)
+	if err != nil {
+		return err
+	}
+	return model.putObject(key, data)
+}
+
+/**
+* isExisted
+* @param to *From, field string, key string
+* @return (bool, error)
+**/
+func isExisted(to *From, field, key string) (bool, error) {
+	model, err := getModel(to)
+	if err != nil {
+		return false, err
+	}
+	return model.isExisted(field, key)
+}

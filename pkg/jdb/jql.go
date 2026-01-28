@@ -118,12 +118,3 @@ func JqlHttp(request *Request, response *Response) {
 
 	handler.Execute(request, response)
 }
-
-/**
-* jqlIsExisted
-* @param to *From, field string, key string
-* @return (bool, error)
-**/
-func jqlIsExisted(to *From, field, key string) (bool, error) {
-	return false, nil
-}

@@ -311,7 +311,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 
 		key := fmt.Sprintf("%v", new[name])
-		exists, err := jqlIsExisted(detail.To, fk, key)
+		exists, err := isExisted(detail.To, fk, key)
 		if err != nil {
 			return nil, err
 		}
