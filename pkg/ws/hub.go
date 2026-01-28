@@ -13,42 +13,42 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type Hub struct {
-	host       string
-	clients    []*Subscriber
-	channels   []*Channel
-	register   chan *Subscriber
-	unregister chan *Subscriber
-	mutex      *sync.RWMutex
-	isStart    bool
+type Ws struct {
+	host        string
+	channels    map[string]*Channel
+	subscribers map[string]*Subscriber
+	register    chan *Subscriber
+	unregister  chan *Subscriber
+	mutex       *sync.RWMutex
+	isStart     bool
 }
 
 /**
-* newHub
-* @return *Hub
+* newWs
+* @return *Ws
 **/
-func newHub() *Hub {
-	return &Hub{
-		clients:    []*Subscriber{},
-		channels:   []*Channel{},
-		register:   make(chan *Subscriber),
-		unregister: make(chan *Subscriber),
-		mutex:      &sync.RWMutex{},
-		isStart:    false,
+func newWs() *Ws {
+	return &Ws{
+		channels:    make(map[string]*Channel),
+		subscribers: make(map[string]*Subscriber),
+		register:    make(chan *Subscriber),
+		unregister:  make(chan *Subscriber),
+		mutex:       &sync.RWMutex{},
+		isStart:     false,
 	}
 }
 
 /**
 * start
 **/
-func (h *Hub) start() {
-	h.isStart = true
+func (s *Ws) start() {
+	s.isStart = true
 	for {
 		select {
-		case client := <-h.register:
-			h.onConnect(client)
-		case client := <-h.unregister:
-			h.onDisconnect(client)
+		case client := <-s.register:
+			s.onConnect(client)
+		case client := <-s.unregister:
+			s.onDisconnect(client)
 		}
 	}
 }
@@ -57,25 +57,20 @@ func (h *Hub) start() {
 * onConnect
 * @param *Subscriber client
 **/
-func (h *Hub) onConnect(client *Subscriber) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
+func (s *Ws) onConnect(client *Subscriber) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	h.clients = append(h.clients, client)
+	s.subscribers[client.Id] = client
 }
 
 /**
 * onDisconnect
 * @param *Subscriber client
 **/
-func (h *Hub) onDisconnect(client *Subscriber) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
+func (s *Ws) onDisconnect(client *Subscriber) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	for i, c := range h.clients {
-		if c == client {
-			h.clients = append(h.clients[:i], h.clients[i+1:]...)
-			break
-		}
-	}
+	delete(s.subscribers, client.Id)
 }

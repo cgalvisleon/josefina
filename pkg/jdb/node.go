@@ -14,6 +14,7 @@ import (
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/pkg/ws"
 )
 
 type NodeState int
@@ -41,6 +42,7 @@ type Node struct {
 	started       bool               `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
+	ws            *Ws                `json:"-"`
 }
 
 /**

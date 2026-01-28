@@ -1,3 +1,12 @@
 package ws
 
-type Channel struct{}
+type TypeChannel string
+
+const (
+	TpQueue TypeChannel = "Queue"
+	TpTopic TypeChannel = "Topic"
+)
+
+type Channel struct {
+	Type TypeChannel `json:"type"`
+}
