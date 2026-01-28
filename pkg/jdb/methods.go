@@ -880,9 +880,7 @@ func (s *Methods) Put(require et.Json, response *bool) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	from := &From{
-		Host: require.Str("from"),
-	}
+	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Get("data")
 	err := put(from, idx, data)

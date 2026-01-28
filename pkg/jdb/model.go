@@ -59,6 +59,21 @@ func (s *From) key() string {
 	return modelKey(s.Database, s.Schema, s.Name)
 }
 
+/**
+* toFrom: Converts a JSON to a From
+* @param def et.Json
+* @return *From
+**/
+func toFrom(def et.Json) *From {
+	return &From{
+		Database: def.Str("database"),
+		Schema:   def.Str("schema"),
+		Name:     def.Str("name"),
+		Host:     def.Str("host"),
+		IsInit:   def.Bool("is_init"),
+	}
+}
+
 type Model struct {
 	*From         `json:"from"`
 	Fields        map[string]*Field           `json:"fields"`
