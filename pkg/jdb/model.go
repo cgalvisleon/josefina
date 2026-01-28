@@ -187,6 +187,13 @@ func (s *Model) init() error {
 		s.Host = node.host
 	}
 
+	for _, detail := range s.Details {
+		_, err := getModel(detail.To)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -535,7 +542,7 @@ func (s *Model) Selects(fields ...string) *Wheres {
 * @param from *From
 * @return *Model, error
 **/
-func etModel(from *From) (*Model, error) {
+func getModel(from *From) (*Model, error) {
 	if !node.started {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}

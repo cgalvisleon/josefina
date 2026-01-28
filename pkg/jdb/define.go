@@ -190,7 +190,7 @@ func (s *Model) DefineReferences(name, key string, to *Model, onDeleteCascade, o
 
 	to.defineIndexe(name)
 	to.defineRequired(name)
-	result = newDetail(to, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
+	result = newDetail(to.From, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
 	s.References[name] = result
 	return result, nil
 }
@@ -229,41 +229,31 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		}
 	}
 
-	s.Details[name] = newDetail(to, keys, []string{}, false, false)
+	s.Details[name] = newDetail(to.From, keys, []string{}, false, false)
 	return to, nil
 }
 
 /**
 * DefineRollup: Defines the rollup
-* @param name string, from string, keys map[string]string, selects []string
-* @return *Model
-**/
-func (s *Model) DefineRollup(name string, from *From, keys map[string]string, selects []string) (*Model, error) {
-	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
-	if err != nil {
-		return nil, err
-	}
-
-	to, err := getModel(from)
-	if err != nil {
-		return nil, err
-	}
-
-	s.Rollups[name] = newDetail(to, keys, selects, false, false)
-	return to, nil
-}
-
-/**
-* DefineRelation: Defines the relation
-* @param from *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool
+* @param name string, to string, keys map[string]string, selects []string
 * @return error
 **/
-func (s *Model) DefineRelation(from *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
-	to, err := getModel(from)
+func (s *Model) DefineRollup(name string, to *From, keys map[string]string, selects []string) error {
+	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
 		return err
 	}
 
+	s.Rollups[name] = newDetail(to, keys, selects, false, false)
+	return nil
+}
+
+/**
+* DefineRelation: Defines the relation
+* @param to *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool
+* @return error
+**/
+func (s *Model) DefineRelation(to *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
 	detail := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.Relations[to.Name] = detail
 	s.setChanged()
