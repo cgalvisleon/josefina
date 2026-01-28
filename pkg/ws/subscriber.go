@@ -25,7 +25,7 @@ type Subscriber struct {
 * @param name string, socket *websocket.Conn
 * @return *Subscriber
 **/
-func newSubscriber(name string, socket *websocket.Conn) *Subscriber {
+func newSubscriber(hub *Hub, name string, socket *websocket.Conn) *Subscriber {
 	return &Subscriber{
 		Created_at: timezone.Now(),
 		Name:       name,
@@ -34,6 +34,7 @@ func newSubscriber(name string, socket *websocket.Conn) *Subscriber {
 		socket:     socket,
 		outbound:   make(chan []byte),
 		mutex:      sync.RWMutex{},
+		hub:        hub,
 	}
 }
 
@@ -41,13 +42,10 @@ func newSubscriber(name string, socket *websocket.Conn) *Subscriber {
 * read
 **/
 func (s *Subscriber) read() {
-	defer func() {
-
-	}()
-
 	for {
 		msgType, message, err := s.socket.ReadMessage()
 		if err != nil {
+			s.hub.unregister <- s
 			break
 		}
 

@@ -14,13 +14,15 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	host        string
-	channels    map[string]*Channel
-	subscribers map[string]*Subscriber
-	register    chan *Subscriber
-	unregister  chan *Subscriber
-	mutex       *sync.RWMutex
-	isStart     bool
+	host            string
+	channels        map[string]*Channel
+	subscribers     map[string]*Subscriber
+	register        chan *Subscriber
+	unregister      chan *Subscriber
+	mutex           *sync.RWMutex
+	onConnection    []func(*Subscriber)
+	onDisconnection []func(*Subscriber)
+	isStart         bool
 }
 
 /**
@@ -28,14 +30,17 @@ type Hub struct {
 * @return *Hub
 **/
 func NewWs() *Hub {
-	return &Hub{
-		channels:    make(map[string]*Channel),
-		subscribers: make(map[string]*Subscriber),
-		register:    make(chan *Subscriber),
-		unregister:  make(chan *Subscriber),
-		mutex:       &sync.RWMutex{},
-		isStart:     false,
+	result := &Hub{
+		channels:        make(map[string]*Channel),
+		subscribers:     make(map[string]*Subscriber),
+		register:        make(chan *Subscriber),
+		unregister:      make(chan *Subscriber),
+		mutex:           &sync.RWMutex{},
+		onConnection:    make([]func(*Subscriber), 0),
+		onDisconnection: make([]func(*Subscriber), 0),
+		isStart:         false,
 	}
+	return result
 }
 
 /**
@@ -54,7 +59,7 @@ func (s *Hub) Start() {
 }
 
 /**
-* onConnect
+* defOnConnect
 * @param *Subscriber client
 **/
 func (s *Hub) onConnect(client *Subscriber) {
@@ -62,10 +67,13 @@ func (s *Hub) onConnect(client *Subscriber) {
 	defer s.mutex.Unlock()
 
 	s.subscribers[client.Name] = client
+	for _, fn := range s.onConnection {
+		fn(client)
+	}
 }
 
 /**
-* onDisconnect
+* defOnDisconnect
 * @param *Subscriber client
 **/
 func (s *Hub) onDisconnect(client *Subscriber) {
@@ -73,6 +81,9 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 	defer s.mutex.Unlock()
 
 	delete(s.subscribers, client.Name)
+	for _, fn := range s.onDisconnection {
+		fn(client)
+	}
 }
 
 /**
@@ -88,11 +99,27 @@ func (s *Hub) connect(socket *websocket.Conn, username string) (*Subscriber, err
 		return client, nil
 	}
 
-	client = newSubscriber(username, socket)
+	client = newSubscriber(s, username, socket)
 	s.register <- client
 
 	go client.write()
 	go client.read()
 
 	return client, nil
+}
+
+/**
+* OnConnection
+* @param fn func(*Subscriber)
+**/
+func (s *Hub) OnConnection(fn func(*Subscriber)) {
+	s.onConnection = append(s.onConnection, fn)
+}
+
+/**
+* OnDisconnection
+* @param fn func(*Subscriber)
+**/
+func (s *Hub) OnDisconnection(fn func(*Subscriber)) {
+	s.onDisconnection = append(s.onDisconnection, fn)
 }
