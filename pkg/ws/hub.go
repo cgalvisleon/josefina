@@ -184,6 +184,10 @@ func (s *Hub) OnSubscribe(channel string, fn func(Message)) {
 	s.onSubscribe[channel] = fn
 }
 
+/**
+* OnStack
+* @param channel string, fn func(Message)
+**/
 func (s *Hub) OnStack(channel string, fn func(Message)) {
 	s.onStack[channel] = fn
 }
