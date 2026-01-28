@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/cgalvisleon/et v1.0.11
 	github.com/go-chi/chi/v5 v5.2.1
+	github.com/gorilla/websocket v1.5.3
 )
 
 require (
