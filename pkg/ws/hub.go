@@ -61,7 +61,7 @@ func (s *Ws) onConnect(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.subscribers[client.Id] = client
+	s.subscribers[client.Name] = client
 }
 
 /**
@@ -72,22 +72,27 @@ func (s *Ws) onDisconnect(client *Subscriber) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	delete(s.subscribers, client.Id)
+	delete(s.subscribers, client.Name)
 }
 
-func (s *Ws) connect(socket *websocket.Conn, clientId, name string) (*Subscriber, error) {
-	client := s.getClient(clientId)
-	if client != nil {
+/**
+* connect
+* @param socket *websocket.Conn, username string
+* @return *Subscriber, error
+**/
+func (s *Ws) connect(socket *websocket.Conn, username string) (*Subscriber, error) {
+	client, ok := s.subscribers[username]
+	if ok {
+		client.Addr = socket.RemoteAddr().String()
+		client.socket = socket
 		return client, nil
 	}
 
-	client, isNew := newSubscriber(s, socket, clientId, name)
-	if isNew {
-		h.register <- client
+	client = newSubscriber(username, socket)
+	s.register <- client
 
-		go client.write()
-		go client.read()
-	}
+	go client.write()
+	go client.read()
 
 	return client, nil
 }

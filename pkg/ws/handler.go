@@ -18,7 +18,7 @@ func (s *Ws) HttpConnect(w http.ResponseWriter, r *http.Request) {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 	}
 
-	_, err = s.connect(conn, clientId, name)
+	_, err = s.connect(conn, "usuario")
 	if err != nil {
 		logs.Alert(err)
 	}
