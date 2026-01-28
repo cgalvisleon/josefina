@@ -1153,7 +1153,7 @@ func (s *Methods) Count(require *From, response *int) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	existed, err := s.count(require)
+	existed, err := count(require)
 	if err != nil {
 		return err
 	}
