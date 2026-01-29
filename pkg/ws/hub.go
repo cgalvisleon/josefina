@@ -211,17 +211,43 @@ func (s *Hub) SendTo(to []string, message Message) {
 	}
 }
 
-func (s *Hub) Queue(channel string) error {
-
-	return nil
+/**
+* Topic
+* @param channel string
+* @return *Channel
+**/
+func (s *Hub) Topic(channel string) *Channel {
+	ch := newChannel(TpTopic)
+	s.mu.Lock()
+	s.Channels[channel] = ch
+	s.mu.Unlock()
+	return ch
 }
 
-func (s *Hub) Stack(channel string) error {
-	return nil
+/**
+* Queue
+* @param channel string
+* @return *Channel
+**/
+func (s *Hub) Queue(channel string) *Channel {
+	ch := newChannel(TpQueue)
+	s.mu.Lock()
+	s.Channels[channel] = ch
+	s.mu.Unlock()
+	return ch
 }
 
-func (s *Hub) Topic(channel string) error {
-	return nil
+/**
+* Stack
+* @param channel string
+* @return *Channel
+**/
+func (s *Hub) Stack(channel string) *Channel {
+	ch := newChannel(TpStack)
+	s.mu.Lock()
+	s.Channels[channel] = ch
+	s.mu.Unlock()
+	return ch
 }
 
 /**
