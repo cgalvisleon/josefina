@@ -1,6 +1,8 @@
 module github.com/cgalvisleon/josefina
 
-go 1.23.0
+go 1.24.1
+
+toolchain go1.24.12
 
 require (
 	github.com/cgalvisleon/et v1.0.11
@@ -17,6 +19,7 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
+	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/cors v1.11.1 // indirect
