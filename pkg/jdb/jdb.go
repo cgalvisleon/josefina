@@ -102,3 +102,15 @@ func Authenticate(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+/**
+* applyMiddleware
+* @param middlewares []func(http.Handler) http.Handler, next http.Handler
+* @return http.Handler
+**/
+func applyMiddleware(middlewares []func(http.Handler) http.Handler, next http.Handler) http.Handler {
+	for _, middleware := range middlewares {
+		next = middleware(next)
+	}
+	return next
+}

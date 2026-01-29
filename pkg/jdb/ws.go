@@ -33,6 +33,13 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	Authenticate(func(w, r) {
+		token := r.Header.Get("Authorization")
+		if !utility.ValidStr(token, 0, []string{""}) {
+			response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
+			return
+		}
+	})
 	token := r.Header.Get("Authorization")
 	if !utility.ValidStr(token, 0, []string{""}) {
 		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
