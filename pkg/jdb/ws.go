@@ -236,3 +236,38 @@ func HttpSendTo(w http.ResponseWriter, r *http.Request) {
 	}))
 	handler.ServeHTTP(w, r)
 }
+
+/**
+* HttpPublish create a stack channel
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func HttpPublish(w http.ResponseWriter, r *http.Request) {
+	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := response.GetBody(r)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		channel := body.Str("channel")
+		if !utility.ValidStr(channel, 0, []string{""}) {
+			response.HTTPError(w, r, http.StatusBadRequest, fmt.Errorf(msg.MSG_ARG_REQUIRED, "channel").Error())
+			return
+		}
+
+		ctx := r.Context()
+		username := ctx.Value("username").(string)
+		ms := ws.NewMessage(et.Json{
+			"username": username,
+		}, []string{})
+		ms.Channel = channel
+		ms.Message = body.Str("message")
+		_, err = node.ws.Publish(channel, ms)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}))
+	handler.ServeHTTP(w, r)
+}
