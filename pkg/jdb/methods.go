@@ -1161,3 +1161,91 @@ func (s *Methods) Count(require *From, response *int) error {
 	*response = existed
 	return nil
 }
+
+/**
+* onConnect
+* @param to, idx string, dest any
+* @return error
+**/
+func (s *Methods) onConnect(to string, username string, tpConnection TpConnection, host string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"username":     username,
+		"tpConnection": tpConnection,
+		"host":         host,
+	}
+	var dest bool
+	err := jrpc.CallRpc(to, "Methods.OnConnect", args, &dest)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* OnConnect
+* @param require et.Json, response *boolean
+* @return error
+**/
+func (s *Methods) OnConnect(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	username := require.Str("username")
+	tpConnection := TpConnection(require.Int("tpConnection"))
+	host := require.Str("host")
+	err := node.onConnect(username, tpConnection, host)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
+* onDisconnect
+* @param to, idx string, dest any
+* @return error
+**/
+func (s *Methods) onDisconnect(to string, username string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	args := et.Json{
+		"username": username,
+	}
+	var dest bool
+	err := jrpc.CallRpc(to, "Methods.OnDisconnect", args, &dest)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* OnDisconnect
+* @param require et.Json, response *boolean
+* @return error
+**/
+func (s *Methods) OnDisconnect(require et.Json, response *bool) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	username := require.Str("username")
+	err := node.onDisconnect(username)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}

@@ -517,12 +517,14 @@ func (s *Node) saveDb(db *DB) error {
 
 /**
 * onConnect: Sets the client
-* @param client *Client
+* @param username string
+* @param tpConnection TpConnection
+* @param host string
 **/
-func (s *Node) onConnect(username string, tpConnection TpConnection, host string) {
+func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
 	leader := s.getLeader()
 	if leader != s.host && leader != "" {
-		return
+		return methods.onConnect(leader, username, tpConnection, host)
 	}
 
 	s.mu.Lock()
@@ -534,4 +536,23 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 		Type:     tpConnection,
 		Status:   Connected,
 	}
+
+	return nil
+}
+
+/**
+* onDisconnect: Removes the client
+* @param username string
+**/
+func (s *Node) onDisconnect(username string) error {
+	leader := s.getLeader()
+	if leader != s.host && leader != "" {
+		return methods.onDisconnect(leader, username)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.clients, username)
+	return nil
 }
