@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/gorilla/websocket"
@@ -25,18 +24,19 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	Channels        map[string]*Channel                       `json:"channels"`
-	Subscribers     map[string]*Subscriber                    `json:"subscribers"`
-	register        chan *Subscriber                          `json:"-"`
-	unregister      chan *Subscriber                          `json:"-"`
-	onConnection    []func(*Subscriber)                       `json:"-"`
-	onDisconnection []func(*Subscriber)                       `json:"-"`
-	onChannel       []func(Channel)                           `json:"-"`
-	onRemove        []func(string)                            `json:"-"`
-	onPublish       []func(id string, ch Channel, ms Message) `json:"-"`
-	onSend          []func(id string, to string, ms Message)  `json:"-"`
-	mu              *sync.RWMutex                             `json:"-"`
-	isStart         bool                                      `json:"-"`
+	Channels        map[string]*Channel            `json:"channels"`
+	Subscribers     map[string]*Subscriber         `json:"subscribers"`
+	register        chan *Subscriber               `json:"-"`
+	unregister      chan *Subscriber               `json:"-"`
+	onConnection    []func(*Subscriber)            `json:"-"`
+	onDisconnection []func(*Subscriber)            `json:"-"`
+	onChannel       []func(Channel)                `json:"-"`
+	onRemove        []func(string)                 `json:"-"`
+	onPublish       []func(ch Channel, ms Message) `json:"-"`
+	onSend          []func(to string, ms Message)  `json:"-"`
+	onReceive       []func(to string, ms Message)  `json:"-"`
+	mu              *sync.RWMutex                  `json:"-"`
+	isStart         bool                           `json:"-"`
 }
 
 /**
@@ -53,8 +53,9 @@ func NewWs() *Hub {
 		onDisconnection: make([]func(*Subscriber), 0),
 		onChannel:       make([]func(Channel), 0),
 		onRemove:        make([]func(string), 0),
-		onPublish:       make([]func(id string, ch Channel, ms Message), 0),
-		onSend:          make([]func(id string, to string, ms Message), 0),
+		onPublish:       make([]func(ch Channel, ms Message), 0),
+		onSend:          make([]func(to string, ms Message), 0),
+		onReceive:       make([]func(to string, ms Message), 0),
 		mu:              &sync.RWMutex{},
 		isStart:         false,
 	}
@@ -192,18 +193,26 @@ func (s *Hub) OnRemove(fn func(string)) {
 
 /**
 * OnPublish
-* @param fn func(id string, ch Channel, ms Message)
+* @param fn func(ch Channel, ms Message)
  */
-func (s *Hub) OnPublish(fn func(id string, ch Channel, ms Message)) {
+func (s *Hub) OnPublish(fn func(ch Channel, ms Message)) {
 	s.onPublish = append(s.onPublish, fn)
 }
 
 /**
 * OnSend
-* @param fn func(id string, to string, ms Message)
+* @param fn func(to string, ms Message)
  */
-func (s *Hub) OnSend(fn func(id string, to string, ms Message)) {
+func (s *Hub) OnSend(fn func(to string, ms Message)) {
 	s.onSend = append(s.onSend, fn)
+}
+
+/**
+* OnReceive
+* @param fn func(to string, ms Message)
+ */
+func (s *Hub) OnReceive(fn func(to string, ms Message)) {
+	s.onReceive = append(s.onReceive, fn)
 }
 
 /**
@@ -327,10 +336,9 @@ func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 
 /**
 * SendTo
-* @param serviceId string, to []string, message Message
+* @param to []string, message Message
 **/
-func (s *Hub) SendTo(serviceId string, to []string, message Message) {
-	serviceId = reg.GetULID(serviceId)
+func (s *Hub) SendTo(to []string, message Message) {
 	for _, username := range to {
 		client, ok := s.Subscribers[username]
 		if ok {
@@ -344,12 +352,12 @@ func (s *Hub) SendTo(serviceId string, to []string, message Message) {
 			if len(message.Data) > 0 {
 				client.sendObject(message.Data)
 				for _, fn := range s.onSend {
-					fn(serviceId, username, message)
+					fn(username, message)
 				}
 			} else if len(message.Message) > 0 {
 				client.sendText(message.Message)
 				for _, fn := range s.onSend {
-					fn(serviceId, username, message)
+					fn(username, message)
 				}
 			}
 		}
@@ -360,7 +368,7 @@ func (s *Hub) SendTo(serviceId string, to []string, message Message) {
 * Publish
 * @param channel string, message Message
 **/
-func (s *Hub) Publish(serviceId string, channel string, message Message) error {
+func (s *Hub) Publish(channel string, message Message) error {
 	s.mu.RLock()
 	ch, ok := s.Channels[channel]
 	s.mu.RUnlock()
@@ -368,15 +376,14 @@ func (s *Hub) Publish(serviceId string, channel string, message Message) error {
 		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
 	}
 
-	serviceId = reg.GetULID(serviceId)
 	for _, fn := range s.onPublish {
-		fn(serviceId, *ch, message)
+		fn(*ch, message)
 	}
 	switch ch.Type {
 	case TpQueue:
 	case TpStack:
 	case TpTopic:
-		s.SendTo(serviceId, ch.Subscribers, message)
+		s.SendTo(ch.Subscribers, message)
 	}
 
 	return nil

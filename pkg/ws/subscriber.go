@@ -99,24 +99,28 @@ func (s *Subscriber) write() {
 * @param message []byte
 **/
 func (s *Subscriber) listener(message []byte) {
-	msg, err := DecodeMessage(message)
+	ms, err := DecodeMessage(message)
 	if err != nil {
 		s.error(err)
 		return
 	}
 
-	if msg.Channel != "" {
-		s.hub.Publish(msg.Channel, msg)
-	} else if len(msg.To) > 0 {
-		s.hub.SendTo(msg.To, msg)
+	if ms.Channel != "" {
+		s.hub.Publish(ms.Channel, ms)
+	} else if len(ms.To) > 0 {
+		s.hub.SendTo(ms.To, ms)
 	}
 
-	logs.Info(msg.ToString())
+	for _, fn := range s.hub.onReceive {
+		fn(s.Name, ms)
+	}
+
+	logs.Info(ms.ToString())
 }
 
 /**
 * send
-* @param msg Message
+* @param tp int, bt []byte
 **/
 func (s *Subscriber) send(tp int, bt []byte) {
 	s.outbound <- Outbound{
@@ -150,13 +154,13 @@ func (s *Subscriber) sendObject(message et.Json) {
 * @param err error
 **/
 func (s *Subscriber) error(err error) {
-	msg := et.Item{
+	ms := et.Item{
 		Ok: false,
 		Result: et.Json{
 			"message": err.Error(),
 		},
 	}
-	bt, err := json.Marshal(msg)
+	bt, err := json.Marshal(ms)
 	if err != nil {
 		return
 	}
@@ -168,13 +172,13 @@ func (s *Subscriber) error(err error) {
 * close
 **/
 func (s *Subscriber) close() {
-	msg := et.Item{
+	ms := et.Item{
 		Ok: true,
 		Result: et.Json{
 			"message": msg.MSG_BYE,
 		},
 	}
-	bt, err := json.Marshal(msg)
+	bt, err := json.Marshal(ms)
 	if err != nil {
 		return
 	}
