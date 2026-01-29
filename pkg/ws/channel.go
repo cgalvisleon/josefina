@@ -11,6 +11,7 @@ const (
 )
 
 type Channel struct {
+	Name        string      `json:"name"`
 	Type        TypeChannel `json:"type"`
 	Subscribers []string    `json:"subscribers"`
 	Turn        int         `json:"turn"`
@@ -21,8 +22,9 @@ type Channel struct {
 * @param tp TypeChannel
 * @return *Channel
 **/
-func newChannel(tp TypeChannel) *Channel {
+func newChannel(name string, tp TypeChannel) *Channel {
 	return &Channel{
+		Name:        name,
 		Type:        tp,
 		Subscribers: []string{},
 		Turn:        0,
@@ -30,10 +32,10 @@ func newChannel(tp TypeChannel) *Channel {
 }
 
 /**
-* addSubscriber
+* subscriber
 * @param subscriber string
 **/
-func (s *Channel) addSubscriber(subscriber string) {
+func (s *Channel) subscriber(subscriber string) {
 	idx := slices.IndexFunc(s.Subscribers, func(item string) bool {
 		return item == subscriber
 	})
@@ -45,10 +47,10 @@ func (s *Channel) addSubscriber(subscriber string) {
 }
 
 /**
-* removeSubscriber
+* remove
 * @param subscriber string
 **/
-func (s *Channel) removeSubscriber(subscriber string) {
+func (s *Channel) remove(subscriber string) {
 	idx := slices.IndexFunc(s.Subscribers, func(item string) bool {
 		return item == subscriber
 	})

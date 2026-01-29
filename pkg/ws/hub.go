@@ -217,7 +217,7 @@ func (s *Hub) SendTo(to []string, message Message) {
 * @return *Channel
 **/
 func (s *Hub) Topic(channel string) *Channel {
-	ch := newChannel(TpTopic)
+	ch := newChannel(channel, TpTopic)
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
@@ -230,7 +230,7 @@ func (s *Hub) Topic(channel string) *Channel {
 * @return *Channel
 **/
 func (s *Hub) Queue(channel string) *Channel {
-	ch := newChannel(TpQueue)
+	ch := newChannel(channel, TpQueue)
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
@@ -243,20 +243,11 @@ func (s *Hub) Queue(channel string) *Channel {
 * @return *Channel
 **/
 func (s *Hub) Stack(channel string) *Channel {
-	ch := newChannel(TpStack)
+	ch := newChannel(channel, TpStack)
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
 	return ch
-}
-
-/**
-* Unsubscribe
-* @param cache string, subscribe string
-* @return error
-**/
-func (s *Hub) Unsubscribe(cache string, subscribe string) error {
-	return nil
 }
 
 /**
@@ -265,6 +256,28 @@ func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 * @return error
 **/
 func (s *Hub) Subscribe(cache string, subscribe string) error {
+	ch, ok := s.Channels[cache]
+	if !ok {
+		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, cache)
+	}
+
+	client, ok := s.Subscribers[subscribe]
+	if !ok {
+		return fmt.Errorf(msg.MSG_USER_NOT_FOUND, subscribe)
+	}
+
+	ch.subscriber(client.Name)
+	client.addChannel(ch.Name)
+
+	return nil
+}
+
+/**
+* Unsubscribe
+* @param cache string, subscribe string
+* @return error
+**/
+func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 	return nil
 }
 
