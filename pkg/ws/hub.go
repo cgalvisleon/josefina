@@ -30,6 +30,7 @@ type Hub struct {
 	onConnection    []func(*Subscriber)     `json:"-"`
 	onDisconnection []func(*Subscriber)     `json:"-"`
 	onChannel       []func(Channel)         `json:"-"`
+	onRemove        []func(string)          `json:"-"`
 	onSend          []func(string, Message) `json:"-"`
 	mu              *sync.RWMutex           `json:"-"`
 	isStart         bool                    `json:"-"`
@@ -48,6 +49,7 @@ func NewWs() *Hub {
 		onConnection:    make([]func(*Subscriber), 0),
 		onDisconnection: make([]func(*Subscriber), 0),
 		onChannel:       make([]func(Channel), 0),
+		onRemove:        make([]func(string), 0),
 		onSend:          make([]func(string, Message), 0),
 		mu:              &sync.RWMutex{},
 		isStart:         false,
@@ -176,13 +178,33 @@ func (s *Hub) OnChannel(fn func(Channel)) {
 	s.onChannel = append(s.onChannel, fn)
 }
 
-/*
-*
+/**
+* OnRemove
+* @param fn func(string)
+**/
+func (s *Hub) OnRemove(fn func(string)) {
+	s.onRemove = append(s.onRemove, fn)
+}
+
+/**
 * OnSend
 * @param fn func(string, Message)
  */
 func (s *Hub) OnSend(fn func(string, Message)) {
 	s.onSend = append(s.onSend, fn)
+}
+
+/**
+* addChannel
+* @param *Channel ch
+**/
+func (s *Hub) addChannel(ch *Channel) {
+	s.mu.Lock()
+	s.Channels[ch.Name] = ch
+	s.mu.Unlock()
+	for _, fn := range s.onChannel {
+		fn(*ch)
+	}
 }
 
 /**
@@ -193,12 +215,7 @@ func (s *Hub) OnSend(fn func(string, Message)) {
  */
 func (s *Hub) Topic(channel string) *Channel {
 	ch := newChannel(channel, TpTopic)
-	s.mu.Lock()
-	s.Channels[channel] = ch
-	s.mu.Unlock()
-	for _, fn := range s.onChannel {
-		fn(*ch)
-	}
+	s.addChannel(ch)
 	return ch
 }
 
@@ -209,12 +226,7 @@ func (s *Hub) Topic(channel string) *Channel {
 **/
 func (s *Hub) Queue(channel string) *Channel {
 	ch := newChannel(channel, TpQueue)
-	s.mu.Lock()
-	s.Channels[channel] = ch
-	s.mu.Unlock()
-	for _, fn := range s.onChannel {
-		fn(*ch)
-	}
+	s.addChannel(ch)
 	return ch
 }
 
@@ -225,12 +237,7 @@ func (s *Hub) Queue(channel string) *Channel {
 **/
 func (s *Hub) Stack(channel string) *Channel {
 	ch := newChannel(channel, TpStack)
-	s.mu.Lock()
-	s.Channels[channel] = ch
-	s.mu.Unlock()
-	for _, fn := range s.onChannel {
-		fn(*ch)
-	}
+	s.addChannel(ch)
 	return ch
 }
 
@@ -258,6 +265,9 @@ func (s *Hub) Remove(channel string) error {
 	s.mu.Lock()
 	delete(s.Channels, channel)
 	s.mu.Unlock()
+	for _, fn := range s.onRemove {
+		fn(channel)
+	}
 	return nil
 }
 
