@@ -253,7 +253,6 @@ func (s *Node) start() error {
 	s.started = true
 	s.mu.Unlock()
 	s.ws.Start()
-	s.ws.SetDebug(true)
 
 	go s.electionLoop()
 

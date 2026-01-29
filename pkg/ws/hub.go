@@ -341,7 +341,8 @@ func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 * SendTo
 * @param to []string, message Message
 **/
-func (s *Hub) SendTo(to []string, message Message) {
+func (s *Hub) SendTo(to []string, message Message) ([]string, error) {
+	result := []string{}
 	for _, username := range to {
 		client, ok := s.Subscribers[username]
 		if ok {
@@ -363,8 +364,16 @@ func (s *Hub) SendTo(to []string, message Message) {
 					fn(username, message)
 				}
 			}
+
+			result = append(result, username)
 		}
 	}
+
+	if len(result) == 0 {
+		return nil, fmt.Errorf(msg.MSG_USER_NOT_FOUND)
+	}
+
+	return result, nil
 }
 
 /**
