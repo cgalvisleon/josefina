@@ -35,16 +35,15 @@ type Outbound struct {
 }
 
 type Subscriber struct {
-	Created_at time.Time           `json:"created_at"`
-	Name       string              `json:"name"`
-	Addr       string              `json:"addr"`
-	Status     Status              `json:"status"`
-	Channels   map[string]*Channel `json:"channels"`
-	socket     *websocket.Conn     `json:"-"`
-	outbound   chan Outbound       `json:"-"`
-	mutex      sync.RWMutex        `json:"-"`
-	hub        *Hub                `json:"-"`
-	ctx        context.Context     `json:"-"`
+	Created_at time.Time       `json:"created_at"`
+	Name       string          `json:"name"`
+	Addr       string          `json:"addr"`
+	Status     Status          `json:"status"`
+	socket     *websocket.Conn `json:"-"`
+	outbound   chan Outbound   `json:"-"`
+	mutex      sync.RWMutex    `json:"-"`
+	hub        *Hub            `json:"-"`
+	ctx        context.Context `json:"-"`
 }
 
 /**
@@ -58,7 +57,6 @@ func newSubscriber(hub *Hub, ctx context.Context, username string, socket *webso
 		Status:     Pending,
 		Name:       username,
 		Addr:       socket.RemoteAddr().String(),
-		Channels:   make(map[string]*Channel),
 		socket:     socket,
 		outbound:   make(chan Outbound),
 		mutex:      sync.RWMutex{},

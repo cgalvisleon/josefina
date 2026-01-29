@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -15,7 +14,6 @@ import (
 
 const (
 	packageName = "WebSocket"
-	version     = "0.0.1"
 )
 
 var upgrader = websocket.Upgrader{
@@ -25,7 +23,6 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	port            int
 	channels        map[string]*Channel
 	subscribers     map[string]*Subscriber
 	register        chan *Subscriber
@@ -44,9 +41,7 @@ type Hub struct {
 * @return *Hub
 **/
 func NewWs() *Hub {
-	port := envar.GetInt("WS_PORT", 3030)
 	result := &Hub{
-		port:            port,
 		channels:        make(map[string]*Channel),
 		subscribers:     make(map[string]*Subscriber),
 		register:        make(chan *Subscriber),
