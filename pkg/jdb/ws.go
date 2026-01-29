@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
@@ -164,6 +165,70 @@ func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		username := ctx.Value("username").(string)
 		err = node.ws.Subscribe(channel, username)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}))
+	handler.ServeHTTP(w, r)
+}
+
+/**
+* HttpUnsubscribe create a stack channel
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := response.GetBody(r)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		channel := body.Str("channel")
+		if !utility.ValidStr(channel, 0, []string{""}) {
+			response.HTTPError(w, r, http.StatusBadRequest, fmt.Errorf(msg.MSG_ARG_REQUIRED, "channel").Error())
+			return
+		}
+
+		ctx := r.Context()
+		username := ctx.Value("username").(string)
+		err = node.ws.Unsubscribe(channel, username)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}))
+	handler.ServeHTTP(w, r)
+}
+
+/**
+* HttpSendTo create a stack channel
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func HttpSendTo(w http.ResponseWriter, r *http.Request) {
+	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := response.GetBody(r)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		to := body.ArrayStr("to")
+		if len(to) == 0 {
+			response.HTTPError(w, r, http.StatusBadRequest, fmt.Errorf(msg.MSG_ARG_REQUIRED, "to").Error())
+			return
+		}
+
+		ctx := r.Context()
+		username := ctx.Value("username").(string)
+		ms := ws.NewMessage(et.Json{
+			"username": username,
+		}, to)
+
+		_, err = node.ws.SendTo(to, ms)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return
