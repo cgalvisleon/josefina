@@ -111,7 +111,7 @@ func newTransaction(model *Model, cmd Command, idx string, data et.Json, status 
 type Tx struct {
 	StartedAt    time.Time      `json:"startedAt"`
 	EndedAt      time.Time      `json:"endedAt"`
-	Id           string         `json:"id"`
+	ID           string         `json:"id"`
 	Transactions []*Transaction `json:"transactions"`
 	isDebug      bool           `json:"-"`
 }
@@ -130,7 +130,7 @@ func getTx(tx *Tx) (*Tx, bool) {
 	tx = &Tx{
 		StartedAt:    timezone.Now(),
 		EndedAt:      time.Time{},
-		Id:           id,
+		ID:           id,
 		Transactions: make([]*Transaction, 0),
 	}
 	return tx, true
@@ -149,7 +149,7 @@ func (s Tx) toJson() et.Json {
 	return et.Json{
 		"startedAt":    s.StartedAt,
 		"endedAt":      s.EndedAt,
-		"id":           s.Id,
+		"id":           s.ID,
 		"transactions": transactions,
 	}
 }
@@ -165,7 +165,7 @@ func (s *Tx) save() error {
 		logs.Debug(data.ToString())
 	}
 
-	_, err := setTransaction(s.Id, data)
+	_, err := setTransaction(s.ID, data)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import (
 )
 
 type Session struct {
+	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	Username  string    `json:"username"`
 	Token     string    `json:"token"`
@@ -89,6 +90,7 @@ func auth(token string) (*claim.Claim, error) {
 		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
 	}
 
+	token = utility.PrefixRemove("Bearer", token)
 	result, err := claim.ParceToken(token)
 	if err != nil {
 		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
