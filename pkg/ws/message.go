@@ -8,25 +8,15 @@ import (
 	"github.com/cgalvisleon/et/reg"
 )
 
-type TypeAction int
-
-const (
-	SendMessage TypeAction = 0
-	Subscribe   TypeAction = 1
-	Queue       TypeAction = 2
-	Stack       TypeAction = 3
-)
-
 type Message struct {
-	Created_at time.Time  `json:"created_at"`
-	Id         string     `json:"id"`
-	From       et.Json    `json:"from"`
-	Channel    string     `json:"channel"`
-	To         []string   `json:"to"`
-	Ignored    []string   `json:"-"`
-	Data       et.Json    `json:"data"`
-	Message    string     `json:"message"`
-	Action     TypeAction `json:"action"`
+	Created_at time.Time `json:"created_at"`
+	Id         string    `json:"id"`
+	From       et.Json   `json:"from"`
+	Channel    string    `json:"channel"`
+	To         []string  `json:"to"`
+	Ignored    []string  `json:"-"`
+	Data       et.Json   `json:"data"`
+	Message    string    `json:"message"`
 }
 
 /**
@@ -71,10 +61,10 @@ func (s *Message) ToString() string {
 
 /**
 * newMessage
-* @param from et.Json, to []string, action TypeAction, data et.Json
+* @param from et.Json, to []string, data et.Json
 * @return *Message
 **/
-func newMessage(from et.Json, to []string, action TypeAction, data et.Json) *Message {
+func newMessage(from et.Json, to []string) *Message {
 	id := reg.UUID()
 	return &Message{
 		Created_at: time.Now(),
@@ -83,9 +73,8 @@ func newMessage(from et.Json, to []string, action TypeAction, data et.Json) *Mes
 		Channel:    "",
 		To:         to,
 		Ignored:    []string{},
-		Data:       data,
+		Data:       et.Json{},
 		Message:    "",
-		Action:     action,
 	}
 }
 

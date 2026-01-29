@@ -23,17 +23,16 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	Channels        map[string]*Channel      `json:"channels"`
-	Subscribers     map[string]*Subscriber   `json:"subscribers"`
-	register        chan *Subscriber         `json:"-"`
-	unregister      chan *Subscriber         `json:"-"`
-	onConnection    []func(*Subscriber)      `json:"-"`
-	onDisconnection []func(*Subscriber)      `json:"-"`
-	onPublish       map[string]func(Message) `json:"-"`
-	onSubscribe     map[string]func(Message) `json:"-"`
-	onStack         map[string]func(Message) `json:"-"`
-	mu              *sync.RWMutex            `json:"-"`
-	isStart         bool                     `json:"-"`
+	Channels        map[string]*Channel     `json:"channels"`
+	Subscribers     map[string]*Subscriber  `json:"subscribers"`
+	register        chan *Subscriber        `json:"-"`
+	unregister      chan *Subscriber        `json:"-"`
+	onConnection    []func(*Subscriber)     `json:"-"`
+	onDisconnection []func(*Subscriber)     `json:"-"`
+	onChannel       []func(Channel)         `json:"-"`
+	onSend          []func(string, Message) `json:"-"`
+	mu              *sync.RWMutex           `json:"-"`
+	isStart         bool                    `json:"-"`
 }
 
 /**
@@ -48,9 +47,8 @@ func NewWs() *Hub {
 		unregister:      make(chan *Subscriber),
 		onConnection:    make([]func(*Subscriber), 0),
 		onDisconnection: make([]func(*Subscriber), 0),
-		onPublish:       make(map[string]func(Message)),
-		onSubscribe:     make(map[string]func(Message)),
-		onStack:         make(map[string]func(Message)),
+		onChannel:       make([]func(Channel), 0),
+		onSend:          make([]func(string, Message), 0),
 		mu:              &sync.RWMutex{},
 		isStart:         false,
 	}
@@ -171,56 +169,36 @@ func (s *Hub) OnDisconnection(fn func(*Subscriber)) {
 }
 
 /**
-* OnPublish
-* @param channel string, fn func(Message)
+* OnChannel
+* @param fn func(Channel)
 **/
-func (s *Hub) OnPublish(channel string, fn func(Message)) {
-	s.onPublish[channel] = fn
+func (s *Hub) OnChannel(fn func(Channel)) {
+	s.onChannel = append(s.onChannel, fn)
 }
 
-/**
-* OnSubscribe
-* @param channel string, fn func(Message)
-**/
-func (s *Hub) OnSubscribe(channel string, fn func(Message)) {
-	s.onSubscribe[channel] = fn
-}
-
-/**
-* OnStack
-* @param channel string, fn func(Message)
-**/
-func (s *Hub) OnStack(channel string, fn func(Message)) {
-	s.onStack[channel] = fn
-}
-
-/**
-* SendTo
-* @param to []string, message Message
-**/
-func (s *Hub) SendTo(to []string, message Message) {
-	for _, username := range to {
-		client, ok := s.Subscribers[username]
-		if ok {
-			if len(message.Data) > 0 {
-				client.sendObject(message.Data)
-			} else if len(message.Message) > 0 {
-				client.sendText(message.Message)
-			}
-		}
-	}
+/*
+*
+* OnSend
+* @param fn func(string, Message)
+ */
+func (s *Hub) OnSend(fn func(string, Message)) {
+	s.onSend = append(s.onSend, fn)
 }
 
 /**
 * Topic
 * @param channel string
 * @return *Channel
-**/
+*
+ */
 func (s *Hub) Topic(channel string) *Channel {
 	ch := newChannel(channel, TpTopic)
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
+	for _, fn := range s.onChannel {
+		fn(*ch)
+	}
 	return ch
 }
 
@@ -234,6 +212,9 @@ func (s *Hub) Queue(channel string) *Channel {
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
+	for _, fn := range s.onChannel {
+		fn(*ch)
+	}
 	return ch
 }
 
@@ -247,6 +228,9 @@ func (s *Hub) Stack(channel string) *Channel {
 	s.mu.Lock()
 	s.Channels[channel] = ch
 	s.mu.Unlock()
+	for _, fn := range s.onChannel {
+		fn(*ch)
+	}
 	return ch
 }
 
@@ -320,6 +304,23 @@ func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 }
 
 /**
+* SendTo
+* @param to []string, message Message
+**/
+func (s *Hub) SendTo(to []string, message Message) {
+	for _, username := range to {
+		client, ok := s.Subscribers[username]
+		if ok {
+			if len(message.Data) > 0 {
+				client.sendObject(message.Data)
+			} else if len(message.Message) > 0 {
+				client.sendText(message.Message)
+			}
+		}
+	}
+}
+
+/**
 * Publish
 * @param channel string, message Message
 **/
@@ -333,9 +334,8 @@ func (s *Hub) Publish(channel string, message Message) error {
 
 	switch ch.Type {
 	case TpQueue:
-		// TODO: Implement queue logic
+	case TpStack:
 	case TpTopic:
-		// TODO: Implement topic logic
 		s.SendTo(ch.Subscribers, message)
 	}
 
