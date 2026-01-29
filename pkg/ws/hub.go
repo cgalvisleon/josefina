@@ -268,7 +268,6 @@ func (s *Hub) Subscribe(cache string, subscribe string) error {
 
 	ch.subscriber(client.Name)
 	client.addChannel(ch.Name)
-
 	return nil
 }
 
@@ -278,6 +277,18 @@ func (s *Hub) Subscribe(cache string, subscribe string) error {
 * @return error
 **/
 func (s *Hub) Unsubscribe(cache string, subscribe string) error {
+	ch, ok := s.Channels[cache]
+	if !ok {
+		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, cache)
+	}
+
+	client, ok := s.Subscribers[subscribe]
+	if !ok {
+		return fmt.Errorf(msg.MSG_USER_NOT_FOUND, subscribe)
+	}
+
+	ch.remove(client.Name)
+	client.removeChannel(ch.Name)
 	return nil
 }
 
