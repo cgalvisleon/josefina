@@ -1,9 +1,11 @@
 package jdb
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/ws"
 )
@@ -36,6 +38,30 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 			response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}))
+	handler.ServeHTTP(w, r)
+}
+
+/**
+* HttpTopic create a topic channel
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func HttpTopic(w http.ResponseWriter, r *http.Request) {
+	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := response.GetBody(r)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		channel := body.Str("channel")
+		if !utility.ValidStr(channel, 0, []string{""}) {
+			response.HTTPError(w, r, http.StatusBadRequest, fmt.Errorf(msg.MSG_ARG_REQUIRED, "channel").Error())
+			return
+		}
+
+		node.ws.Topic(channel)
 	}))
 	handler.ServeHTTP(w, r)
 }
