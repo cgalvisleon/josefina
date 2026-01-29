@@ -329,7 +329,19 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 
 	if !exists {
-		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		db, err := getDb(database)
+		if err != nil {
+			return nil, err
+		}
+
+		if db.IsStrict {
+			return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		}
+
+		result, err = db.newModel(schema, name, false, 1)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	to := s.nextNode()
