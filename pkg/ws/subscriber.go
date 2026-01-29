@@ -105,13 +105,26 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
-	if ms.Channel != "" {
-		s.hub.Publish(ms.Channel, ms)
-	} else if len(ms.To) > 0 {
-		s.hub.SendTo(ms.To, ms)
+	notify := func(result []string, err error) {
+		if err != nil {
+			s.error(err)
+			return
+		}
+		ms.Data["result"] = result
+		s.sendText(ms.ToString())
 	}
 
-	logs.Info(ms.ToString())
+	if ms.Channel != "" {
+		result, err := s.hub.Publish(ms.Channel, ms)
+		notify(result, err)
+	} else if len(ms.To) > 0 {
+		result, err := s.hub.SendTo(ms.To, ms)
+		notify(result, err)
+	}
+
+	if s.hub.isDebug {
+		logs.Info(ms.ToString())
+	}
 }
 
 /**

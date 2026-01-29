@@ -17,6 +17,7 @@ type Message struct {
 	Ignored    []string  `json:"-"`
 	Data       et.Json   `json:"data"`
 	Message    string    `json:"message"`
+	Verified   bool      `json:"verified"`
 }
 
 /**

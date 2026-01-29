@@ -380,12 +380,12 @@ func (s *Hub) SendTo(to []string, message Message) ([]string, error) {
 * Publish
 * @param channel string, message Message
 **/
-func (s *Hub) Publish(channel string, message Message) error {
+func (s *Hub) Publish(channel string, message Message) ([]string, error) {
 	s.mu.RLock()
 	ch, ok := s.Channels[channel]
 	s.mu.RUnlock()
 	if !ok {
-		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
+		return []string{}, fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
 	}
 
 	for _, fn := range s.onPublish {
@@ -393,10 +393,20 @@ func (s *Hub) Publish(channel string, message Message) error {
 	}
 	switch ch.Type {
 	case TpQueue:
+		n := len(ch.Subscribers)
+		if n == 0 {
+			return []string{}, fmt.Errorf(msg.MSG_USER_NOT_FOUND)
+		}
+		if ch.Turn >= n {
+			ch.Turn = 0
+		}
+		subscribe := ch.Subscribers[ch.Turn]
+		ch.Turn++
+		return s.SendTo([]string{subscribe}, message)
 	case TpStack:
 	case TpTopic:
-		s.SendTo(ch.Subscribers, message)
+		return s.SendTo(ch.Subscribers, message)
 	}
 
-	return nil
+	return []string{}, fmt.Errorf(msg.MSG_USER_NOT_FOUND)
 }
