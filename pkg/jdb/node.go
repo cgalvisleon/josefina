@@ -300,57 +300,42 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return result, nil
 	}
 
-	type Result struct {
-		result *Model
-		err    error
+	key := modelKey(database, schema, name)
+	s.modelMu.RLock()
+	result, ok := s.models[key]
+	s.modelMu.RUnlock()
+	if ok {
+		return result, nil
 	}
 
-	ch := make(chan Result)
-	go func() {
-		key := modelKey(database, schema, name)
-		s.modelMu.RLock()
-		result, ok := s.models[key]
-		s.modelMu.RUnlock()
-		if ok {
-			ch <- Result{result: result, err: nil}
-			return
-		}
+	err := initModels()
+	if err != nil {
+		return nil, err
+	}
 
-		err := initModels()
-		if err != nil {
-			ch <- Result{result: nil, err: err}
-			return
-		}
+	exists, err := models.get(key, &result)
+	if err != nil {
+		return nil, err
+	}
 
-		exists, err := models.get(key, &result)
-		if err != nil {
-			ch <- Result{result: nil, err: err}
-			return
-		}
+	if !exists {
+		return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+	}
 
-		if !exists {
-			ch <- Result{result: nil, err: fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)}
-			return
-		}
+	to := s.nextNode()
+	err = methods.loadModel(to, result)
+	if err != nil {
+		return nil, err
+	}
 
-		to := s.nextNode()
-		err = methods.loadModel(to, result)
-		if err != nil {
-			ch <- Result{result: nil, err: err}
-			return
-		}
+	result.Host = to
+	result.IsInit = true
 
-		result.Host = to
-		result.IsInit = true
+	s.modelMu.Lock()
+	s.models[key] = result
+	s.modelMu.Unlock()
 
-		s.modelMu.Lock()
-		s.models[key] = result
-		s.modelMu.Unlock()
-		ch <- Result{result: result, err: nil}
-	}()
-
-	res := <-ch
-	return res.result, res.err
+	return result, err
 }
 
 /**
