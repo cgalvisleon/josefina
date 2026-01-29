@@ -211,12 +211,34 @@ func (s *Hub) SendTo(to []string, message Message) {
 	}
 }
 
+func (s *Hub) Queue(channel string) error {
+
+	return nil
+}
+
+func (s *Hub) Stack(channel string) error {
+	return nil
+}
+
+func (s *Hub) Topic(channel string) error {
+	return nil
+}
+
 /**
-* Subscribe
-* @param action TypeAction, cache string, subscribe string
+* Unsubscribe
+* @param cache string, subscribe string
 * @return error
 **/
-func (s *Hub) Subscribe(action TypeAction, cache string, subscribe string) error {
+func (s *Hub) Unsubscribe(cache string, subscribe string) error {
+	return nil
+}
+
+/**
+* Subscribe
+* @param cache string, subscribe string
+* @return error
+**/
+func (s *Hub) Subscribe(cache string, subscribe string) error {
 	return nil
 }
 

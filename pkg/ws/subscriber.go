@@ -105,48 +105,13 @@ func (s *Subscriber) listener(message []byte) {
 		return
 	}
 
-	if msg.Action == Subscribe {
-		s.hub.Subscribe(msg.Action, msg.Channel, s.Name)
-	} else if msg.Action == Queue {
-		s.hub.Subscribe(msg.Action, msg.Channel, s.Name)
-	} else if msg.Action == Stack {
-		s.hub.Subscribe(msg.Action, msg.Channel, s.Name)
-	} else if msg.Channel != "" {
+	if msg.Channel != "" {
 		s.hub.Publish(msg.Channel, msg)
 	} else if len(msg.To) > 0 {
 		s.hub.SendTo(msg.To, msg)
 	}
 
 	logs.Info(msg.ToString())
-}
-
-/**
-* addChannel
-* @param channel string
-**/
-func (s *Subscriber) addChannel(channel string) {
-	idx := slices.IndexFunc(s.Channels, func(c string) bool {
-		return c == channel
-	})
-	if idx != -1 {
-		return
-	}
-	s.Channels = append(s.Channels, channel)
-}
-
-/**
-* removeChannel
-* @param channel string
-**/
-func (s *Subscriber) removeChannel(channel string) {
-	idx := slices.IndexFunc(s.Channels, func(c string) bool {
-		return c == channel
-	})
-	if idx == -1 {
-		return
-	}
-
-	s.Channels = append(s.Channels[:idx], s.Channels[idx+1:]...)
 }
 
 /**
@@ -216,4 +181,33 @@ func (s *Subscriber) close() {
 
 	s.send(TextMessage, bt)
 	s.socket.Close()
+}
+
+/**
+* addChannel
+* @param channel string
+**/
+func (s *Subscriber) addChannel(channel string) {
+	idx := slices.IndexFunc(s.Channels, func(c string) bool {
+		return c == channel
+	})
+	if idx != -1 {
+		return
+	}
+	s.Channels = append(s.Channels, channel)
+}
+
+/**
+* removeChannel
+* @param channel string
+**/
+func (s *Subscriber) removeChannel(channel string) {
+	idx := slices.IndexFunc(s.Channels, func(c string) bool {
+		return c == channel
+	})
+	if idx == -1 {
+		return
+	}
+
+	s.Channels = append(s.Channels[:idx], s.Channels[idx+1:]...)
 }
