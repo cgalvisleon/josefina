@@ -455,32 +455,23 @@ func (s *Node) saveDb(db *DB) error {
 		return nil
 	}
 
-	ch := make(chan error)
-	go func() {
-		err := initDbs()
-		if err != nil {
-			ch <- err
-			return
-		}
+	err := initDbs()
+	if err != nil {
+		return err
+	}
 
-		bt, err := db.serialize()
-		if err != nil {
-			ch <- err
-			return
-		}
+	bt, err := db.serialize()
+	if err != nil {
+		return err
+	}
 
-		key := db.Name
-		err = dbs.put(key, bt)
-		if err != nil {
-			ch <- err
-			return
-		}
+	key := db.Name
+	err = dbs.put(key, bt)
+	if err != nil {
+		return err
+	}
 
-		ch <- nil
-	}()
-
-	res := <-ch
-	return res
+	return nil
 }
 
 /**
