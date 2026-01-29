@@ -57,5 +57,10 @@ func (s *Router) Routes() http.Handler {
 func (s *Router) WsRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/ws", jdb.WsUpgrader)
+	r.Post("/ws/topic", jdb.HttpTopic)
+	r.Post("/ws/queue", jdb.HttpQueue)
+	r.Post("/ws/stack", jdb.HttpStack)
+	r.Post("/ws/remove", jdb.HttpRemove)
+	r.Post("/ws/subscribe", jdb.HttpSubscribe)
 	return r
 }
