@@ -1,9 +1,6 @@
 package jdb
 
 import (
-	"strings"
-
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -19,10 +16,8 @@ type Request struct {
 * @param token string
 **/
 func (s *Request) SetToken(token string) {
-	prefix := envar.GetStr("TOKEN_PREFIX", "Bearer ")
-	if strings.HasPrefix(token, prefix) {
-		s.Token = strings.TrimPrefix(token, prefix)
-	}
+	token = prefix(token)
+	s.Token = token
 }
 
 /**

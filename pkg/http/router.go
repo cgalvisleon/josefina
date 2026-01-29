@@ -30,6 +30,13 @@ func newRouter(name string) *Router {
 	}
 }
 
+func (s *Router) autentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 /**
 * Routes
 * @return http.Handler
@@ -41,6 +48,7 @@ func (s *Router) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	router.SetAutentication(s.autentication)
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/signin", s.signIn, s.PackageName, s.PackagePath, host)
 	router.Private(r, router.Post, "/jql", s.jql, s.PackageName, s.PackagePath, host)

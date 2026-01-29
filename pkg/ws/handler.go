@@ -1,11 +1,13 @@
 package ws
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/request"
 	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 /**
@@ -45,11 +47,17 @@ func (s *Hub) HttpTopic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := request.GetBody(r)
+	body, err := response.GetBody(r)
 	if err != nil {
-		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	defer body.Close()
 
+	channel := body.Str("channel")
+	if !utility.ValidStr(channel, 0, []string{""}) {
+		response.HTTPError(w, r, http.StatusBadRequest, fmt.Errorf(msg.MSG_ARG_REQUIRED, "channel").Error())
+		return
+	}
+
+	s.Topic(channel)
 }
