@@ -61,6 +61,7 @@ var (
 	MSG_GET_FROM_NOT_USED           = "getFrom not used"
 	MSG_TRANSACTION_NOT_FOUND       = "transaction not found"
 	MSG_BYE                         = "bay"
+	MSG_HOLA                        = "hola"
 	MSG_CHANNEL_NOT_FOUND           = "channel not found (%s)"
 	ERROR_INTERNAL_ERROR            = MessageError{Code: 500, Message: "internal error"}
 	ERROR_CLIENT_NOT_AUTHENTICATION = MessageError{Code: 401, Message: "client not authentication"}
@@ -122,6 +123,7 @@ func init() {
 		MSG_GET_FROM_NOT_USED = "getFrom no usado"
 		MSG_TRANSACTION_NOT_FOUND = "transaction no encontrado"
 		MSG_BYE = "Chao"
+		MSG_HOLA = "hola"
 		MSG_CHANNEL_NOT_FOUND = "channel no encontrado (%s)"
 		ERROR_INTERNAL_ERROR = MessageError{Code: 500, Message: "internal error"}
 		ERROR_CLIENT_NOT_AUTHENTICATION = MessageError{Code: 401, Message: "cliente no autenticado"}

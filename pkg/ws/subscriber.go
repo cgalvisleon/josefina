@@ -169,9 +169,27 @@ func (s *Subscriber) error(err error) {
 }
 
 /**
-* close
+* sendHola
 **/
-func (s *Subscriber) close() {
+func (s *Subscriber) sendHola() {
+	ms := et.Item{
+		Ok: true,
+		Result: et.Json{
+			"message": msg.MSG_HOLA,
+		},
+	}
+	bt, err := json.Marshal(ms)
+	if err != nil {
+		return
+	}
+
+	s.send(TextMessage, bt)
+}
+
+/**
+* sendBye
+**/
+func (s *Subscriber) sendBye() {
 	ms := et.Item{
 		Ok: true,
 		Result: et.Json{
@@ -184,7 +202,6 @@ func (s *Subscriber) close() {
 	}
 
 	s.send(TextMessage, bt)
-	s.socket.Close()
 }
 
 /**
