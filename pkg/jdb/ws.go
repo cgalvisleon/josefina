@@ -1,13 +1,9 @@
 package jdb
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
-	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/response"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/cgalvisleon/josefina/pkg/ws"
 )
@@ -33,45 +29,13 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Authenticate(func(w, r) {
-		token := r.Header.Get("Authorization")
-		if !utility.ValidStr(token, 0, []string{""}) {
-			response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
+	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		_, err := node.ws.Connect(conn, ctx)
+		if err != nil {
+			response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-	})
-	token := r.Header.Get("Authorization")
-	if !utility.ValidStr(token, 0, []string{""}) {
-		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
-		return
-	}
-
-	token = prefixRemove("Bearer", token)
-	result, err := claim.ParceToken(token)
-	if err != nil {
-		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
-		return
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists := GetCacheStr(key)
-	if !exists {
-		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
-		return
-	}
-
-	if session != token {
-		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
-		return
-	}
-
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, "app", result.App)
-	ctx = context.WithValue(ctx, "device", result.Device)
-	ctx = context.WithValue(ctx, "username", result.Username)
-	_, err = node.ws.Connect(conn, ctx)
-	if err != nil {
-		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
+	}))
+	handler.ServeHTTP(w, r)
 }

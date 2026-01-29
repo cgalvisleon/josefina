@@ -108,9 +108,22 @@ func Authenticate(next http.Handler) http.Handler {
 * @param middlewares []func(http.Handler) http.Handler, next http.Handler
 * @return http.Handler
 **/
-func applyMiddleware(middlewares []func(http.Handler) http.Handler, next http.Handler) http.Handler {
+func applyMiddlewares(handler http.Handler, middlewares []func(http.Handler) http.Handler) http.Handler {
 	for _, middleware := range middlewares {
-		next = middleware(next)
+		handler = middleware(handler)
 	}
-	return next
+
+	return handler
+}
+
+/**
+* applyAuthenticate
+* @param handler http.Handler
+* @return http.Handler
+**/
+func applyAuthenticate(handler http.Handler) http.Handler {
+	middlewares := []func(http.Handler) http.Handler{
+		Authenticate,
+	}
+	return applyMiddlewares(handler, middlewares)
 }

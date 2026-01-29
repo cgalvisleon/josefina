@@ -391,7 +391,7 @@ func (s *Hub) Publish(channel string, message Message) ([]string, error) {
 	for _, fn := range s.onPublish {
 		fn(*ch, message)
 	}
-	
+
 	switch ch.Type {
 	case TpQueue:
 		n := len(ch.Subscribers)
