@@ -348,31 +348,24 @@ func (s *Node) loadModel(model *Model) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	ch := make(chan error)
-	go func() {
-		err := model.init()
-		if err != nil {
-			ch <- err
-			return
-		}
+	err := model.init()
+	if err != nil {
+		return err
+	}
 
-		key := model.key()
-		s.modelMu.RLock()
-		result, ok := s.models[key]
-		s.modelMu.RUnlock()
-		if !ok {
-			ch <- fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)
-			return
-		}
+	key := model.key()
+	s.modelMu.RLock()
+	result, ok := s.models[key]
+	s.modelMu.RUnlock()
+	if !ok {
+		return fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)
+	}
 
-		s.modelMu.Lock()
-		s.models[key] = result
-		s.modelMu.Unlock()
-		ch <- nil
-	}()
+	s.modelMu.Lock()
+	s.models[key] = result
+	s.modelMu.Unlock()
 
-	res := <-ch
-	return res
+	return nil
 }
 
 /**
