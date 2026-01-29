@@ -251,6 +251,33 @@ func (s *Hub) Stack(channel string) *Channel {
 }
 
 /**
+* Remove
+* @param channel string
+* @return error
+**/
+func (s *Hub) Remove(channel string) error {
+	s.mu.Lock()
+	ch, ok := s.Channels[channel]
+	if !ok {
+		s.mu.Unlock()
+		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
+	}
+	s.mu.Unlock()
+
+	for _, subscribe := range ch.Subscribers {
+		client, ok := s.Subscribers[subscribe]
+		if ok {
+			client.removeChannel(channel)
+		}
+	}
+
+	s.mu.Lock()
+	delete(s.Channels, channel)
+	s.mu.Unlock()
+	return nil
+}
+
+/**
 * Subscribe
 * @param cache string, subscribe string
 * @return error
