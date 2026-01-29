@@ -426,17 +426,13 @@ func (s *Node) reportModels(models map[string]*Model) error {
 		return nil
 	}
 
-	ch := make(chan error)
-	go func() {
-		for key, model := range models {
-			s.mu.Lock()
-			s.models[key] = model
-			s.mu.Unlock()
-		}
-		ch <- nil
-	}()
+	for key, model := range models {
+		s.mu.Lock()
+		s.models[key] = model
+		s.mu.Unlock()
+	}
 
-	return <-ch
+	return nil
 }
 
 /**
