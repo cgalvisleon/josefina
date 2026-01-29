@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/gorilla/websocket"
@@ -24,17 +25,18 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	Channels        map[string]*Channel     `json:"channels"`
-	Subscribers     map[string]*Subscriber  `json:"subscribers"`
-	register        chan *Subscriber        `json:"-"`
-	unregister      chan *Subscriber        `json:"-"`
-	onConnection    []func(*Subscriber)     `json:"-"`
-	onDisconnection []func(*Subscriber)     `json:"-"`
-	onChannel       []func(Channel)         `json:"-"`
-	onRemove        []func(string)          `json:"-"`
-	onSend          []func(string, Message) `json:"-"`
-	mu              *sync.RWMutex           `json:"-"`
-	isStart         bool                    `json:"-"`
+	Channels        map[string]*Channel      `json:"channels"`
+	Subscribers     map[string]*Subscriber   `json:"subscribers"`
+	register        chan *Subscriber         `json:"-"`
+	unregister      chan *Subscriber         `json:"-"`
+	onConnection    []func(*Subscriber)      `json:"-"`
+	onDisconnection []func(*Subscriber)      `json:"-"`
+	onChannel       []func(Channel)          `json:"-"`
+	onRemove        []func(string)           `json:"-"`
+	onPublish       []func(Channel, Message) `json:"-"`
+	onSend          []func(string, Message)  `json:"-"`
+	mu              *sync.RWMutex            `json:"-"`
+	isStart         bool                     `json:"-"`
 }
 
 /**
@@ -188,6 +190,14 @@ func (s *Hub) OnRemove(fn func(string)) {
 }
 
 /**
+* OnPublish
+* @param fn func(Channel, Message)
+ */
+func (s *Hub) OnPublish(fn func(Channel, Message)) {
+	s.onPublish = append(s.onPublish, fn)
+}
+
+/**
 * OnSend
 * @param fn func(string, Message)
  */
@@ -316,9 +326,10 @@ func (s *Hub) Unsubscribe(cache string, subscribe string) error {
 
 /**
 * SendTo
-* @param to []string, message Message
+* @param serviceId string, to []string, message Message
 **/
-func (s *Hub) SendTo(to []string, message Message) {
+func (s *Hub) SendTo(serviceId string, to []string, message Message) {
+	serviceId = reg.GetULID(serviceId)
 	for _, username := range to {
 		client, ok := s.Subscribers[username]
 		if ok {

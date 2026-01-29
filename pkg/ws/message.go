@@ -65,7 +65,7 @@ func (s *Message) ToString() string {
 * @return *Message
 **/
 func newMessage(from et.Json, to []string) *Message {
-	id := reg.UUID()
+	id := reg.ULID()
 	return &Message{
 		Created_at: time.Now(),
 		Id:         id,
