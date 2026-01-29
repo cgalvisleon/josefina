@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
 
@@ -337,12 +336,11 @@ func Hidden(keys []string, object et.Json) et.Json {
 }
 
 /**
-* prefix
-* @param token string
+* prefixRemove
+* @param prefix string, token string
 * @return string
 **/
-func prefix(token string) string {
-	prefix := envar.GetStr("TOKEN_PREFIX", "Bearer ")
+func prefixRemove(prefix, token string) string {
 	if strings.HasPrefix(token, prefix) {
 		return strings.TrimPrefix(token, prefix)
 	}

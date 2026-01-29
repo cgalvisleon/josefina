@@ -16,7 +16,7 @@ type Request struct {
 * @param token string
 **/
 func (s *Request) SetToken(token string) {
-	token = prefix(token)
+	token = prefixRemove("Bearer ", token)
 	s.Token = token
 }
 
