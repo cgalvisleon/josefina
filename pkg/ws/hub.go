@@ -25,18 +25,18 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	Channels        map[string]*Channel      `json:"channels"`
-	Subscribers     map[string]*Subscriber   `json:"subscribers"`
-	register        chan *Subscriber         `json:"-"`
-	unregister      chan *Subscriber         `json:"-"`
-	onConnection    []func(*Subscriber)      `json:"-"`
-	onDisconnection []func(*Subscriber)      `json:"-"`
-	onChannel       []func(Channel)          `json:"-"`
-	onRemove        []func(string)           `json:"-"`
-	onPublish       []func(Channel, Message) `json:"-"`
-	onSend          []func(string, Message)  `json:"-"`
-	mu              *sync.RWMutex            `json:"-"`
-	isStart         bool                     `json:"-"`
+	Channels        map[string]*Channel                       `json:"channels"`
+	Subscribers     map[string]*Subscriber                    `json:"subscribers"`
+	register        chan *Subscriber                          `json:"-"`
+	unregister      chan *Subscriber                          `json:"-"`
+	onConnection    []func(*Subscriber)                       `json:"-"`
+	onDisconnection []func(*Subscriber)                       `json:"-"`
+	onChannel       []func(Channel)                           `json:"-"`
+	onRemove        []func(string)                            `json:"-"`
+	onPublish       []func(id string, ch Channel, ms Message) `json:"-"`
+	onSend          []func(id string, to string, ms Message)  `json:"-"`
+	mu              *sync.RWMutex                             `json:"-"`
+	isStart         bool                                      `json:"-"`
 }
 
 /**
@@ -53,7 +53,8 @@ func NewWs() *Hub {
 		onDisconnection: make([]func(*Subscriber), 0),
 		onChannel:       make([]func(Channel), 0),
 		onRemove:        make([]func(string), 0),
-		onSend:          make([]func(string, Message), 0),
+		onPublish:       make([]func(id string, ch Channel, ms Message), 0),
+		onSend:          make([]func(id string, to string, ms Message), 0),
 		mu:              &sync.RWMutex{},
 		isStart:         false,
 	}
@@ -191,17 +192,17 @@ func (s *Hub) OnRemove(fn func(string)) {
 
 /**
 * OnPublish
-* @param fn func(Channel, Message)
+* @param fn func(id string, ch Channel, ms Message)
  */
-func (s *Hub) OnPublish(fn func(Channel, Message)) {
+func (s *Hub) OnPublish(fn func(id string, ch Channel, ms Message)) {
 	s.onPublish = append(s.onPublish, fn)
 }
 
 /**
 * OnSend
-* @param fn func(string, Message)
+* @param fn func(id string, to string, ms Message)
  */
-func (s *Hub) OnSend(fn func(string, Message)) {
+func (s *Hub) OnSend(fn func(id string, to string, ms Message)) {
 	s.onSend = append(s.onSend, fn)
 }
 
@@ -343,12 +344,12 @@ func (s *Hub) SendTo(serviceId string, to []string, message Message) {
 			if len(message.Data) > 0 {
 				client.sendObject(message.Data)
 				for _, fn := range s.onSend {
-					fn(username, message)
+					fn(serviceId, username, message)
 				}
 			} else if len(message.Message) > 0 {
 				client.sendText(message.Message)
 				for _, fn := range s.onSend {
-					fn(username, message)
+					fn(serviceId, username, message)
 				}
 			}
 		}
@@ -359,7 +360,7 @@ func (s *Hub) SendTo(serviceId string, to []string, message Message) {
 * Publish
 * @param channel string, message Message
 **/
-func (s *Hub) Publish(channel string, message Message) error {
+func (s *Hub) Publish(serviceId string, channel string, message Message) error {
 	s.mu.RLock()
 	ch, ok := s.Channels[channel]
 	s.mu.RUnlock()
@@ -367,11 +368,15 @@ func (s *Hub) Publish(channel string, message Message) error {
 		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
 	}
 
+	serviceId = reg.GetULID(serviceId)
+	for _, fn := range s.onPublish {
+		fn(serviceId, *ch, message)
+	}
 	switch ch.Type {
 	case TpQueue:
 	case TpStack:
 	case TpTopic:
-		s.SendTo(ch.Subscribers, message)
+		s.SendTo(serviceId, ch.Subscribers, message)
 	}
 
 	return nil
