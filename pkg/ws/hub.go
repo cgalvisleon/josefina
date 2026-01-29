@@ -404,6 +404,16 @@ func (s *Hub) Publish(channel string, message Message) ([]string, error) {
 		ch.Turn++
 		return s.SendTo([]string{subscribe}, message)
 	case TpStack:
+		n := len(ch.Subscribers)
+		if n == 0 {
+			return []string{}, fmt.Errorf(msg.MSG_USER_NOT_FOUND)
+		}
+		if ch.Turn < 0 {
+			ch.Turn = n - 1
+		}
+		subscribe := ch.Subscribers[ch.Turn]
+		ch.Turn--
+		return s.SendTo([]string{subscribe}, message)
 	case TpTopic:
 		return s.SendTo(ch.Subscribers, message)
 	}
