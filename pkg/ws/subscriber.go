@@ -39,6 +39,7 @@ type Subscriber struct {
 	Name       string          `json:"name"`
 	Addr       string          `json:"addr"`
 	Status     Status          `json:"status"`
+	Channels   []string        `json:"channels"`
 	socket     *websocket.Conn `json:"-"`
 	outbound   chan Outbound   `json:"-"`
 	mutex      sync.RWMutex    `json:"-"`

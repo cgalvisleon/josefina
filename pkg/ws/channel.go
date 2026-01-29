@@ -10,4 +10,5 @@ const (
 type Channel struct {
 	Type        TypeChannel `json:"type"`
 	Subscribers []string    `json:"subscribers"`
+	Turn        int         `json:"turn"`
 }

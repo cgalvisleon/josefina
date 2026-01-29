@@ -23,17 +23,17 @@ var upgrader = websocket.Upgrader{
 }
 
 type Hub struct {
-	channels        map[string]*Channel
-	subscribers     map[string]*Subscriber
-	register        chan *Subscriber
-	unregister      chan *Subscriber
-	onConnection    []func(*Subscriber)
-	onDisconnection []func(*Subscriber)
-	onPublish       map[string]func(Message)
-	onSubscribe     map[string]func(Message)
-	onStack         map[string]func(Message)
-	mu              *sync.RWMutex
-	isStart         bool
+	Channels        map[string]*Channel      `json:"channels"`
+	Subscribers     map[string]*Subscriber   `json:"subscribers"`
+	register        chan *Subscriber         `json:"-"`
+	unregister      chan *Subscriber         `json:"-"`
+	onConnection    []func(*Subscriber)      `json:"-"`
+	onDisconnection []func(*Subscriber)      `json:"-"`
+	onPublish       map[string]func(Message) `json:"-"`
+	onSubscribe     map[string]func(Message) `json:"-"`
+	onStack         map[string]func(Message) `json:"-"`
+	mu              *sync.RWMutex            `json:"-"`
+	isStart         bool                     `json:"-"`
 }
 
 /**
@@ -42,8 +42,8 @@ type Hub struct {
 **/
 func NewWs() *Hub {
 	result := &Hub{
-		channels:        make(map[string]*Channel),
-		subscribers:     make(map[string]*Subscriber),
+		Channels:        make(map[string]*Channel),
+		Subscribers:     make(map[string]*Subscriber),
 		register:        make(chan *Subscriber),
 		unregister:      make(chan *Subscriber),
 		onConnection:    make([]func(*Subscriber), 0),
@@ -101,7 +101,7 @@ func (s *Hub) onConnect(client *Subscriber) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.subscribers[client.Name] = client
+	s.Subscribers[client.Name] = client
 	logs.Logf(packageName, "Connected: %s", client.Name)
 	for _, fn := range s.onConnection {
 		fn(client)
@@ -116,14 +116,14 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	_, ok := s.subscribers[client.Name]
+	_, ok := s.Subscribers[client.Name]
 	if ok {
-		s.subscribers[client.Name].Status = Disconnected
+		s.Subscribers[client.Name].Status = Disconnected
 		for _, fn := range s.onDisconnection {
 			fn(client)
 		}
 
-		delete(s.subscribers, client.Name)
+		delete(s.Subscribers, client.Name)
 	}
 }
 
@@ -138,7 +138,7 @@ func (s *Hub) Connect(socket *websocket.Conn, ctx context.Context) (*Subscriber,
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	client, ok := s.subscribers[username]
+	client, ok := s.Subscribers[username]
 	if ok {
 		client.Addr = socket.RemoteAddr().String()
 		client.socket = socket
@@ -200,7 +200,7 @@ func (s *Hub) OnStack(channel string, fn func(Message)) {
 **/
 func (s *Hub) SendTo(to []string, message Message) {
 	for _, username := range to {
-		client, ok := s.subscribers[username]
+		client, ok := s.Subscribers[username]
 		if ok {
 			if len(message.Data) > 0 {
 				client.sendObject(message.Data)
@@ -226,7 +226,7 @@ func (s *Hub) Subscribe(action TypeAction, cache string, subscribe string) error
 **/
 func (s *Hub) Publish(channel string, message Message) error {
 	s.mu.RLock()
-	ch, ok := s.channels[channel]
+	ch, ok := s.Channels[channel]
 	s.mu.RUnlock()
 	if !ok {
 		return fmt.Errorf(msg.MSG_CHANNEL_NOT_FOUND, channel)
