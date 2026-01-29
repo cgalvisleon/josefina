@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"sync"
 
 	"github.com/cgalvisleon/et/logs"
@@ -321,10 +322,23 @@ func (s *Hub) SendTo(to []string, message Message) {
 	for _, username := range to {
 		client, ok := s.Subscribers[username]
 		if ok {
+			idx := slices.IndexFunc(message.Ignored, func(user string) bool {
+				return user == username
+			})
+			if idx != -1 {
+				continue
+			}
+
 			if len(message.Data) > 0 {
 				client.sendObject(message.Data)
+				for _, fn := range s.onSend {
+					fn(username, message)
+				}
 			} else if len(message.Message) > 0 {
 				client.sendText(message.Message)
+				for _, fn := range s.onSend {
+					fn(username, message)
+				}
 			}
 		}
 	}
