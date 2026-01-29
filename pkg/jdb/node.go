@@ -25,6 +25,21 @@ const (
 	Leader
 )
 
+type TpConnection int
+
+const (
+	HTTP TpConnection = iota
+	WebSocket
+	TCP
+)
+
+type Client struct {
+	Username string       `json:"username"`
+	Host     string       `json:"host"`
+	Status   Status       `json:"status"`
+	Type     TpConnection `json:"type"`
+}
+
 type Node struct {
 	host          string             `json:"-"`
 	port          int                `json:"-"`
@@ -41,6 +56,7 @@ type Node struct {
 	turn          int                `json:"-"`
 	started       bool               `json:"-"`
 	ws            *ws.Hub            `json:"-"`
+	clients       map[string]*Client `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
 }
@@ -52,7 +68,7 @@ type Node struct {
 **/
 func newNode(host string, port int, version string) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
-	return &Node{
+	result := &Node{
 		host:    address,
 		port:    port,
 		version: version,
@@ -60,9 +76,15 @@ func newNode(host string, port int, version string) *Node {
 		dbs:     make(map[string]*DB),
 		models:  make(map[string]*Model),
 		ws:      ws.NewWs(),
+		clients: make(map[string]*Client),
 		mu:      sync.Mutex{},
 		modelMu: sync.RWMutex{},
 	}
+	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
+		result.onConnect(subscriber.Name, WebSocket, result.host)
+	})
+
+	return result
 }
 
 /**
@@ -491,4 +513,25 @@ func (s *Node) saveDb(db *DB) error {
 
 	res := <-ch
 	return res
+}
+
+/**
+* onConnect: Sets the client
+* @param client *Client
+**/
+func (s *Node) onConnect(username string, tpConnection TpConnection, host string) {
+	leader := s.getLeader()
+	if leader != s.host && leader != "" {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.clients[username] = &Client{
+		Username: username,
+		Host:     host,
+		Type:     tpConnection,
+		Status:   Connected,
+	}
 }

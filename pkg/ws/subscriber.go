@@ -58,6 +58,7 @@ func newSubscriber(hub *Hub, ctx context.Context, username string, socket *webso
 		Status:     Pending,
 		Name:       username,
 		Addr:       socket.RemoteAddr().String(),
+		Channels:   []string{},
 		socket:     socket,
 		outbound:   make(chan Outbound),
 		mutex:      sync.RWMutex{},

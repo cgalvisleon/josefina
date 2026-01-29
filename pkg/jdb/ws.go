@@ -62,5 +62,11 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "app", result.App)
 	ctx = context.WithValue(ctx, "device", result.Device)
 	ctx = context.WithValue(ctx, "username", result.Username)
-	node.ws.Connect(conn, ctx)
+	client, err := node.ws.Connect(conn, ctx)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	node.onConnect(client.Name, WebSocket, node.host)
 }

@@ -93,16 +93,18 @@ const (
 type Status string
 
 const (
-	Active    Status = "active"
-	Archived  Status = "archived"
-	Canceled  Status = "canceled"
-	OfSystem  Status = "of_system"
-	ForDelete Status = "for_delete"
-	Pending   Status = "pending"
-	Approved  Status = "approved"
-	Rejected  Status = "rejected"
-	Failed    Status = "failed"
-	Processed Status = "processed"
+	Active       Status = "active"
+	Archived     Status = "archived"
+	Canceled     Status = "canceled"
+	OfSystem     Status = "of_system"
+	ForDelete    Status = "for_delete"
+	Pending      Status = "pending"
+	Approved     Status = "approved"
+	Rejected     Status = "rejected"
+	Failed       Status = "failed"
+	Processed    Status = "processed"
+	Connected    Status = "connected"
+	Disconnected Status = "disconnected"
 )
 
 type Field struct {
