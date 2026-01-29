@@ -185,6 +185,7 @@ func getDb(name string) (*DB, error) {
 	}
 
 	if exists {
+		result.isDebug = node.isDebug
 		return result, nil
 	}
 
@@ -194,6 +195,7 @@ func getDb(name string) (*DB, error) {
 		Version: Version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
+		isDebug: node.isDebug,
 	}
 	node.dbs[name] = result
 
