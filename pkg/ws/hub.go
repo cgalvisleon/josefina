@@ -34,9 +34,9 @@ type Hub struct {
 	onRemove        []func(string)                 `json:"-"`
 	onPublish       []func(ch Channel, ms Message) `json:"-"`
 	onSend          []func(to string, ms Message)  `json:"-"`
-	onReceive       []func(to string, ms Message)  `json:"-"`
 	mu              *sync.RWMutex                  `json:"-"`
 	isStart         bool                           `json:"-"`
+	isDebug         bool                           `json:"-"`
 }
 
 /**
@@ -55,7 +55,6 @@ func NewWs() *Hub {
 		onRemove:        make([]func(string), 0),
 		onPublish:       make([]func(ch Channel, ms Message), 0),
 		onSend:          make([]func(to string, ms Message), 0),
-		onReceive:       make([]func(to string, ms Message), 0),
 		mu:              &sync.RWMutex{},
 		isStart:         false,
 	}
@@ -133,6 +132,14 @@ func (s *Hub) onDisconnect(client *Subscriber) {
 }
 
 /**
+* SetDebug
+* @param debug bool
+**/
+func (s *Hub) SetDebug(debug bool) {
+	s.isDebug = debug
+}
+
+/**
 * Connect
 * @param socket *websocket.Conn, context.Context
 * @return *Subscriber, error
@@ -142,6 +149,9 @@ func (s *Hub) Connect(socket *websocket.Conn, ctx context.Context) (*Subscriber,
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	client, ok := s.Subscribers[username]
 	if ok {
@@ -155,6 +165,7 @@ func (s *Hub) Connect(socket *websocket.Conn, ctx context.Context) (*Subscriber,
 
 	go client.write()
 	go client.read()
+	go client.sendHola()
 
 	return client, nil
 }
@@ -205,14 +216,6 @@ func (s *Hub) OnPublish(fn func(ch Channel, ms Message)) {
  */
 func (s *Hub) OnSend(fn func(to string, ms Message)) {
 	s.onSend = append(s.onSend, fn)
-}
-
-/**
-* OnReceive
-* @param fn func(to string, ms Message)
- */
-func (s *Hub) OnReceive(fn func(to string, ms Message)) {
-	s.onReceive = append(s.onReceive, fn)
 }
 
 /**

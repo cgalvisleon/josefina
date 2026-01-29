@@ -51,6 +51,7 @@ type DB struct {
 	Path     string             `json:"path"`
 	Schemas  map[string]*Schema `json:"schemas"`
 	IsStrict bool               `json:"is_strict"`
+	isDebug  bool               `json:"-"`
 }
 
 /**
@@ -91,6 +92,19 @@ func (s *DB) ToJson() (et.Json, error) {
 **/
 func (s *DB) save() error {
 	return node.saveDb(s)
+}
+
+/**
+* SetDebug
+* @param debug bool
+**/
+func (s *DB) SetDebug(debug bool) {
+	s.isDebug = debug
+	for _, schema := range s.Schemas {
+		for _, model := range schema.Models {
+			model.isDebug = debug
+		}
+	}
 }
 
 /**

@@ -111,10 +111,6 @@ func (s *Subscriber) listener(message []byte) {
 		s.hub.SendTo(ms.To, ms)
 	}
 
-	for _, fn := range s.hub.onReceive {
-		fn(s.Name, ms)
-	}
-
 	logs.Info(ms.ToString())
 }
 
@@ -176,24 +172,6 @@ func (s *Subscriber) sendHola() {
 		Ok: true,
 		Result: et.Json{
 			"message": msg.MSG_HOLA,
-		},
-	}
-	bt, err := json.Marshal(ms)
-	if err != nil {
-		return
-	}
-
-	s.send(TextMessage, bt)
-}
-
-/**
-* sendBye
-**/
-func (s *Subscriber) sendBye() {
-	ms := et.Item{
-		Ok: true,
-		Result: et.Json{
-			"message": msg.MSG_BYE,
 		},
 	}
 	bt, err := json.Marshal(ms)

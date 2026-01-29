@@ -464,6 +464,14 @@ func (s *Model) count() (int, error) {
 }
 
 /**
+* SetDebug
+* @param debug bool
+**/
+func (s *Model) SetDebug(debug bool) {
+	s.isDebug = debug
+}
+
+/**
 * IsDebug: Returns the debug mode
 * @return *Model
 **/
