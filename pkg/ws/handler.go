@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/request"
 	"github.com/cgalvisleon/et/response"
 )
 
@@ -29,4 +30,26 @@ func (s *Hub) HttpConnect(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logs.Alert(err)
 	}
+}
+
+/**
+* HttpTopic create a topic channel
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Hub) HttpTopic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	username := ctx.Value("username").(string)
+	if username == "" {
+		response.HTTPError(w, r, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	body, err := request.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer body.Close()
+
 }
