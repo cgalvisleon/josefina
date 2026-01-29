@@ -1,10 +1,22 @@
 package msg
 
-import "github.com/cgalvisleon/et/envar"
+import (
+	"fmt"
+
+	"github.com/cgalvisleon/et/envar"
+)
 
 type MessageError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+/*
+* Error
+* @return error
+ */
+func (s *MessageError) Error() error {
+	return fmt.Errorf(`%d: %s`, s.Code, s.Message)
 }
 
 var (
