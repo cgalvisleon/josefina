@@ -81,56 +81,6 @@ func DropSession(token string) error {
 }
 
 /**
-* auth: Authenticates a user
-* @param token string
-* @return *claim.Token, error
-**/
-func auth(token string) (*claim.Claim, error) {
-	if !utility.ValidStr(token, 0, []string{""}) {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	token = utility.PrefixRemove("Bearer", token)
-	result, err := claim.ParceToken(token)
-	if err != nil {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists := GetCacheStr(key)
-	if !exists {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	if session != token {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	return result, nil
-}
-
-/**
-* authenticate: Authenticates a user
-* @param next Handler
-* @return Handler
-**/
-func authenticate(next Handler) Handler {
-	return HandlerFunc(func(request *Request, response *Response) {
-		token := request.Token
-		result, err := auth(token)
-		if err != nil {
-			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
-			return
-		}
-
-		request.Set("app", result.App)
-		request.Set("device", result.Device)
-		request.Set("username", result.Username)
-		next.Execute(request, response)
-	})
-}
-
-/**
 * SignIn: Sign in a user
 * @param device, username, password string
 * @return *Session, error

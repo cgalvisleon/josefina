@@ -71,10 +71,31 @@ type JqlHandler struct {
 
 var jqlHandler *JqlHandler
 
+/**
+* jQlAuthenticate: Authenticates a user
+* @param next Handler
+* @return Handler
+**/
+func jQlAuthenticate(next Handler) Handler {
+	return HandlerFunc(func(request *Request, response *Response) {
+		token := request.Token
+		result, err := authenticate(token)
+		if err != nil {
+			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
+			return
+		}
+
+		request.Set("app", result.App)
+		request.Set("device", result.Device)
+		request.Set("username", result.Username)
+		next.Execute(request, response)
+	})
+}
+
 func init() {
 	jqlHandler = &JqlHandler{
 		middleware: []MiddlewareFunc{
-			authenticate,
+			jQlAuthenticate,
 		},
 	}
 }
