@@ -159,25 +159,18 @@ func (s Tx) toJson() et.Json {
 * @return error
 **/
 func (s *Tx) save() error {
-	ch := make(chan error)
-	go func() {
-		s.EndedAt = timezone.Now()
-		data := s.toJson()
-		if s.isDebug {
-			logs.Debug(data.ToString())
-		}
+	s.EndedAt = timezone.Now()
+	data := s.toJson()
+	if s.isDebug {
+		logs.Debug(data.ToString())
+	}
 
-		_, err := setTransaction(s.Id, data)
-		if err != nil {
-			ch <- err
-			return
-		}
+	_, err := setTransaction(s.Id, data)
+	if err != nil {
+		return err
+	}
 
-		ch <- nil
-	}()
-
-	result := <-ch
-	return result
+	return nil
 }
 
 /**
