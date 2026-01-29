@@ -14,13 +14,13 @@ type Config struct {
 **/
 func getConfig() (*Config, error) {
 	filePath := "./config.json"
-	var result Config
-	err := file.Read(filePath, result)
+	var result *Config
+	err := file.Read(filePath, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 /**
