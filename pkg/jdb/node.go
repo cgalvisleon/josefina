@@ -59,6 +59,7 @@ type Node struct {
 	clients       map[string]*Client `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
+	isDebug       bool               `json:"-"`
 }
 
 /**
@@ -159,6 +160,14 @@ func (s *Node) mount(services any) error {
 }
 
 /**
+* SetDebug
+* @param debug bool
+**/
+func (s *Node) SetDebug(debug bool) {
+	s.isDebug = debug
+}
+
+/**
 * addNode
 * @param node string
 **/
@@ -253,7 +262,7 @@ func (s *Node) start() error {
 	s.started = true
 	s.mu.Unlock()
 	s.ws.Start()
-	s.ws.SetDebug(true)
+	s.ws.SetDebug(s.isDebug)
 
 	go s.electionLoop()
 
