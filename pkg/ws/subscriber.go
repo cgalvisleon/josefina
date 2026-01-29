@@ -106,12 +106,19 @@ func (s *Subscriber) listener(message []byte) {
 	}
 
 	notify := func(result []string, err error) {
+		if !ms.Verified {
+			return
+		}
 		if err != nil {
 			s.error(err)
 			return
 		}
-		ms.Data["result"] = result
-		s.sendText(ms.ToString())
+		s.sendItem(et.Item{
+			Ok: true,
+			Result: et.Json{
+				"senders": result,
+			},
+		})
 	}
 
 	if ms.Channel != "" {
@@ -159,6 +166,19 @@ func (s *Subscriber) sendObject(message et.Json) {
 }
 
 /**
+* sendItem
+* @param message et.Item
+**/
+func (s *Subscriber) sendItem(message et.Item) {
+	bt, err := message.ToByte()
+	if err != nil {
+		return
+	}
+
+	s.send(TextMessage, bt)
+}
+
+/**
 * error
 * @param err error
 **/
@@ -169,12 +189,7 @@ func (s *Subscriber) error(err error) {
 			"message": err.Error(),
 		},
 	}
-	bt, err := json.Marshal(ms)
-	if err != nil {
-		return
-	}
-
-	s.send(TextMessage, bt)
+	s.sendItem(ms)
 }
 
 /**
@@ -187,7 +202,7 @@ func (s *Subscriber) sendHola() {
 			"message": msg.MSG_HOLA,
 		},
 	}
-	bt, err := json.Marshal(ms)
+	bt, err := ms.ToByte()
 	if err != nil {
 		return
 	}
