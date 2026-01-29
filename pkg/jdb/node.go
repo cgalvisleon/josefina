@@ -13,8 +13,8 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-	"github.com/cgalvisleon/josefina/pkg/ws"
 )
 
 type NodeState int

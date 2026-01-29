@@ -6,8 +6,8 @@ import (
 
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-	"github.com/cgalvisleon/josefina/pkg/ws"
 )
 
 /**
