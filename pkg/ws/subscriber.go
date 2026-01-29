@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"sync"
 	"time"
 
@@ -117,6 +118,35 @@ func (s *Subscriber) listener(message []byte) {
 	}
 
 	logs.Info(msg.ToString())
+}
+
+/**
+* addChannel
+* @param channel string
+**/
+func (s *Subscriber) addChannel(channel string) {
+	idx := slices.IndexFunc(s.Channels, func(c string) bool {
+		return c == channel
+	})
+	if idx != -1 {
+		return
+	}
+	s.Channels = append(s.Channels, channel)
+}
+
+/**
+* removeChannel
+* @param channel string
+**/
+func (s *Subscriber) removeChannel(channel string) {
+	idx := slices.IndexFunc(s.Channels, func(c string) bool {
+		return c == channel
+	})
+	if idx == -1 {
+		return
+	}
+
+	s.Channels = append(s.Channels[:idx], s.Channels[idx+1:]...)
 }
 
 /**
