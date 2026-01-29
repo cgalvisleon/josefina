@@ -83,6 +83,9 @@ func newNode(host string, port int, version string) *Node {
 	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
 		result.onConnect(subscriber.Name, WebSocket, result.host)
 	})
+	result.ws.OnDisconnection(func(subscriber *ws.Subscriber) {
+		result.onDisconnect(subscriber.Name)
+	})
 
 	return result
 }

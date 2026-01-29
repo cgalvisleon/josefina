@@ -102,7 +102,7 @@ func (s *Hub) onConnect(client *Subscriber) {
 	defer s.mu.Unlock()
 
 	s.Subscribers[client.Name] = client
-	logs.Logf(packageName, "Connected: %s", client.Name)
+	logs.Logf(packageName, "Client connected: %s", client.Name)
 	for _, fn := range s.onConnection {
 		fn(client)
 	}
