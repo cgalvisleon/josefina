@@ -334,16 +334,3 @@ func Hidden(keys []string, object et.Json) et.Json {
 
 	return result
 }
-
-/**
-* prefixRemove
-* @param prefix string, token string
-* @return string
-**/
-func prefixRemove(prefix, token string) string {
-	token = strings.ReplaceAll(token, " ", "")
-	if strings.HasPrefix(token, prefix) {
-		return strings.TrimPrefix(token, prefix)
-	}
-	return token
-}

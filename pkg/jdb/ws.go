@@ -39,7 +39,7 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token = prefix(token)
+	token = prefixRemove("Bearer", token)
 	result, err := claim.ParceToken(token)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
