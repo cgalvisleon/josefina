@@ -391,32 +391,23 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	ch := make(chan error)
-	go func() {
-		err := initModels()
-		if err != nil {
-			ch <- err
-			return
-		}
+	err := initModels()
+	if err != nil {
+		return err
+	}
 
-		bt, err := model.serialize()
-		if err != nil {
-			ch <- err
-			return
-		}
+	bt, err := model.serialize()
+	if err != nil {
+		return err
+	}
 
-		key := model.key()
-		err = models.put(key, bt)
-		if err != nil {
-			ch <- err
-			return
-		}
+	key := model.key()
+	err = models.put(key, bt)
+	if err != nil {
+		return err
+	}
 
-		ch <- nil
-	}()
-
-	res := <-ch
-	return res
+	return nil
 }
 
 /**
