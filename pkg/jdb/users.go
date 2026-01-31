@@ -19,7 +19,7 @@ var users *Model
 **/
 func initUsers() error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if users != nil {
@@ -74,7 +74,7 @@ func initUsers() error {
 **/
 func createUser(username, password string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
@@ -115,7 +115,7 @@ func createUser(username, password string) error {
 **/
 func dropUser(username string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
@@ -150,7 +150,7 @@ func dropUser(username string) error {
 **/
 func changuePassword(username, password string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
