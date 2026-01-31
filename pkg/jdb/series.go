@@ -48,7 +48,7 @@ func initSeries() error {
 **/
 func createSerie(tag, format string, value int) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -90,7 +90,7 @@ func createSerie(tag, format string, value int) error {
 **/
 func dropSerie(tag string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -125,7 +125,7 @@ func dropSerie(tag string) error {
 **/
 func setSerie(tag string, value int) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
@@ -162,7 +162,7 @@ func setSerie(tag string, value int) error {
 **/
 func getSerie(tag string) (et.Json, error) {
 	if !node.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
