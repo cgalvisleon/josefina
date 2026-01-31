@@ -38,9 +38,9 @@ func initUsers() error {
 	users.DefineAtrib(ID, TpKey, "")
 	users.DefineAtrib("username", TpText, "")
 	users.DefineAtrib("password", TpText, "")
-	users.defineHidden("password")
-	users.definePrimaryKey("username")
-	users.defineUnique(ID)
+	users.DefineHidden("password")
+	users.DefinePrimaryKeys("username")
+	users.DefineUnique(ID)
 	if err := users.init(); err != nil {
 		return err
 	}
