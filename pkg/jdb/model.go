@@ -162,11 +162,11 @@ func (s *Model) Save() error {
 }
 
 /**
-* Store: Opens a store
+* store: Opens a store
 * @param name string
 * @return *store.FileStore, error
 **/
-func (s *Model) Store(name string) (*store.FileStore, error) {
+func (s *Model) store(name string) (*store.FileStore, error) {
 	result, ok := s.stores[name]
 	if ok {
 		return result, nil
@@ -195,7 +195,7 @@ func (s *Model) init() error {
 	}
 
 	for _, name := range s.Indexes {
-		_, err := s.Store(name)
+		_, err := s.store(name)
 		if err != nil {
 			return err
 		}
@@ -222,20 +222,6 @@ func (s *Model) init() error {
 **/
 func (s *Model) genKey() string {
 	return reg.GenUUId(s.Name)
-}
-
-/**
-* store: Returns the index
-* @param name string
-* @return *store.FileStore, bool
-**/
-func (s *Model) store(name string) (*store.FileStore, error) {
-	result, ok := s.stores[name]
-	if !ok {
-		return nil, errors.New(msg.MSG_STORE_NOT_DEFINED)
-	}
-
-	return result, nil
 }
 
 /**
