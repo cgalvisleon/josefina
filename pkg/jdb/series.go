@@ -21,7 +21,7 @@ func initSeries() error {
 		return nil
 	}
 
-	db, err := getDb(packageName)
+	db, err := getDb(node.PackageName)
 	if err != nil {
 		return err
 	}
@@ -54,8 +54,8 @@ func createSerie(tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.createSerie(leader, tag, format, value)
 		if err != nil {
 			return err
@@ -96,8 +96,8 @@ func dropSerie(tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.dropSerie(leader, tag)
 		if err != nil {
 			return err
@@ -131,8 +131,8 @@ func setSerie(tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.setSerie(leader, tag, value)
 		if err != nil {
 			return err
@@ -168,8 +168,8 @@ func getSerie(tag string) (et.Json, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.getSerie(leader, tag)
 		if err != nil {
 			return nil, err

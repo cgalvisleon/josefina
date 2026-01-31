@@ -26,7 +26,7 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := getDb(packageName)
+	db, err := getDb(node.PackageName)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,8 @@ func createUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.createUser(leader, username, password)
 		if err != nil {
 			return err
@@ -121,8 +121,8 @@ func dropUser(username string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.dropUser(leader, username)
 		if err != nil {
 			return err
@@ -159,8 +159,8 @@ func changuePassword(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		err := methods.changuePassword(leader, username, password)
 		if err != nil {
 			return err
@@ -174,7 +174,7 @@ func changuePassword(username, password string) error {
 		return err
 	}
 
-	ok, err := users.isExisted("username", username)
+	ok, err = users.isExisted("username", username)
 	if err != nil {
 		return err
 	}

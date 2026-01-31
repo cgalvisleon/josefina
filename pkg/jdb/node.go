@@ -7,7 +7,6 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
@@ -95,7 +94,7 @@ func newNode(host string, port int) *Node {
 * @return et.Json
 **/
 func (s *Node) ToJson() et.Json {
-	leader := s.getLeader()
+	leader, _ := s.getLeader()
 	return et.Json{
 		"host":    s.Host,
 		"leader":  leader,
@@ -173,12 +172,13 @@ func (s *Node) nextNode() string {
 
 /**
 * getLeader
-* @return string
+* @return string, error
 **/
-func (n *Node) getLeader() string {
+func (n *Node) getLeader() (string, bool) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	return n.leaderID
+	result := n.leaderID
+	return result, result != n.Host && result != ""
 }
 
 /**

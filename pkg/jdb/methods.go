@@ -51,12 +51,12 @@ func (s *Methods) ping(to string) error {
 	}
 
 	var response string
-	err := jrpc.CallRpc(to, "Methods.Ping", node.host, &response)
+	err := jrpc.CallRpc(to, "Methods.Ping", node.Host, &response)
 	if err != nil {
 		return err
 	}
 
-	logs.Logf(packageName, "%s:%s", response, to)
+	logs.Logf(node.PackageName, "%s:%s", response, to)
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (s *Methods) Ping(require string, response *string) error {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	logs.Log(packageName, "ping:", require)
+	logs.Log(node.PackageName, "ping:", require)
 	*response = "pong"
 	return nil
 }

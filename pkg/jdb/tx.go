@@ -22,7 +22,7 @@ func initTransactions() error {
 		return nil
 	}
 
-	db, err := getDb(packageName)
+	db, err := getDb(node.PackageName)
 	if err != nil {
 		return err
 	}
@@ -48,8 +48,8 @@ func setTransaction(key string, data et.Json) (string, error) {
 		key = transactions.genKey()
 	}
 
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.setTransaction(leader, key, data)
 		if err != nil {
 			return "", err

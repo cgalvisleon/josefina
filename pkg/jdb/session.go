@@ -43,7 +43,7 @@ func createSession(device, username string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	token, err := claim.NewToken(packageName, device, username, et.Json{}, 0)
+	token, err := claim.NewToken(node.PackageName, device, username, et.Json{}, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -98,10 +98,10 @@ func Auth(device, database, username, password string) (*Session, error) {
 	}
 
 	if database == "" {
-		database = packageName
+		database = node.PackageName
 	}
-	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.auth(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
@@ -132,7 +132,7 @@ func Auth(device, database, username, password string) (*Session, error) {
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s:%s:%s", packageName, device, username)
+	key := fmt.Sprintf("%s:%s:%s", node.PackageName, device, username)
 	_, err = SetCache(key, result.Token, 0)
 	if err != nil {
 		return nil, err

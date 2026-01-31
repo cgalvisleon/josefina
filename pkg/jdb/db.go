@@ -159,8 +159,8 @@ func getDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	leader := node.getLeader()
-	if leader != node.Host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.getDb(leader, name)
 		if err != nil {
 			return nil, err
