@@ -342,7 +342,7 @@ func (s *Node) loadModel(model *Model) error {
 	result, ok := s.models[key]
 	s.modelMu.RUnlock()
 	if !ok {
-		return fmt.Errorf(msg.MSG_GET_FROM_NOT_USED)
+		return errors.New(msg.MSG_GET_FROM_NOT_USED)
 	}
 
 	s.modelMu.Lock()
