@@ -261,8 +261,8 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
@@ -364,8 +364,8 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		err := methods.saveModel(leader, model)
 		if err != nil {
 			return err
@@ -399,8 +399,8 @@ func (s *Node) saveModel(model *Model) error {
 * @return error
 **/
 func (s *Node) reportModels(models map[string]*Model) error {
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		err := methods.reportModels(leader, models)
 		if err != nil {
 			return err
@@ -428,8 +428,8 @@ func (s *Node) saveDb(db *DB) error {
 		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		err := methods.saveDb(leader, db)
 		if err != nil {
 			return err
@@ -464,8 +464,8 @@ func (s *Node) saveDb(db *DB) error {
 * @param host string
 **/
 func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		return methods.onConnect(leader, username, tpConnection, host)
 	}
 
@@ -487,8 +487,8 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 * @param username string
 **/
 func (s *Node) onDisconnect(username string) error {
-	leader := s.getLeader()
-	if leader != s.Host && leader != "" {
+	leader, ok := s.getLeader()
+	if ok {
 		return methods.onDisconnect(leader, username)
 	}
 
