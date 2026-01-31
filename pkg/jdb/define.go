@@ -134,8 +134,8 @@ func (s *Model) DefinePrimaryKeys(fields ...string) error {
 		idx := slices.Index(s.PrimaryKeys, field)
 		if idx == -1 {
 			s.PrimaryKeys = append(s.PrimaryKeys, field)
-			s.defineRequired(field)
-			s.defineUnique(field)
+			s.DefineRequired(field)
+			s.DefineUnique(field)
 		}
 	}
 
@@ -148,29 +148,23 @@ func (s *Model) DefinePrimaryKeys(fields ...string) error {
 * @return *Detail
 **/
 func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-	if !utility.ValidStr(key, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "key")
+	for fk, pk := range keys {
+		_, ok := s.Fields[pk]
+		if !ok {
+			return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, pk)
+		}
+		s.DefineRequired(pk)
+
+		_, ok = to.Fields[fk]
+		if !ok {
+			return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, fk)
+		}
+		to.DefineRequired(fk)
 	}
 
-	_, ok := s.Fields[name]
-	if !ok {
-		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
-	}
-
-	result, ok := s.References[name]
-	if ok {
-		result.OnDeleteCascade = onDeleteCascade
-		result.OnUpdateCascade = onUpdateCascade
-		return result, nil
-	}
-
-	to.defineIndexe(name)
-	to.defineRequired(name)
-	result = newDetail(to.From, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
-	s.References[name] = result
+	name := fmt.Sprintf("%s_%s_fk", s.Name, to.Name)
+	result := newDetail(to.From, keys, []string{}, onDeleteCascade, onUpdateCascade)
+	s.ForeignKeys[name] = result
 	return result, nil
 }
 
@@ -179,12 +173,12 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 * @return *Field, error
 **/
 func (s *Model) defineIndexField() (*Field, error) {
-	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
+	result, err := s.defineField(INDEX, TpAtrib, TpKey, "")
 	if err != nil {
 		return nil, err
 	}
-	s.defineIndexe(INDEX)
-	s.defineHidden(INDEX)
+	s.DefineIndexes(INDEX)
+	s.DefineHidden(INDEX)
 	return result, nil
 }
 
