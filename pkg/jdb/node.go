@@ -2,14 +2,11 @@ package jdb
 
 import (
 	"fmt"
-	"net"
-	"net/rpc"
-	"reflect"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
@@ -41,12 +38,13 @@ type Client struct {
 }
 
 type Node struct {
-	host          string             `json:"-"`
-	port          int                `json:"-"`
-	version       string             `json:"-"`
-	rpcs          map[string]et.Json `json:"-"`
+	PackageName   string             `json:"packageName"`
+	Version       string             `json:"version"`
+	Host          string             `json:"host"`
+	Port          int                `json:"port"`
 	dbs           map[string]*DB     `json:"-"`
 	models        map[string]*Model  `json:"-"`
+	rpcs          map[string]et.Json `json:"-"`
 	peers         []string           `json:"-"`
 	state         NodeState          `json:"-"`
 	term          int                `json:"-"`
@@ -64,25 +62,26 @@ type Node struct {
 
 /**
 * newNode
-* @param host string, port int, version string
+* @param host string, port int
 * @return *Node
 **/
-func newNode(host string, port int, version string) *Node {
+func newNode(host string, port int) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
-		host:    address,
-		port:    port,
-		version: version,
-		rpcs:    make(map[string]et.Json),
-		dbs:     make(map[string]*DB),
-		models:  make(map[string]*Model),
-		ws:      ws.NewWs(),
-		clients: make(map[string]*Client),
-		mu:      sync.Mutex{},
-		modelMu: sync.RWMutex{},
+		PackageName: "josefina",
+		Host:        address,
+		Port:        port,
+		Version:     "0.0.1",
+		rpcs:        make(map[string]et.Json),
+		dbs:         make(map[string]*DB),
+		models:      make(map[string]*Model),
+		ws:          ws.NewWs(),
+		clients:     make(map[string]*Client),
+		mu:          sync.Mutex{},
+		modelMu:     sync.RWMutex{},
 	}
 	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
-		result.onConnect(subscriber.Name, WebSocket, result.host)
+		result.onConnect(subscriber.Name, WebSocket, result.Host)
 	})
 	result.ws.OnDisconnection(func(subscriber *ws.Subscriber) {
 		result.onDisconnect(subscriber.Name)
@@ -98,9 +97,9 @@ func newNode(host string, port int, version string) *Node {
 func (s *Node) ToJson() et.Json {
 	leader := s.getLeader()
 	return et.Json{
-		"host":    s.host,
+		"host":    s.Host,
 		"leader":  leader,
-		"version": s.version,
+		"version": s.Version,
 		"rpcs":    s.rpcs,
 		"peers":   s.peers,
 		"models":  s.models,
@@ -113,50 +112,29 @@ func (s *Node) ToJson() et.Json {
 **/
 func (s *Node) helpCheck() et.Json {
 	return et.Json{
-		"host":    s.host,
+		"host":    s.Host,
 		"leader":  s.leaderID,
-		"version": s.version,
+		"version": s.Version,
 		"peers":   s.peers,
 	}
 }
 
 /**
-* mount
+* Mount: Mounts the services
 * @param services any
 * @return error
 **/
-func (s *Node) mount(services any) error {
-	tipoStruct := reflect.TypeOf(services)
-	structName := tipoStruct.String()
-	list := strings.Split(structName, ".")
-	structName = list[len(list)-1]
-	for i := 0; i < tipoStruct.NumMethod(); i++ {
-		metodo := tipoStruct.Method(i)
-		numInputs := metodo.Type.NumIn()
-		numOutputs := metodo.Type.NumOut()
-
-		inputs := []string{}
-		for i := 1; i < numInputs; i++ {
-			paramType := metodo.Type.In(i)
-			inputs = append(inputs, paramType.String())
-		}
-
-		outputs := []string{}
-		for i := 0; i < numOutputs; i++ {
-			paramType := metodo.Type.Out(i)
-			outputs = append(outputs, paramType.String())
-		}
-
-		name := fmt.Sprintf("%s.%s", structName, metodo.Name)
-		s.rpcs[name] = et.Json{
-			"inputs":  inputs,
-			"outputs": outputs,
-		}
-
-		logs.Logf("rpc", "RPC:/%s/%s", s.host, name)
+func (s *Node) Mount(services any) error {
+	router, err := jrpc.Mount(s.Host, services)
+	if err != nil {
+		return err
 	}
 
-	return rpc.Register(services)
+	for name, rpc := range router {
+		s.rpcs[name] = rpc
+	}
+
+	return nil
 }
 
 /**
@@ -182,7 +160,7 @@ func (s *Node) addNode(node string) {
 func (s *Node) nextNode() string {
 	t := len(s.peers)
 	if t == 0 {
-		return s.host
+		return s.Host
 	}
 
 	s.turn++
@@ -204,24 +182,6 @@ func (n *Node) getLeader() string {
 }
 
 /**
-* startRPC
-* @param listener net.Listener
-**/
-func (n *Node) startRPC(listener net.Listener) {
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				logs.Error(err)
-				continue
-			}
-
-			go rpc.ServeConn(conn)
-		}
-	}()
-}
-
-/**
 * start
 * @return error
 **/
@@ -234,12 +194,12 @@ func (s *Node) start() error {
 		methods = new(Methods)
 	}
 
-	err := s.mount(methods)
+	err := s.Mount(methods)
 	if err != nil {
 		return err
 	}
 
-	err = s.mount(cache)
+	err = s.Mount(cache)
 	if err != nil {
 		return err
 	}
@@ -253,13 +213,10 @@ func (s *Node) start() error {
 		s.addNode(node)
 	}
 
-	address := fmt.Sprintf(`:%d`, s.port)
-	listener, err := net.Listen("tcp", address)
+	err = jrpc.Start(s.Port)
 	if err != nil {
-		logs.Fatal(err)
+		return err
 	}
-
-	s.startRPC(listener)
 
 	s.mu.Lock()
 	s.state = Follower
@@ -271,7 +228,6 @@ func (s *Node) start() error {
 
 	go s.electionLoop()
 
-	logs.Logf("Rpc", "running on %s%s", s.host, listener.Addr())
 	return nil
 }
 
@@ -306,7 +262,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		result, err := methods.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
@@ -409,7 +365,7 @@ func (s *Node) saveModel(model *Model) error {
 	}
 
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		err := methods.saveModel(leader, model)
 		if err != nil {
 			return err
@@ -444,7 +400,7 @@ func (s *Node) saveModel(model *Model) error {
 **/
 func (s *Node) reportModels(models map[string]*Model) error {
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		err := methods.reportModels(leader, models)
 		if err != nil {
 			return err
@@ -473,7 +429,7 @@ func (s *Node) saveDb(db *DB) error {
 	}
 
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		err := methods.saveDb(leader, db)
 		if err != nil {
 			return err
@@ -509,7 +465,7 @@ func (s *Node) saveDb(db *DB) error {
 **/
 func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		return methods.onConnect(leader, username, tpConnection, host)
 	}
 
@@ -532,7 +488,7 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 **/
 func (s *Node) onDisconnect(username string) error {
 	leader := s.getLeader()
-	if leader != s.host && leader != "" {
+	if leader != s.Host && leader != "" {
 		return methods.onDisconnect(leader, username)
 	}
 

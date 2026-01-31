@@ -7,16 +7,16 @@ import (
 	"github.com/cgalvisleon/et/et"
 )
 
-var (
-	packageName = "josefina"
-	Version     = "0.0.1"
-	node        *Node
-	hostname    string
-)
+var node *Node
 
 func init() {
-	hostname, _ = os.Hostname()
-	node = &Node{}
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
+	port := envar.GetInt("RPC_PORT", 4200)
+	node = newNode(hostname, port)
 }
 
 /**
@@ -28,8 +28,6 @@ func Load() error {
 		return nil
 	}
 
-	port := envar.GetInt("RPC_PORT", 4200)
-	node = newNode(hostname, port, Version)
 	go node.start()
 
 	return nil

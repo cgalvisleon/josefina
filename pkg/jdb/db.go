@@ -22,16 +22,16 @@ func initDbs() error {
 		return nil
 	}
 
-	db, ok := node.dbs[packageName]
+	db, ok := node.dbs[node.PackageName]
 	if !ok {
 		path := envar.GetStr("DATA_PATH", "./data")
 		db = &DB{
-			Name:    packageName,
-			Version: Version,
-			Path:    fmt.Sprintf("%s/%s", path, packageName),
+			Name:    node.PackageName,
+			Version: node.Version,
+			Path:    fmt.Sprintf("%s/%s", path, node.PackageName),
 			Schemas: make(map[string]*Schema, 0),
 		}
-		node.dbs[packageName] = db
+		node.dbs[node.PackageName] = db
 	}
 
 	var err error
@@ -160,7 +160,7 @@ func getDb(name string) (*DB, error) {
 	}
 
 	leader := node.getLeader()
-	if leader != node.host && leader != "" {
+	if leader != node.Host && leader != "" {
 		result, err := methods.getDb(leader, name)
 		if err != nil {
 			return nil, err
@@ -193,7 +193,7 @@ func getDb(name string) (*DB, error) {
 	path := envar.GetStr("DATA_PATH", "./data")
 	result = &DB{
 		Name:    name,
-		Version: Version,
+		Version: node.Version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 		isDebug: node.isDebug,
