@@ -97,7 +97,7 @@ func (s *Persist) Remove(require et.Json, response *bool) error {
 
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
-	err := remove(from, idx)
+	err := from.Remove(idx)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (s *Persist) Get(require et.Json, response *AnyResult) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	var dest any
-	ok, err := get(from, idx, &dest)
+	ok, err := from.Get(idx, &dest)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (s *Persist) PutObject(require et.Json, response et.Json) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	var dest et.Json
-	err := putObject(from, idx, dest)
+	err := from.PutObject(idx, dest)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (s *Persist) RemoveObject(require et.Json, response *bool) error {
 
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
-	err := removeObject(from, idx)
+	err := from.RemoveObject(idx)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (s *Persist) IsExisted(require et.Json, response *bool) error {
 	from := toFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
-	existed, err := isExisted(from, field, idx)
+	existed, err := from.IsExisted(field, idx)
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (s *Persist) Count(require *From, response *int) error {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	existed, err := count(require)
+	existed, err := require.Count()
 	if err != nil {
 		return err
 	}
