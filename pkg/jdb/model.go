@@ -552,7 +552,7 @@ func (s *Model) Selects(fields ...string) *Wheres {
 **/
 func getModel(from *From) (*Model, error) {
 	if !node.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	return node.getModel(from.Database, from.Schema, from.Name)
@@ -565,7 +565,7 @@ func getModel(from *From) (*Model, error) {
 **/
 func Put(from *From, idx string, data any) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -588,7 +588,7 @@ func Put(from *From, idx string, data any) error {
 **/
 func Remove(from *From, idx string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -611,7 +611,7 @@ func Remove(from *From, idx string) error {
 **/
 func Get(from *From, idx string, dest any) (bool, error) {
 	if !node.started {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return false, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -634,7 +634,7 @@ func Get(from *From, idx string, dest any) (bool, error) {
 **/
 func PutObject(from *From, idx string, data et.Json) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -666,7 +666,7 @@ func GetObjet(from *From, idx string, dest et.Json) (bool, error) {
 **/
 func RemoveObject(from *From, idx string) error {
 	if !node.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -689,7 +689,7 @@ func RemoveObject(from *From, idx string) error {
 **/
 func IsExisted(from *From, field, idx string) (bool, error) {
 	if !node.started {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return false, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {
@@ -712,7 +712,7 @@ func IsExisted(from *From, field, idx string) (bool, error) {
 **/
 func Count(from *From) (int, error) {
 	if !node.started {
-		return 0, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return 0, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	if node.host != from.Host && from.Host != "" {

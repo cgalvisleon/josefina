@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"time"
 
@@ -47,7 +48,7 @@ var methods *Methods
 **/
 func (s *Methods) ping(to string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var response string
@@ -67,7 +68,7 @@ func (s *Methods) ping(to string) error {
 **/
 func (s *Methods) Ping(require string, response *string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	logs.Log(packageName, "ping:", require)
@@ -104,7 +105,7 @@ func (s *Methods) requestVote(to string, require *RequestVoteArgs, response *Req
 **/
 func (s *Methods) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.requestVote(require, response)
@@ -140,7 +141,7 @@ func (s *Methods) heartbeat(to string, require *HeartbeatArgs, response *Heartbe
 **/
 func (s *Methods) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.heartbeat(require, response)
@@ -173,7 +174,7 @@ func (s *Methods) getModel(to, database, schema, name string) (*Model, error) {
 **/
 func (s *Methods) GetModel(require et.Json, response *Model) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	database := require.Str("database")
@@ -210,7 +211,7 @@ func (s *Methods) loadModel(to string, model *Model) error {
 **/
 func (s *Methods) LoadModel(require *Model, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.loadModel(require)
@@ -244,7 +245,7 @@ func (s *Methods) saveModel(to string, model *Model) error {
 **/
 func (s *Methods) SaveModel(require *Model, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.saveModel(require)
@@ -278,7 +279,7 @@ func (s *Methods) reportModels(to string, models map[string]*Model) error {
 **/
 func (s *Methods) ReportModels(require map[string]*Model, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.reportModels(require)
@@ -312,7 +313,7 @@ func (s *Methods) getDb(to string, name string) (*DB, error) {
 **/
 func (s *Methods) GetDb(require string, response *DB) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	db, err := getDb(require)
@@ -346,7 +347,7 @@ func (s *Methods) saveDb(to string, db *DB) error {
 **/
 func (s *Methods) SaveDb(require *DB, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	err := node.saveDb(require)
@@ -383,7 +384,7 @@ func (s *Methods) createUser(to, username, password string) error {
 **/
 func (s *Methods) CreateUser(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	username := require.Str("username")
@@ -421,7 +422,7 @@ func (s *Methods) dropUser(to, username string) error {
 **/
 func (s *Methods) DropUser(require et.Json, response *Session) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	username := require.Str("username")
@@ -459,7 +460,7 @@ func (s *Methods) changuePassword(to, username, password string) error {
 **/
 func (s *Methods) ChanguePassword(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	username := require.Str("username")
@@ -500,7 +501,7 @@ func (s *Methods) signIn(to, device, database, username, password string) (*Sess
 **/
 func (s *Methods) SignIn(require et.Json, response *Session) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	device := require.Str("device")
@@ -523,7 +524,7 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 **/
 func (s *Methods) createSerie(to, tag, format string, value int) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
@@ -547,7 +548,7 @@ func (s *Methods) createSerie(to, tag, format string, value int) error {
 **/
 func (s *Methods) CreateSerie(require et.Json, response *string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	tag := require.Str("tag")
@@ -568,7 +569,7 @@ func (s *Methods) CreateSerie(require et.Json, response *string) error {
 **/
 func (s *Methods) dropSerie(to, tag string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
@@ -590,7 +591,7 @@ func (s *Methods) dropSerie(to, tag string) error {
 **/
 func (s *Methods) DropSerie(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	tag := require.Str("tag")
@@ -610,7 +611,7 @@ func (s *Methods) DropSerie(require et.Json, response *bool) error {
 **/
 func (s *Methods) setSerie(to, tag string, value int) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
@@ -633,7 +634,7 @@ func (s *Methods) setSerie(to, tag string, value int) error {
 **/
 func (s *Methods) SetSerie(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	tag := require.Str("tag")
@@ -676,7 +677,7 @@ func (s *Methods) getSerie(to, tag string) (et.Json, error) {
 **/
 func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	tag := require.Str("tag")
@@ -719,7 +720,7 @@ func (s *Methods) setTransaction(to, key string, data et.Json) (string, error) {
 **/
 func (s *Methods) SetTransaction(require et.Json, response *string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	key := require.Str("key")
@@ -764,7 +765,7 @@ func (s *Methods) setCache(to, key string, value interface{}, duration time.Dura
 **/
 func (s *Methods) SetCache(require et.Json, response *mem.Item) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	key := require.Str("key")
@@ -839,7 +840,7 @@ func (s *Methods) deleteCache(to, key string) (bool, error) {
 **/
 func (s *Methods) DeleteCache(require string, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	result, err := DeleteCache(require)
@@ -858,7 +859,7 @@ func (s *Methods) DeleteCache(require string, response *bool) error {
 **/
 func (s *Methods) put(from *From, idx string, data any) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -882,7 +883,7 @@ func (s *Methods) put(from *From, idx string, data any) error {
 **/
 func (s *Methods) Put(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -904,7 +905,7 @@ func (s *Methods) Put(require et.Json, response *bool) error {
 **/
 func (s *Methods) remove(from *From, idx string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -927,7 +928,7 @@ func (s *Methods) remove(from *From, idx string) error {
 **/
 func (s *Methods) Remove(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -972,7 +973,7 @@ func (s *Methods) get(from *From, idx string, dest any) (bool, error) {
 **/
 func (s *Methods) Get(require et.Json, response *AnyResult) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -997,7 +998,7 @@ func (s *Methods) Get(require et.Json, response *AnyResult) error {
 **/
 func (s *Methods) putObject(from *From, idx string, dest et.Json) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1019,7 +1020,7 @@ func (s *Methods) putObject(from *From, idx string, dest et.Json) error {
 **/
 func (s *Methods) PutObject(require et.Json, response et.Json) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -1041,7 +1042,7 @@ func (s *Methods) PutObject(require et.Json, response et.Json) error {
 **/
 func (s *Methods) removeObject(from *From, idx string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1064,7 +1065,7 @@ func (s *Methods) removeObject(from *From, idx string) error {
 **/
 func (s *Methods) RemoveObject(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -1109,7 +1110,7 @@ func (s *Methods) isExisted(from *From, field, idx string) (bool, error) {
 **/
 func (s *Methods) IsExisted(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	from := toFrom(require.Json("from"))
@@ -1150,7 +1151,7 @@ func (s *Methods) count(from *From) (int, error) {
 **/
 func (s *Methods) Count(require *From, response *int) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	existed, err := Count(require)
@@ -1169,7 +1170,7 @@ func (s *Methods) Count(require *From, response *int) error {
 **/
 func (s *Methods) onConnect(to string, username string, tpConnection TpConnection, host string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1193,7 +1194,7 @@ func (s *Methods) onConnect(to string, username string, tpConnection TpConnectio
 **/
 func (s *Methods) OnConnect(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	username := require.Str("username")
@@ -1215,7 +1216,7 @@ func (s *Methods) OnConnect(require et.Json, response *bool) error {
 **/
 func (s *Methods) onDisconnect(to string, username string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1237,7 +1238,7 @@ func (s *Methods) onDisconnect(to string, username string) error {
 **/
 func (s *Methods) OnDisconnect(require et.Json, response *bool) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	username := require.Str("username")

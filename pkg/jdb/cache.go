@@ -8,6 +8,8 @@ import (
 	"github.com/cgalvisleon/et/mem"
 )
 
+type Cache struct{}
+
 var (
 	cache        *Model
 	errNotExists = fmt.Errorf("NotExists")

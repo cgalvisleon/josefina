@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
@@ -152,7 +153,7 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 **/
 func getDb(name string) (*DB, error) {
 	if !node.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")

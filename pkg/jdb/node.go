@@ -239,6 +239,11 @@ func (s *Node) start() error {
 		return err
 	}
 
+	err = s.mount(cache)
+	if err != nil {
+		return err
+	}
+
 	nodes, err := getNodes()
 	if err != nil {
 		return err
