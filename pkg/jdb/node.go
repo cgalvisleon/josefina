@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -252,7 +253,7 @@ func (s *Node) Ping(to string) bool {
 **/
 func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	if !s.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(database, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
@@ -296,7 +297,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		}
 
 		if db.IsStrict {
-			return nil, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+			return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 		}
 
 		result, err = db.newModel(schema, name, false, 1)
@@ -328,7 +329,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 **/
 func (s *Node) loadModel(model *Model) error {
 	if !s.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	err := model.init()
@@ -358,7 +359,7 @@ func (s *Node) loadModel(model *Model) error {
 **/
 func (s *Node) saveModel(model *Model) error {
 	if !s.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if model.IsCore {
 		return nil
@@ -425,7 +426,7 @@ func (s *Node) reportModels(models map[string]*Model) error {
 **/
 func (s *Node) saveDb(db *DB) error {
 	if !s.started {
-		return fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	leader, ok := s.getLeader()
