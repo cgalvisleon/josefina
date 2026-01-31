@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
@@ -268,12 +269,12 @@ func (s *Cmd) AfterDelete(name, definition string) *Cmd {
 func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 	model := s.model
 	if model == nil {
-		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+		return nil, errors.New(msg.MSG_MODEL_IS_NIL)
 
 	}
 
 	if s.data.IsEmpty() {
-		return nil, fmt.Errorf(msg.MSG_NOT_DATA)
+		return nil, errors.New(msg.MSG_NOT_DATA)
 	}
 
 	new := s.data
@@ -296,7 +297,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 		key := fmt.Sprintf("%v", new[name])
 		if source.IsExist(key) {
-			return nil, fmt.Errorf(msg.MSG_RECORD_EXISTS)
+			return nil, errors.New(msg.MSG_RECORD_EXISTS)
 		}
 	}
 
@@ -373,7 +374,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 	model := s.model
 	if model == nil {
-		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+		return nil, errors.New(msg.MSG_MODEL_IS_NIL)
 	}
 
 	s.wheres.SetOwner(model)
@@ -455,7 +456,7 @@ func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 	model := s.model
 	if model == nil {
-		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+		return nil, errors.New(msg.MSG_MODEL_IS_NIL)
 	}
 
 	s.wheres.SetOwner(model)
@@ -529,7 +530,7 @@ func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 	model := s.model
 	if model == nil {
-		return nil, fmt.Errorf(msg.MSG_MODEL_IS_NIL)
+		return nil, errors.New(msg.MSG_MODEL_IS_NIL)
 	}
 
 	new := s.data
