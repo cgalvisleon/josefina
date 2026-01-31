@@ -312,7 +312,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 
 		key := fmt.Sprintf("%v", new[name])
-		exists, err := IsExisted(detail.To, fk, key)
+		exists, err := detail.To.IsExisted(fk, key)
 		if err != nil {
 			return nil, err
 		}

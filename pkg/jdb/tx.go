@@ -223,13 +223,13 @@ func (s *Tx) commit() error {
 		cmd := tr.Command
 		idx := tr.Idx
 		if cmd == DELETE {
-			err := RemoveObject(tr.From, idx)
+			err := tr.From.RemoveObject(idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			err := PutObject(tr.From, idx, data)
+			err := tr.From.PutObject(idx, data)
 			if err != nil {
 				return err
 			}
