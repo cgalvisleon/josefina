@@ -2,7 +2,6 @@ package jdb
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
@@ -54,7 +53,7 @@ func (s *Persist) Put(require et.Json, response *bool) error {
 	from := toFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Get("data")
-	err := put(from, idx, data)
+	err := from.Put(idx, data)
 	if err != nil {
 		return err
 	}
@@ -326,174 +325,4 @@ func (s *Persist) Count(require *From, response *int) error {
 
 	*response = existed
 	return nil
-}
-
-/**
-* put: Puts an object into the model
-* @param from *From, key string, data any
-* @return error
-**/
-func put(from *From, idx string, data any) error {
-	if !node.started {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.put(from, idx, data)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.put(idx, data)
-}
-
-/**
-* remove: Removes an object from the model
-* @param from *From, idx string
-* @return error
-**/
-func remove(from *From, idx string) error {
-	if !node.started {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.remove(from, idx)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.remove(idx)
-}
-
-/**
-* get: Gets an object from the model
-* @param from *From, idx string, dest any
-* @return bool, error
-**/
-func get(from *From, idx string, dest any) (bool, error) {
-	if !node.started {
-		return false, errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.get(from, idx, dest)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.get(idx, dest)
-}
-
-/**
-* putObject: Puts an object into the model
-* @param model *Model, idx string, data et.Json
-* @return error
-**/
-func putObject(from *From, idx string, data et.Json) error {
-	if !node.started {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.putObject(from, idx, data)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.putObject(idx, data)
-}
-
-/**
-* getObject: Gets the model as object
-* @param idx string
-* @return et.Json, error
-**/
-func getObject(from *From, idx string, dest et.Json) (bool, error) {
-	return get(from, idx, &dest)
-}
-
-/**
-* removeObject: Removes an object from the model
-* @param model *Model, key string
-* @return error
-**/
-func removeObject(from *From, idx string) error {
-	if !node.started {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.removeObject(from, idx)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.removeObject(key)
-}
-
-/**
-* isExisted
-* @param from *From, field string, key string
-* @return (bool, error)
-**/
-func isExisted(from *From, field, idx string) (bool, error) {
-	if !node.started {
-		return false, errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.isExisted(from, field, idx)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.isExisted(field, idx)
-}
-
-/**
-* count
-* @param from *From
-* @return (int, error)
-**/
-func count(from *From) (int, error) {
-	if !node.started {
-		return 0, errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	if node.Host != from.Host && from.Host != "" {
-		return persist.count(from)
-	}
-
-	key := from.key()
-	model, ok := node.models[key]
-	if !ok {
-		return 0, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	return model.count()
 }
