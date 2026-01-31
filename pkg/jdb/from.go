@@ -2,7 +2,6 @@ package jdb
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -56,7 +55,7 @@ func (s *From) Put(idx string, data any) error {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.put(idx, data)
@@ -79,7 +78,7 @@ func (s *From) Remove(idx string) error {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.remove(idx)
@@ -102,7 +101,7 @@ func (s *From) Get(idx string, dest any) (bool, error) {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return false, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.get(idx, dest)
@@ -125,7 +124,7 @@ func (s *From) PutObject(idx string, data et.Json) error {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.putObject(idx, data)
@@ -157,7 +156,7 @@ func (s *From) RemoveObject(idx string) error {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.removeObject(key)
@@ -180,7 +179,7 @@ func (s *From) IsExisted(field, idx string) (bool, error) {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return false, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return false, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.isExisted(field, idx)
@@ -203,7 +202,7 @@ func (s *From) Count() (int, error) {
 	key := s.key()
 	model, ok := node.models[key]
 	if !ok {
-		return 0, fmt.Errorf(msg.MSG_MODEL_NOT_FOUND)
+		return 0, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return model.count()
