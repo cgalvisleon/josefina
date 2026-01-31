@@ -551,11 +551,11 @@ func (s *Model) Selects(fields ...string) *Wheres {
 }
 
 /**
-* getModel: Gets the model
+* GetModel: Gets the model
 * @param from *From
 * @return *Model, error
 **/
-func getModel(from *From) (*Model, error) {
+func GetModel(from *From) (*Model, error) {
 	if !node.started {
 		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -573,7 +573,7 @@ func Put(from *From, idx string, data any) error {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	if node.host != from.Host && from.Host != "" {
+	if node.Host != from.Host && from.Host != "" {
 		return methods.put(from, idx, data)
 	}
 
