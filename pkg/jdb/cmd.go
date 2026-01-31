@@ -301,7 +301,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 	}
 
-	for name, detail := range model.References {
+	for name, detail := range model.ForeignKeys {
 		if _, ok := new[name]; !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
