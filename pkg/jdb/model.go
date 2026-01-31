@@ -69,7 +69,6 @@ type Model struct {
 	isDebug       bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
-	changed       bool                        `json:"-"`
 }
 
 /**

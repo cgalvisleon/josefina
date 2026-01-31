@@ -9,19 +9,12 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-func (s *Model) setChanged() {
-	if !s.IsInit {
-		return
-	}
-	s.changed = true
-}
-
 /**
-* defineFields: Defines the fields
+* defineField: Defines the field
 * @param name string, tpField TypeField, tpData TypeData, defaultValue interface{}
 * @return *Field, error
 **/
-func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
+func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -39,136 +32,122 @@ func (s *Model) defineFields(name string, tpField TypeField, tpData TypeData, de
 		return nil, err
 	}
 	s.Fields[name] = result
-	s.setChanged()
 
 	return result, nil
 }
 
 /**
-* defineIndexe: Defines the index
+* DefineIndexes: Defines the index
 * @param name string
 **/
-func (s *Model) defineIndexe(name string) bool {
-	_, ok := s.Fields[name]
-	if !ok {
-		return false
+func (s *Model) DefineIndexes(fields ...string) error {
+	for _, field := range fields {
+		_, ok := s.Fields[field]
+		if !ok {
+			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		}
+
+		idx := slices.Index(s.Indexes, field)
+		if idx == -1 {
+			s.Indexes = append(s.Indexes, field)
+		}
 	}
 
-	idx := slices.Index(s.Indexes, name)
-	if idx == -1 {
-		s.Indexes = append(s.Indexes, name)
-		s.setChanged()
-	}
-	return true
+	return nil
 }
 
 /*
 *
-* defineUnique: Defines the unique
+* DefineUnique: Defines the unique
 * @param name string
 * @return bool
 *
  */
-func (s *Model) defineUnique(name string) bool {
-	_, ok := s.Fields[name]
-	if !ok {
-		return false
-	}
+func (s *Model) DefineUnique(fields ...string) error {
+	for _, field := range fields {
+		_, ok := s.Fields[field]
+		if !ok {
+			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		}
 
-	idx := slices.Index(s.Unique, name)
-	if idx == -1 {
-		s.Unique = append(s.Unique, name)
-		s.defineIndexe(name)
+		idx := slices.Index(s.Unique, field)
+		if idx == -1 {
+			s.Unique = append(s.Unique, field)
+			s.DefineIndexes(field)
+		}
 	}
-	return true
+	return nil
 }
 
 /**
-* defineRequired: Defines the required
+* DefineRequired: Defines the required
 * @param name string
 * @return bool
 **/
-func (s *Model) defineRequired(name string) bool {
-	_, ok := s.Fields[name]
-	if !ok {
-		return false
-	}
+func (s *Model) DefineRequired(fields ...string) error {
+	for _, field := range fields {
+		_, ok := s.Fields[field]
+		if !ok {
+			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		}
 
-	idx := slices.Index(s.Required, name)
-	if idx == -1 {
-		s.Required = append(s.Required, name)
-		s.defineIndexe(name)
+		idx := slices.Index(s.Required, field)
+		if idx == -1 {
+			s.Required = append(s.Required, field)
+			s.DefineIndexes(field)
+		}
 	}
-	return true
+	return nil
 }
 
 /**
-* defineHidden: Defines the hidden
+* DefineHidden: Defines the hidden
 * @param name string
 * @return bool
 **/
-func (s *Model) defineHidden(name string) bool {
-	_, ok := s.Fields[name]
-	if !ok {
-		return false
-	}
+func (s *Model) DefineHidden(fields ...string) error {
+	for _, field := range fields {
+		_, ok := s.Fields[field]
+		if !ok {
+			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		}
 
-	idx := slices.Index(s.Hidden, name)
-	if idx == -1 {
-		s.Hidden = append(s.Hidden, name)
-		s.setChanged()
+		idx := slices.Index(s.Hidden, field)
+		if idx == -1 {
+			s.Hidden = append(s.Hidden, field)
+		}
 	}
-	return true
+	return nil
 }
 
 /**
 * definePrimaryKey: Defines the primary keys
 * @param name string
 **/
-func (s *Model) definePrimaryKey(name string) bool {
-	_, ok := s.Fields[name]
-	if !ok {
-		return false
+func (s *Model) DefinePrimaryKeys(fields ...string) error {
+	for _, field := range fields {
+		_, ok := s.Fields[field]
+		if !ok {
+			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		}
+
+		idx := slices.Index(s.PrimaryKeys, field)
+		if idx == -1 {
+			s.PrimaryKeys = append(s.PrimaryKeys, field)
+			s.defineRequired(field)
+			s.defineUnique(field)
+		}
 	}
 
-	idx := slices.Index(s.PrimaryKeys, name)
-	if idx == -1 {
-		s.PrimaryKeys = append(s.PrimaryKeys, name)
-		s.defineRequired(name)
-		s.defineUnique(name)
-	}
-	return true
+	return nil
 }
 
 /**
-* defineIndexField: Defines the index field
-* @return *Field, error
-**/
-func (s *Model) defineIndexField() (*Field, error) {
-	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
-	if err != nil {
-		return nil, err
-	}
-	s.defineIndexe(INDEX)
-	s.defineHidden(INDEX)
-	return result, nil
-}
-
-/**
-* DefineAtrib: Defines the field
-* @param name string, tpData TypeData, defaultValue interface{}
-* @return *Field, error
-**/
-func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	return s.defineFields(name, TpAtrib, tpData, defaultValue)
-}
-
-/**
-* DefineReferences: Defines the references
+* DefineForeignKeys: Defines the foreign keys
 * @param name, key string, to *Model, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
-func (s *Model) DefineReferences(name, key string, to *Model, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
+func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCascade, onUpdateCascade bool) (*Detail, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -193,6 +172,29 @@ func (s *Model) DefineReferences(name, key string, to *Model, onDeleteCascade, o
 	result = newDetail(to.From, map[string]string{name: key}, []string{}, onDeleteCascade, onUpdateCascade)
 	s.References[name] = result
 	return result, nil
+}
+
+/**
+* defineIndexField: Defines the index field
+* @return *Field, error
+**/
+func (s *Model) defineIndexField() (*Field, error) {
+	result, err := s.defineFields(INDEX, TpAtrib, TpKey, "")
+	if err != nil {
+		return nil, err
+	}
+	s.defineIndexe(INDEX)
+	s.defineHidden(INDEX)
+	return result, nil
+}
+
+/**
+* DefineAtrib: Defines the field
+* @param name string, tpData TypeData, defaultValue interface{}
+* @return *Field, error
+**/
+func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	return s.defineFields(name, TpAtrib, tpData, defaultValue)
 }
 
 /**
