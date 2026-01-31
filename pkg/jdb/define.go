@@ -188,7 +188,7 @@ func (s *Model) defineIndexField() (*Field, error) {
 * @return *Field, error
 **/
 func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	return s.defineFields(name, TpAtrib, tpData, defaultValue)
+	return s.defineField(name, TpAtrib, tpData, defaultValue)
 }
 
 /**
@@ -197,7 +197,7 @@ func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface
 * @return *Model, error
 **/
 func (s *Model) DefineDetail(name string, keys map[string]string, version int) (*Model, error) {
-	_, err := s.defineFields(name, TpDetail, TpAny, []et.Json{})
+	_, err := s.defineField(name, TpDetail, TpAny, []et.Json{})
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +207,7 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		return nil, err
 	}
 
+	forKeys := make(map[string]string)
 	for fk, pk := range keys {
 		_, err = s.DefineAtrib(pk, TpKey, "")
 		if err != nil {
@@ -218,13 +219,11 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 			return nil, err
 		}
 
-		s.definePrimaryKey(pk)
-		_, err = to.DefineReferences(fk, pk, s, true, true)
-		if err != nil {
-			return nil, err
-		}
+		s.DefinePrimaryKeys(pk)
+		forKeys[pk] = fk
 	}
 
+	to.DefineForeignKeys(s, forKeys, true, true)
 	s.Details[name] = newDetail(to.From, keys, []string{}, false, false)
 	return to, nil
 }
@@ -235,7 +234,7 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 * @return error
 **/
 func (s *Model) DefineRollup(name string, to *From, keys map[string]string, selects []string) error {
-	_, err := s.defineFields(name, TpRollup, TpJson, []et.Json{})
+	_, err := s.defineField(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
 		return err
 	}
@@ -252,7 +251,6 @@ func (s *Model) DefineRollup(name string, to *From, keys map[string]string, sele
 func (s *Model) DefineRelation(to *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
 	detail := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.Relations[to.Name] = detail
-	s.setChanged()
 	return nil
 }
 
@@ -262,42 +260,11 @@ func (s *Model) DefineRelation(to *From, keys map[string]string, onDeleteCascade
 * @return error
 **/
 func (s *Model) DefineCalc(name string, definition []byte) error {
-	_, err := s.defineFields(name, TpCalc, TpBytes, nil)
+	_, err := s.defineField(name, TpCalc, TpBytes, nil)
 	if err != nil {
 		return err
 	}
 
 	s.Calcs[name] = definition
-	s.setChanged()
 	return nil
-}
-
-/**
-* DefineIndexes: Defines the indexes
-* @param names ...string
-* @return error
-**/
-func (s *Model) DefineIndexes(names ...string) bool {
-	for _, name := range names {
-		ok := s.defineIndexe(name)
-		if !ok {
-			return false
-		}
-	}
-	return true
-}
-
-/**
-* DefinePrimaryKeys: Defines the primary keys
-* @param names ...string
-* @return bool
-**/
-func (s *Model) DefinePrimaryKeys(names ...string) bool {
-	for _, name := range names {
-		ok := s.definePrimaryKey(name)
-		if !ok {
-			return false
-		}
-	}
-	return true
 }
