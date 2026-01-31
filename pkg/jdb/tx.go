@@ -1,7 +1,7 @@
 package jdb
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -191,7 +191,7 @@ func (s *Tx) add(model *Model, cmd Command, idx string, data et.Json) error {
 func (s *Tx) setStatus(idx int, status Status) error {
 	tr := s.Transactions[idx]
 	if tr == nil {
-		return fmt.Errorf(msg.MSG_TRANSACTION_NOT_FOUND)
+		return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
 	}
 
 	tr.Status = status
