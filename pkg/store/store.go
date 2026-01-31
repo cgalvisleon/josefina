@@ -63,6 +63,13 @@ func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byt
 	return result, header, nil
 }
 
+type mode int
+
+const (
+	modeRead mode = iota
+	modeWrite
+)
+
 type FileStore struct {
 	Name         string                `json:"name"`
 	Path         string                `json:"path"`
@@ -81,6 +88,7 @@ type FileStore struct {
 	active       *segment              `json:"-"` // segmento activo para escritura
 	index        map[string]*RecordRef `json:"-"` // índice en memoria
 	keys         []string              `json:"-"` // claves en memoria
+	mode         mode                  `json:"-"` // modo de operación
 }
 
 /**
@@ -714,11 +722,11 @@ func (s *FileStore) Empty() error {
 }
 
 /**
-* Open
+* open
 * @param path, name string,
 * @return *FileStore, error
 **/
-func Open(path, name string, isDebug bool) (*FileStore, error) {
+func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
 	name = utility.Normalize(name)
@@ -729,6 +737,8 @@ func Open(path, name string, isDebug bool) (*FileStore, error) {
 		PathSnapshot: filepath.Join(path, name, "snapshot"),
 		PathCompact:  filepath.Join(path, name, "compact"),
 		MaxSegment:   maxSegmentMG,
+		isDebug:      isDebug,
+		mode:         mode,
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
@@ -757,4 +767,22 @@ func Open(path, name string, isDebug bool) (*FileStore, error) {
 	}
 
 	return fs, nil
+}
+
+/**
+* Open
+* @param path, name string,
+* @return *FileStore, error
+**/
+func Open(path, name string, isDebug bool) (*FileStore, error) {
+	return open(path, name, isDebug, modeWrite)
+}
+
+/**
+* ReadOnly
+* @param path, name string,
+* @return *FileStore, error
+**/
+func ReadOnly(path, name string, isDebug bool) (*FileStore, error) {
+	return open(path, name, isDebug, modeRead)
 }
