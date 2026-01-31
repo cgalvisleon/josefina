@@ -162,6 +162,26 @@ func (s *Model) Save() error {
 }
 
 /**
+* Store: Opens a store
+* @param name string
+* @return *store.FileStore, error
+**/
+func (s *Model) Store(name string) (*store.FileStore, error) {
+	result, ok := s.stores[name]
+	if ok {
+		return result, nil
+	}
+
+	result, err := store.Open(s.Path, name, s.isDebug)
+	if err != nil {
+		return nil, err
+	}
+	s.stores[name] = result
+
+	return result, nil
+}
+
+/**
 * init: Initializes the model
 * @return error
 **/
@@ -175,16 +195,15 @@ func (s *Model) init() error {
 	}
 
 	for _, name := range s.Indexes {
-		fStore, err := store.Open(s.Path, name, s.isDebug)
+		_, err := s.Store(name)
 		if err != nil {
 			return err
 		}
-		s.stores[name] = fStore
 	}
 
 	s.IsInit = true
 	if node != nil {
-		s.Host = node.host
+		s.Host = node.Host
 	}
 
 	for _, detail := range s.Details {
