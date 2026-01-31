@@ -48,8 +48,8 @@ func initCache() error {
 func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	result := mem.Set(key, value, duration)
 
-	leader := node.getLeader()
-	if leader != node.Host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.setCache(leader, key, value, duration)
 		if err != nil {
 			return nil, err
@@ -81,8 +81,8 @@ func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item,
 func DeleteCache(key string) (bool, error) {
 	result := mem.Delete(key)
 
-	leader := node.getLeader()
-	if leader != node.Host && leader != "" {
+	leader, ok := node.getLeader()
+	if ok {
 		result, err := methods.deleteCache(leader, key)
 		if err != nil {
 			return false, err
@@ -112,8 +112,8 @@ func DeleteCache(key string) (bool, error) {
 func GetCache(key string) (*mem.Item, bool) {
 	value, err := mem.GetItem(key)
 	if err != nil && err.Error() == errNotExists.Error() {
-		leader := node.getLeader()
-		if leader != node.Host && leader != "" {
+		leader, ok := node.getLeader()
+		if ok {
 			result, err := methods.getCache(leader, key)
 			if err != nil {
 				return nil, false

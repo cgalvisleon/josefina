@@ -27,7 +27,7 @@ func initModels() error {
 		return nil
 	}
 
-	db, err := getDb(packageName)
+	db, err := getDb(node.PackageName)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (s *Model) init() error {
 	}
 
 	for _, detail := range s.Details {
-		_, err := getModel(detail.To)
+		_, err := GetModel(detail.To)
 		if err != nil {
 			return err
 		}
