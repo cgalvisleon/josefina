@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
@@ -27,7 +28,7 @@ func wrapperConsole(vm *Vm) {
 			logs.Info(args...)
 		},
 		"error": func(args string) {
-			logs.Error(fmt.Errorf(args))
+			logs.Error(errors.New(args))
 		},
 	})
 }
@@ -48,7 +49,7 @@ func wrapperFetch(vm *Vm) {
 		body := args[3].Export().(map[string]interface{})
 		result, status := request.Fetch(method, url, headers, body)
 		if status.Code != 200 {
-			panic(vm.NewGoError(fmt.Errorf(status.Message)))
+			panic(vm.NewGoError(errors.New(status.Message)))
 		}
 		if !status.Ok {
 			panic(vm.NewGoError(fmt.Errorf("error al hacer la peticion: %s", status.Message)))
@@ -111,7 +112,7 @@ func wrapperToString(vm *Vm) {
 func wrapperModel(vm *Vm) {
 	vm.Set("model", func(call goja.FunctionCall) goja.Value {
 		if node == nil {
-			panic(vm.NewGoError(fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)))
+			panic(vm.NewGoError(errors.New(msg.MSG_NODE_NOT_INITIALIZED)))
 		}
 		args := call.Arguments
 		if len(args) != 3 {
