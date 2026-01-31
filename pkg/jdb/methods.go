@@ -3,7 +3,6 @@ package jdb
 import (
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -475,13 +474,13 @@ func (s *Methods) ChanguePassword(require et.Json, response *bool) error {
 }
 
 /**
-* signIn: Sign in a user
+* auth: Sign in a user
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Methods) signIn(to, device, database, username, password string) (*Session, error) {
+func (s *Methods) auth(to, device, database, username, password string) (*Session, error) {
 	var response Session
-	err := jrpc.CallRpc(to, "Methods.SignIn", et.Json{
+	err := jrpc.CallRpc(to, "Methods.Auth", et.Json{
 		"device":   device,
 		"database": database,
 		"username": username,
@@ -495,11 +494,11 @@ func (s *Methods) signIn(to, device, database, username, password string) (*Sess
 }
 
 /**
-* getModel
+* Auth
 * @param database, schema, model string
 * @return *Model, error
 **/
-func (s *Methods) SignIn(require et.Json, response *Session) error {
+func (s *Methods) Auth(require et.Json, response *Session) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -508,7 +507,7 @@ func (s *Methods) SignIn(require et.Json, response *Session) error {
 	database := require.Str("database")
 	username := require.Str("username")
 	password := require.Str("password")
-	result, err := SignIn(device, database, username, password)
+	result, err := Auth(device, database, username, password)
 	if err != nil {
 		return err
 	}
@@ -655,7 +654,7 @@ func (s *Methods) SetSerie(require et.Json, response *bool) error {
 **/
 func (s *Methods) getSerie(to, tag string) (et.Json, error) {
 	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
@@ -697,7 +696,7 @@ func (s *Methods) GetSerie(require et.Json, response *et.Json) error {
 **/
 func (s *Methods) setTransaction(to, key string, data et.Json) (string, error) {
 	if node == nil {
-		return "", fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return "", errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -741,7 +740,7 @@ func (s *Methods) SetTransaction(require et.Json, response *string) error {
 **/
 func (s *Methods) setCache(to, key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	data := et.Json{
@@ -787,7 +786,7 @@ func (s *Methods) SetCache(require et.Json, response *mem.Item) error {
 **/
 func (s *Methods) getCache(to, key string) (*mem.Item, error) {
 	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var reply *mem.Item
@@ -821,7 +820,7 @@ func (s *Methods) GetCache(require string, response *mem.Item) bool {
 **/
 func (s *Methods) deleteCache(to, key string) (bool, error) {
 	if node == nil {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var reply bool
@@ -949,7 +948,7 @@ func (s *Methods) Remove(require et.Json, response *bool) error {
 **/
 func (s *Methods) get(from *From, idx string, dest any) (bool, error) {
 	if node == nil {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1086,7 +1085,7 @@ func (s *Methods) RemoveObject(require et.Json, response *bool) error {
 **/
 func (s *Methods) isExisted(from *From, field, idx string) (bool, error) {
 	if node == nil {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	args := et.Json{
@@ -1132,7 +1131,7 @@ func (s *Methods) IsExisted(require et.Json, response *bool) error {
 **/
 func (s *Methods) count(from *From) (int, error) {
 	if node == nil {
-		return 0, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return 0, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var dest int

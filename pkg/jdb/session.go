@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -85,15 +86,15 @@ func DropSession(token string) error {
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, database, username, password string) (*Session, error) {
+func Auth(device, database, username, password string) (*Session, error) {
 	if !node.started {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_STARTED)
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_USERNAME_REQUIRED)
+		return nil, errors.New(msg.MSG_USERNAME_REQUIRED)
 	}
 	if !utility.ValidStr(password, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_PASSWORD_REQUIRED)
+		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
 	}
 
 	if database == "" {
@@ -101,7 +102,7 @@ func SignIn(device, database, username, password string) (*Session, error) {
 	}
 	leader := node.getLeader()
 	if leader != node.host && leader != "" {
-		result, err := methods.signIn(leader, device, database, username, password)
+		result, err := methods.auth(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +124,7 @@ func SignIn(device, database, username, password string) (*Session, error) {
 		return nil, err
 	}
 	if len(item) == 0 {
-		return nil, fmt.Errorf(msg.MSG_AUTHENTICATION_FAILED)
+		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
 	result, err := createSession(device, username)

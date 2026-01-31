@@ -19,11 +19,11 @@ func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
-* signIn
+* auth
 * @param w http.ResponseWriter, r *http.Request
 * @return error
 **/
-func (s *Router) signIn(w http.ResponseWriter, r *http.Request) {
+func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -34,7 +34,7 @@ func (s *Router) signIn(w http.ResponseWriter, r *http.Request) {
 	database := body.Str("database")
 	username := body.Str("username")
 	password := body.Str("password")
-	session, err := jdb.SignIn(device, database, username, password)
+	session, err := jdb.Auth(device, database, username, password)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
