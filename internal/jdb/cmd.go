@@ -324,7 +324,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 
 	idx := new.ValStr("", INDEX)
 	if idx == "" {
-		idx = model.genKey()
+		idx = model.GenKey()
 		new[INDEX] = idx
 	}
 

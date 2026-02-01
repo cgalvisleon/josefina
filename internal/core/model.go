@@ -1,7 +1,10 @@
 package core
 
 import (
+	"errors"
+
 	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
@@ -13,6 +16,10 @@ var (
 * @return error
 **/
 func initModels() error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+
 	if models != nil {
 		return nil
 	}

@@ -19,6 +19,10 @@ var users *jdb.Model
 * @return error
 **/
 func initUsers() error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+
 	if users != nil {
 		return nil
 	}
@@ -50,9 +54,9 @@ func initUsers() error {
 	if count == 0 {
 		useranme := envar.GetStr("USERNAME", "admin")
 		password := envar.GetStr("PASSWORD", "admin")
-		idx := users.genKey()
-		err := users.putObject(idx, et.Json{
-			ID:         idx,
+		idx := users.GenKey()
+		err := users.PutObject(idx, et.Json{
+			jdb.ID:     idx,
 			"username": useranme,
 			"password": password,
 		})
@@ -70,7 +74,7 @@ func initUsers() error {
 * @return error
 **/
 func createUser(username, password string) error {
-	if !node.started {
+	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
