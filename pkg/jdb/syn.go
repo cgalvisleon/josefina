@@ -80,7 +80,7 @@ func (s *Syn) Ping(require string, response *string) error {
 }
 
 /**
-* RequestVote
+* requestVote
 * @param require et.Json, response *Model
 * @return error
 **/
@@ -102,8 +102,8 @@ func (s *Syn) requestVote(to string, require *RequestVoteArgs, response *Request
 }
 
 /**
-* RequestVote
-* @param require et.Json, response *Model
+* RequestVote: Requests a vote
+* @param require *RequestVoteArgs, response *RequestVoteReply
 * @return error
 **/
 func (s *Syn) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
@@ -116,8 +116,8 @@ func (s *Syn) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) 
 }
 
 /**
-* heartbeat
-* @param require et.Json, response *Model
+* heartbeat: Sends a heartbeat
+* @param require *HeartbeatArgs, response *HeartbeatReply
 * @return error
 **/
 func (s *Syn) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
@@ -138,8 +138,8 @@ func (s *Syn) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatRe
 }
 
 /**
-* HeartbeatHeartbeHeartbeatat
-* @param require et.Json, response *Model
+* Heartbeat: Sends a heartbeat
+* @param require *HeartbeatArgs, response *HeartbeatReply
 * @return error
 **/
 func (s *Syn) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
@@ -152,8 +152,8 @@ func (s *Syn) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error 
 }
 
 /**
-* getModel
-* @param database, schema, model string
+* getModel: Gets a model
+* @param to string, database, schema, model string
 * @return *Model, error
 **/
 func (s *Syn) getModel(to, database, schema, name string) (*Model, error) {
@@ -171,7 +171,7 @@ func (s *Syn) getModel(to, database, schema, name string) (*Model, error) {
 }
 
 /**
-* GetFrom
+* GetModel: Gets a model
 * @param require et.Json, response *Model
 * @return error
 **/
@@ -193,9 +193,9 @@ func (s *Syn) GetModel(require et.Json, response *Model) error {
 }
 
 /**
-* loadModel
-* @param database, schema, model string
-* @return *Model, error
+* loadModel: Loads a model
+* @param to string, model *Model
+* @return error
 **/
 func (s *Syn) loadModel(to string, model *Model) error {
 	var response bool
@@ -208,7 +208,7 @@ func (s *Syn) loadModel(to string, model *Model) error {
 }
 
 /**
-* LoadModel
+* LoadModel: Loads a model
 * @param require *Model, response true
 * @return error
 **/
@@ -227,7 +227,7 @@ func (s *Syn) LoadModel(require *Model, response *bool) error {
 }
 
 /**
-* saveModel
+* saveModel: Saves a model
 * @param to string, model *Model
 * @return error
 **/
@@ -242,7 +242,7 @@ func (s *Syn) saveModel(to string, model *Model) error {
 }
 
 /**
-* SaveModel
+* SaveModel: Saves a model
 * @param model *Model
 * @return bool, error
 **/
@@ -261,7 +261,7 @@ func (s *Syn) SaveModel(require *Model, response *bool) error {
 }
 
 /**
-* reportModels
+* reportModels: Reports models
 * @param to string, models map[string]*Model
 * @return error
 **/
@@ -276,9 +276,9 @@ func (s *Syn) reportModels(to string, models map[string]*Model) error {
 }
 
 /**
-* ReportModels
-* @param model *Model
-* @return bool, error
+* ReportModels: Reports models
+* @param require map[string]*Model, response true
+* @return error
 **/
 func (s *Syn) ReportModels(require map[string]*Model, response *bool) error {
 	if node == nil {
@@ -295,7 +295,7 @@ func (s *Syn) ReportModels(require map[string]*Model, response *bool) error {
 }
 
 /**
-* getDb
+* getDb: Gets a database
 * @param to string, name string
 * @return *DB, error
 **/
@@ -310,9 +310,9 @@ func (s *Syn) getDb(to string, name string) (*DB, error) {
 }
 
 /**
-* GetDb
-* @param model *DB
-* @return bool, error
+* GetDb: Gets a database
+* @param require string, response *DB
+* @return error
 **/
 func (s *Syn) GetDb(require string, response *DB) error {
 	if node == nil {
@@ -329,7 +329,7 @@ func (s *Syn) GetDb(require string, response *DB) error {
 }
 
 /**
-* saveDb
+* saveDb: Saves a database
 * @param to string, db *DB
 * @return error
 **/
@@ -344,7 +344,7 @@ func (s *Syn) saveDb(to string, db *DB) error {
 }
 
 /**
-* SaveDb
+* SaveDb: Saves a database
 * @param model *DB
 * @return bool, error
 **/
@@ -363,7 +363,7 @@ func (s *Syn) SaveDb(require *DB, response *bool) error {
 }
 
 /**
-* setTransaction
+* setTransaction: Sets a transaction
 * @param to, key string, data et.Json
 * @return error
 **/
@@ -386,7 +386,7 @@ func (s *Syn) setTransaction(to, key string, data et.Json) (string, error) {
 }
 
 /**
-* SetTransaction
+* SetTransaction: Sets a transaction
 * @param require et.Json, response *string
 * @return error
 **/
@@ -407,7 +407,7 @@ func (s *Syn) SetTransaction(require et.Json, response *string) error {
 }
 
 /**
-* onConnect
+* onConnect: Handles a connection
 * @param to, idx string, dest any
 * @return error
 **/
@@ -431,7 +431,7 @@ func (s *Syn) onConnect(to string, username string, tpConnection TpConnection, h
 }
 
 /**
-* OnConnect
+* OnConnect: Handles a connection
 * @param require et.Json, response *boolean
 * @return error
 **/
@@ -453,7 +453,7 @@ func (s *Syn) OnConnect(require et.Json, response *bool) error {
 }
 
 /**
-* onDisconnect
+* onDisconnect: Handles a disconnection
 * @param to, idx string, dest any
 * @return error
 **/
@@ -475,7 +475,7 @@ func (s *Syn) onDisconnect(to string, username string) error {
 }
 
 /**
-* OnDisconnect
+* OnDisconnect: Handles a disconnection
 * @param require et.Json, response *boolean
 * @return error
 **/

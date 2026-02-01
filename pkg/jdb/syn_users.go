@@ -9,9 +9,9 @@ import (
 )
 
 /**
-* signIn: Sign in a user
+* createUser: Creates a user
 * @param to, username, password string
-* @return *Session, error
+* @return error
 **/
 func (s *Syn) createUser(to, username, password string) error {
 	var response bool
@@ -48,8 +48,8 @@ func (s *Syn) CreateUser(require et.Json, response *bool) error {
 }
 
 /**
-* signIn: Sign in a user
-* @param device, username, password string
+* dropUser: Drops a user
+* @param to, username string
 * @return error
 **/
 func (s *Syn) dropUser(to, username string) error {
@@ -65,11 +65,11 @@ func (s *Syn) dropUser(to, username string) error {
 }
 
 /**
-* getModel
-* @param database, schema, model string
-* @return *Model, error
+* DropUser: Drops a user
+* @param require et.Json, response *bool
+* @return error
 **/
-func (s *Syn) DropUser(require et.Json, response *Session) error {
+func (s *Syn) DropUser(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -80,12 +80,12 @@ func (s *Syn) DropUser(require et.Json, response *Session) error {
 		return err
 	}
 
-	*response = Session{}
+	*response = true
 	return nil
 }
 
 /**
-* changuePassword: Sign in a user
+* changuePassword: Changes a user's password
 * @param device, username, password string
 * @return *Session, error
 **/
@@ -103,9 +103,9 @@ func (s *Syn) changuePassword(to, username, password string) error {
 }
 
 /**
-* ChanguePassword
-* @param database, schema, model string
-* @return *Model, error
+* ChanguePassword: Changes a user's password
+* @param require et.Json, response *bool
+* @return error
 **/
 func (s *Syn) ChanguePassword(require et.Json, response *bool) error {
 	if node == nil {
@@ -124,7 +124,7 @@ func (s *Syn) ChanguePassword(require et.Json, response *bool) error {
 }
 
 /**
-* auth: Sign in a user
+* auth: Authenticates a user
 * @param device, username, password string
 * @return *Session, error
 **/
@@ -144,9 +144,9 @@ func (s *Syn) auth(to, device, database, username, password string) (*Session, e
 }
 
 /**
-* Auth
-* @param database, schema, model string
-* @return *Model, error
+* Auth: Authenticates a user
+* @param require et.Json, response *Session
+* @return error
 **/
 func (s *Syn) Auth(require et.Json, response *Session) error {
 	if node == nil {
