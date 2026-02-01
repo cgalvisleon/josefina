@@ -50,7 +50,7 @@ func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item,
 
 	leader, ok := node.getLeader()
 	if ok {
-		result, err := methods.setCache(leader, key, value, duration)
+		result, err := syn.setCache(leader, key, value, duration)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func DeleteCache(key string) (bool, error) {
 
 	leader, ok := node.getLeader()
 	if ok {
-		result, err := methods.deleteCache(leader, key)
+		result, err := syn.deleteCache(leader, key)
 		if err != nil {
 			return false, err
 		}
@@ -114,7 +114,7 @@ func GetCache(key string) (*mem.Item, bool) {
 	if err != nil && err.Error() == errNotExists.Error() {
 		leader, ok := node.getLeader()
 		if ok {
-			result, err := methods.getCache(leader, key)
+			result, err := syn.getCache(leader, key)
 			if err != nil {
 				return nil, false
 			}
