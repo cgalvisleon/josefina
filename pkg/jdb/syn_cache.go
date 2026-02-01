@@ -11,7 +11,7 @@ import (
 )
 
 /**
-* setCache
+* setCache: Sets a cache
 * @param to, key string, value interface{}, duration time.Duration
 * @return error
 **/
@@ -35,7 +35,7 @@ func (s *Syn) setCache(to, key string, value interface{}, duration time.Duration
 }
 
 /**
-* SetCache
+* SetCache: Sets a cache
 * @param require et.Json, response *mem.Item
 * @return error
 **/
@@ -57,7 +57,7 @@ func (s *Syn) SetCache(require et.Json, response *mem.Item) error {
 }
 
 /**
-* getCache
+* getCache: Gets a cache
 * @param to, key string
 * @return error
 **/
@@ -76,7 +76,7 @@ func (s *Syn) getCache(to, key string) (*mem.Item, error) {
 }
 
 /**
-* GetCache
+* GetCache: Gets a cache
 * @param require string, response *mem.Item
 * @return error
 **/
@@ -91,7 +91,7 @@ func (s *Syn) GetCache(require string, response *mem.Item) bool {
 }
 
 /**
-* deleteCache
+* deleteCache: Deletes a cache
 * @param to, key string
 * @return error
 **/
@@ -110,8 +110,8 @@ func (s *Syn) deleteCache(to, key string) (bool, error) {
 }
 
 /**
-* DeleteCache
-* @param require string, response *mem.Item
+* DeleteCache: Deletes a cache
+* @param require string, response *bool
 * @return error
 **/
 func (s *Syn) DeleteCache(require string, response *bool) error {
