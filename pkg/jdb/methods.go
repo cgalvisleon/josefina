@@ -195,7 +195,7 @@ func (s *Methods) GetModel(require et.Json, response *Model) error {
 **/
 func (s *Methods) loadModel(to string, model *Model) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Methods.ReserveModel", model, &response)
+	err := jrpc.CallRpc(to, "Methods.LoadModel", model, &response)
 	if err != nil {
 		return err
 	}

@@ -57,6 +57,7 @@ type Node struct {
 	clients       map[string]*Client `json:"-"`
 	mu            sync.Mutex         `json:"-"`
 	modelMu       sync.RWMutex       `json:"-"`
+	clientMu      sync.RWMutex       `json:"-"`
 	isDebug       bool               `json:"-"`
 }
 
@@ -79,6 +80,7 @@ func newNode(host string, port int) *Node {
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
 		modelMu:     sync.RWMutex{},
+		clientMu:    sync.RWMutex{},
 	}
 	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
 		result.onConnect(subscriber.Name, WebSocket, result.Host)
@@ -154,10 +156,10 @@ func (s *Node) addNode(node string) {
 }
 
 /**
-* nextNode
+* nextHost
 * @return string
 **/
-func (s *Node) nextNode() string {
+func (s *Node) nextHost() string {
 	t := len(s.peers)
 	if t == 0 {
 		return s.Host
@@ -306,18 +308,18 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		}
 	}
 
-	to := s.nextNode()
-	err = methods.loadModel(to, result)
-	if err != nil {
-		return nil, err
+	to := s.nextHost()
+	if to == s.Host {
+		err := s.loadModel(result)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = methods.loadModel(to, result)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	result.Host = to
-	result.IsInit = true
-
-	s.modelMu.Lock()
-	s.models[key] = result
-	s.modelMu.Unlock()
 
 	return result, err
 }
@@ -332,21 +334,15 @@ func (s *Node) loadModel(model *Model) error {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
+	model.Host = s.Host
 	err := model.init()
 	if err != nil {
 		return err
 	}
 
 	key := model.key()
-	s.modelMu.RLock()
-	result, ok := s.models[key]
-	s.modelMu.RUnlock()
-	if !ok {
-		return errors.New(msg.MSG_GET_FROM_NOT_USED)
-	}
-
 	s.modelMu.Lock()
-	s.models[key] = result
+	s.models[key] = model
 	s.modelMu.Unlock()
 
 	return nil
@@ -470,15 +466,14 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 		return methods.onConnect(leader, username, tpConnection, host)
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	s.clientMu.Lock()
 	s.clients[username] = &Client{
 		Username: username,
 		Host:     host,
 		Type:     tpConnection,
 		Status:   Connected,
 	}
+	s.clientMu.Unlock()
 
 	return nil
 }
@@ -493,9 +488,8 @@ func (s *Node) onDisconnect(username string) error {
 		return methods.onDisconnect(leader, username)
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	s.clientMu.Lock()
 	delete(s.clients, username)
+	s.clientMu.Unlock()
 	return nil
 }

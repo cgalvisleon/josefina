@@ -7,7 +7,10 @@ import (
 	"github.com/cgalvisleon/et/et"
 )
 
-var node *Node
+var (
+	node        *Node
+	packageName string
+)
 
 func init() {
 	hostname, err := os.Hostname()
