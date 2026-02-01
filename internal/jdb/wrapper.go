@@ -111,9 +111,6 @@ func wrapperToString(vm *Vm) {
 **/
 func wrapperModel(vm *Vm) {
 	vm.Set("model", func(call goja.FunctionCall) goja.Value {
-		if node == nil {
-			panic(vm.NewGoError(errors.New(msg.MSG_NODE_NOT_INITIALIZED)))
-		}
 		args := call.Arguments
 		if len(args) != 3 {
 			panic(vm.NewGoError(fmt.Errorf(msg.MSG_ARG_REQUIRED, "database, schema, model")))
