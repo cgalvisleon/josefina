@@ -81,7 +81,6 @@ var (
 
 func init() {
 	lang := envar.GetStr("LANG", "en")
-
 	if lang == "es" {
 		MSG_JOSEFINA_NOT_STARTED = "josefina no iniciado"
 		MSG_NOT_FOUND = "no encontrado"
