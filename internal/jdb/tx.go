@@ -54,6 +54,7 @@ type Tx struct {
 	ID           string         `json:"id"`
 	Transactions []*Transaction `json:"transactions"`
 	isDebug      bool           `json:"-"`
+	onSave       OnSave         `json:"-"`
 }
 
 /**
@@ -95,19 +96,29 @@ func (s Tx) toJson() et.Json {
 }
 
 /**
-* save: Saves the transaction
+* SetOnSave
+* @param onSave OnSave
+**/
+func (s *Tx) SetOnSave(onSave OnSave) {
+	s.onSave = onSave
+}
+
+/**
+* Save
 * @return error
 **/
-func (s *Tx) save() error {
+func (s *Tx) Save() error {
 	s.EndedAt = timezone.Now()
 	data := s.toJson()
 	if s.isDebug {
 		logs.Debug(data.ToString())
 	}
 
-	_, err := setTransaction(s.ID, data)
-	if err != nil {
-		return err
+	if s.onSave != nil {
+		err := s.onSave(s.ID, data)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -120,7 +131,7 @@ func (s *Tx) save() error {
 func (s *Tx) add(model *Model, cmd Command, idx string, data et.Json) error {
 	transaction := newTransaction(model, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
-	return s.save()
+	return s.Save()
 }
 
 /**
@@ -136,7 +147,7 @@ func (s *Tx) setStatus(idx int, status Status) error {
 
 	tr.Status = status
 	s.Transactions[idx] = tr
-	return s.save()
+	return s.Save()
 }
 
 /**
