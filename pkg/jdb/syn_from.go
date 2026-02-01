@@ -8,20 +8,12 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-type Persist struct{}
-
-var persist *Persist
-
-func init() {
-	persist = &Persist{}
-}
-
 /**
 * put
 * @param to, key string
 * @return error
 **/
-func (s *Persist) put(from *From, idx string, data any) error {
+func (s *Syn) put(from *From, idx string, data any) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -45,7 +37,7 @@ func (s *Persist) put(from *From, idx string, data any) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Persist) Put(require et.Json, response *bool) error {
+func (s *Syn) Put(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -67,7 +59,7 @@ func (s *Persist) Put(require et.Json, response *bool) error {
 * @param to, key string
 * @return error
 **/
-func (s *Persist) remove(from *From, idx string) error {
+func (s *Syn) remove(from *From, idx string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -90,7 +82,7 @@ func (s *Persist) remove(from *From, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Persist) Remove(require et.Json, response *bool) error {
+func (s *Syn) Remove(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -111,7 +103,7 @@ func (s *Persist) Remove(require et.Json, response *bool) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Persist) get(from *From, idx string, dest any) (bool, error) {
+func (s *Syn) get(from *From, idx string, dest any) (bool, error) {
 	if node == nil {
 		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -135,7 +127,7 @@ func (s *Persist) get(from *From, idx string, dest any) (bool, error) {
 * @param require et.Json, response *AnyResult
 * @return error
 **/
-func (s *Persist) Get(require et.Json, response *AnyResult) error {
+func (s *Syn) Get(require et.Json, response *AnyResult) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -160,7 +152,7 @@ func (s *Persist) Get(require et.Json, response *AnyResult) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Persist) putObject(from *From, idx string, dest et.Json) error {
+func (s *Syn) putObject(from *From, idx string, dest et.Json) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -182,7 +174,7 @@ func (s *Persist) putObject(from *From, idx string, dest et.Json) error {
 * @param require et.Json, response et.Json
 * @return error
 **/
-func (s *Persist) PutObject(require et.Json, response et.Json) error {
+func (s *Syn) PutObject(require et.Json, response et.Json) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -204,7 +196,7 @@ func (s *Persist) PutObject(require et.Json, response et.Json) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Persist) removeObject(from *From, idx string) error {
+func (s *Syn) removeObject(from *From, idx string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -227,7 +219,7 @@ func (s *Persist) removeObject(from *From, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Persist) RemoveObject(require et.Json, response *bool) error {
+func (s *Syn) RemoveObject(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -248,7 +240,7 @@ func (s *Persist) RemoveObject(require et.Json, response *bool) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Persist) isExisted(from *From, field, idx string) (bool, error) {
+func (s *Syn) isExisted(from *From, field, idx string) (bool, error) {
 	if node == nil {
 		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -272,7 +264,7 @@ func (s *Persist) isExisted(from *From, field, idx string) (bool, error) {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Persist) IsExisted(require et.Json, response *bool) error {
+func (s *Syn) IsExisted(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -294,7 +286,7 @@ func (s *Persist) IsExisted(require et.Json, response *bool) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Persist) count(from *From) (int, error) {
+func (s *Syn) count(from *From) (int, error) {
 	if node == nil {
 		return 0, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -313,7 +305,7 @@ func (s *Persist) count(from *From) (int, error) {
 * @param require *From, response *int
 * @return error
 **/
-func (s *Persist) Count(require *From, response *int) error {
+func (s *Syn) Count(require *From, response *int) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}

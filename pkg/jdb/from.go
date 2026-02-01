@@ -49,7 +49,7 @@ func (s *From) Put(idx string, data any) error {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.put(s, idx, data)
+		return syn.put(s, idx, data)
 	}
 
 	key := s.key()
@@ -72,7 +72,7 @@ func (s *From) Remove(idx string) error {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.remove(s, idx)
+		return syn.remove(s, idx)
 	}
 
 	key := s.key()
@@ -95,7 +95,7 @@ func (s *From) Get(idx string, dest any) (bool, error) {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.get(s, idx, dest)
+		return syn.get(s, idx, dest)
 	}
 
 	key := s.key()
@@ -118,7 +118,7 @@ func (s *From) PutObject(idx string, data et.Json) error {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.putObject(s, idx, data)
+		return syn.putObject(s, idx, data)
 	}
 
 	key := s.key()
@@ -150,7 +150,7 @@ func (s *From) RemoveObject(idx string) error {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.removeObject(s, idx)
+		return syn.removeObject(s, idx)
 	}
 
 	key := s.key()
@@ -173,7 +173,7 @@ func (s *From) IsExisted(field, idx string) (bool, error) {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.isExisted(s, field, idx)
+		return syn.isExisted(s, field, idx)
 	}
 
 	key := s.key()
@@ -196,7 +196,7 @@ func (s *From) Count() (int, error) {
 	}
 
 	if node.Host != s.Host && s.Host != "" {
-		return persist.count(s)
+		return syn.count(s)
 	}
 
 	key := s.key()
