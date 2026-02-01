@@ -63,7 +63,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		IsCore:        isCore,
 		stores:        make(map[string]*store.FileStore, 0),
 		triggers:      make(map[string]*Vm, 0),
-		onSave:        make([]Onsavefn, 0),
 	}
 	_, err := result.defineIndexField()
 	if err != nil {
