@@ -271,7 +271,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		return next
 	}
 
-	st, err := model.source()
+	st, err := model.Source()
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +365,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	for field, keys := range s.keys {
 		for _, key := range keys {
 			indexes := map[string]bool{}
-			exists, err := model.getIndex(field, key, indexes)
+			exists, err := model.GetIndex(field, key, indexes)
 			if err != nil {
 				return nil, err
 			}
@@ -375,7 +375,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 			for idx := range indexes {
 				item := et.Json{}
-				exists, err = model.getObjet(idx, item)
+				exists, err = model.GetObjet(idx, item)
 				if err != nil {
 					return nil, err
 				}
