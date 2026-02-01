@@ -131,10 +131,10 @@ func (s *Model) Init() error {
 }
 
 /**
-* genKey: Returns a new key for the model
+* GenKey: Returns a new key for the model
 * @return string
 **/
-func (s *Model) genKey() string {
+func (s *Model) GenKey() string {
 	return reg.GenUUId(s.Name)
 }
 
