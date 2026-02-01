@@ -490,6 +490,22 @@ func (s *FileStore) rebuildIndexes() error {
 }
 
 /**
+* OnPut
+* @param fn func(string, []byte)
+**/
+func (s *FileStore) OnPut(fn func(string, []byte)) {
+	s.onPut = append(s.onPut, fn)
+}
+
+/**
+* OnDelete
+* @param fn func(string)
+**/
+func (s *FileStore) OnDelete(fn func(string)) {
+	s.onDelete = append(s.onDelete, fn)
+}
+
+/**
 * Put
 * @param id string, value any
 * @return error
