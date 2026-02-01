@@ -147,6 +147,18 @@ func (s *Model) Init() error {
 		}
 	}
 
+	for _, detail := range s.Details {
+		model, err := node.GetModel(detail.To)
+		if err != nil {
+			return err
+		}
+
+		err = model.Init()
+		if err != nil {
+			return err
+		}
+	}
+
 	s.IsInit = true
 	return nil
 }
