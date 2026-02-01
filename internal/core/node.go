@@ -1,8 +1,15 @@
 package core
 
-type Node interface{}
+import "github.com/cgalvisleon/josefina/internal/jdb"
 
-var node Node
+type Node interface {
+	GetDb(name string) (*jdb.DB, error)
+}
+
+var (
+	node     Node
+	database string = "josefina"
+)
 
 func SetNode(n Node) {
 	node = n

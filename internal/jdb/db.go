@@ -108,11 +108,11 @@ func (s *DB) getSchema(name string) *Schema {
 }
 
 /**
-* newModel: Creates a new model
+* NewModel: Creates a new model
 * @param schema, name	string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
+func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch := s.getSchema(schema)
 	model, err := sch.newModel(name, isCore, version)
 	if err != nil {
