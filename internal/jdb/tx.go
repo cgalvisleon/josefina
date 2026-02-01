@@ -11,66 +11,6 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var transactions *Model
-
-/**
-* initTransactions: Initializes the transactions model
-* @return error
-**/
-func initTransactions() error {
-	if transactions != nil {
-		return nil
-	}
-
-	db, err := getDb(packageName)
-	if err != nil {
-		return err
-	}
-
-	transactions, err = db.newModel("", "transactions", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := transactions.init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* setTransaction: Sets a Transaction
-* @param key string, data et.Json
-* @return string, error
-**/
-func setTransaction(key string, data et.Json) (string, error) {
-	if key == "" {
-		key = transactions.genKey()
-	}
-
-	leader, ok := node.getLeader()
-	if ok {
-		result, err := syn.setTransaction(leader, key, data)
-		if err != nil {
-			return "", err
-		}
-
-		return result, nil
-	}
-
-	err := initTransactions()
-	if err != nil {
-		return "", err
-	}
-
-	err = transactions.putObject(key, data)
-	if err != nil {
-		return "", err
-	}
-
-	return key, nil
-}
-
 type Transaction struct {
 	From    *From   `json:"from"`
 	Command Command `json:"command"`
