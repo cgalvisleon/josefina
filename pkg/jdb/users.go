@@ -85,7 +85,7 @@ func createUser(username, password string) error {
 
 	leader, ok := node.getLeader()
 	if ok {
-		err := methods.createUser(leader, username, password)
+		err := syn.createUser(leader, username, password)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func dropUser(username string) error {
 
 	leader, ok := node.getLeader()
 	if ok {
-		err := methods.dropUser(leader, username)
+		err := syn.dropUser(leader, username)
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func changuePassword(username, password string) error {
 
 	leader, ok := node.getLeader()
 	if ok {
-		err := methods.changuePassword(leader, username, password)
+		err := syn.changuePassword(leader, username, password)
 		if err != nil {
 			return err
 		}
