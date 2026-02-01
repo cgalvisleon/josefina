@@ -70,6 +70,9 @@ const (
 	modeWrite
 )
 
+type Putfn func(string, []byte)
+type Deletefn func(string)
+
 type FileStore struct {
 	Name         string                `json:"name"`
 	Path         string                `json:"path"`
@@ -89,6 +92,8 @@ type FileStore struct {
 	index        map[string]*RecordRef `json:"-"` // índice en memoria
 	keys         []string              `json:"-"` // claves en memoria
 	mode         mode                  `json:"-"` // modo de operación
+	onPut        []Putfn               `json:"-"` // función de escritura
+	onDelete     []Deletefn            `json:"-"` // función de eliminación
 }
 
 /**
@@ -514,6 +519,10 @@ func (s *FileStore) Put(id string, value any) error {
 	s.index[id] = ref
 	s.indexMu.Unlock()
 
+	for _, fn := range s.onPut {
+		fn(id, data)
+	}
+
 	if s.isDebug {
 		i := len(s.index)
 		logs.Debug("put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
@@ -546,6 +555,10 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.indexMu.Lock()
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
+
+	for _, fn := range s.onDelete {
+		fn(id)
+	}
 
 	if s.isDebug {
 		i := len(s.index)
@@ -739,6 +752,8 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 		MaxSegment:   maxSegmentMG,
 		isDebug:      isDebug,
 		mode:         mode,
+		onPut:        make([]Putfn, 0),
+		onDelete:     make([]Deletefn, 0),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
