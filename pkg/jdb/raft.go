@@ -102,7 +102,7 @@ func (s *Node) startElection() {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: s.Host}
 			var reply RequestVoteReply
-			res := methods.requestVote(peer, &args, &reply)
+			res := syn.requestVote(peer, &args, &reply)
 			if res.Error != nil {
 				total--
 			}
@@ -166,7 +166,7 @@ func (s *Node) heartbeatLoop() {
 			go func(peer string) {
 				args := HeartbeatArgs{Term: term, LeaderID: s.Host}
 				var reply HeartbeatReply
-				res := methods.heartbeat(peer, &args, &reply)
+				res := syn.heartbeat(peer, &args, &reply)
 				if res.Ok {
 					s.mu.Lock()
 					defer s.mu.Unlock()
