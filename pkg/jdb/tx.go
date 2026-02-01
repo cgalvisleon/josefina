@@ -50,7 +50,7 @@ func setTransaction(key string, data et.Json) (string, error) {
 
 	leader, ok := node.getLeader()
 	if ok {
-		result, err := methods.setTransaction(leader, key, data)
+		result, err := syn.setTransaction(leader, key, data)
 		if err != nil {
 			return "", err
 		}

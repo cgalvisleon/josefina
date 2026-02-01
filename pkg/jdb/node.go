@@ -193,16 +193,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	if methods == nil {
-		methods = new(Methods)
-	}
-
-	err := s.Mount(methods)
-	if err != nil {
-		return err
-	}
-
-	err = s.Mount(cache)
+	err := s.Mount(syn)
 	if err != nil {
 		return err
 	}
@@ -240,7 +231,7 @@ func (s *Node) start() error {
 * @return bool
 **/
 func (s *Node) Ping(to string) bool {
-	err := methods.ping(to)
+	err := syn.ping(to)
 	if err != nil {
 		return false
 	}
@@ -266,7 +257,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 
 	leader, ok := s.getLeader()
 	if ok {
-		result, err := methods.getModel(leader, database, schema, name)
+		result, err := syn.getModel(leader, database, schema, name)
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +306,7 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 			return nil, err
 		}
 	} else {
-		err = methods.loadModel(to, result)
+		err = syn.loadModel(to, result)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +354,7 @@ func (s *Node) saveModel(model *Model) error {
 
 	leader, ok := s.getLeader()
 	if ok {
-		err := methods.saveModel(leader, model)
+		err := syn.saveModel(leader, model)
 		if err != nil {
 			return err
 		}
@@ -398,7 +389,7 @@ func (s *Node) saveModel(model *Model) error {
 func (s *Node) reportModels(models map[string]*Model) error {
 	leader, ok := s.getLeader()
 	if ok {
-		err := methods.reportModels(leader, models)
+		err := syn.reportModels(leader, models)
 		if err != nil {
 			return err
 		}
@@ -427,7 +418,7 @@ func (s *Node) saveDb(db *DB) error {
 
 	leader, ok := s.getLeader()
 	if ok {
-		err := methods.saveDb(leader, db)
+		err := syn.saveDb(leader, db)
 		if err != nil {
 			return err
 		}
@@ -463,7 +454,7 @@ func (s *Node) saveDb(db *DB) error {
 func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
 	leader, ok := s.getLeader()
 	if ok {
-		return methods.onConnect(leader, username, tpConnection, host)
+		return syn.onConnect(leader, username, tpConnection, host)
 	}
 
 	s.clientMu.Lock()
@@ -485,7 +476,7 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 func (s *Node) onDisconnect(username string) error {
 	leader, ok := s.getLeader()
 	if ok {
-		return methods.onDisconnect(leader, username)
+		return syn.onDisconnect(leader, username)
 	}
 
 	s.clientMu.Lock()

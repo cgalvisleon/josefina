@@ -161,7 +161,7 @@ func getDb(name string) (*DB, error) {
 
 	leader, ok := node.getLeader()
 	if ok {
-		result, err := methods.getDb(leader, name)
+		result, err := syn.getDb(leader, name)
 		if err != nil {
 			return nil, err
 		}

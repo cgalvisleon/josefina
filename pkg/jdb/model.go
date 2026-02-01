@@ -50,7 +50,6 @@ type Trigger struct {
 }
 
 type TriggerFunction func(tx *Tx, old, new et.Json) error
-type Onsavefn func([]byte) error
 
 type Model struct {
 	*From         `json:"from"`
@@ -78,7 +77,6 @@ type Model struct {
 	isDebug       bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
-	onSave        []Onsavefn                  `json:"-"`
 }
 
 /**
@@ -136,26 +134,7 @@ func (s *Model) ToJson() (et.Json, error) {
 * @return error
 **/
 func (s *Model) Save() error {
-	for _, fn := range s.onSave {
-		bt, err := s.serialize()
-		if err != nil {
-			return err
-		}
-		err = fn(bt)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-/**
-* OnSave: Adds a save function
-* @param fn Onsavefn
-**/
-func (s *Model) OnSave(fn Onsavefn) {
-	s.onSave = append(s.onSave, fn)
+	return node.saveModel(s)
 }
 
 /**
