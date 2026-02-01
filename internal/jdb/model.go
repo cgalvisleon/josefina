@@ -128,10 +128,10 @@ func (s *Model) store(name string) (*store.FileStore, error) {
 }
 
 /**
-* init: Initializes the model
+* Init: Initializes the model
 * @return error
 **/
-func (s *Model) init() error {
+func (s *Model) Init() error {
 	if s.IsInit {
 		return nil
 	}
@@ -160,10 +160,10 @@ func (s *Model) genKey() string {
 }
 
 /**
-* source: Returns the source
+* Source: Returns the source
 * @return *store.FileStore, error
 **/
-func (s *Model) source() (*store.FileStore, error) {
+func (s *Model) Source() (*store.FileStore, error) {
 	result, err := s.store(INDEX)
 	if err != nil {
 		return nil, err
@@ -173,12 +173,12 @@ func (s *Model) source() (*store.FileStore, error) {
 }
 
 /**
-* put: Puts the model
-* @param idx string, valu any
+* Put: Puts the model
+* @param idx string, value any
 * @return error
 **/
-func (s *Model) put(idx string, value any) error {
-	source, err := s.source()
+func (s *Model) Put(idx string, value any) error {
+	source, err := s.Source()
 	if err != nil {
 		return err
 	}
@@ -192,12 +192,12 @@ func (s *Model) put(idx string, value any) error {
 }
 
 /**
-* remove: Removes the model
+* Remove: Removes the model
 * @param idx string
 * @return error
 **/
-func (s *Model) remove(idx string) error {
-	source, err := s.source()
+func (s *Model) Remove(idx string) error {
+	source, err := s.Source()
 	if err != nil {
 		return err
 	}
@@ -211,12 +211,12 @@ func (s *Model) remove(idx string) error {
 }
 
 /**
-* get: Gets the model
+* Get: Gets the model
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) get(idx string, dest any) (bool, error) {
-	source, err := s.source()
+func (s *Model) Get(idx string, dest any) (bool, error) {
+	source, err := s.Source()
 	if err != nil {
 		return false, err
 	}
@@ -234,11 +234,11 @@ func (s *Model) get(idx string, dest any) (bool, error) {
 }
 
 /**
-* putObject: Puts the model
-* @param idx string, data et.Json
+* PutObject: Puts the model
+* @param idx string, object et.Json
 * @return error
 **/
-func (s *Model) putObject(idx string, object et.Json) error {
+func (s *Model) PutObject(idx string, object et.Json) error {
 	object[INDEX] = idx
 	for _, name := range s.Indexes {
 		key := fmt.Sprintf("%v", object[name])
@@ -281,22 +281,22 @@ func (s *Model) putObject(idx string, object et.Json) error {
 }
 
 /**
-* getObjet: Gets the model as object
+* GetObjet: Gets the model as object
 * @param idx string
 * @return et.Json, error
 **/
-func (s *Model) getObjet(idx string, dest et.Json) (bool, error) {
-	return s.get(idx, &dest)
+func (s *Model) GetObjet(idx string, dest et.Json) (bool, error) {
+	return s.Get(idx, &dest)
 }
 
 /**
-* removeObject: Removes the model
+* RemoveObject: Removes the model
 * @param idx string
 * @return error
 **/
-func (s *Model) removeObject(idx string) error {
+func (s *Model) RemoveObject(idx string) error {
 	data := et.Json{}
-	exists, err := s.get(idx, &data)
+	exists, err := s.Get(idx, &data)
 	if err != nil {
 		return err
 	}
@@ -354,11 +354,11 @@ func (s *Model) removeObject(idx string) error {
 }
 
 /**
-* getIndex: Gets the index
+* GetIndex: Gets the index
 * @param field, key string, dest map[string]bool
 * @return bool, error
 **/
-func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) {
+func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) {
 	index, err := s.store(field)
 	if err != nil {
 		return false, err
@@ -377,11 +377,11 @@ func (s *Model) getIndex(field, key string, dest map[string]bool) (bool, error) 
 }
 
 /**
-* isExisted: Check if index exists in model
+* IsExisted: Check if index exists in model
 * @param name string, key string
 * @return bool, error
 **/
-func (s *Model) isExisted(field, idx string) (bool, error) {
+func (s *Model) IsExisted(field, idx string) (bool, error) {
 	source, err := s.store(field)
 	if err != nil {
 		return false, err
@@ -395,7 +395,7 @@ func (s *Model) isExisted(field, idx string) (bool, error) {
 * @return int, error
 **/
 func (s *Model) count() (int, error) {
-	result, err := s.source()
+	result, err := s.Source()
 	if err != nil {
 		return 0, err
 	}
