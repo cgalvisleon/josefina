@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/cgalvisleon/et/claim"
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -111,7 +109,7 @@ func Auth(device, database, username, password string) (*Session, error) {
 	}
 	leader, ok := node.getLeader()
 	if ok {
-		result, err := methods.auth(leader, device, database, username, password)
+		result, err := syn.auth(leader, device, database, username, password)
 		if err != nil {
 			return nil, err
 		}
