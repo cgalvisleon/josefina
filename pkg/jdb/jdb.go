@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	node        *Node
+	// node        *Node
 	packageName string
 )
 

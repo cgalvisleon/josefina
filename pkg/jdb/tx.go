@@ -22,7 +22,7 @@ func initTransactions() error {
 		return nil
 	}
 
-	db, err := getDb(node.PackageName)
+	db, err := getDb(packageName)
 	if err != nil {
 		return err
 	}

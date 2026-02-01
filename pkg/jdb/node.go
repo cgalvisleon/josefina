@@ -69,7 +69,7 @@ type Node struct {
 func newNode(host string, port int) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
-		PackageName: "josefina",
+		PackageName: packageName,
 		Host:        address,
 		Port:        port,
 		Version:     "0.0.1",
