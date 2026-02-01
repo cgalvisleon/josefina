@@ -7,8 +7,6 @@ import (
 	"github.com/cgalvisleon/et/utility"
 )
 
-type OnSave func(key string, data any) error
-
 type DB struct {
 	Name     string             `json:"name"`
 	Version  string             `json:"version"`
@@ -16,7 +14,6 @@ type DB struct {
 	Schemas  map[string]*Schema `json:"schemas"`
 	IsStrict bool               `json:"is_strict"`
 	isDebug  bool               `json:"-"`
-	onSave   OnSave             `json:"-"`
 }
 
 /**
@@ -49,26 +46,6 @@ func (s *DB) ToJson() (et.Json, error) {
 	}
 
 	return result, nil
-}
-
-/**
-* SetOnSave
-* @param onSave OnSave
-**/
-func (s *DB) SetOnSave(onSave OnSave) {
-	s.onSave = onSave
-}
-
-/**
-* Save
-* @return error
-**/
-func (s *DB) Save() error {
-	if s.onSave == nil {
-		return nil
-	}
-
-	return s.onSave(s.Name, s)
 }
 
 /**

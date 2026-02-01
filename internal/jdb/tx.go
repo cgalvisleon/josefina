@@ -54,7 +54,6 @@ type Tx struct {
 	ID           string         `json:"id"`
 	Transactions []*Transaction `json:"transactions"`
 	isDebug      bool           `json:"-"`
-	onSave       OnSave         `json:"-"`
 }
 
 /**
@@ -96,14 +95,6 @@ func (s Tx) toJson() et.Json {
 }
 
 /**
-* SetOnSave
-* @param onSave OnSave
-**/
-func (s *Tx) SetOnSave(onSave OnSave) {
-	s.onSave = onSave
-}
-
-/**
 * Save
 * @return error
 **/
@@ -114,14 +105,7 @@ func (s *Tx) Save() error {
 		logs.Debug(data.ToString())
 	}
 
-	if s.onSave != nil {
-		err := s.onSave(s.ID, data)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return node.SaveTransaction(s)
 }
 
 /**

@@ -52,7 +52,6 @@ type Model struct {
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	schema        *Schema                     `json:"-"`
-	onSave        OnSave                      `json:"-"`
 }
 
 /**
@@ -85,26 +84,6 @@ func (s *Model) ToJson() (et.Json, error) {
 	}
 
 	return result, nil
-}
-
-/**
-* SetOnSave
-* @param onSave OnSave
-**/
-func (s *Model) SetOnSave(onSave OnSave) {
-	s.onSave = onSave
-}
-
-/**
-* Save
-* @return error
-**/
-func (s *Model) Save() error {
-	if s.onSave == nil {
-		return nil
-	}
-
-	return s.onSave(s.Name, s)
 }
 
 /**
@@ -394,7 +373,7 @@ func (s *Model) IsExisted(field, idx string) (bool, error) {
 * Count: Counts the model
 * @return int, error
 **/
-func (s *Model) count() (int, error) {
+func (s *Model) Count() (int, error) {
 	result, err := s.Source()
 	if err != nil {
 		return 0, err

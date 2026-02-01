@@ -15,10 +15,10 @@ type From struct {
 }
 
 /**
-* key: Returns the key of the model
+* Key: Returns the key of the model
 * @return string
 **/
-func (s *From) key() string {
+func (s *From) Key() string {
 	result := s.Name
 	if s.Schema != "" {
 		result = fmt.Sprintf("%s.%s", s.Schema, result)
@@ -30,11 +30,11 @@ func (s *From) key() string {
 }
 
 /**
-* toFrom: Converts a JSON to a From
+* ToFrom: Converts a JSON to a From
 * @param def et.Json
 * @return *From
 **/
-func toFrom(def et.Json) *From {
+func ToFrom(def et.Json) *From {
 	return &From{
 		Database: def.Str("database"),
 		Schema:   def.Str("schema"),
