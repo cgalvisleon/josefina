@@ -9,8 +9,8 @@ import (
 )
 
 /**
-* put
-* @param to, key string
+* put: Puts a value
+* @param require et.Json, response *bool
 * @return error
 **/
 func (s *Syn) put(from *From, idx string, data any) error {
@@ -24,7 +24,7 @@ func (s *Syn) put(from *From, idx string, data any) error {
 		"data": data,
 	}
 	var reply bool
-	err := jrpc.CallRpc(from.Host, "Methods.Put", args, &reply)
+	err := jrpc.CallRpc(from.Host, "Syn.Put", args, &reply)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (s *Syn) put(from *From, idx string, data any) error {
 }
 
 /**
-* Put
+* Put: Puts a value
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -55,8 +55,8 @@ func (s *Syn) Put(require et.Json, response *bool) error {
 }
 
 /**
-* remove
-* @param to, key string
+* remove: Removes a value
+* @param require et.Json, response *bool
 * @return error
 **/
 func (s *Syn) remove(from *From, idx string) error {
@@ -69,7 +69,7 @@ func (s *Syn) remove(from *From, idx string) error {
 		"idx":  idx,
 	}
 	var reply bool
-	err := jrpc.CallRpc(from.Host, "Methods.Remove", args, &reply)
+	err := jrpc.CallRpc(from.Host, "Syn.Remove", args, &reply)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (s *Syn) remove(from *From, idx string) error {
 }
 
 /**
-* Remove
+* Remove: Removes a value
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -99,8 +99,8 @@ func (s *Syn) Remove(require et.Json, response *bool) error {
 }
 
 /**
-* get
-* @param to, idx string, dest any
+* get: Gets a value
+* @param require et.Json, response *AnyResult
 * @return error
 **/
 func (s *Syn) get(from *From, idx string, dest any) (bool, error) {
@@ -113,7 +113,7 @@ func (s *Syn) get(from *From, idx string, dest any) (bool, error) {
 		"idx":  idx,
 	}
 	var reply AnyResult
-	err := jrpc.CallRpc(from.Host, "Methods.Get", args, &reply)
+	err := jrpc.CallRpc(from.Host, "Syn.Get", args, &reply)
 	if err != nil {
 		return false, err
 	}
@@ -123,7 +123,7 @@ func (s *Syn) get(from *From, idx string, dest any) (bool, error) {
 }
 
 /**
-* Get
+* Get: Gets a value
 * @param require et.Json, response *AnyResult
 * @return error
 **/
@@ -148,8 +148,8 @@ func (s *Syn) Get(require et.Json, response *AnyResult) error {
 }
 
 /**
-* putObject
-* @param to, idx string, dest any
+* putObject: Puts an object
+* @param require et.Json, response et.Json
 * @return error
 **/
 func (s *Syn) putObject(from *From, idx string, dest et.Json) error {
@@ -161,7 +161,7 @@ func (s *Syn) putObject(from *From, idx string, dest et.Json) error {
 		"from": from,
 		"idx":  idx,
 	}
-	err := jrpc.CallRpc(from.Host, "Methods.PutObject", args, &dest)
+	err := jrpc.CallRpc(from.Host, "Syn.PutObject", args, &dest)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (s *Syn) putObject(from *From, idx string, dest et.Json) error {
 }
 
 /**
-* PutObject
+* PutObject: Puts an object
 * @param require et.Json, response et.Json
 * @return error
 **/
@@ -192,8 +192,8 @@ func (s *Syn) PutObject(require et.Json, response et.Json) error {
 }
 
 /**
-* removeObject
-* @param to, idx string, dest any
+* removeObject: Removes an object
+* @param require et.Json, response *bool
 * @return error
 **/
 func (s *Syn) removeObject(from *From, idx string) error {
@@ -206,7 +206,7 @@ func (s *Syn) removeObject(from *From, idx string) error {
 		"idx":  idx,
 	}
 	var dest bool
-	err := jrpc.CallRpc(from.Host, "Methods.RemoveObject", args, &dest)
+	err := jrpc.CallRpc(from.Host, "Syn.RemoveObject", args, &dest)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (s *Syn) removeObject(from *From, idx string) error {
 }
 
 /**
-* RemoveObject
+* RemoveObject: Removes an object
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -236,8 +236,8 @@ func (s *Syn) RemoveObject(require et.Json, response *bool) error {
 }
 
 /**
-* isExisted
-* @param to, idx string, dest any
+* isExisted: Checks if an object exists
+* @param require et.Json, response *bool
 * @return error
 **/
 func (s *Syn) isExisted(from *From, field, idx string) (bool, error) {
@@ -251,7 +251,7 @@ func (s *Syn) isExisted(from *From, field, idx string) (bool, error) {
 		"idx":   idx,
 	}
 	var dest bool
-	err := jrpc.CallRpc(from.Host, "Methods.IsExisted", args, &dest)
+	err := jrpc.CallRpc(from.Host, "Syn.IsExisted", args, &dest)
 	if err != nil {
 		return false, err
 	}
@@ -260,7 +260,7 @@ func (s *Syn) isExisted(from *From, field, idx string) (bool, error) {
 }
 
 /**
-* IsExisted
+* IsExisted: Checks if an object exists
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -282,8 +282,8 @@ func (s *Syn) IsExisted(require et.Json, response *bool) error {
 }
 
 /**
-* count
-* @param to, idx string, dest any
+* count: Counts the number of objects
+* @param require *From, response *int
 * @return error
 **/
 func (s *Syn) count(from *From) (int, error) {
@@ -292,7 +292,7 @@ func (s *Syn) count(from *From) (int, error) {
 	}
 
 	var dest int
-	err := jrpc.CallRpc(from.Host, "Methods.Count", from, &dest)
+	err := jrpc.CallRpc(from.Host, "Syn.Count", from, &dest)
 	if err != nil {
 		return 0, err
 	}
@@ -301,7 +301,7 @@ func (s *Syn) count(from *From) (int, error) {
 }
 
 /**
-* Count
+* Count: Counts the number of objects
 * @param require *From, response *int
 * @return error
 **/

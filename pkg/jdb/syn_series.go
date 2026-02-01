@@ -9,7 +9,7 @@ import (
 )
 
 /**
-* createSerie
+* createSerie: Creates a series
 * @param to, tag, format string, value int
 * @return error
 **/
@@ -33,8 +33,8 @@ func (s *Syn) createSerie(to, tag, format string, value int) error {
 }
 
 /**
-* CreateSerie
-* @param require *Transaction, response *Session
+* CreateSerie: Creates a series
+* @param require et.Json, response *string
 * @return error
 **/
 func (s *Syn) CreateSerie(require et.Json, response *string) error {
@@ -54,7 +54,7 @@ func (s *Syn) CreateSerie(require et.Json, response *string) error {
 }
 
 /**
-* dropSerie
+* dropSerie: Drops a series
 * @param tag string
 * @return error
 **/
@@ -76,7 +76,7 @@ func (s *Syn) dropSerie(to, tag string) error {
 }
 
 /**
-* DropSerie
+* DropSerie: Drops a series
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -96,7 +96,7 @@ func (s *Syn) DropSerie(require et.Json, response *bool) error {
 }
 
 /**
-* setSerie
+* setSerie: Sets a series
 * @param to, tag string, value int
 * @return error
 **/
@@ -119,7 +119,7 @@ func (s *Syn) setSerie(to, tag string, value int) error {
 }
 
 /**
-* SetSerie
+* SetSerie: Sets a series
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -140,7 +140,7 @@ func (s *Syn) SetSerie(require et.Json, response *bool) error {
 }
 
 /**
-* getSerie
+* getSerie: Gets a series
 * @param to, tag string
 * @return error
 **/
@@ -162,7 +162,7 @@ func (s *Syn) getSerie(to, tag string) (et.Json, error) {
 }
 
 /**
-* GetSerie
+* GetSerie: Gets a series
 * @param require et.Json, response *et.Json
 * @return error
 **/
