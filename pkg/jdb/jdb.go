@@ -1,6 +1,28 @@
 package jdb
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"os"
+
+	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/et"
+)
+
+var (
+	packageName string = "josefina"
+	version     string = "0.0.1"
+	node        *Node
+)
+
+func init() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
+	port := envar.GetInt("RPC_PORT", 4200)
+	isStrict := envar.GetBool("IS_STRICT", false)
+	node = newNode(hostname, port, isStrict)
+}
 
 /**
 * Load: Initializes josefine

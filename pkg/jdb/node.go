@@ -16,22 +16,6 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var (
-	packageName string = "josefina"
-	version     string = "0.0.1"
-	node        *Node
-)
-
-func init() {
-	// hostname, err := os.Hostname()
-	// if err != nil {
-	// 	hostname = "localhost"
-	// }
-
-	// port := envar.GetInt("RPC_PORT", 4200)
-	// node = newNode(hostname, port)
-}
-
 type NodeState int
 
 const (
