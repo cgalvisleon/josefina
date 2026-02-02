@@ -10,11 +10,11 @@ import (
 )
 
 /**
-* Query: Executes a query
+* Jql: Executes a query
 * @param ctx context.Context, query et.Json
 * @return []et.Json, error
 **/
-func Query(ctx context.Context, query et.Json) ([]et.Json, error) {
+func Jql(ctx context.Context, query et.Json) ([]et.Json, error) {
 	app := ctx.Value("app").(string)
 	device := ctx.Value("device").(string)
 	username := ctx.Value("username").(string)

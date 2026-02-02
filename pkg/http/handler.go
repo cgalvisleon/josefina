@@ -60,7 +60,7 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	result, err := jql.Query(ctx, body)
+	result, err := jql.Jql(ctx, body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
