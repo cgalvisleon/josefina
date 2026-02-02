@@ -136,3 +136,7 @@ func JqlHttp(request *Request, response *Response) {
 
 	handler.Execute(request, response)
 }
+
+func Query(session *claim.Claim, query string) et.Json {
+	return et.Json{}
+}
