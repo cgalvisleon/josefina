@@ -81,7 +81,7 @@ type Node struct {
 func newNode(host string, port int, isStrict bool) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
-		PackageName: packageName,
+		PackageName: appName,
 		Host:        address,
 		Port:        port,
 		Version:     version,

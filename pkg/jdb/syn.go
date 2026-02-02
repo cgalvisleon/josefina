@@ -10,6 +10,7 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/dbs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -22,12 +23,12 @@ func init() {
 	gob.Register(et.Items{})
 	gob.Register(et.List{})
 	gob.Register(claim.Claim{})
-	gob.Register(&Session{})
-	gob.Register(&RequestVoteArgs{})
-	gob.Register(&RequestVoteReply{})
-	gob.Register(&HeartbeatArgs{})
-	gob.Register(&HeartbeatReply{})
-	gob.Register(&mem.Item{})
+	gob.Register(core.Session{})
+	gob.Register(RequestVoteArgs{})
+	gob.Register(RequestVoteReply{})
+	gob.Register(HeartbeatArgs{})
+	gob.Register(HeartbeatReply{})
+	gob.Register(mem.Item{})
 }
 
 type AnyResult struct {
@@ -395,14 +396,14 @@ func (s *Nodes) Authenticate(require et.Json, response *claim.Claim) error {
 * @param to, device, database, username, password string
 * @return error
 **/
-func (s *Nodes) auth(to, device, database, username, password string) (*Session, error) {
+func (s *Nodes) auth(to, device, database, username, password string) (*core.Session, error) {
 	args := et.Json{
 		"device":   device,
 		"database": database,
 		"username": username,
 		"password": password,
 	}
-	var reply *Session
+	var reply *core.Session
 	err := jrpc.CallRpc(to, "Nodes.Auth", args, &reply)
 	if err != nil {
 		return nil, err
@@ -416,7 +417,7 @@ func (s *Nodes) auth(to, device, database, username, password string) (*Session,
 * @param require et.Json, response *Session
 * @return error
 **/
-func (s *Nodes) Auth(require et.Json, response *Session) error {
+func (s *Nodes) Auth(require et.Json, response *core.Session) error {
 	device := require.Str("device")
 	database := require.Str("database")
 	username := require.Str("username")

@@ -1,6 +1,7 @@
 package jql
 
 import (
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
@@ -137,6 +138,11 @@ func JqlHttp(request *Request, response *Response) {
 	handler.Execute(request, response)
 }
 
+/**
+* Query: Executes a query
+* @param session *claim.Claim, query string
+* @return et.Json
+**/
 func Query(session *claim.Claim, query string) et.Json {
 	return et.Json{}
 }

@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	packageName string = "josefina"
-	version     string = "0.0.1"
-	node        *Node
-	hostname    string = ""
+	appName  string = "josefina"
+	version  string = "0.0.1"
+	node     *Node
+	hostname string = ""
 )
 
 func init() {
