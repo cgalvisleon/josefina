@@ -9,6 +9,8 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -29,7 +31,7 @@ func authenticate(token string) (*claim.Claim, error) {
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists := GetCacheStr(key)
+	session, exists := cache.GetStr(key)
 	if !exists {
 		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
 	}
@@ -94,9 +96,6 @@ func applyAuthenticate(handler http.Handler) http.Handler {
 * @return *Session, error
 **/
 func Auth(device, database, username, password string) (*Session, error) {
-	if !node.started {
-		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -104,29 +103,7 @@ func Auth(device, database, username, password string) (*Session, error) {
 		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	if database == "" {
-		database = node.PackageName
-	}
-	leader, ok := node.getLeader()
-	if ok {
-		result, err := syn.auth(leader, device, database, username, password)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	err := initUsers()
-	if err != nil {
-		return nil, err
-	}
-
-	item, err := users.
-		Selects().
-		Where(Eq("username", username)).
-		And(Eq("password", password)).
-		Run(nil)
+	item, err := core.GetUser(username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -134,13 +111,13 @@ func Auth(device, database, username, password string) (*Session, error) {
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := createSession(device, username)
+	result, err := CreateSession(device, username)
 	if err != nil {
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s:%s:%s", node.PackageName, device, username)
-	_, err = SetCache(key, result.Token, 0)
+	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
+	_, err = cache.Set(key, result.Token, 0)
 	if err != nil {
 		return nil, err
 	}

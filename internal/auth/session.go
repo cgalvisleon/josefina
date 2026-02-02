@@ -7,7 +7,7 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/core"
+	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -77,7 +77,7 @@ func DropSession(token string) error {
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	_, err = core.DeleteCache(key)
+	_, err = cache.Delete(key)
 	if err != nil {
 		return err
 	}
