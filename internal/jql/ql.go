@@ -7,18 +7,18 @@ type Ql struct {
 }
 
 /**
-* getQl: Returns a Ql
+* ToQl: Returns a Ql
 * @param query et.Json
 * @return *Ql, error
 **/
-func getQl(query et.Json) (*Ql, error) {
+func ToQl(query et.Json) (*Ql, error) {
 	return &Ql{}, nil
 }
 
 /**
-* run: Runs the query
+* Run: Runs the query
 * @return et.Items, error
 **/
-func (s *Ql) run() (et.Items, error) {
+func (s *Ql) Run() (et.Items, error) {
 	return et.Items{}, nil
 }

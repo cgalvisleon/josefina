@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/jql"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -24,12 +25,12 @@ func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
 		return et.Items{}, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
 	}
 
-	ql, err := getQl(query)
+	ql, err := jql.ToQl(query)
 	if err != nil {
 		return et.Items{}, err
 	}
 
-	result, err := ql.run()
+	result, err := ql.Run()
 	if err != nil {
 		return et.Items{}, err
 	}
