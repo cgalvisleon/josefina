@@ -7,6 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -68,7 +69,7 @@ func applyAuthenticate(handler http.Handler) http.Handler {
 * @param device, username, password string
 * @return *Session, error
 **/
-func Auth(device, database, username, password string) (*Session, error) {
+func Auth(device, database, username, password string) (*core.Session, error) {
 	if !node.started {
 		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
 	}

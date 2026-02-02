@@ -526,7 +526,7 @@ func (s *Node) authenticate(token string) (*claim.Claim, error) {
 * @param device, database, username, password string
 * @return *Session, error
 **/
-func (s *Node) auth(device, database, username, password string) (*Session, error) {
+func (s *Node) auth(device, database, username, password string) (*core.Session, error) {
 	leader, ok := s.getLeader()
 	if ok {
 		return syn.auth(leader, device, database, username, password)
@@ -540,7 +540,7 @@ func (s *Node) auth(device, database, username, password string) (*Session, erro
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := createSession(device, username)
+	result, err := core.CreateSession(device, username)
 	if err != nil {
 		return nil, err
 	}

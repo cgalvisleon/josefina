@@ -10,10 +10,6 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var (
-	appName = "josefina"
-)
-
 type Session struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`

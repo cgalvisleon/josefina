@@ -16,7 +16,7 @@ func initTransactions() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(database)
+	db, err := dbs.GetDb(appName)
 	if err != nil {
 		return err
 	}

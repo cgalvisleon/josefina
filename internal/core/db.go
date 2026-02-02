@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	database string = "josefina"
-	mdbs     *dbs.Model
+	appName string = "josefina"
+	mdbs    *dbs.Model
 )
 
 /**
@@ -18,7 +18,7 @@ func initDbs() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(database)
+	db, err := dbs.GetDb(appName)
 	if err != nil {
 		return err
 	}
