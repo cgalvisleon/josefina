@@ -49,11 +49,14 @@ func newTransaction(model *Model, cmd Command, idx string, data et.Json, status 
 }
 
 type Tx struct {
-	StartedAt    time.Time      `json:"startedAt"`
-	EndedAt      time.Time      `json:"endedAt"`
-	ID           string         `json:"id"`
-	Transactions []*Transaction `json:"transactions"`
-	isDebug      bool           `json:"-"`
+	StartedAt    time.Time                          `json:"startedAt"`
+	EndedAt      time.Time                          `json:"endedAt"`
+	ID           string                             `json:"id"`
+	Transactions []*Transaction                     `json:"transactions"`
+	onChange     func(string, et.Json) error        `json:"-"`
+	onRemove     func(*From, string) error          `json:"-"`
+	onPut        func(*From, string, et.Json) error `json:"-"`
+	isDebug      bool                               `json:"-"`
 }
 
 /**
@@ -95,17 +98,45 @@ func (s Tx) toJson() et.Json {
 }
 
 /**
+* SetOnChange
+* @param onChange func(string, et.Json) error
+**/
+func (s *Tx) SetOnChange(onChange func(string, et.Json) error) {
+	s.onChange = onChange
+}
+
+/**
+* SetOnRemove
+* @param onRemove func(*From, string) error
+**/
+func (s *Tx) SetOnRemove(onRemove func(*From, string) error) {
+	s.onRemove = onRemove
+}
+
+/**
+* SetOnPut
+* @param onPut func(*From, string, et.Json) error
+**/
+func (s *Tx) SetOnPut(onPut func(*From, string, et.Json) error) {
+	s.onPut = onPut
+}
+
+/**
 * Save
 * @return error
 **/
-func (s *Tx) Save() error {
+func (s *Tx) change() error {
 	s.EndedAt = timezone.Now()
 	data := s.toJson()
 	if s.isDebug {
 		logs.Debug(data.ToString())
 	}
 
-	return node.SaveTransaction(s)
+	if s.onChange != nil {
+		return s.onChange(s.ID, data)
+	}
+
+	return nil
 }
 
 /**
@@ -115,7 +146,7 @@ func (s *Tx) Save() error {
 func (s *Tx) add(model *Model, cmd Command, idx string, data et.Json) error {
 	transaction := newTransaction(model, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
-	return s.Save()
+	return s.change()
 }
 
 /**
@@ -131,7 +162,7 @@ func (s *Tx) setStatus(idx int, status Status) error {
 
 	tr.Status = status
 	s.Transactions[idx] = tr
-	return s.Save()
+	return s.change()
 }
 
 /**
@@ -158,13 +189,19 @@ func (s *Tx) commit() error {
 		cmd := tr.Command
 		idx := tr.Idx
 		if cmd == DELETE {
-			err := node.RemoveObject(tr.From, idx)
+			if s.onRemove == nil {
+				return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
+			}
+			err := s.onRemove(tr.From, idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			err := node.PutObject(tr.From, idx, data)
+			if s.onPut == nil {
+				return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
+			}
+			err := s.onPut(tr.From, idx, data)
 			if err != nil {
 				return err
 			}
