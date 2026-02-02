@@ -2,7 +2,6 @@ package dbs
 
 import (
 	"encoding/gob"
-	"net/rpc"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
@@ -26,7 +25,7 @@ func init() {
 	gob.Register(&Transaction{})
 
 	syn = &Syn{}
-	err := rpc.Register(syn)
+	_, err := jrpc.Mount(hostname, syn)
 	if err != nil {
 		logs.Panic(err)
 	}

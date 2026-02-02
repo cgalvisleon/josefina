@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -120,10 +119,7 @@ func (s *Model) Init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	port := envar.GetInt("RPC_PORT", 4200)
-	host := fmt.Sprintf("%s:%d", hostname, port)
-	s.Host = host
-
+	s.Host = hostname
 	for _, name := range s.Indexes {
 		_, err := s.store(name)
 		if err != nil {
