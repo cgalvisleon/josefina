@@ -4,7 +4,10 @@ import (
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
-var dbs *jdb.Model
+var (
+	database string = "josefina"
+	dbs      *jdb.Model
+)
 
 /**
 * initDbs: Initializes the dbs model
