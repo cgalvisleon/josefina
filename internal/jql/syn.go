@@ -14,12 +14,9 @@ import (
 
 type Jql struct{}
 
-type getLeaderFn func() (string, bool)
-
 var (
-	syn       *Jql
-	hostname  string
-	getLeader getLeaderFn
+	syn      *Jql
+	hostname string
 )
 
 func init() {
@@ -37,17 +34,7 @@ func init() {
 }
 
 /**
-* Load: Loads the cache
-* @param fn getLeaderFn
-* @return error
-**/
-func Load(fn getLeaderFn) error {
-	getLeader = fn
-	return nil
-}
-
-/**
-* query: Executes a query
+* jquery: Executes a query
 * @params to string, query et.Json
 * @return error
 **/
