@@ -468,11 +468,11 @@ func (s *Node) loadModel(model *dbs.Model) error {
 }
 
 /**
-* saveModel: Saves the model
+* setModel: Saves the model
 * @param model *Model
 * @return error
 **/
-func (s *Node) saveModel(model *dbs.Model) error {
+func (s *Node) setModel(model *dbs.Model) error {
 	if !s.started {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -482,7 +482,7 @@ func (s *Node) saveModel(model *dbs.Model) error {
 
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.saveModel(leader, model)
+		return syn.setModel(leader, model)
 	}
 
 	return core.SetModel(model)

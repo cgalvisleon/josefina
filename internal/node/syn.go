@@ -291,13 +291,13 @@ func (s *Syn) LoadModel(require *dbs.Model, response *bool) error {
 }
 
 /**
-* saveModel: Saves a model
+* setModel: Saves a model
 * @param to string, model *Model
 * @return error
 **/
-func (s *Syn) saveModel(to string, model *dbs.Model) error {
+func (s *Syn) setModel(to string, model *dbs.Model) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.SaveModel", model, &response)
+	err := jrpc.CallRpc(to, "Syn.SetModel", model, &response)
 	if err != nil {
 		return err
 	}
@@ -306,16 +306,16 @@ func (s *Syn) saveModel(to string, model *dbs.Model) error {
 }
 
 /**
-* SaveModel: Saves a model
+* SetModel: Saves a model
 * @param model *Model
 * @return bool, error
 **/
-func (s *Syn) SaveModel(require *dbs.Model, response *bool) error {
+func (s *Syn) SetModel(require *dbs.Model, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	err := node.saveModel(require)
+	err := node.setModel(require)
 	if err != nil {
 		return err
 	}
