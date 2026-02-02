@@ -9,7 +9,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
-	"github.com/cgalvisleon/josefina/internal/jdb"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 

@@ -51,6 +51,7 @@ type Node struct {
 	Version       string                `json:"version"`
 	Host          string                `json:"host"`
 	Port          int                   `json:"port"`
+	isStrict      bool                  `json:"-"`
 	dbs           map[string]*dbs.DB    `json:"-"`
 	models        map[string]*dbs.Model `json:"-"`
 	rpcs          map[string]et.Json    `json:"-"`
@@ -265,6 +266,14 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
+* setIsStrict
+* @param isStrict bool
+**/
+func (s *Node) setIsStrict(isStrict bool) {
+	s.isStrict = isStrict
+}
+
+/**
 * getDb: Returns a database by name
 * @param name string
 * @return *DB, error
@@ -303,6 +312,10 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 		return result, nil
 	}
 
+	if s.isStrict {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
 	result, err = dbs.GetDb(name)
 	if err != nil {
 		return nil, err
@@ -315,9 +328,9 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 /**
 * getModel
 * @param database, schema, name string
-* @return *From, error
+* @return *dbs.Model, error
 **/
-func (s *Node) getModel(database, schema, name string) (*Model, error) {
+func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 	if !s.started {
 		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -326,6 +339,23 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 	}
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	loadModel := func(result *dbs.Model) (*dbs.Model, error) {
+		to := s.nextHost()
+		if to == s.Host {
+			err := s.loadModel(result)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err := syn.loadModel(to, result)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return result, nil
 	}
 
 	leader, ok := s.getLeader()
@@ -346,43 +376,59 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 		return result, nil
 	}
 
-	err := initModels()
+	exists, err := core.GetModel(&dbs.From{
+		Database: database,
+		Schema:   schema,
+		Name:     name,
+	}, result)
 	if err != nil {
 		return nil, err
 	}
 
-	exists, err := models.get(key, &result)
-	if err != nil {
-		return nil, err
-	}
+	if exists {
+		if result.Host != "" {
+			return result, nil
+		}
 
-	if !exists {
-		db, err := getDb(database)
+		result, err = loadModel(result)
 		if err != nil {
 			return nil, err
 		}
 
+		return result, nil
+	}
+
+	var db *dbs.DB
+	exists, err = core.GetDb(database, db)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
 		if db.IsStrict {
 			return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 		}
 
-		result, err = db.newModel(schema, name, false, 1)
+		result, err = db.NewModel(schema, name, false, 1)
 		if err != nil {
 			return nil, err
 		}
+
+		result, err = loadModel(result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
-	to := s.nextHost()
-	if to == s.Host {
-		err := s.loadModel(result)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		err = syn.loadModel(to, result)
-		if err != nil {
-			return nil, err
-		}
+	if s.isStrict {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	result, err = db.NewModel(schema, name, false, 1)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, err
@@ -393,18 +439,17 @@ func (s *Node) getModel(database, schema, name string) (*Model, error) {
 * @param model *Model
 * @return error
 **/
-func (s *Node) loadModel(model *Model) error {
+func (s *Node) loadModel(model *dbs.Model) error {
 	if !s.started {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
-	model.Host = s.Host
-	err := model.init()
+	err := model.Init()
 	if err != nil {
 		return err
 	}
 
-	key := model.key()
+	key := model.Key()
 	s.modelMu.Lock()
 	s.models[key] = model
 	s.modelMu.Unlock()
