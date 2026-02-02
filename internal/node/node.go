@@ -289,12 +289,7 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 
 	leader, ok := s.getLeader()
 	if ok {
-		result, err := syn.getDb(leader, name)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
+		return syn.getDb(leader, name)
 	}
 
 	name = utility.Normalize(name)
@@ -333,6 +328,24 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 }
 
 /**
+* saveDb: Saves the model
+* @param db *DB
+* @return error
+**/
+func (s *Node) saveDb(db *dbs.DB) error {
+	if !s.started {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.saveDb(leader, db)
+	}
+
+	return core.SetDb(db)
+}
+
+/**
 * getModel
 * @param database, schema, name string
 * @return *dbs.Model, error
@@ -367,12 +380,7 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 
 	leader, ok := s.getLeader()
 	if ok {
-		result, err := syn.getModel(leader, database, schema, name)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
+		return syn.getModel(leader, database, schema, name)
 	}
 
 	key := modelKey(database, schema, name)
@@ -474,81 +482,27 @@ func (s *Node) saveModel(model *dbs.Model) error {
 
 	leader, ok := s.getLeader()
 	if ok {
-		err := syn.saveModel(leader, model)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return syn.saveModel(leader, model)
 	}
 
-	err := core.SetModel(model)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return core.SetModel(model)
 }
 
 /**
 * reportModels: Reports the models
-* @param models map[string]*Model
+* @param models map[string]*dbs.Model
 * @return error
 **/
-func (s *Node) reportModels(models map[string]*Model) error {
+func (s *Node) reportModels(models map[string]*dbs.Model) error {
 	leader, ok := s.getLeader()
 	if ok {
-		err := syn.reportModels(leader, models)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return syn.reportModels(leader, models)
 	}
 
 	for key, model := range models {
 		s.mu.Lock()
 		s.models[key] = model
 		s.mu.Unlock()
-	}
-
-	return nil
-}
-
-/**
-* saveDb: Saves the model
-* @param db *DB
-* @return error
-**/
-func (s *Node) saveDb(db *DB) error {
-	if !s.started {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
-	leader, ok := s.getLeader()
-	if ok {
-		err := syn.saveDb(leader, db)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	err := initDbs()
-	if err != nil {
-		return err
-	}
-
-	bt, err := db.serialize()
-	if err != nil {
-		return err
-	}
-
-	key := db.Name
-	err = dbs.put(key, bt)
-	if err != nil {
-		return err
 	}
 
 	return nil
