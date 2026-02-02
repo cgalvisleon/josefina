@@ -33,25 +33,25 @@ type AnyResult struct {
 	Ok   bool
 }
 
-type Syn struct{}
+type Nodes struct{}
 
-var syn *Syn
+var syn *Nodes
 
 func init() {
-	syn = &Syn{}
+	syn = &Nodes{}
 }
 
 /**
 * ping
 * @return error
 **/
-func (s *Syn) ping(to string) error {
+func (s *Nodes) ping(to string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	var response string
-	err := jrpc.CallRpc(to, "Syn.Ping", node.Host, &response)
+	err := jrpc.CallRpc(to, "Nodes.Ping", node.Host, &response)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (s *Syn) ping(to string) error {
 * @param response *string
 * @return error
 **/
-func (s *Syn) Ping(require string, response *string) error {
+func (s *Nodes) Ping(require string, response *string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -80,9 +80,9 @@ func (s *Syn) Ping(require string, response *string) error {
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Syn) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) *ResponseBool {
+func (s *Nodes) requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) *ResponseBool {
 	var res RequestVoteReply
-	err := jrpc.CallRpc(to, "Syn.RequestVote", require, &res)
+	err := jrpc.CallRpc(to, "Nodes.RequestVote", require, &res)
 	if err != nil {
 		return &ResponseBool{
 			Ok:    false,
@@ -102,7 +102,7 @@ func (s *Syn) requestVote(to string, require *RequestVoteArgs, response *Request
 * @param require *RequestVoteArgs, response *RequestVoteReply
 * @return error
 **/
-func (s *Syn) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
+func (s *Nodes) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -116,9 +116,9 @@ func (s *Syn) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) 
 * @param require *HeartbeatArgs, response *HeartbeatReply
 * @return error
 **/
-func (s *Syn) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
+func (s *Nodes) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
 	var res HeartbeatReply
-	err := jrpc.CallRpc(to, "Syn.Heartbeat", require, &res)
+	err := jrpc.CallRpc(to, "Nodes.Heartbeat", require, &res)
 	if err != nil {
 		return &ResponseBool{
 			Ok:    false,
@@ -138,7 +138,7 @@ func (s *Syn) heartbeat(to string, require *HeartbeatArgs, response *HeartbeatRe
 * @param require *HeartbeatArgs, response *HeartbeatReply
 * @return error
 **/
-func (s *Syn) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
+func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -152,9 +152,9 @@ func (s *Syn) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error 
 * @param to string, name string
 * @return *DB, error
 **/
-func (s *Syn) getDb(to string, name string) (*dbs.DB, error) {
+func (s *Nodes) getDb(to string, name string) (*dbs.DB, error) {
 	var response *dbs.DB
-	err := jrpc.CallRpc(to, "Syn.GetDb", name, &response)
+	err := jrpc.CallRpc(to, "Nodes.GetDb", name, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (s *Syn) getDb(to string, name string) (*dbs.DB, error) {
 * @param require string, response *DB
 * @return error
 **/
-func (s *Syn) GetDb(require string, response *dbs.DB) error {
+func (s *Nodes) GetDb(require string, response *dbs.DB) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -186,9 +186,9 @@ func (s *Syn) GetDb(require string, response *dbs.DB) error {
 * @param to string, db *DB
 * @return error
 **/
-func (s *Syn) setDb(to string, db *dbs.DB) error {
+func (s *Nodes) setDb(to string, db *dbs.DB) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.SetDb", db, &response)
+	err := jrpc.CallRpc(to, "Nodes.SetDb", db, &response)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (s *Syn) setDb(to string, db *dbs.DB) error {
 * @param model *DB
 * @return bool, error
 **/
-func (s *Syn) SetDb(require *dbs.DB, response *bool) error {
+func (s *Nodes) SetDb(require *dbs.DB, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -220,9 +220,9 @@ func (s *Syn) SetDb(require *dbs.DB, response *bool) error {
 * @param to string, database, schema, model string
 * @return *Model, error
 **/
-func (s *Syn) getModel(to, database, schema, name string) (*dbs.Model, error) {
+func (s *Nodes) getModel(to, database, schema, name string) (*dbs.Model, error) {
 	var response *dbs.Model
-	err := jrpc.CallRpc(to, "Syn.GetModel", et.Json{
+	err := jrpc.CallRpc(to, "Nodes.GetModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"name":     name,
@@ -239,7 +239,7 @@ func (s *Syn) getModel(to, database, schema, name string) (*dbs.Model, error) {
 * @param require et.Json, response *Model
 * @return error
 **/
-func (s *Syn) GetModel(require et.Json, response *dbs.Model) error {
+func (s *Nodes) GetModel(require et.Json, response *dbs.Model) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -261,9 +261,9 @@ func (s *Syn) GetModel(require et.Json, response *dbs.Model) error {
 * @param to string, model *Model
 * @return error
 **/
-func (s *Syn) loadModel(to string, model *dbs.Model) error {
+func (s *Nodes) loadModel(to string, model *dbs.Model) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.LoadModel", model, &response)
+	err := jrpc.CallRpc(to, "Nodes.LoadModel", model, &response)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (s *Syn) loadModel(to string, model *dbs.Model) error {
 * @param require *Model, response true
 * @return error
 **/
-func (s *Syn) LoadModel(require *dbs.Model, response *bool) error {
+func (s *Nodes) LoadModel(require *dbs.Model, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -295,9 +295,9 @@ func (s *Syn) LoadModel(require *dbs.Model, response *bool) error {
 * @param to string, model *Model
 * @return error
 **/
-func (s *Syn) setModel(to string, model *dbs.Model) error {
+func (s *Nodes) setModel(to string, model *dbs.Model) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.SetModel", model, &response)
+	err := jrpc.CallRpc(to, "Nodes.SetModel", model, &response)
 	if err != nil {
 		return err
 	}
@@ -310,7 +310,7 @@ func (s *Syn) setModel(to string, model *dbs.Model) error {
 * @param model *Model
 * @return bool, error
 **/
-func (s *Syn) SetModel(require *dbs.Model, response *bool) error {
+func (s *Nodes) SetModel(require *dbs.Model, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -329,9 +329,9 @@ func (s *Syn) SetModel(require *dbs.Model, response *bool) error {
 * @param to string, models map[string]*Model
 * @return error
 **/
-func (s *Syn) reportModels(to string, models map[string]*dbs.Model) error {
+func (s *Nodes) reportModels(to string, models map[string]*dbs.Model) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.ReportModels", models, &response)
+	err := jrpc.CallRpc(to, "Nodes.ReportModels", models, &response)
 	if err != nil {
 		return err
 	}
@@ -344,7 +344,7 @@ func (s *Syn) reportModels(to string, models map[string]*dbs.Model) error {
 * @param require map[string]*Model, response true
 * @return error
 **/
-func (s *Syn) ReportModels(require map[string]*dbs.Model, response *bool) error {
+func (s *Nodes) ReportModels(require map[string]*dbs.Model, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -363,7 +363,7 @@ func (s *Syn) ReportModels(require map[string]*dbs.Model, response *bool) error 
 * @param to, key string, data et.Json
 * @return error
 **/
-func (s *Syn) setTransaction(to, key string, data et.Json) error {
+func (s *Nodes) setTransaction(to, key string, data et.Json) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -373,7 +373,7 @@ func (s *Syn) setTransaction(to, key string, data et.Json) error {
 		"data": data,
 	}
 	var reply bool
-	err := jrpc.CallRpc(to, "Syn.SetTransaction", args, &reply)
+	err := jrpc.CallRpc(to, "Nodes.SetTransaction", args, &reply)
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func (s *Syn) setTransaction(to, key string, data et.Json) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Syn) SetTransaction(require et.Json, response *bool) error {
+func (s *Nodes) SetTransaction(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -407,7 +407,7 @@ func (s *Syn) SetTransaction(require et.Json, response *bool) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Syn) onConnect(to string, username string, tpConnection TpConnection, host string) error {
+func (s *Nodes) onConnect(to string, username string, tpConnection TpConnection, host string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -418,7 +418,7 @@ func (s *Syn) onConnect(to string, username string, tpConnection TpConnection, h
 		"host":         host,
 	}
 	var dest bool
-	err := jrpc.CallRpc(to, "Syn.OnConnect", args, &dest)
+	err := jrpc.CallRpc(to, "Nodes.OnConnect", args, &dest)
 	if err != nil {
 		return err
 	}
@@ -431,7 +431,7 @@ func (s *Syn) onConnect(to string, username string, tpConnection TpConnection, h
 * @param require et.Json, response *boolean
 * @return error
 **/
-func (s *Syn) OnConnect(require et.Json, response *bool) error {
+func (s *Nodes) OnConnect(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -453,7 +453,7 @@ func (s *Syn) OnConnect(require et.Json, response *bool) error {
 * @param to, idx string, dest any
 * @return error
 **/
-func (s *Syn) onDisconnect(to string, username string) error {
+func (s *Nodes) onDisconnect(to string, username string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -462,7 +462,7 @@ func (s *Syn) onDisconnect(to string, username string) error {
 		"username": username,
 	}
 	var dest bool
-	err := jrpc.CallRpc(to, "Syn.OnDisconnect", args, &dest)
+	err := jrpc.CallRpc(to, "Nodes.OnDisconnect", args, &dest)
 	if err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func (s *Syn) onDisconnect(to string, username string) error {
 * @param require et.Json, response *boolean
 * @return error
 **/
-func (s *Syn) OnDisconnect(require et.Json, response *bool) error {
+func (s *Nodes) OnDisconnect(require et.Json, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
