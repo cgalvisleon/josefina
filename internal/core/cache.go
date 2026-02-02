@@ -109,7 +109,10 @@ func GetCache(key string) (*mem.Item, bool) {
 		return nil, false
 	}
 
-	expiration := result.Expiration.Truncate(time.Second)
+	expiration := result.Expiration
+	if expiration != 0 {
+		expiration = result.Expiration - time.Since(result.LastUpdate)
+	}
 	mem.Set(key, result.Value, expiration)
 	return &result, true
 }
