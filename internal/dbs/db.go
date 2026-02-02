@@ -3,7 +3,6 @@ package dbs
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
@@ -21,16 +20,12 @@ type DB struct {
 }
 
 var (
-	version  string = "0.0.1"
-	dbs      map[string]*DB
-	hostname string
+	version string = "0.0.1"
+	dbs     map[string]*DB
 )
 
 func init() {
 	dbs = make(map[string]*DB)
-	hostname, _ = os.Hostname()
-	port := envar.GetInt("RPC_PORT", 4200)
-	hostname = fmt.Sprintf("%s:%d", hostname, port)
 }
 
 /**

@@ -2,7 +2,10 @@ package dbs
 
 import (
 	"encoding/gob"
+	"fmt"
+	"os"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
@@ -10,7 +13,10 @@ import (
 
 type Dbs struct{}
 
-var syn *Dbs
+var (
+	syn      *Dbs
+	hostname string
+)
 
 func init() {
 	gob.Register(et.Json{})
@@ -23,6 +29,10 @@ func init() {
 	gob.Register(&Model{})
 	gob.Register(&Tx{})
 	gob.Register(&Transaction{})
+
+	hostname, _ = os.Hostname()
+	port := envar.GetInt("RPC_PORT", 4200)
+	hostname = fmt.Sprintf("%s:%d", hostname, port)
 
 	syn = &Dbs{}
 	_, err := jrpc.Mount(hostname, syn)
