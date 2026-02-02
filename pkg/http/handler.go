@@ -52,7 +52,7 @@ func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 * @param w http.ResponseWriter, r *http.Request
 * @return error
 **/
-func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
+func (s *Router) jQuery(w http.ResponseWriter, r *http.Request) {
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -60,7 +60,7 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	result, err := jql.Jql(ctx, body)
+	result, err := jql.Jquery(ctx, body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return

@@ -44,7 +44,7 @@ func (s *Router) Routes() http.Handler {
 	router.SetAutentication(jdb.Authenticate)
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/auth", s.auth, s.PackageName, s.PackagePath, host)
-	router.Private(r, router.Post, "/jql", s.jql, s.PackageName, s.PackagePath, host)
+	router.Private(r, router.Post, "/jquery", s.jQuery, s.PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(s.PackageName)
 	return r
