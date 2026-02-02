@@ -182,13 +182,13 @@ func (s *Syn) GetDb(require string, response *dbs.DB) error {
 }
 
 /**
-* saveDb: Saves a database
+* setDb: Saves a database
 * @param to string, db *DB
 * @return error
 **/
-func (s *Syn) saveDb(to string, db *dbs.DB) error {
+func (s *Syn) setDb(to string, db *dbs.DB) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Syn.SaveDb", db, &response)
+	err := jrpc.CallRpc(to, "Syn.SetDb", db, &response)
 	if err != nil {
 		return err
 	}
@@ -197,16 +197,16 @@ func (s *Syn) saveDb(to string, db *dbs.DB) error {
 }
 
 /**
-* SaveDb: Saves a database
+* SetDb: Saves a database
 * @param model *DB
 * @return bool, error
 **/
-func (s *Syn) SaveDb(require *dbs.DB, response *bool) error {
+func (s *Syn) SetDb(require *dbs.DB, response *bool) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
-	err := node.saveDb(require)
+	err := node.setDb(require)
 	if err != nil {
 		return err
 	}

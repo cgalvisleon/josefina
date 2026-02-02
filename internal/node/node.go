@@ -328,18 +328,18 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 }
 
 /**
-* saveDb: Saves the model
+* setDb: Saves the model
 * @param db *DB
 * @return error
 **/
-func (s *Node) saveDb(db *dbs.DB) error {
+func (s *Node) setDb(db *dbs.DB) error {
 	if !s.started {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.saveDb(leader, db)
+		return syn.setDb(leader, db)
 	}
 
 	return core.SetDb(db)
