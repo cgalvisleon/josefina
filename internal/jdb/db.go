@@ -2,9 +2,16 @@ package jdb
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
+
+var (
+	version string = "0.0.1"
 )
 
 type DB struct {
@@ -97,4 +104,26 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 	}
 
 	return model, nil
+}
+
+/**
+* GetDb: Returns a database by name
+* @param name string
+* @return *DB, error
+**/
+func GetDb(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	path := envar.GetStr("DATA_PATH", "./data")
+	result := &DB{
+		Name:    name,
+		Version: version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
+
+	return result, nil
 }
