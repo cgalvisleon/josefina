@@ -24,7 +24,6 @@ func newVm() *Vm {
 	wrapperFetch(result)
 	wrapperToJson(result)
 	wrapperToString(result)
-	wrapperModel(result)
 	return result
 }
 

@@ -171,13 +171,13 @@ func (s *Tx) commit() error {
 		cmd := tr.Command
 		idx := tr.Idx
 		if cmd == DELETE {
-			err := s.onRemove(tr.From, idx)
+			err := removeObject(tr.From, idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			err := s.onPut(tr.From, idx, data)
+			err := putObject(tr.From, idx, data)
 			if err != nil {
 				return err
 			}

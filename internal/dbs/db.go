@@ -163,5 +163,5 @@ func getModel(from *From) (*Model, error) {
 		return nil, err
 	}
 
-	return nil, nil
+	return db.getModel(from.Schema, from.Name)
 }
