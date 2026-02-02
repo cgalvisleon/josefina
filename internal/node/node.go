@@ -13,6 +13,7 @@ import (
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -263,6 +264,58 @@ func (s *Node) ping(to string) bool {
 	}
 
 	return true
+}
+
+/**
+* getDb: Returns a database by name
+* @param name string
+* @return *DB, error
+**/
+func (s *Node) getDb(name string) (*jdb.DB, error) {
+	if !s.started {
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	leader, ok := s.getLeader()
+	if ok {
+		result, err := syn.getDb(leader, name)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	name = utility.Normalize(name)
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	exists, err := core.GetDb(name, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		result.isDebug = node.isDebug
+		return result, nil
+	}
+
+	path := envar.GetStr("DATA_PATH", "./data")
+	result = &DB{
+		Name:    name,
+		Version: node.Version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+		isDebug: node.isDebug,
+	}
+	node.dbs[name] = result
+
+	return result, nil
 }
 
 /**

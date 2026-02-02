@@ -61,17 +61,16 @@ func SaveDb(db *jdb.DB) error {
 
 /**
 * GetDb: Gets a model
-* @param from *jdb.From, dest *jdb.Model
+* @param name string, dest *jdb.Model
 * @return bool, error
 **/
-func GetDb(from *jdb.From, dest *jdb.DB) (bool, error) {
+func GetDb(name string, dest *jdb.DB) (bool, error) {
 	err := initDbs()
 	if err != nil {
 		return false, err
 	}
 
-	key := from.Key()
-	exists, err := dbs.Get(key, &dest)
+	exists, err := dbs.Get(name, &dest)
 	if err != nil {
 		return false, err
 	}
