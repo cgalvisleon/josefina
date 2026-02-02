@@ -24,5 +24,15 @@ func Jquery(ctx context.Context, query et.Json) (et.Items, error) {
 		return et.Items{}, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
 	}
 
-	return et.Items{}, nil
+	ql, err := getQl(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result, err := ql.run()
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
 }
