@@ -1,7 +1,7 @@
 ```
 goenv local 1.23.0
 go mod init github.com/cgalvisleon/josefina
-go get github.com/cgalvisleon/et@v1.0.12
+go get github.com/cgalvisleon/et@v1.0.13
 go get github.com/gorilla/websocket
 git remote add origin https://github.com/cgalvisleon/josefina.git
 ```
