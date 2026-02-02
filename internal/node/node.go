@@ -321,6 +321,12 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = core.SetDb(result)
+	if err != nil {
+		return nil, err
+	}
+
 	s.dbs[name] = result
 
 	return result, nil
@@ -413,10 +419,19 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 		return nil, err
 	}
 
+	err = core.SetModel(result)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err = loadModel(result)
 	if err != nil {
 		return nil, err
 	}
+
+	s.modelMu.Lock()
+	s.models[key] = result
+	s.modelMu.Unlock()
 
 	return result, nil
 }
@@ -467,13 +482,7 @@ func (s *Node) saveModel(model *dbs.Model) error {
 		return nil
 	}
 
-	bt, err := model.Serialize()
-	if err != nil {
-		return err
-	}
-
-	key := model.key()
-	err = models.put(key, bt)
+	err := core.SetModel(model)
 	if err != nil {
 		return err
 	}
