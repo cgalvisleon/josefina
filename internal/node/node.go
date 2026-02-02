@@ -1,0 +1,499 @@
+package node
+
+import (
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
+	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/et/ws"
+	"github.com/cgalvisleon/josefina/pkg/jdb"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
+
+var (
+	packageName string = "josefina"
+	version     string = "0.0.1"
+)
+
+type NodeState int
+
+const (
+	Follower NodeState = iota
+	Candidate
+	Leader
+)
+
+type TpConnection int
+
+const (
+	HTTP TpConnection = iota
+	WebSocket
+	TCP
+)
+
+type Status int
+
+const (
+	Connected Status = iota
+	Disconnected
+)
+
+type Client struct {
+	Username string       `json:"username"`
+	Host     string       `json:"host"`
+	Status   Status       `json:"status"`
+	Type     TpConnection `json:"type"`
+}
+
+type Node struct {
+	PackageName   string                `json:"packageName"`
+	Version       string                `json:"version"`
+	Host          string                `json:"host"`
+	Port          int                   `json:"port"`
+	dbs           map[string]*jdb.DB    `json:"-"`
+	models        map[string]*jdb.Model `json:"-"`
+	rpcs          map[string]et.Json    `json:"-"`
+	peers         []string              `json:"-"`
+	state         NodeState             `json:"-"`
+	term          int                   `json:"-"`
+	votedFor      string                `json:"-"`
+	leaderID      string                `json:"-"`
+	lastHeartbeat time.Time             `json:"-"`
+	turn          int                   `json:"-"`
+	started       bool                  `json:"-"`
+	ws            *ws.Hub               `json:"-"`
+	clients       map[string]*Client    `json:"-"`
+	mu            sync.Mutex            `json:"-"`
+	modelMu       sync.RWMutex          `json:"-"`
+	clientMu      sync.RWMutex          `json:"-"`
+	isDebug       bool                  `json:"-"`
+}
+
+/**
+* newNode
+* @param host string, port int
+* @return *Node
+**/
+func newNode(host string, port int) *Node {
+	address := fmt.Sprintf(`%s:%d`, host, port)
+	result := &Node{
+		PackageName: packageName,
+		Host:        address,
+		Port:        port,
+		Version:     version,
+		rpcs:        make(map[string]et.Json),
+		dbs:         make(map[string]*jdb.DB),
+		models:      make(map[string]*jdb.Model),
+		ws:          ws.NewWs(),
+		clients:     make(map[string]*Client),
+		mu:          sync.Mutex{},
+		modelMu:     sync.RWMutex{},
+		clientMu:    sync.RWMutex{},
+	}
+	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
+		result.onConnect(subscriber.Name, WebSocket, result.Host)
+	})
+	result.ws.OnDisconnection(func(subscriber *ws.Subscriber) {
+		result.onDisconnect(subscriber.Name)
+	})
+
+	return result
+}
+
+/**
+* ToJson: Converts the node to a json
+* @return et.Json
+**/
+func (s *Node) ToJson() et.Json {
+	leader, _ := s.getLeader()
+	return et.Json{
+		"host":    s.Host,
+		"leader":  leader,
+		"version": s.Version,
+		"rpcs":    s.rpcs,
+		"peers":   s.peers,
+		"models":  s.models,
+	}
+}
+
+/**
+* helpCheck: Returns the help check
+* @return et.Json
+**/
+func (s *Node) helpCheck() et.Json {
+	return et.Json{
+		"host":    s.Host,
+		"leader":  s.leaderID,
+		"version": s.Version,
+		"peers":   s.peers,
+	}
+}
+
+/**
+* Mount: Mounts the services
+* @param services any
+* @return error
+**/
+func (s *Node) Mount(services any) error {
+	router, err := jrpc.Mount(s.Host, services)
+	if err != nil {
+		return err
+	}
+
+	for name, rpc := range router {
+		s.rpcs[name] = rpc
+	}
+
+	return nil
+}
+
+/**
+* SetDebug
+* @param debug bool
+**/
+func (s *Node) SetDebug(debug bool) {
+	s.isDebug = debug
+}
+
+/**
+* addNode
+* @param node string
+**/
+func (s *Node) addNode(node string) {
+	s.peers = append(s.peers, node)
+}
+
+/**
+* nextHost
+* @return string
+**/
+func (s *Node) nextHost() string {
+	t := len(s.peers)
+	if t == 0 {
+		return s.Host
+	}
+
+	s.turn++
+	if s.turn >= t {
+		s.turn = 1
+	}
+
+	return s.peers[s.turn]
+}
+
+/**
+* getLeader
+* @return string, error
+**/
+func (n *Node) getLeader() (string, bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	result := n.leaderID
+	return result, result != n.Host && result != ""
+}
+
+/**
+* start
+* @return error
+**/
+func (s *Node) start() error {
+	if s.started {
+		return nil
+	}
+
+	err := s.Mount(syn)
+	if err != nil {
+		return err
+	}
+
+	nodes, err := getNodes()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range nodes {
+		s.addNode(node)
+	}
+
+	err = jrpc.Start(s.Port)
+	if err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	s.state = Follower
+	s.lastHeartbeat = timezone.Now()
+	s.started = true
+	s.mu.Unlock()
+	s.ws.Start()
+	s.ws.SetDebug(s.isDebug)
+
+	go s.electionLoop()
+
+	return nil
+}
+
+/**
+* Ping
+* @param to string
+* @return bool
+**/
+func (s *Node) Ping(to string) bool {
+	err := syn.ping(to)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+/**
+* getModel
+* @param database, schema, name string
+* @return *From, error
+**/
+func (s *Node) getModel(database, schema, name string) (*Model, error) {
+	if !s.started {
+		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	leader, ok := s.getLeader()
+	if ok {
+		result, err := syn.getModel(leader, database, schema, name)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	key := modelKey(database, schema, name)
+	s.modelMu.RLock()
+	result, ok := s.models[key]
+	s.modelMu.RUnlock()
+	if ok {
+		return result, nil
+	}
+
+	err := initModels()
+	if err != nil {
+		return nil, err
+	}
+
+	exists, err := models.get(key, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		db, err := getDb(database)
+		if err != nil {
+			return nil, err
+		}
+
+		if db.IsStrict {
+			return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+		}
+
+		result, err = db.newModel(schema, name, false, 1)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	to := s.nextHost()
+	if to == s.Host {
+		err := s.loadModel(result)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = syn.loadModel(to, result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, err
+}
+
+/**
+* reserveModel
+* @param model *Model
+* @return error
+**/
+func (s *Node) loadModel(model *Model) error {
+	if !s.started {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	model.Host = s.Host
+	err := model.init()
+	if err != nil {
+		return err
+	}
+
+	key := model.key()
+	s.modelMu.Lock()
+	s.models[key] = model
+	s.modelMu.Unlock()
+
+	return nil
+}
+
+/**
+* saveModel: Saves the model
+* @param model *Model
+* @return error
+**/
+func (s *Node) saveModel(model *Model) error {
+	if !s.started {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+	if model.IsCore {
+		return nil
+	}
+
+	leader, ok := s.getLeader()
+	if ok {
+		err := syn.saveModel(leader, model)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initModels()
+	if err != nil {
+		return err
+	}
+
+	bt, err := model.serialize()
+	if err != nil {
+		return err
+	}
+
+	key := model.key()
+	err = models.put(key, bt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* reportModels: Reports the models
+* @param models map[string]*Model
+* @return error
+**/
+func (s *Node) reportModels(models map[string]*Model) error {
+	leader, ok := s.getLeader()
+	if ok {
+		err := syn.reportModels(leader, models)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	for key, model := range models {
+		s.mu.Lock()
+		s.models[key] = model
+		s.mu.Unlock()
+	}
+
+	return nil
+}
+
+/**
+* saveDb: Saves the model
+* @param db *DB
+* @return error
+**/
+func (s *Node) saveDb(db *DB) error {
+	if !s.started {
+		return errors.New(msg.MSG_NODE_NOT_STARTED)
+	}
+
+	leader, ok := s.getLeader()
+	if ok {
+		err := syn.saveDb(leader, db)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := initDbs()
+	if err != nil {
+		return err
+	}
+
+	bt, err := db.serialize()
+	if err != nil {
+		return err
+	}
+
+	key := db.Name
+	err = dbs.put(key, bt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* onConnect: Sets the client
+* @param username string
+* @param tpConnection TpConnection
+* @param host string
+**/
+func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.onConnect(leader, username, tpConnection, host)
+	}
+
+	s.clientMu.Lock()
+	s.clients[username] = &Client{
+		Username: username,
+		Host:     host,
+		Type:     tpConnection,
+		Status:   Connected,
+	}
+	s.clientMu.Unlock()
+
+	return nil
+}
+
+/**
+* onDisconnect: Removes the client
+* @param username string
+**/
+func (s *Node) onDisconnect(username string) error {
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.onDisconnect(leader, username)
+	}
+
+	s.clientMu.Lock()
+	delete(s.clients, username)
+	s.clientMu.Unlock()
+	return nil
+}
