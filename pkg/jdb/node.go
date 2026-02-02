@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/timezone"
@@ -504,6 +505,20 @@ func (s *Node) setTransaction(key string, data et.Json) error {
 	}
 
 	return core.SetTransaction(key, data)
+}
+
+/**
+* authenticate: Authenticates a user
+* @param token string
+* @return *claim.Claim, error
+**/
+func (s *Node) authenticate(token string) (*claim.Claim, error) {
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.authenticate(leader, token)
+	}
+
+	return core.Authenticate(token)
 }
 
 /**

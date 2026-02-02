@@ -7,7 +7,6 @@ import (
 
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -18,14 +17,20 @@ import (
 **/
 func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !node.started {
+			response.HTTPError(w, r, http.StatusUnauthorized, msg.MSG_JOSEFINA_NOT_STARTED)
+			return
+		}
+
 		token := r.Header.Get("Authorization")
-		result, err := core.Authenticate(token)
+		result, err := node.authenticate(token)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
 			return
 		}
 
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, "sessionId", result.Id)
 		ctx = context.WithValue(ctx, "app", result.App)
 		ctx = context.WithValue(ctx, "device", result.Device)
 		ctx = context.WithValue(ctx, "username", result.Username)

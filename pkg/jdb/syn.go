@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
@@ -20,6 +21,7 @@ func init() {
 	gob.Register(et.Item{})
 	gob.Register(et.Items{})
 	gob.Register(et.List{})
+	gob.Register(claim.Claim{})
 	gob.Register(&Session{})
 	gob.Register(&RequestVoteArgs{})
 	gob.Register(&RequestVoteReply{})
@@ -351,6 +353,40 @@ func (s *Nodes) SetTransaction(require et.Json, response *bool) error {
 	}
 
 	*response = true
+	return nil
+}
+
+/**
+* authenticate: Authenticates a user
+* @param to, device, database, username, password string
+* @return error
+**/
+func (s *Nodes) authenticate(to, token string) (*claim.Claim, error) {
+	args := et.Json{
+		"token": token,
+	}
+	var reply *claim.Claim
+	err := jrpc.CallRpc(to, "Nodes.Authenticate", args, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
+/**
+* Auth: Authenticates a user
+* @param require et.Json, response *Session
+* @return error
+**/
+func (s *Nodes) Authenticate(require et.Json, response *claim.Claim) error {
+	token := require.Str("token")
+	result, err := node.authenticate(token)
+	if err != nil {
+		return err
+	}
+
+	response = result
 	return nil
 }
 
