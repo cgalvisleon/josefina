@@ -509,6 +509,20 @@ func (s *Node) reportModels(models map[string]*dbs.Model) error {
 }
 
 /**
+* setTransaction: Sets a transaction
+* @param key string, data et.Json
+* @return error
+**/
+func (s *Node) setTransaction(key string, data et.Json) error {
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.setTransaction(leader, key, data)
+	}
+
+	return core.SetTransaction(key, data)
+}
+
+/**
 * onConnect: Sets the client
 * @param username string
 * @param tpConnection TpConnection
