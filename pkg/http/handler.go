@@ -5,7 +5,6 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
-	"github.com/cgalvisleon/josefina/internal/jql"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
@@ -60,7 +59,7 @@ func (s *Router) jQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	result, err := jql.Jquery(ctx, body)
+	result, err := jdb.JQuery(ctx, body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
