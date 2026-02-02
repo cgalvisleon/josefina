@@ -5,6 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/cache"
 )
 
 var (
@@ -25,6 +26,11 @@ func init() {
 func Load() error {
 	if node != nil {
 		return nil
+	}
+
+	err := cache.Load(node.getLeader)
+	if err != nil {
+		return err
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
