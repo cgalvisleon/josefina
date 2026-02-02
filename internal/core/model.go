@@ -24,7 +24,7 @@ func initModels() error {
 		return nil
 	}
 
-	db, err := node.GetDb(database)
+	db, err := jdb.GetDb(database)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func initModels() error {
 * @return *Model
 **/
 func newModel(database, schema, name string, isCore bool, version int) (*jdb.Model, error) {
-	db, err := node.GetDb(database)
+	db, err := jdb.GetDb(database)
 	if err != nil {
 		return nil, err
 	}

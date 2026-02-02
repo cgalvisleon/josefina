@@ -27,7 +27,7 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := node.GetDb(database)
+	db, err := jdb.GetDb(database)
 	if err != nil {
 		return err
 	}
