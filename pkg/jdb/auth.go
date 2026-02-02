@@ -15,35 +15,6 @@ import (
 )
 
 /**
-* authenticate: Authenticates a user
-* @param token string
-* @return *claim.Token, error
-**/
-func authenticate(token string) (*claim.Claim, error) {
-	if !utility.ValidStr(token, 0, []string{""}) {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	token = utility.PrefixRemove("Bearer", token)
-	result, err := claim.ParceToken(token)
-	if err != nil {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists := cache.GetStr(key)
-	if !exists {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	if session != token {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
-	}
-
-	return result, nil
-}
-
-/**
 * Authenticate
 * @param next http.Handler
 * @return http.Handler
