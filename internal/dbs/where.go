@@ -235,7 +235,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	add := func(item et.Json) bool {
+	addResult := func(item et.Json) bool {
 		if len(s.selects) == 0 {
 			item = Hidden(s.hidden, item)
 		} else {
@@ -265,7 +265,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		}
 
 		if ok {
-			next = add(item)
+			next = addResult(item)
 		}
 
 		return next
@@ -287,7 +287,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 				return false, err
 			}
 
-			next = add(item)
+			next = addResult(item)
 			return next, nil
 		}, asc, s.offset, s.limit, s.workers)
 		if err != nil {
@@ -301,7 +301,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		// Items by cache
 		cache := tx.getRecors(model.From)
 		for _, item := range cache {
-			next = add(item)
+			next = addResult(item)
 			if !next {
 				return result, nil
 			}

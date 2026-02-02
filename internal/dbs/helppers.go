@@ -2,6 +2,7 @@ package dbs
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -310,10 +311,10 @@ func Select(keys []string, object et.Json) et.Json {
 func Hidden(keys []string, object et.Json) et.Json {
 	result := et.Json{}
 	for key, value := range object {
-		_, ok := object[key]
-		if !ok {
-			result[key] = value
+		if slices.Contains(keys, key) {
+			continue
 		}
+		result[key] = value
 	}
 
 	return result
