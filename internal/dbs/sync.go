@@ -33,6 +33,24 @@ func init() {
 }
 
 /**
+* removeObject
+* @params from *From, idx string
+* @return error
+**/
+func (s *Sync) removeObject(from *From, idx string) error {
+	var response bool
+	err := jrpc.CallRpc(from.Host, "Sync.RemoveObject", et.Json{
+		"from": from,
+		"idx":  idx,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
 * RemoveObject: Removes an object
 * @param require et.Json, response *bool
 * @return error
@@ -50,6 +68,25 @@ func (s *Sync) RemoveObject(require et.Json, response *bool) error {
 	}
 
 	*response = true
+	return nil
+}
+
+/**
+* putObject
+* @params from *From, idx string, data et.Json
+* @return error
+**/
+func (s *Sync) putObject(from *From, idx string, data et.Json) error {
+	var response bool
+	err := jrpc.CallRpc(from.Host, "Sync.PutObject", et.Json{
+		"from": from,
+		"idx":  idx,
+		"data": data,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -76,15 +113,16 @@ func (s *Sync) PutObject(require et.Json, response *bool) error {
 }
 
 /**
-* removeObject
-* @params from *From, idx string
+* isExisted
+* @params from *From, field, idx string
 * @return error
 **/
-func removeObject(from *From, idx string) error {
+func (s *Sync) isExisted(from *From, field, idx string) error {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Sync.RemoveObject", et.Json{
-		"from": from,
-		"idx":  idx,
+	err := jrpc.CallRpc(from.Host, "Sync.IsExisted", et.Json{
+		"from":  from,
+		"field": field,
+		"idx":   idx,
 	}, &response)
 	if err != nil {
 		return err
@@ -94,20 +132,23 @@ func removeObject(from *From, idx string) error {
 }
 
 /**
-* putObject
-* @params from *From, idx string, data et.Json
+* IsExisted: Checks if an object exists
+* @param require et.Json, response *bool
 * @return error
 **/
-func putObject(from *From, idx string, data et.Json) error {
-	var response bool
-	err := jrpc.CallRpc(from.Host, "Sync.PutObject", et.Json{
-		"from": from,
-		"idx":  idx,
-		"data": data,
-	}, &response)
+func (s *Sync) IsExisted(require et.Json, response *bool) error {
+	from := ToFrom(require.Json("from"))
+	field := require.Str("field")
+	idx := require.Str("idx")
+	model, err := getModel(from)
+	if err != nil {
+		return err
+	}
+	exists, err := model.IsExisted(field, idx)
 	if err != nil {
 		return err
 	}
 
+	*response = exists
 	return nil
 }
