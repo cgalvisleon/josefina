@@ -69,11 +69,11 @@ func initUsers() error {
 }
 
 /**
-* createUser: Creates a new user
+* CreateUser: Creates a new user
 * @param username, password string
 * @return error
 **/
-func createUser(username, password string) error {
+func CreateUser(username, password string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -100,11 +100,11 @@ func createUser(username, password string) error {
 }
 
 /**
-* dropUser: Drops a user
+* DropUser: Drops a user
 * @param username string
 * @return error
 **/
-func dropUser(username string) error {
+func DropUser(username string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -125,11 +125,11 @@ func dropUser(username string) error {
 }
 
 /**
-* changuePassword: Changues the password of a user
+* ChanguePassword: Changues the password of a user
 * @param username, password string
 * @return error
 **/
-func changuePassword(username, password string) error {
+func ChanguePassword(username, password string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
