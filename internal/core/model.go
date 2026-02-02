@@ -1,10 +1,7 @@
 package core
 
 import (
-	"errors"
-
 	"github.com/cgalvisleon/josefina/internal/jdb"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
@@ -16,10 +13,6 @@ var (
 * @return error
 **/
 func initModels() error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
 	if models != nil {
 		return nil
 	}
@@ -41,19 +34,46 @@ func initModels() error {
 }
 
 /**
-* newModel
-* @param database, schema, name string, isCore bool, version int
-* @return *Model
+* SaveModel: Saves a model
+* @param model *jdb.Model
+* @return error
 **/
-func newModel(database, schema, name string, isCore bool, version int) (*jdb.Model, error) {
-	db, err := jdb.GetDb(database)
+func SaveModel(model *jdb.Model) error {
+	err := initModels()
 	if err != nil {
-		return nil, err
-	}
-	result, err := db.NewModel(schema, name, isCore, version)
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return result, nil
+	bt, err := model.Serialize()
+	if err != nil {
+		return err
+	}
+
+	key := model.Key()
+	err = models.Put(key, bt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* getModel: Gets a model
+* @param from *jdb.From, dest *jdb.Model
+* @return bool, error
+**/
+func GetModel(from *jdb.From, dest *jdb.Model) (bool, error) {
+	err := initModels()
+	if err != nil {
+		return false, err
+	}
+
+	key := from.Key()
+	exists, err := models.Get(key, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
