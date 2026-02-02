@@ -35,12 +35,12 @@ func initTransactions() error {
 /**
 * SetTransaction: Sets a Transaction
 * @param key string, data et.Json
-* @return string, error
+* @return error
 **/
-func SetTransaction(key string, data et.Json) (string, error) {
+func SetTransaction(key string, data et.Json) error {
 	err := initTransactions()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if key == "" {
@@ -49,8 +49,8 @@ func SetTransaction(key string, data et.Json) (string, error) {
 
 	err = transactions.PutObject(key, data)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return key, nil
+	return nil
 }
