@@ -153,10 +153,10 @@ func (s *Node) mount(services any) error {
 }
 
 /**
-* setDebug
+* SetDebug
 * @param debug bool
 **/
-func (s *Node) setDebug(debug bool) {
+func (s *Node) SetDebug(debug bool) {
 	s.isDebug = debug
 }
 
@@ -238,11 +238,11 @@ func (s *Node) start() error {
 }
 
 /**
-* ping
+* Ping
 * @param to string
 * @return bool
 **/
-func (s *Node) ping(to string) bool {
+func (s *Node) Ping(to string) bool {
 	err := syn.ping(to)
 	if err != nil {
 		return false
@@ -252,10 +252,10 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
-* setIsStrict
+* SetIsStrict
 * @param isStrict bool
 **/
-func (s *Node) setIsStrict(isStrict bool) {
+func (s *Node) SetIsStrict(isStrict bool) {
 	s.isStrict = isStrict
 }
 
