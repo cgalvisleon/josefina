@@ -84,16 +84,6 @@ func createUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, ok := node.getLeader()
-	if ok {
-		err := syn.createUser(leader, username, password)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
 	err := initUsers()
 	if err != nil {
 		return err
@@ -101,7 +91,7 @@ func createUser(username, password string) error {
 
 	_, err = users.
 		Insert(et.Json{
-			ID:         users.genKey(),
+			jdb.ID:     users.GenKey(),
 			"username": username,
 			"password": password,
 		}).
@@ -115,21 +105,11 @@ func createUser(username, password string) error {
 * @return error
 **/
 func dropUser(username string) error {
-	if !node.started {
+	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-
-	leader, ok := node.getLeader()
-	if ok {
-		err := syn.dropUser(leader, username)
-		if err != nil {
-			return err
-		}
-
-		return nil
 	}
 
 	err := initUsers()
@@ -139,7 +119,7 @@ func dropUser(username string) error {
 
 	_, err = users.
 		Delete().
-		Where(Eq("username", username)).
+		Where(jdb.Eq("username", username)).
 		Execute(nil)
 	return err
 }
@@ -150,7 +130,7 @@ func dropUser(username string) error {
 * @return error
 **/
 func changuePassword(username, password string) error {
-	if !node.started {
+	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -160,22 +140,12 @@ func changuePassword(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	leader, ok := node.getLeader()
-	if ok {
-		err := syn.changuePassword(leader, username, password)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
 	err := initUsers()
 	if err != nil {
 		return err
 	}
 
-	ok, err = users.isExisted("username", username)
+	ok, err := users.IsExisted("username", username)
 	if err != nil {
 		return err
 	}
@@ -187,7 +157,7 @@ func changuePassword(username, password string) error {
 		Update(et.Json{
 			"password": password,
 		}).
-		Where(Eq("username", username)).
+		Where(jdb.Eq("username", username)).
 		Execute(nil)
 	return err
 }
