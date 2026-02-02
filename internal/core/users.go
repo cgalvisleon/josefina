@@ -19,10 +19,6 @@ var users *jdb.Model
 * @return error
 **/
 func initUsers() error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
-
 	if users != nil {
 		return nil
 	}
@@ -74,9 +70,6 @@ func initUsers() error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -105,9 +98,6 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -130,9 +120,6 @@ func DropUser(username string) error {
 * @return error
 **/
 func ChanguePassword(username, password string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_STARTED)
-	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
