@@ -556,9 +556,7 @@ func (s *Node) auth(device, database, username, password string) (*Session, erro
 
 /**
 * onConnect: Sets the client
-* @param username string
-* @param tpConnection TpConnection
-* @param host string
+* @param username string, tpConnection TpConnection, host string
 **/
 func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
 	leader, ok := s.getLeader()
