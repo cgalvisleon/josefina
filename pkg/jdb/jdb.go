@@ -6,6 +6,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/jql"
 )
 
 var (
@@ -29,6 +30,11 @@ func Load() error {
 	}
 
 	err := cache.Load(node.getLeader)
+	if err != nil {
+		return err
+	}
+
+	err = jql.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
