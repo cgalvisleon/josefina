@@ -2,7 +2,9 @@ package jql
 
 import "github.com/cgalvisleon/et/et"
 
-type Ql struct{}
+type Ql struct {
+	host string
+}
 
 /**
 * getQl: Returns a Ql
