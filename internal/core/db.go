@@ -1,0 +1,77 @@
+package core
+
+import (
+	"github.com/cgalvisleon/josefina/internal/jdb"
+)
+
+var dbs *jdb.Model
+
+/**
+* initDbs: Initializes the dbs model
+* @return error
+**/
+func initDbs() error {
+	if dbs != nil {
+		return nil
+	}
+
+	db, err := jdb.GetDb(database)
+	if err != nil {
+		return err
+	}
+
+	dbs, err = db.NewModel("", "dbs", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := dbs.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SaveDb: Saves the model
+* @param db *DB
+* @return error
+**/
+func SaveDb(db *jdb.DB) error {
+	err := initDbs()
+	if err != nil {
+		return err
+	}
+
+	bt, err := db.Serialize()
+	if err != nil {
+		return err
+	}
+
+	key := db.Name
+	err = dbs.Put(key, bt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* GetDb: Gets a model
+* @param from *jdb.From, dest *jdb.Model
+* @return bool, error
+**/
+func GetDb(from *jdb.From, dest *jdb.DB) (bool, error) {
+	err := initDbs()
+	if err != nil {
+		return false, err
+	}
+
+	key := from.Key()
+	exists, err := dbs.Get(key, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
