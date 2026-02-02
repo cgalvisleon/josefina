@@ -376,8 +376,8 @@ func (s *Nodes) auth(to, device, database, username, password string) (*Session,
 }
 
 /**
-* SetTransaction: Sets a transaction
-* @param require et.Json, response *bool
+* Auth: Authenticates a user
+* @param require et.Json, response *Session
 * @return error
 **/
 func (s *Nodes) Auth(require et.Json, response *Session) error {
