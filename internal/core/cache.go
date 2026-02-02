@@ -89,30 +89,29 @@ func DeleteCache(key string) (bool, error) {
 * @return *mem.Item
 **/
 func GetCache(key string) (*mem.Item, bool) {
-	value, err := mem.GetItem(key)
-	if err != nil && err.Error() == errNotExists.Error() {		
-		err := initCache()
-		if err != nil {
-			return nil, false
-		}
+	value, exists := mem.GetItem(key)
+	if exists {
+		return value, true
+	}
 
-		result := mem.Item{}
-		exists, err := cache.get(key, &result)
-		if err != nil {
-			return nil, false
-		}
-
-		if !exists {
-			return nil, false
-		}
-
-		mem.Set(key, result.Value, 0)
-		return &result, true
-	} else if err != nil {
+	err := initCache()
+	if err != nil {
 		return nil, false
 	}
 
-	return value, true
+	result := mem.Item{}
+	exists, err = cache.Get(key, &result)
+	if err != nil {
+		return nil, false
+	}
+
+	if !exists {
+		return nil, false
+	}
+
+	expiration := result.Expiration.Truncate(time.Second)
+	mem.Set(key, result.Value, expiration)
+	return &result, true
 }
 
 /**
