@@ -66,9 +66,5 @@ func (s *Router) jQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.ITEMS(w, r, http.StatusOK, et.Items{
-		Ok:     len(result) > 0,
-		Count:  len(result),
-		Result: result,
-	})
+	response.ITEMS(w, r, http.StatusOK, result)
 }

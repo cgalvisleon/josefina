@@ -12,17 +12,17 @@ import (
 /**
 * JQuery: Executes a query
 * @param ctx context.Context, query et.Json
-* @return []et.Json, error
+* @return et.Items, error
 **/
-func Jquery(ctx context.Context, query et.Json) ([]et.Json, error) {
+func Jquery(ctx context.Context, query et.Json) (et.Items, error) {
 	app := ctx.Value("app").(string)
 	device := ctx.Value("device").(string)
 	username := ctx.Value("username").(string)
 	key := fmt.Sprintf("%s:%s:%s", app, device, username)
 	_, exists := cache.GetStr(key)
 	if !exists {
-		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
+		return et.Items{}, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
 	}
 
-	return []et.Json{}, nil
+	return et.Items{}, nil
 }

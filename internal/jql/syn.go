@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
@@ -52,11 +51,11 @@ func Load(fn getLeaderFn) error {
 * @params to string, query et.Json
 * @return error
 **/
-func (s *Jql) jquery(to string, query et.Json) (*mem.Item, error) {
-	var response *mem.Item
+func (s *Jql) jquery(to string, query et.Json) (et.Items, error) {
+	var response et.Items
 	err := jrpc.CallRpc(to, "Jql.Jquery", query, &response)
 	if err != nil {
-		return nil, err
+		return et.Items{}, err
 	}
 
 	return response, nil
@@ -64,18 +63,10 @@ func (s *Jql) jquery(to string, query et.Json) (*mem.Item, error) {
 
 /**
 * Jquery: Sets a cache value
-* @param require et.Json, response *mem.Item
+* @param require et.Json, response *et.Items
 * @return error
 **/
-func (s *Jql) Jquery(require et.Json, response *mem.Item) error {
-	key := require.Str("key")
-	value := require.Get("value")
-	duration := time.Duration(require.Int("duration"))
-	result, err := Set(key, value, duration)
-	if err != nil {
-		return err
-	}
-
-	response = result
+func (s *Jql) Jquery(require et.Json, response et.Items) error {
+	response = et.Items{}
 	return nil
 }
