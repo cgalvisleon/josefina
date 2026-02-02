@@ -29,6 +29,8 @@ var (
 func init() {
 	dbs = make(map[string]*DB)
 	hostname, _ = os.Hostname()
+	port := envar.GetInt("RPC_PORT", 4200)
+	hostname = fmt.Sprintf("%s:%d", hostname, port)
 }
 
 /**
