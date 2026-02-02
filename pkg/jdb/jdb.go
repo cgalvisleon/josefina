@@ -11,17 +11,11 @@ var (
 	packageName string = "josefina"
 	version     string = "0.0.1"
 	node        *Node
+	hostname    string = ""
 )
 
 func init() {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "localhost"
-	}
-
-	port := envar.GetInt("RPC_PORT", 4200)
-	isStrict := envar.GetBool("IS_STRICT", false)
-	node = newNode(hostname, port, isStrict)
+	hostname, _ = os.Hostname()
 }
 
 /**
@@ -29,9 +23,13 @@ func init() {
 * @return error
 **/
 func Load() error {
-	if node.started {
+	if node != nil {
 		return nil
 	}
+
+	port := envar.GetInt("RPC_PORT", 4200)
+	isStrict := envar.GetBool("IS_STRICT", false)
+	node = newNode(hostname, port, isStrict)
 
 	go node.start()
 

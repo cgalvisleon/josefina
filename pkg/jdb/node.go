@@ -226,12 +226,11 @@ func (s *Node) start() error {
 	s.mu.Lock()
 	s.state = Follower
 	s.lastHeartbeat = timezone.Now()
-	s.started = true
 	s.mu.Unlock()
 	s.ws.Start()
 	s.ws.SetDebug(s.isDebug)
-
 	go s.electionLoop()
+	s.started = true
 
 	return nil
 }
