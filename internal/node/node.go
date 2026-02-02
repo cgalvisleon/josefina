@@ -3,9 +3,11 @@ package node
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/timezone"
@@ -13,11 +15,6 @@ import (
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-)
-
-var (
-	packageName string = "josefina"
-	version     string = "0.0.1"
 )
 
 type NodeState int
@@ -72,6 +69,22 @@ type Node struct {
 	modelMu       sync.RWMutex          `json:"-"`
 	clientMu      sync.RWMutex          `json:"-"`
 	isDebug       bool                  `json:"-"`
+}
+
+var (
+	packageName string = "josefina"
+	version     string = "0.0.1"
+	node        *Node
+)
+
+func init() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
+	port := envar.GetInt("RPC_PORT", 4200)
+	node = newNode(hostname, port)
 }
 
 /**
@@ -135,11 +148,11 @@ func (s *Node) helpCheck() et.Json {
 }
 
 /**
-* Mount: Mounts the services
+* mount: Mounts the services
 * @param services any
 * @return error
 **/
-func (s *Node) Mount(services any) error {
+func (s *Node) mount(services any) error {
 	router, err := jrpc.Mount(s.Host, services)
 	if err != nil {
 		return err
@@ -153,10 +166,10 @@ func (s *Node) Mount(services any) error {
 }
 
 /**
-* SetDebug
+* setDebug
 * @param debug bool
 **/
-func (s *Node) SetDebug(debug bool) {
+func (s *Node) setDebug(debug bool) {
 	s.isDebug = debug
 }
 
@@ -206,7 +219,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	err := s.Mount(syn)
+	err := s.mount(syn)
 	if err != nil {
 		return err
 	}
@@ -239,11 +252,11 @@ func (s *Node) start() error {
 }
 
 /**
-* Ping
+* ping
 * @param to string
 * @return bool
 **/
-func (s *Node) Ping(to string) bool {
+func (s *Node) ping(to string) bool {
 	err := syn.ping(to)
 	if err != nil {
 		return false
