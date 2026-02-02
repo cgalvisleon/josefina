@@ -100,6 +100,16 @@ func (s *DB) getSchema(name string) *Schema {
 }
 
 /**
+* getModel: Returns a model by name
+* @param schema, name string
+* @return *Model, error
+**/
+func (s *DB) getModel(schema, name string) (*Model, error) {
+	sch := s.getSchema(schema)
+	return sch.getModel(name)
+}
+
+/**
 * NewModel: Creates a new model
 * @param schema, name	string, isCore bool, version int
 * @return *Model, error
@@ -140,4 +150,18 @@ func GetDb(name string) (*DB, error) {
 	dbs[name] = result
 
 	return result, nil
+}
+
+/**
+* getModel: Returns a model by name
+* @param from *From
+* @return *Model, error
+**/
+func getModel(from *From) (*Model, error) {
+	db, err := GetDb(from.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

@@ -3,6 +3,7 @@ package dbs
 import (
 	"net/rpc"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 )
 
@@ -18,14 +19,28 @@ func init() {
 	}
 }
 
-func (s *Sync) GetDb(name string) (*DB, error) {
-	return nil, nil
-}
+/**
+* RemoveObject: Removes an object
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Sync) RemoveObject(require et.Json, response *bool) error {
+	from := toFrom(require.Json("from"))
+	idx := require.Str("idx")
+	data := require.Get("data")
+	err := from.Put(idx, data)
+	if err != nil {
+		return err
+	}
 
-func removeObject(fromidx string) error {
+	*response = true
 	return nil
 }
 
-func putObject(idx string, data et.Json) error {
+func removeObject(from *From, idx string) error {
+	return nil
+}
+
+func putObject(from *From, idx string, data et.Json) error {
 	return nil
 }

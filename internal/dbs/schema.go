@@ -73,3 +73,12 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 
 	return result, nil
 }
+
+func (s *Schema) getModel(name string) (*Model, error) {
+	result, ok := s.Models[name]
+	if !ok {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return result, nil
+}
