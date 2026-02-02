@@ -16,10 +16,10 @@ var (
 )
 
 /**
-* initCache: Initializes the cache model
+* initModel: Initializes the cache model
 * @return error
 **/
-func initCache() error {
+func initModel() error {
 	if cache != nil {
 		return nil
 	}
@@ -41,13 +41,13 @@ func initCache() error {
 }
 
 /**
-* SetCache: Sets a cache value
+* Set: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
+func Set(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	result := mem.Set(key, value, duration)
-	err := initCache()
+	err := initModel()
 	if err != nil {
 		return nil, err
 	}
@@ -63,13 +63,13 @@ func SetCache(key string, value interface{}, duration time.Duration) (*mem.Item,
 }
 
 /**
-* DeleteCache: Gets a cache value as an int
+* Delete: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func DeleteCache(key string) (bool, error) {
+func Delete(key string) (bool, error) {
 	result := mem.Delete(key)
-	err := initCache()
+	err := initModel()
 	if err != nil {
 		return false, err
 	}
@@ -83,17 +83,17 @@ func DeleteCache(key string) (bool, error) {
 }
 
 /**
-* GetCache: Gets a cache value
+* Get: Gets a cache value
 * @param key string
 * @return *mem.Item
 **/
-func GetCache(key string) (*mem.Item, bool) {
+func Get(key string) (*mem.Item, bool) {
 	value, exists := mem.GetItem(key)
 	if exists {
 		return value, true
 	}
 
-	err := initCache()
+	err := initModel()
 	if err != nil {
 		return nil, false
 	}
@@ -117,12 +117,12 @@ func GetCache(key string) (*mem.Item, bool) {
 }
 
 /**
-* GetCacheStr: Gets a cache value as a string
+* GetStr: Gets a cache value as a string
 * @param key string
 * @return string, bool
 **/
-func GetCacheStr(key string) (string, bool) {
-	item, exists := GetCache(key)
+func GetStr(key string) (string, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Str(), true
 	}
@@ -131,12 +131,12 @@ func GetCacheStr(key string) (string, bool) {
 }
 
 /**
-* GetCacheInt: Gets a cache value as an int
+* GetInt: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func GetCacheInt(key string) (int, bool) {
-	item, exists := GetCache(key)
+func GetInt(key string) (int, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Int(), true
 	}
@@ -145,12 +145,12 @@ func GetCacheInt(key string) (int, bool) {
 }
 
 /**
-* GetCacheInt64: Gets a cache value as an int64
+* GetInt64: Gets a cache value as an int64
 * @param key string
 * @return int64, bool
 **/
-func GetCacheInt64(key string) (int64, bool) {
-	item, exists := GetCache(key)
+func GetInt64(key string) (int64, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Int64(), true
 	}
@@ -159,12 +159,12 @@ func GetCacheInt64(key string) (int64, bool) {
 }
 
 /**
-* GetCacheFloat: Gets a cache value as a float64
+* GetFloat: Gets a cache value as a float64
 * @param key string
 * @return float64, bool
 **/
-func GetCacheFloat64(key string) (float64, bool) {
-	item, exists := GetCache(key)
+func GetFloat64(key string) (float64, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Float(), true
 	}
@@ -173,12 +173,12 @@ func GetCacheFloat64(key string) (float64, bool) {
 }
 
 /**
-* GetCacheBool: Gets a cache value as an int
+* GetBool: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func GetCacheBool(key string) (bool, bool) {
-	item, exists := GetCache(key)
+func GetBool(key string) (bool, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Bool(), true
 	}
@@ -187,12 +187,12 @@ func GetCacheBool(key string) (bool, bool) {
 }
 
 /**
-* GetCacheTime: Gets a cache value as an int
+* GetTime: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func GetCacheTime(key string) (time.Time, bool) {
-	item, exists := GetCache(key)
+func GetTime(key string) (time.Time, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Time(), true
 	}
@@ -201,12 +201,12 @@ func GetCacheTime(key string) (time.Time, bool) {
 }
 
 /**
-* GetCacheDuration: Gets a cache value as an int
+* GetDuration: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func GetCacheDuration(key string) (time.Duration, bool) {
-	item, exists := GetCache(key)
+func GetDuration(key string) (time.Duration, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Duration(), true
 	}
@@ -215,12 +215,12 @@ func GetCacheDuration(key string) (time.Duration, bool) {
 }
 
 /**
-* GetCacheJson: Gets a cache value as a json
+* GetJson: Gets a cache value as a json
 * @param key string
 * @return et.Json, bool
 **/
-func GetCacheJson(key string) (et.Json, bool) {
-	item, exists := GetCache(key)
+func GetJson(key string) (et.Json, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.Json(), true
 	}
@@ -229,12 +229,12 @@ func GetCacheJson(key string) (et.Json, bool) {
 }
 
 /**
-* GetCacheArrayJson: Gets a cache value as an int
+* GetArrayJson: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func GetCacheArrayJson(key string) ([]et.Json, bool) {
-	item, exists := GetCache(key)
+func GetArrayJson(key string) ([]et.Json, bool) {
+	item, exists := Get(key)
 	if exists {
 		return item.ArrayJson(), true
 	}
