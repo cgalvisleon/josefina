@@ -16,7 +16,7 @@ import (
 
 type Result struct {
 	result *mem.Item
-	err    error
+	exists bool
 }
 
 type MemCache struct{}
@@ -95,16 +95,16 @@ func (s *MemCache) Set(require et.Json, response *mem.Item) error {
 * @params to string, key string
 * @return error
 **/
-func (s *MemCache) delete(to, key string) (*mem.Item, error) {
-	var response *mem.Item
+func (s *MemCache) delete(to, key string) (bool, error) {
+	var response *bool
 	err := jrpc.CallRpc(to, "MemCache.Delete", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	return response, nil
+	return *response, nil
 }
 
 /**
@@ -128,16 +128,16 @@ func (s *MemCache) Delete(require et.Json, response *bool) error {
 * @params to string, key string
 * @return error
 **/
-func (s *MemCache) get(to, key string) (*mem.Item, error) {
+func (s *MemCache) get(to, key string) (*mem.Item, bool) {
 	var response *Result
 	err := jrpc.CallRpc(to, "MemCache.Delete", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {
-		return nil, err
+		return nil, false
 	}
 
-	return response.result, response.err
+	return response.result, response.exists
 }
 
 /**
@@ -154,7 +154,7 @@ func (s *MemCache) Get(require et.Json, response *Result) error {
 
 	*response = Result{
 		result: result,
-		err:    nil,
+		exists: exists,
 	}
 	return nil
 }
