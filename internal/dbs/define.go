@@ -1,4 +1,4 @@
-package jdb
+package dbs
 
 import (
 	"fmt"

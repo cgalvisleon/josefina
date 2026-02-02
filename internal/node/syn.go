@@ -153,6 +153,40 @@ func (s *Syn) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error 
 }
 
 /**
+* getDb: Gets a database
+* @param to string, name string
+* @return *DB, error
+**/
+func (s *Syn) getDb(to string, name string) (*DB, error) {
+	var response *DB
+	err := jrpc.CallRpc(to, "Syn.GetDb", name, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetDb: Gets a database
+* @param require string, response *DB
+* @return error
+**/
+func (s *Syn) GetDb(require string, response *DB) error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := getDb(require)
+	if err != nil {
+		return err
+	}
+
+	*response = *db
+	return nil
+}
+
+/**
 * getModel: Gets a model
 * @param to string, database, schema, model string
 * @return *Model, error
@@ -292,40 +326,6 @@ func (s *Syn) ReportModels(require map[string]*Model, response *bool) error {
 	}
 
 	*response = true
-	return nil
-}
-
-/**
-* getDb: Gets a database
-* @param to string, name string
-* @return *DB, error
-**/
-func (s *Syn) getDb(to string, name string) (*DB, error) {
-	var response *DB
-	err := jrpc.CallRpc(to, "Syn.GetDb", name, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
-}
-
-/**
-* GetDb: Gets a database
-* @param require string, response *DB
-* @return error
-**/
-func (s *Syn) GetDb(require string, response *DB) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := getDb(require)
-	if err != nil {
-		return err
-	}
-
-	*response = *db
 	return nil
 }
 

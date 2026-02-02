@@ -1,4 +1,4 @@
-package jdb
+package dbs
 
 type Node interface {
 	GetModel(from *From) (*Model, error)

@@ -295,7 +295,7 @@ func (s *Node) getDb(name string) (*jdb.DB, error) {
 		return result, nil
 	}
 
-	exists, err := core.GetDb(name, &result)
+	exists, err := core.GetDb(name, result)
 	if err != nil {
 		return nil, err
 	}
