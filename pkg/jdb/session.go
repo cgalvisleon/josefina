@@ -35,11 +35,11 @@ func (s *Session) ToJson() et.Json {
 }
 
 /**
-* CreateSession: Creates a new session
+* createSession: Creates a new session
 * @param device, username string
 * @return *Session, error
 **/
-func CreateSession(device, username string) (*Session, error) {
+func createSession(device, username string) (*Session, error) {
 	if !utility.ValidStr(device, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
 	}

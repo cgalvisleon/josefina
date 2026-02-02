@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
+	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/dbs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
@@ -503,6 +504,39 @@ func (s *Node) setTransaction(key string, data et.Json) error {
 	}
 
 	return core.SetTransaction(key, data)
+}
+
+/**
+* auth
+* @param device, database, username, password string
+* @return *Session, error
+**/
+func (s *Node) auth(device, database, username, password string) (*Session, error) {
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.auth(leader, device, database, username, password)
+	}
+
+	item, err := core.GetUser(username, password)
+	if err != nil {
+		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
+	}
+
+	result, err := createSession(device, username)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
+	_, err = cache.Set(key, result.Token, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**

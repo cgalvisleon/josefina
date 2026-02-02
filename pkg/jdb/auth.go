@@ -3,12 +3,10 @@ package jdb
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
@@ -66,6 +64,9 @@ func applyAuthenticate(handler http.Handler) http.Handler {
 * @return *Session, error
 **/
 func Auth(device, database, username, password string) (*Session, error) {
+	if !node.started {
+		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
+	}
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_USERNAME_REQUIRED)
 	}
@@ -73,24 +74,5 @@ func Auth(device, database, username, password string) (*Session, error) {
 		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	item, err := core.GetUser(username, password)
-	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
-	}
-
-	result, err := CreateSession(device, username)
-	if err != nil {
-		return nil, err
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	_, err = cache.Set(key, result.Token, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return node.auth(device, database, username, password)
 }
