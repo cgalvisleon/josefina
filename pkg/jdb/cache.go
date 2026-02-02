@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -11,8 +10,7 @@ import (
 type Cache struct{}
 
 var (
-	cache        *Model
-	errNotExists = fmt.Errorf("NotExists")
+	cache *Model
 )
 
 /**
