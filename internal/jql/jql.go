@@ -1,147 +1,28 @@
 package jql
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/core"
+	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-type Request struct {
-	et.Json
-	Token string `json:"token"`
-}
-
-/**
-* SetToken
-* @param token string
-**/
-func (s *Request) SetToken(token string) {
-	token = utility.PrefixRemove("Bearer", token)
-	s.Token = token
-}
-
-/**
-* SetBody
-* @param values et.Json
-**/
-func (s *Request) SetBody(values et.Json) {
-	s.Json = values
-}
-
-type Response struct {
-	Error  *msg.MessageError `json:"error"`
-	Result []et.Json         `json:"result"`
-}
-
-/**
-* Add: Adds an item to the result
-* @param item et.Json
-**/
-func (s *Response) Add(item et.Json) {
-	s.Result = append(s.Result, item)
-}
-
-type HandlerFunc func(*Request, *Response)
-type MiddlewareFunc func(Handler) Handler
-
-/**
-* Execute
-* @param request *Request, response *Response
-**/
-func (s HandlerFunc) Execute(request *Request, response *Response) {
-	s(request, response)
-}
-
-type Handler interface {
-	Execute(*Request, *Response)
-}
-
-/**
-* errorResponse: Creates an error response
-* @param msg msg.MessageError, err error, response *Response
-**/
-func errorResponse(msg *msg.MessageError, response *Response) {
-	response.Error = msg
-}
-
-type JqlHandler struct {
-	middleware []MiddlewareFunc
-}
-
-var jqlHandler *JqlHandler
-
-/**
-* jQlAuthenticate: Authenticates a user
-* @param next Handler
-* @return Handler
-**/
-func jQlAuthenticate(next Handler) Handler {
-	return HandlerFunc(func(request *Request, response *Response) {
-		token := request.Token
-		result, err := core.Authenticate(token)
-		if err != nil {
-			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
-			return
-		}
-
-		request.Set("app", result.App)
-		request.Set("device", result.Device)
-		request.Set("username", result.Username)
-		next.Execute(request, response)
-	})
-}
-
-func init() {
-	jqlHandler = &JqlHandler{
-		middleware: []MiddlewareFunc{
-			jQlAuthenticate,
-		},
-	}
-}
-
-/**
-* applyMiddleware
-* @param handler Handler
-* @return Handler
-**/
-func (s *JqlHandler) applyMiddleware(handler Handler) Handler {
-	for _, middleware := range s.middleware {
-		handler = middleware(handler)
-	}
-	return handler
-}
-
-/**
-* Execute
-* @param request *Request, response *Response
-**/
-func (s *JqlHandler) Execute(request *Request, response *Response) {
-	logs.Ping()
-	response.Add(request.Json)
-	// jql(request, response)
-}
-
-/**
-* JqlHttp
-* @param request *Request, response *Response
-**/
-func JqlHttp(request *Request, response *Response) {
-	handler := jqlHandler.applyMiddleware(jqlHandler)
-	if handler == nil {
-		response.Error = &msg.ERROR_INTERNAL_ERROR
-		return
-	}
-
-	handler.Execute(request, response)
-}
-
 /**
 * Query: Executes a query
-* @param session *Session, query string
-* @return et.Json
+* @param ctx context.Context, query et.Json
+* @return []et.Json, error
 **/
-func Query(session *core.Session, query string) et.Json {
-	return et.Json{}
+func Query(ctx context.Context, query et.Json) ([]et.Json, error) {
+	app := ctx.Value("app").(string)
+	device := ctx.Value("device").(string)
+	username := ctx.Value("username").(string)
+	key := fmt.Sprintf("%s:%s:%s", app, device, username)
+	_, exists := cache.GetStr(key)
+	if !exists {
+		return nil, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
+	}
+
+	return []et.Json{}, nil
 }

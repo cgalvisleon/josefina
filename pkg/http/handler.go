@@ -59,20 +59,16 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Header.Get("Authorization")
-	query := &jql.Request{}
-	query.SetToken(token)
-	query.SetBody(body)
-	var res jql.Response
-	jql.JqlHttp(query, &res)
-	if res.Error != nil {
-		response.HTTPError(w, r, res.Error.Code, res.Error.Message)
+	ctx := r.Context()
+	result, err := jql.Query(ctx, body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	result := et.Items{Result: []et.Json{}}
-	for _, item := range res.Result {
-		result.Result = append(result.Result, item)
-	}
-	response.ITEMS(w, r, http.StatusOK, result)
+	response.ITEMS(w, r, http.StatusOK, et.Items{
+		Ok:     len(result) > 0,
+		Count:  len(result),
+		Result: result,
+	})
 }
