@@ -25,19 +25,19 @@ type getLeaderFn func() (string, bool)
 
 var (
 	syn       *MemCache
-	hostname  string
+	host      string
 	getLeader getLeaderFn
 )
 
 func init() {
 	gob.Register(mem.Item{})
 
-	hostname, _ = os.Hostname()
+	hostname, _ := os.Hostname()
 	port := envar.GetInt("RPC_PORT", 4200)
-	hostname = fmt.Sprintf("%s:%d", hostname, port)
+	host = fmt.Sprintf("%s:%d", hostname, port)
 
 	syn = &MemCache{}
-	_, err := jrpc.Mount(hostname, syn)
+	_, err := jrpc.Mount(host, syn)
 	if err != nil {
 		logs.Panic(err)
 	}
