@@ -115,6 +115,39 @@ func DropUser(username string) error {
 }
 
 /**
+* GetUser: Gets a user
+* @param username, password string
+* @return et.Json, error
+**/
+func GetUser(username, password string) (et.Json, error) {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(password, 3, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
+	err := initUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	item, err := users.
+		Selects().
+		Where(jdb.Eq("username", username)).
+		And(jdb.Eq("password", password)).
+		Run(nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
+	}
+
+	return item[0], nil
+}
+
+/**
 * ChanguePassword: Changues the password of a user
 * @param username, password string
 * @return error
