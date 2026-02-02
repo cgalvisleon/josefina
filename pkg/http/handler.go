@@ -5,6 +5,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
+	"github.com/cgalvisleon/josefina/internal/jql"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
@@ -59,11 +60,11 @@ func (s *Router) jql(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := r.Header.Get("Authorization")
-	query := &jdb.Request{}
+	query := &jql.Request{}
 	query.SetToken(token)
 	query.SetBody(body)
-	var res jdb.Response
-	jdb.JqlHttp(query, &res)
+	var res jql.Response
+	jql.JqlHttp(query, &res)
 	if res.Error != nil {
 		response.HTTPError(w, r, res.Error.Code, res.Error.Message)
 		return
