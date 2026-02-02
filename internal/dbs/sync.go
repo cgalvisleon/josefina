@@ -9,9 +9,9 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
-type Sync struct{}
+type Syn struct{}
 
-var sync *Sync
+var syn *Syn
 
 func init() {
 	gob.Register(et.Json{})
@@ -25,8 +25,8 @@ func init() {
 	gob.Register(&Tx{})
 	gob.Register(&Transaction{})
 
-	sync = &Sync{}
-	err := rpc.Register(sync)
+	syn = &Syn{}
+	err := rpc.Register(syn)
 	if err != nil {
 		logs.Panic(err)
 	}
@@ -37,9 +37,9 @@ func init() {
 * @params from *From, idx string
 * @return error
 **/
-func (s *Sync) removeObject(from *From, idx string) error {
+func (s *Syn) removeObject(from *From, idx string) error {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Sync.RemoveObject", et.Json{
+	err := jrpc.CallRpc(from.Host, "Syn.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -55,7 +55,7 @@ func (s *Sync) removeObject(from *From, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Sync) RemoveObject(require et.Json, response *bool) error {
+func (s *Syn) RemoveObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	model, err := getModel(from)
@@ -76,9 +76,9 @@ func (s *Sync) RemoveObject(require et.Json, response *bool) error {
 * @params from *From, idx string, data et.Json
 * @return error
 **/
-func (s *Sync) putObject(from *From, idx string, data et.Json) error {
+func (s *Syn) putObject(from *From, idx string, data et.Json) error {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Sync.PutObject", et.Json{
+	err := jrpc.CallRpc(from.Host, "Syn.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -95,7 +95,7 @@ func (s *Sync) putObject(from *From, idx string, data et.Json) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Sync) PutObject(require et.Json, response *bool) error {
+func (s *Syn) PutObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Json("data")
@@ -117,18 +117,18 @@ func (s *Sync) PutObject(require et.Json, response *bool) error {
 * @params from *From, field, idx string
 * @return error
 **/
-func (s *Sync) isExisted(from *From, field, idx string) error {
+func (s *Syn) isExisted(from *From, field, idx string) (bool, error) {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Sync.IsExisted", et.Json{
+	err := jrpc.CallRpc(from.Host, "Syn.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,
 	}, &response)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return response, nil
 }
 
 /**
@@ -136,7 +136,7 @@ func (s *Sync) isExisted(from *From, field, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Sync) IsExisted(require et.Json, response *bool) error {
+func (s *Syn) IsExisted(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
