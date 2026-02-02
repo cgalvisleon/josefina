@@ -3,15 +3,12 @@ package dbs
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/pkg/msg"
-)
-
-var (
-	version string = "0.0.1"
 )
 
 type DB struct {
@@ -21,6 +18,17 @@ type DB struct {
 	Schemas  map[string]*Schema `json:"schemas"`
 	IsStrict bool               `json:"is_strict"`
 	isDebug  bool               `json:"-"`
+}
+
+var (
+	version  string = "0.0.1"
+	dbs      map[string]*DB
+	hostname string
+)
+
+func init() {
+	dbs = make(map[string]*DB)
+	hostname, _ = os.Hostname()
 }
 
 /**
@@ -112,18 +120,24 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *DB, error
 **/
 func GetDb(name string) (*DB, error) {
+	result, ok := dbs[name]
+	if ok {
+		return result, nil
+	}
+
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
 	path := envar.GetStr("DATA_PATH", "./data")
-	result := &DB{
+	result = &DB{
 		Name:    name,
 		Version: version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
+	dbs[name] = result
 
 	return result, nil
 }

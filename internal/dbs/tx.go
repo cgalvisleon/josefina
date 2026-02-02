@@ -49,14 +49,12 @@ func newTransaction(from *From, cmd Command, idx string, data et.Json, status St
 }
 
 type Tx struct {
-	StartedAt    time.Time                          `json:"startedAt"`
-	EndedAt      time.Time                          `json:"endedAt"`
-	ID           string                             `json:"id"`
-	Transactions []*Transaction                     `json:"transactions"`
-	onChange     func(string, et.Json) error        `json:"-"`
-	onRemove     func(*From, string) error          `json:"-"`
-	onPut        func(*From, string, et.Json) error `json:"-"`
-	isDebug      bool                               `json:"-"`
+	StartedAt    time.Time                   `json:"startedAt"`
+	EndedAt      time.Time                   `json:"endedAt"`
+	ID           string                      `json:"id"`
+	Transactions []*Transaction              `json:"transactions"`
+	onChange     func(string, et.Json) error `json:"-"`
+	isDebug      bool                        `json:"-"`
 }
 
 /**
@@ -106,22 +104,6 @@ func (s *Tx) SetOnChange(onChange func(string, et.Json) error) {
 }
 
 /**
-* SetOnRemove
-* @param onRemove func(*From, string) error
-**/
-func (s *Tx) SetOnRemove(onRemove func(*From, string) error) {
-	s.onRemove = onRemove
-}
-
-/**
-* SetOnPut
-* @param onPut func(*From, string, et.Json) error
-**/
-func (s *Tx) SetOnPut(onPut func(*From, string, et.Json) error) {
-	s.onPut = onPut
-}
-
-/**
 * Save
 * @return error
 **/
@@ -140,10 +122,10 @@ func (s *Tx) change() error {
 }
 
 /**
-* add: Adds data to the Transaction
+* addTransaction: Adds data to the Transaction
 * @param from *From, cmd Command, idx string, data et.Json
 **/
-func (s *Tx) add(from *From, cmd Command, idx string, data et.Json) error {
+func (s *Tx) addTransaction(from *From, cmd Command, idx string, data et.Json) error {
 	transaction := newTransaction(from, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
 	return s.change()
@@ -189,18 +171,12 @@ func (s *Tx) commit() error {
 		cmd := tr.Command
 		idx := tr.Idx
 		if cmd == DELETE {
-			if s.onRemove == nil {
-				return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
-			}
 			err := s.onRemove(tr.From, idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			if s.onPut == nil {
-				return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
-			}
 			err := s.onPut(tr.From, idx, data)
 			if err != nil {
 				return err

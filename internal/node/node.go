@@ -3,11 +3,9 @@ package node
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/timezone"
@@ -75,17 +73,17 @@ type Node struct {
 var (
 	packageName string = "josefina"
 	version     string = "0.0.1"
-	node        *Node
+	// node        *Node
 )
 
 func init() {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "localhost"
-	}
+	// hostname, err := os.Hostname()
+	// if err != nil {
+	// 	hostname = "localhost"
+	// }
 
-	port := envar.GetInt("RPC_PORT", 4200)
-	node = newNode(hostname, port)
+	// port := envar.GetInt("RPC_PORT", 4200)
+	// node = newNode(hostname, port)
 }
 
 /**
@@ -290,7 +288,7 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	result, ok := node.dbs[name]
+	result, ok := s.dbs[name]
 	if ok {
 		return result, nil
 	}
@@ -301,19 +299,15 @@ func (s *Node) getDb(name string) (*dbs.DB, error) {
 	}
 
 	if exists {
-		result.isDebug = node.isDebug
+		result.SetDebug(s.isDebug)
 		return result, nil
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
-	result = &DB{
-		Name:    name,
-		Version: node.Version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
-		isDebug: node.isDebug,
+	result, err = dbs.GetDb(name)
+	if err != nil {
+		return nil, err
 	}
-	node.dbs[name] = result
+	s.dbs[name] = result
 
 	return result, nil
 }
