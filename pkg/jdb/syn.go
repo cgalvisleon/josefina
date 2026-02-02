@@ -46,10 +46,6 @@ func init() {
 * @return error
 **/
 func (s *Nodes) ping(to string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	var response string
 	err := jrpc.CallRpc(to, "Nodes.Ping", node.Host, &response)
 	if err != nil {
@@ -66,10 +62,6 @@ func (s *Nodes) ping(to string) error {
 * @return error
 **/
 func (s *Nodes) Ping(require string, response *string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	logs.Log(node.PackageName, "ping:", require)
 	*response = "pong"
 	return nil
@@ -103,10 +95,6 @@ func (s *Nodes) requestVote(to string, require *RequestVoteArgs, response *Reque
 * @return error
 **/
 func (s *Nodes) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.requestVote(require, response)
 	return err
 }
@@ -139,10 +127,6 @@ func (s *Nodes) heartbeat(to string, require *HeartbeatArgs, response *Heartbeat
 * @return error
 **/
 func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.heartbeat(require, response)
 	return err
 }
@@ -168,10 +152,6 @@ func (s *Nodes) getDb(to string, name string) (*dbs.DB, error) {
 * @return error
 **/
 func (s *Nodes) GetDb(require string, response *dbs.DB) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	db, err := node.getDb(require)
 	if err != nil {
 		return err
@@ -202,10 +182,6 @@ func (s *Nodes) setDb(to string, db *dbs.DB) error {
 * @return bool, error
 **/
 func (s *Nodes) SetDb(require *dbs.DB, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.setDb(require)
 	if err != nil {
 		return err
@@ -240,10 +216,6 @@ func (s *Nodes) getModel(to, database, schema, name string) (*dbs.Model, error) 
 * @return error
 **/
 func (s *Nodes) GetModel(require et.Json, response *dbs.Model) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
@@ -277,10 +249,6 @@ func (s *Nodes) loadModel(to string, model *dbs.Model) error {
 * @return error
 **/
 func (s *Nodes) LoadModel(require *dbs.Model, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.loadModel(require)
 	if err != nil {
 		return err
@@ -311,10 +279,6 @@ func (s *Nodes) setModel(to string, model *dbs.Model) error {
 * @return bool, error
 **/
 func (s *Nodes) SetModel(require *dbs.Model, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.setModel(require)
 	if err != nil {
 		return err
@@ -345,10 +309,6 @@ func (s *Nodes) reportModels(to string, models map[string]*dbs.Model) error {
 * @return error
 **/
 func (s *Nodes) ReportModels(require map[string]*dbs.Model, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	err := node.reportModels(require)
 	if err != nil {
 		return err
@@ -364,10 +324,6 @@ func (s *Nodes) ReportModels(require map[string]*dbs.Model, response *bool) erro
 * @return error
 **/
 func (s *Nodes) setTransaction(to, key string, data et.Json) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	args := et.Json{
 		"key":  key,
 		"data": data,
@@ -387,10 +343,6 @@ func (s *Nodes) setTransaction(to, key string, data et.Json) error {
 * @return error
 **/
 func (s *Nodes) SetTransaction(require et.Json, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	key := require.Str("key")
 	data := require.Json("data")
 	err := node.setTransaction(key, data)
@@ -399,6 +351,46 @@ func (s *Nodes) SetTransaction(require et.Json, response *bool) error {
 	}
 
 	*response = true
+	return nil
+}
+
+/**
+* auth: Authenticates a user
+* @param to, device, database, username, password string
+* @return error
+**/
+func (s *Nodes) auth(to, device, database, username, password string) (*Session, error) {
+	args := et.Json{
+		"device":   device,
+		"database": database,
+		"username": username,
+		"password": password,
+	}
+	var reply *Session
+	err := jrpc.CallRpc(to, "Nodes.Auth", args, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
+/**
+* SetTransaction: Sets a transaction
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Nodes) Auth(require et.Json, response *Session) error {
+	device := require.Str("device")
+	database := require.Str("database")
+	username := require.Str("username")
+	password := require.Str("password")
+	result, err := node.auth(device, database, username, password)
+	if err != nil {
+		return err
+	}
+
+	response = result
 	return nil
 }
 
