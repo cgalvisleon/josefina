@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/cache"
@@ -22,7 +21,7 @@ import (
 func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
-		result, err := authenticate(token)
+		result, err := core.Authenticate(token)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusUnauthorized, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Message)
 			return

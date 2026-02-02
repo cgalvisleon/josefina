@@ -4,6 +4,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -79,7 +80,7 @@ var jqlHandler *JqlHandler
 func jQlAuthenticate(next Handler) Handler {
 	return HandlerFunc(func(request *Request, response *Response) {
 		token := request.Token
-		result, err := authenticate(token)
+		result, err := core.Authenticate(token)
 		if err != nil {
 			errorResponse(&msg.ERROR_CLIENT_NOT_AUTHENTICATION, response)
 			return
