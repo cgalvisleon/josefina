@@ -345,7 +345,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 	}
 
 	// Insert data into indexes
-	tx.add(model, INSERT, idx, new)
+	tx.add(model.From, INSERT, idx, new)
 
 	// Run after insert triggers
 	for _, trigger := range s.afterTriggerInserts {
@@ -424,7 +424,7 @@ func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 		}
 
 		// Insert data into indexes
-		tx.add(model, UPDATE, idx, new)
+		tx.add(model.From, UPDATE, idx, new)
 
 		// Run after update triggers
 		for _, trigger := range s.afterTriggerUpdates {
@@ -498,7 +498,7 @@ func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 		}
 
 		// Delete data from indexes
-		tx.add(model, DELETE, idx, old)
+		tx.add(model.From, DELETE, idx, old)
 
 		// Run after delete triggers
 		for _, trigger := range s.afterTriggerDeletes {

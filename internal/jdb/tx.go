@@ -35,12 +35,12 @@ func (s *Transaction) toJson() et.Json {
 
 /**
 * newTransaction: Creates a new Transaction
-* @param model *Model
+* @param from *From, cmd Command, idx string, data et.Json, status Status
 * @return *Transaction
 **/
-func newTransaction(model *Model, cmd Command, idx string, data et.Json, status Status) *Transaction {
+func newTransaction(from *From, cmd Command, idx string, data et.Json, status Status) *Transaction {
 	return &Transaction{
-		From:    model.From,
+		From:    from,
 		Command: cmd,
 		Idx:     idx,
 		Data:    data,
@@ -141,10 +141,10 @@ func (s *Tx) change() error {
 
 /**
 * add: Adds data to the Transaction
-* @param name string, data et.Json
+* @param from *From, cmd Command, idx string, data et.Json
 **/
-func (s *Tx) add(model *Model, cmd Command, idx string, data et.Json) error {
-	transaction := newTransaction(model, cmd, idx, data, Pending)
+func (s *Tx) add(from *From, cmd Command, idx string, data et.Json) error {
+	transaction := newTransaction(from, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
 	return s.change()
 }
