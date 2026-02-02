@@ -43,11 +43,11 @@ func initSeries() error {
 }
 
 /**
-* createSerie: Creates a new serie
+* CreateSerie: Creates a new serie
 * @param tag, format string, value int
 * @return error
 **/
-func createSerie(tag, format string, value int) error {
+func CreateSerie(tag, format string, value int) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -72,11 +72,11 @@ func createSerie(tag, format string, value int) error {
 }
 
 /**
-* dropSerie: Drops a serie
+* DropSerie: Drops a serie
 * @param tag string
 * @return error
 **/
-func dropSerie(tag string) error {
+func DropSerie(tag string) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -94,11 +94,11 @@ func dropSerie(tag string) error {
 }
 
 /**
-* setSerie: Sets a serie
+* SetSerie: Sets a serie
 * @param tag string, value int
 * @return error
 **/
-func setSerie(tag string, value int) error {
+func SetSerie(tag string, value int) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -118,11 +118,11 @@ func setSerie(tag string, value int) error {
 }
 
 /**
-* getSerie: Gets a serie
+* GetSerie: Gets a serie
 * @param tag string
 * @return et.Json, error
 **/
-func getSerie(tag string) (et.Json, error) {
+func GetSerie(tag string) (et.Json, error) {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
