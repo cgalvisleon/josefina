@@ -7,11 +7,11 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/cgalvisleon/josefina/internal/dbs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var users *jdb.Model
+var users *dbs.Model
 
 /**
 * initUsers: Initializes the users model
@@ -23,7 +23,7 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := jdb.GetDb(database)
+	db, err := dbs.GetDb(database)
 	if err != nil {
 		return err
 	}
@@ -32,12 +32,12 @@ func initUsers() error {
 	if err != nil {
 		return err
 	}
-	users.DefineAtrib(jdb.ID, jdb.TpKey, "")
-	users.DefineAtrib("username", jdb.TpText, "")
-	users.DefineAtrib("password", jdb.TpText, "")
+	users.DefineAtrib(dbs.ID, dbs.TpKey, "")
+	users.DefineAtrib("username", dbs.TpText, "")
+	users.DefineAtrib("password", dbs.TpText, "")
 	users.DefineHidden("password")
 	users.DefinePrimaryKeys("username")
-	users.DefineUnique(jdb.ID)
+	users.DefineUnique(dbs.ID)
 	if err := users.Init(); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func initUsers() error {
 		password := envar.GetStr("PASSWORD", "admin")
 		idx := users.GenKey()
 		err := users.PutObject(idx, et.Json{
-			jdb.ID:     idx,
+			dbs.ID:     idx,
 			"username": useranme,
 			"password": password,
 		})
@@ -84,7 +84,7 @@ func CreateUser(username, password string) error {
 
 	_, err = users.
 		Insert(et.Json{
-			jdb.ID:     users.GenKey(),
+			dbs.ID:     users.GenKey(),
 			"username": username,
 			"password": password,
 		}).
@@ -109,7 +109,7 @@ func DropUser(username string) error {
 
 	_, err = users.
 		Delete().
-		Where(jdb.Eq("username", username)).
+		Where(dbs.Eq("username", username)).
 		Execute(nil)
 	return err
 }
@@ -134,8 +134,8 @@ func GetUser(username, password string) (et.Json, error) {
 
 	item, err := users.
 		Selects().
-		Where(jdb.Eq("username", username)).
-		And(jdb.Eq("password", password)).
+		Where(dbs.Eq("username", username)).
+		And(dbs.Eq("password", password)).
 		Run(nil)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func ChanguePassword(username, password string) error {
 		Update(et.Json{
 			"password": password,
 		}).
-		Where(jdb.Eq("username", username)).
+		Where(dbs.Eq("username", username)).
 		Execute(nil)
 	return err
 }

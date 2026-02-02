@@ -1,12 +1,12 @@
 package core
 
 import (
-	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/cgalvisleon/josefina/internal/dbs"
 )
 
 var (
 	database string = "josefina"
-	dbs      *jdb.Model
+	mdbs     *dbs.Model
 )
 
 /**
@@ -14,20 +14,20 @@ var (
 * @return error
 **/
 func initDbs() error {
-	if dbs != nil {
+	if mdbs != nil {
 		return nil
 	}
 
-	db, err := jdb.GetDb(database)
+	db, err := dbs.GetDb(database)
 	if err != nil {
 		return err
 	}
 
-	dbs, err = db.NewModel("", "dbs", true, 1)
+	mdbs, err = db.NewModel("", "dbs", true, 1)
 	if err != nil {
 		return err
 	}
-	if err := dbs.Init(); err != nil {
+	if err := mdbs.Init(); err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func initDbs() error {
 * @param db *DB
 * @return error
 **/
-func SaveDb(db *jdb.DB) error {
+func SaveDb(db *dbs.DB) error {
 	err := initDbs()
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func SaveDb(db *jdb.DB) error {
 	}
 
 	key := db.Name
-	err = dbs.Put(key, bt)
+	err = mdbs.Put(key, bt)
 	if err != nil {
 		return err
 	}
@@ -64,13 +64,13 @@ func SaveDb(db *jdb.DB) error {
 * @param name string, dest *jdb.Model
 * @return bool, error
 **/
-func GetDb(name string, dest *jdb.DB) (bool, error) {
+func GetDb(name string, dest *dbs.DB) (bool, error) {
 	err := initDbs()
 	if err != nil {
 		return false, err
 	}
 
-	exists, err := dbs.Get(name, &dest)
+	exists, err := mdbs.Get(name, &dest)
 	if err != nil {
 		return false, err
 	}

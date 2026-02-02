@@ -1,11 +1,11 @@
 package core
 
 import (
-	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/cgalvisleon/josefina/internal/dbs"
 )
 
 var (
-	models *jdb.Model
+	models *dbs.Model
 )
 
 /**
@@ -17,7 +17,7 @@ func initModels() error {
 		return nil
 	}
 
-	db, err := jdb.GetDb(database)
+	db, err := dbs.GetDb(database)
 	if err != nil {
 		return err
 	}
@@ -35,10 +35,10 @@ func initModels() error {
 
 /**
 * SaveModel: Saves a model
-* @param model *jdb.Model
+* @param model *dbs.Model
 * @return error
 **/
-func SaveModel(model *jdb.Model) error {
+func SaveModel(model *dbs.Model) error {
 	err := initModels()
 	if err != nil {
 		return err
@@ -60,10 +60,10 @@ func SaveModel(model *jdb.Model) error {
 
 /**
 * getModel: Gets a model
-* @param from *jdb.From, dest *jdb.Model
+* @param from *dbs.From, dest *dbs.Model
 * @return bool, error
 **/
-func GetModel(from *jdb.From, dest *jdb.Model) (bool, error) {
+func GetModel(from *dbs.From, dest *dbs.Model) (bool, error) {
 	err := initModels()
 	if err != nil {
 		return false, err
