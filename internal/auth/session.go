@@ -1,4 +1,4 @@
-package core
+package auth
 
 import (
 	"fmt"
@@ -7,7 +7,12 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/pkg/msg"
+)
+
+var (
+	appName = "josefina"
 )
 
 type Session struct {
@@ -42,7 +47,7 @@ func CreateSession(device, username string) (*Session, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	token, err := claim.NewToken(database, device, username, et.Json{}, 0)
+	token, err := claim.NewToken(appName, device, username, et.Json{}, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +77,7 @@ func DropSession(token string) error {
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	_, err = DeleteCache(key)
+	_, err = core.DeleteCache(key)
 	if err != nil {
 		return err
 	}

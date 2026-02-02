@@ -1,7 +1,6 @@
-package core
+package cache
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -12,8 +11,8 @@ import (
 type Cache struct{}
 
 var (
-	cache        *jdb.Model
-	errNotExists = fmt.Errorf("NotExists")
+	cache    *jdb.Model
+	database = "josefina"
 )
 
 /**
