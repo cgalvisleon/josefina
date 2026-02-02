@@ -14,7 +14,7 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
+	"github.com/cgalvisleon/josefina/internal/dbs"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -53,8 +53,8 @@ type Node struct {
 	Version       string                `json:"version"`
 	Host          string                `json:"host"`
 	Port          int                   `json:"port"`
-	dbs           map[string]*jdb.DB    `json:"-"`
-	models        map[string]*jdb.Model `json:"-"`
+	dbs           map[string]*dbs.DB    `json:"-"`
+	models        map[string]*dbs.Model `json:"-"`
 	rpcs          map[string]et.Json    `json:"-"`
 	peers         []string              `json:"-"`
 	state         NodeState             `json:"-"`
@@ -101,8 +101,8 @@ func newNode(host string, port int) *Node {
 		Port:        port,
 		Version:     version,
 		rpcs:        make(map[string]et.Json),
-		dbs:         make(map[string]*jdb.DB),
-		models:      make(map[string]*jdb.Model),
+		dbs:         make(map[string]*dbs.DB),
+		models:      make(map[string]*dbs.Model),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
@@ -271,7 +271,7 @@ func (s *Node) ping(to string) bool {
 * @param name string
 * @return *DB, error
 **/
-func (s *Node) getDb(name string) (*jdb.DB, error) {
+func (s *Node) getDb(name string) (*dbs.DB, error) {
 	if !s.started {
 		return nil, errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
