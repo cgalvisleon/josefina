@@ -45,11 +45,11 @@ func init() {
 
 /**
 * Load: Loads the cache
-* @param getLeader getLeaderFn
+* @param fn getLeaderFn
 * @return error
 **/
-func Load(getLeader getLeaderFn) error {
-	getLeader = getLeader
+func Load(fn getLeaderFn) error {
+	getLeader = fn
 	return nil
 }
 
