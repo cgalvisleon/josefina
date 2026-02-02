@@ -92,13 +92,14 @@ func init() {
 * @param host string, port int
 * @return *Node
 **/
-func newNode(host string, port int) *Node {
+func newNode(host string, port int, isStrict bool) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
 		PackageName: packageName,
 		Host:        address,
 		Port:        port,
 		Version:     version,
+		isStrict:    isStrict,
 		rpcs:        make(map[string]et.Json),
 		dbs:         make(map[string]*dbs.DB),
 		models:      make(map[string]*dbs.Model),
@@ -386,7 +387,7 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 	}
 
 	if exists {
-		if result.Host != "" {
+		if result.IsInit {
 			return result, nil
 		}
 
@@ -398,32 +399,13 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 		return result, nil
 	}
 
-	var db *dbs.DB
-	exists, err = core.GetDb(database, db)
+	db, err := s.getDb(database)
 	if err != nil {
 		return nil, err
 	}
 
-	if exists {
-		if db.IsStrict {
-			return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
-		}
-
-		result, err = db.NewModel(schema, name, false, 1)
-		if err != nil {
-			return nil, err
-		}
-
-		result, err = loadModel(result)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	if s.isStrict {
-		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	if db.IsStrict {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	result, err = db.NewModel(schema, name, false, 1)
@@ -431,7 +413,12 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 		return nil, err
 	}
 
-	return result, err
+	result, err = loadModel(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -462,7 +449,7 @@ func (s *Node) loadModel(model *dbs.Model) error {
 * @param model *Model
 * @return error
 **/
-func (s *Node) saveModel(model *Model) error {
+func (s *Node) saveModel(model *dbs.Model) error {
 	if !s.started {
 		return errors.New(msg.MSG_NODE_NOT_STARTED)
 	}
@@ -480,12 +467,7 @@ func (s *Node) saveModel(model *Model) error {
 		return nil
 	}
 
-	err := initModels()
-	if err != nil {
-		return err
-	}
-
-	bt, err := model.serialize()
+	bt, err := model.Serialize()
 	if err != nil {
 		return err
 	}

@@ -35,11 +35,11 @@ func initDbs() error {
 }
 
 /**
-* SaveDb: Saves the model
+* SetDb: Sets the model
 * @param db *DB
 * @return error
 **/
-func SaveDb(db *dbs.DB) error {
+func SetDb(db *dbs.DB) error {
 	err := initDbs()
 	if err != nil {
 		return err
