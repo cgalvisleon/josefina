@@ -424,6 +424,36 @@ func (s *Core) CreateSession(require et.Json, response *Session) error {
 }
 
 /**
+* setTransaction: Sets a transaction
+* @params to string, tx *mod.Tx
+* @return error
+**/
+func (s *Core) setTransaction(to string, tx *mod.Tx) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Core.SetTransaction", tx, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SetTransaction: Sets a transaction
+* @param require *mod.Tx, response *bool
+* @return error
+**/
+func (s *Core) SetTransaction(require *mod.Tx, response *bool) error {
+	err := SetTransaction(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * createUser: Creates a user
 * @params to string, username, password string
 * @return error
