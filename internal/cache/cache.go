@@ -72,6 +72,7 @@ func initModel() error {
 **/
 func Set(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	result := mem.Set(key, value, duration)
+
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.set(leader, key, value, duration)
@@ -99,6 +100,7 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Item, erro
 **/
 func Delete(key string) (bool, error) {
 	result := mem.Delete(key)
+
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.delete(leader, key)
@@ -128,9 +130,22 @@ func Get(key string) (*mem.Item, bool) {
 		return value, true
 	}
 
+	set := func(result *mem.Item, exists bool) (*mem.Item, bool) {
+		expiration := result.Expiration
+		if expiration != 0 {
+			expiration = result.Expiration - time.Since(result.LastUpdate)
+		}
+		mem.Set(key, result.Value, expiration)
+		return result, exists
+	}
+
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.get(leader, key)
+		result, exists := syn.get(leader, key)
+		if !exists {
+			return nil, false
+		}
+		return set(result, exists)
 	}
 
 	err := initModel()
@@ -148,12 +163,7 @@ func Get(key string) (*mem.Item, bool) {
 		return nil, false
 	}
 
-	expiration := result.Expiration
-	if expiration != 0 {
-		expiration = result.Expiration - time.Since(result.LastUpdate)
-	}
-	mem.Set(key, result.Value, expiration)
-	return &result, true
+	return set(&result, exists)
 }
 
 /**
