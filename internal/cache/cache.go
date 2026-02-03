@@ -22,7 +22,7 @@ var (
 * @param fn func() (string, bool)
 * @return error
 **/
-func Load(fn func() (string, bool)) error {
+func Load(getLeader func() (string, bool)) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func Load(fn func() (string, bool)) error {
 		logs.Panic(err)
 	}
 
-	syn.getLeader = fn
+	syn.getLeader = getLeader
 	syn.address = address
 	return nil
 }
