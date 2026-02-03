@@ -70,6 +70,11 @@ func initUsers() error {
 * @return error
 **/
 func CreateUser(username, password string) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.createUser(leader, username, password)
+	}
+
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -98,6 +103,11 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username string) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.dropUser(leader, username)
+	}
+
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -120,6 +130,11 @@ func DropUser(username string) error {
 * @return et.Json, error
 **/
 func GetUser(username, password string) (et.Json, error) {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.getUser(leader, username, password)
+	}
+
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -153,6 +168,11 @@ func GetUser(username, password string) (et.Json, error) {
 * @return error
 **/
 func ChanguePassword(username, password string) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.changuePassword(leader, username, password)
+	}
+
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -165,7 +185,7 @@ func ChanguePassword(username, password string) error {
 		return err
 	}
 
-	ok, err := users.IsExisted("username", username)
+	ok, err = users.IsExisted("username", username)
 	if err != nil {
 		return err
 	}
