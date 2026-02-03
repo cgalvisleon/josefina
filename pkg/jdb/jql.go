@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
@@ -22,7 +23,7 @@ func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
 	key := fmt.Sprintf("%s:%s:%s", app, device, username)
 	_, exists := cache.GetStr(key)
 	if !exists {
-		return et.Items{}, msg.ERROR_CLIENT_NOT_AUTHENTICATION.Error()
+		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
 
 	ql, err := jql.ToQl(query)
