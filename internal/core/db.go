@@ -37,7 +37,7 @@ func initDbs() error {
 * @param db *DB
 * @return error
 **/
-func SetDb(db *mod.DB) error {
+func CreateDb(db *mod.DB) error {
 	err := initDbs()
 	if err != nil {
 		return err

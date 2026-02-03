@@ -20,9 +20,8 @@ type DB struct {
 }
 
 var (
-	version  string = "0.0.1"
-	dbs      map[string]*DB
-	isStrict bool
+	version string = "0.0.1"
+	dbs     map[string]*DB
 )
 
 func init() {
@@ -133,10 +132,6 @@ func GetDb(name string) (*DB, error) {
 	result, ok := dbs[name]
 	if ok {
 		return result, nil
-	}
-
-	if !isStrict {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 	}
 
 	name = utility.Normalize(name)
