@@ -85,6 +85,11 @@ func (s *Session) ToJson() (et.Json, error) {
 * @return *Session, error
 **/
 func CreateSession(device, username string) (*Session, error) {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.createSession(leader, device, username)
+	}
+
 	if !utility.ValidStr(device, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
 	}

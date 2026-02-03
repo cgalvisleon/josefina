@@ -387,3 +387,38 @@ func (s *Core) DropSerie(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* createSession: Creates a session
+* @params to string, device, username string
+* @return *Session, error
+**/
+func (s *Core) createSession(to, device, username string) (*Session, error) {
+	var response *Session
+	err := jrpc.CallRpc(to, "Core.CreateSession", et.Json{
+		"device":   device,
+		"username": username,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* CreateSession: Creates a session
+* @param require et.Json, response *Session
+* @return error
+**/
+func (s *Core) CreateSession(require et.Json, response *Session) error {
+	device := require.Str("device")
+	username := require.Str("username")
+	session, err := CreateSession(device, username)
+	if err != nil {
+		return err
+	}
+
+	response = session
+	return nil
+}
