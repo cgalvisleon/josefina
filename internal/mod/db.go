@@ -139,6 +139,7 @@ func GetDb(name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
+
 	result, ok := dbs[name]
 	if ok {
 		return result, nil
