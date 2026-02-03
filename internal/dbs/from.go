@@ -10,7 +10,7 @@ type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
-	Host     string `json:"-"`
+	Address  string `json:"-"`
 	IsInit   bool   `json:"-"`
 }
 
@@ -39,7 +39,7 @@ func ToFrom(def et.Json) *From {
 		Database: def.Str("database"),
 		Schema:   def.Str("schema"),
 		Name:     def.Str("name"),
-		Host:     def.Str("host"),
+		Address:  def.Str("address"),
 		IsInit:   def.Bool("is_init"),
 	}
 }

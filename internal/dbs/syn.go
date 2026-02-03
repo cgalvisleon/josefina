@@ -14,8 +14,8 @@ import (
 type Dbs struct{}
 
 var (
-	syn      *Dbs
-	hostname string
+	syn     *Dbs
+	address string
 )
 
 func init() {
@@ -30,12 +30,12 @@ func init() {
 	gob.Register(Tx{})
 	gob.Register(Transaction{})
 
-	hostname, _ = os.Hostname()
+	hostname, _ := os.Hostname()
 	port := envar.GetInt("RPC_PORT", 4200)
-	hostname = fmt.Sprintf("%s:%d", hostname, port)
+	address = fmt.Sprintf("%s:%d", hostname, port)
 
 	syn = &Dbs{}
-	_, err := jrpc.Mount(hostname, syn)
+	_, err := jrpc.Mount(address, syn)
 	if err != nil {
 		logs.Panic(err)
 	}
@@ -48,7 +48,7 @@ func init() {
 **/
 func (s *Dbs) removeObject(from *From, idx string) error {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Dbs.RemoveObject", et.Json{
+	err := jrpc.CallRpc(from.Address, "Dbs.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -87,7 +87,7 @@ func (s *Dbs) RemoveObject(require et.Json, response *bool) error {
 **/
 func (s *Dbs) putObject(from *From, idx string, data et.Json) error {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Dbs.PutObject", et.Json{
+	err := jrpc.CallRpc(from.Address, "Dbs.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -128,7 +128,7 @@ func (s *Dbs) PutObject(require et.Json, response *bool) error {
 **/
 func (s *Dbs) isExisted(from *From, field, idx string) (bool, error) {
 	var response bool
-	err := jrpc.CallRpc(from.Host, "Dbs.IsExisted", et.Json{
+	err := jrpc.CallRpc(from.Address, "Dbs.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,

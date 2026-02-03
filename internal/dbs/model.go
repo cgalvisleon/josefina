@@ -119,7 +119,7 @@ func (s *Model) Init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	s.Host = hostname
+	s.Address = address
 	for _, name := range s.Indexes {
 		_, err := s.store(name)
 		if err != nil {

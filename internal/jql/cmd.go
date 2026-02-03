@@ -32,9 +32,11 @@ type Cmd struct {
 	isDebug      bool
 }
 
-func newCmd(command Command) *Cmd {
+func newCmd(command Command, model *dbs.Model) *Cmd {
 	return &Cmd{
+		address: model.Address,
 		command: command,
+		model:   model,
 	}
 }
 
