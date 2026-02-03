@@ -11,10 +11,10 @@ import (
 )
 
 type Schema struct {
-	Database string            `json:"database"`
-	Name     string            `json:"name"`
-	Models   map[string]*Model `json:"models"`
-	db       *DB               `json:"-"`
+	Database string           `json:"database"`
+	Name     string           `json:"name"`
+	Models   map[string]*From `json:"models"`
+	db       *DB              `json:"-"`
 }
 
 /**
@@ -27,15 +27,10 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	result, ok := s.Models[name]
-	if ok {
-		return result, nil
-	}
-
 	name = utility.Normalize(name)
 	path := strs.Append(s.db.Path, s.Name, "/")
 	path = fmt.Sprintf("%s/%s", path, name)
-	result = &Model{
+	result := &Model{
 		From: &From{
 			Database: s.Database,
 			Schema:   s.Name,
@@ -69,16 +64,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	if err != nil {
 		return nil, err
 	}
-	s.Models[name] = result
-
-	return result, nil
-}
-
-func (s *Schema) getModel(name string) (*Model, error) {
-	result, ok := s.Models[name]
-	if !ok {
-		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
-	}
+	s.Models[name] = result.From
 
 	return result, nil
 }

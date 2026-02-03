@@ -12,6 +12,7 @@ type From struct {
 	Name     string `json:"name"`
 	Address  string `json:"-"`
 	IsInit   bool   `json:"-"`
+	isDebug  bool   `json:"-"`
 }
 
 /**

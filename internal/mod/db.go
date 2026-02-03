@@ -97,22 +97,12 @@ func (s *DB) getSchema(name string) *Schema {
 	result = &Schema{
 		Database: s.Name,
 		Name:     name,
-		Models:   make(map[string]*Model, 0),
+		Models:   make(map[string]*From, 0),
 		db:       s,
 	}
 	s.Schemas[name] = result
 
 	return result
-}
-
-/**
-* getModel: Returns a model by name
-* @param schema, name string
-* @return *Model, error
-**/
-func (s *DB) getModel(schema, name string) (*Model, error) {
-	sch := s.getSchema(schema)
-	return sch.getModel(name)
 }
 
 /**
@@ -160,18 +150,4 @@ func GetDb(name string) (*DB, error) {
 	dbs[name] = result
 
 	return result, nil
-}
-
-/**
-* getModel: Returns a model by name
-* @param from *From
-* @return *Model, error
-**/
-func getModel(from *From) (*Model, error) {
-	db, err := GetDb(from.Database)
-	if err != nil {
-		return nil, err
-	}
-
-	return db.getModel(from.Schema, from.Name)
 }

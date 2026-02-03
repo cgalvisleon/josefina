@@ -53,7 +53,6 @@ type Model struct {
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
 	IsStrict      bool                        `json:"is_strict"`
-	isDebug       bool                        `json:"-"`
 	stores        map[string]*store.FileStore `json:"-"`
 	triggers      map[string]*Vm              `json:"-"`
 	schema        *Schema                     `json:"-"`
@@ -124,7 +123,6 @@ func (s *Model) Init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	s.Address = address
 	for _, name := range s.Indexes {
 		_, err := s.store(name)
 		if err != nil {
@@ -132,7 +130,9 @@ func (s *Model) Init() error {
 		}
 	}
 
+	s.Address = address
 	s.IsInit = true
+	models[s.Key()] = s
 	return nil
 }
 
@@ -142,6 +142,31 @@ func (s *Model) Init() error {
 **/
 func (s *Model) GenKey() string {
 	return reg.GenUUId(s.Name)
+}
+
+/**
+* SetDebug
+* @param debug bool
+**/
+func (s *Model) SetDebug(debug bool) {
+	s.isDebug = debug
+}
+
+/**
+* IsDebug: Returns the debug mode
+* @return *Model
+**/
+func (s *Model) IsDebug() *Model {
+	s.isDebug = true
+	return s
+}
+
+/**
+* Stricted: Sets the model to strict
+* @return void
+**/
+func (s *Model) Stricted() {
+	s.IsStrict = true
 }
 
 /**
@@ -467,31 +492,6 @@ func (s *Model) AddAfterDelete(name string, fn []byte) {
 }
 
 /**
-* SetDebug
-* @param debug bool
-**/
-func (s *Model) SetDebug(debug bool) {
-	s.isDebug = debug
-}
-
-/**
-* IsDebug: Returns the debug mode
-* @return *Model
-**/
-func (s *Model) IsDebug() *Model {
-	s.isDebug = true
-	return s
-}
-
-/**
-* Stricted: Sets the model to strict
-* @return void
-**/
-func (s *Model) Stricted() {
-	s.IsStrict = true
-}
-
-/**
 * Insert: Inserts the model
 * @param data et.Json
 * @return *Cmd
@@ -546,4 +546,19 @@ func (s *Model) Selects(fields ...string) *Wheres {
 		result.selects = append(result.selects, field)
 	}
 	return result
+}
+
+/**
+* getModel: Returns a model by name
+* @param from *From
+* @return *Model, error
+**/
+func getModels(from *From) (*Model, error) {
+	key := from.Key()
+	result, ok := models[key]
+	if ok {
+		return result, nil
+	}
+
+	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 }
