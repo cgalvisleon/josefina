@@ -569,7 +569,7 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func (s *Cmd) Execute(tx *Tx) ([]et.Json, error) {
-	tx, commit := getTx(tx)
+	tx, commit := GetTx(tx)
 	tx.isDebug = s.isDebug
 	result := []et.Json{}
 	switch s.command {

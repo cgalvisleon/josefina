@@ -58,11 +58,11 @@ type Tx struct {
 }
 
 /**
-* getTx: Returns the Transaction for the session
+* GetTx: Returns the Transaction for the session
 * @param tx *Tx
 * @return (*Tx, bool)
 **/
-func getTx(tx *Tx) (*Tx, bool) {
+func GetTx(tx *Tx) (*Tx, bool) {
 	if tx != nil {
 		return tx, false
 	}

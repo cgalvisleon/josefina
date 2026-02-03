@@ -13,6 +13,9 @@ const (
 	UPDATE Command = "UPDATE"
 	DELETE Command = "DELETE"
 	UPSERT Command = "UPSERT"
+	CREATE Command = "CREATE"
+	DROP   Command = "DROP"
+	CHANGE Command = "CHANGE"
 )
 
 type Cmd struct {
@@ -50,6 +53,11 @@ func newCmd(command Command, model *dbs.Model) *Cmd {
 }
 
 func toCmd(cmd et.Json) (*Cmd, error) {
+	command, err := gerCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	model := cmd.Str("model")
 	return &Cmd{}, nil
 }
 
@@ -63,5 +71,6 @@ func (s *Cmd) debug() *Cmd {
 }
 
 func (s *Cmd) run(tx *dbs.Tx) (et.Items, error) {
+	tx, _ = dbs.GetTx(tx)
 	return et.Items{}, nil
 }
