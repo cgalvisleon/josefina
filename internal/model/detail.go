@@ -1,4 +1,4 @@
-package dbs
+package model
 
 type Detail struct {
 	To              *From             `json:"to"`
