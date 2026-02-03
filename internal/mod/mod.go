@@ -2,10 +2,10 @@ package mod
 
 /**
 * Load: Loads the models
-* @param isStrict bool
+* @param strict bool
 * @return error
 **/
-func Load(isStrict bool) error {
-	isStrict = isStrict
+func Load(strict bool) error {
+	isStrict = strict
 	return nil
 }
