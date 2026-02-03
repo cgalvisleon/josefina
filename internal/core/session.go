@@ -1,14 +1,44 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
+
+var sessions *mod.Model
+
+/**
+* initSessions: Initializes the sessions model
+* @param db *DB
+* @return error
+**/
+func initSessions() error {
+	if sessions != nil {
+		return nil
+	}
+
+	db, err := mod.GetDb(appName)
+	if err != nil {
+		return err
+	}
+
+	sessions, err = db.NewModel("", "sessions", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := series.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 type Session struct {
 	ID        string    `json:"id"`
@@ -18,15 +48,35 @@ type Session struct {
 }
 
 /**
-* toJson: Converts the session to a json
-* @return et.Json
+* serialize
+* @return []byte, error
 **/
-func (s *Session) ToJson() et.Json {
-	return et.Json{
-		"created_at": s.CreatedAt,
-		"username":   s.Username,
-		"token":      s.Token,
+func (s *Session) serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
 	}
+
+	return result, nil
+}
+
+/**
+* toJson: Converts the session to a json
+* @return et.Json, error
+**/
+func (s *Session) ToJson() (et.Json, error) {
+	definition, err := s.serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -51,6 +101,22 @@ func CreateSession(device, username string) (*Session, error) {
 		CreatedAt: time.Now(),
 		Username:  username,
 		Token:     token,
+	}
+
+	err = initSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	bt, err := result.serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	key := result.Token
+	err = sessions.Put(key, bt)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
