@@ -1,6 +1,11 @@
 package core
 
-import "github.com/cgalvisleon/josefina/internal/mod"
+import (
+	"fmt"
+
+	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/pkg/msg"
+)
 
 var (
 	appName string = "josefina"
@@ -33,14 +38,23 @@ func initDbs() error {
 }
 
 /**
-* SetDb: Sets the model
-* @param db *DB
-* @return error
+* CreteDb: Creates a new database
+* @param name string
+* @return *DB, error
 **/
-func CreateDb(db *mod.DB) error {
+func CreteDb(name string) (*mod.DB, error) {
 	err := initDbs()
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	var result *mod.DB
+	exists, err := GetDb(name, result)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf(msg.MSG_DB_EXISTS, name)
 	}
 
 	bt, err := db.Serialize()

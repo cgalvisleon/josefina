@@ -78,6 +78,7 @@ var (
 	MSG_COMMAND_NOT_FOUND          = "command not found"
 	MSG_INTERNAL_ERROR             = "internal error"
 	MSG_CLIENT_NOT_AUTHENTICATION  = "client not authentication"
+	MSG_DB_EXISTS                  = "database exists (%s)"
 )
 
 func init() {
@@ -140,5 +141,6 @@ func init() {
 		MSG_COMMAND_NOT_FOUND = "command not found"
 		MSG_INTERNAL_ERROR = "internal error"
 		MSG_CLIENT_NOT_AUTHENTICATION = "client not authentication"
+		MSG_DB_EXISTS = "database exists (%s)"
 	}
 }

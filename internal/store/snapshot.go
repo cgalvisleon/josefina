@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 /**

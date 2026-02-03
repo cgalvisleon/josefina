@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type recordHeader struct {
