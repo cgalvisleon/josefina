@@ -2,6 +2,7 @@ package mod
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
@@ -167,7 +168,7 @@ func GetDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	return createDb(name)
+	return nil, errors.New(msg.MSG_DB_NOT_FOUND)
 }
 
 /**

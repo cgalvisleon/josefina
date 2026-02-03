@@ -38,11 +38,16 @@ func initDbs() error {
 }
 
 /**
-* CreteDb: Creates a new database
+* CreateDb: Creates a new database
 * @param name string
 * @return *DB, error
 **/
-func CreteDb(name string) (*mod.DB, error) {
+func CreateDb(name string) (*mod.DB, error) {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.createDb(leader, name)
+	}
+
 	err := initDbs()
 	if err != nil {
 		return nil, err
@@ -55,7 +60,7 @@ func CreteDb(name string) (*mod.DB, error) {
 	}
 
 	if exists {
-		return nil, fmt.Errorf(msg.MSG_DB_EXISTS, name)
+		return result, fmt.Errorf(msg.MSG_DB_EXISTS, name)
 	}
 
 	bt, err := db.Serialize()
