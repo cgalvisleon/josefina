@@ -249,3 +249,40 @@ func (s *Core) DropModel(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* createSerie: Creates a serie
+* @params to string, tag, format string, value int
+* @return error
+**/
+func (s *Core) createSerie(to, tag, format string, value int) error {
+	var response *ModelResult
+	err := jrpc.CallRpc(to, "Core.CreateSerie", et.Json{
+		"tag":    tag,
+		"format": format,
+		"value":  value,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* CreateSerie: Gets a model
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) CreateSerie(require et.Json, response *bool) error {
+	tag := require.Str("tag")
+	format := require.Str("format")
+	value := require.Int("value")
+	err := CreateSerie(tag, format, value)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
