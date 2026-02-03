@@ -49,7 +49,3 @@ func Load(getLeader func() (string, bool), getNextHost func() string, isStrict b
 func toQuery(query et.Json) (*Jql, error) {
 	return &Jql{}, nil
 }
-
-func (s *Jql) run() (et.Items, error) {
-	return et.Items{}, nil
-}
