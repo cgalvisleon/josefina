@@ -29,13 +29,14 @@ func Load(fn func() (string, bool)) error {
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
-	address = fmt.Sprintf("%s:%d", hostname, port)
+	address := fmt.Sprintf("%s:%d", hostname, port)
 	_, err = jrpc.Mount(address, syn)
 	if err != nil {
 		logs.Panic(err)
 	}
 
 	syn.getLeader = fn
+	syn.address = address
 	return nil
 }
 

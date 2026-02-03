@@ -17,11 +17,11 @@ type Result struct {
 
 type Cache struct {
 	getLeader func() (string, bool)
+	address   string
 }
 
 var (
-	syn     *Cache
-	address string
+	syn *Cache
 )
 
 func init() {
