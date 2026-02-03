@@ -1,9 +1,14 @@
 package cache
 
 import (
+	"fmt"
+	"os"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/mod"
 )
@@ -12,6 +17,28 @@ var (
 	cache    *mod.Model
 	database = "josefina"
 )
+
+/**
+* Load: Loads the cache
+* @param fn func() (string, bool)
+* @return error
+**/
+func Load(fn func() (string, bool)) error {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	port := envar.GetInt("RPC_PORT", 4200)
+	adress = fmt.Sprintf("%s:%d", hostname, port)
+	_, err = jrpc.Mount(adress, syn)
+	if err != nil {
+		logs.Panic(err)
+	}
+
+	syn.getLeader = fn
+	return nil
+}
 
 /**
 * initModel: Initializes the cache model
@@ -45,7 +72,7 @@ func initModel() error {
 **/
 func Set(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	result := mem.Set(key, value, duration)
-	leader, ok := getLeader()
+	leader, ok := syn.getLeader()
 	if ok {
 		return syn.set(leader, key, value, duration)
 	}
@@ -72,7 +99,7 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Item, erro
 **/
 func Delete(key string) (bool, error) {
 	result := mem.Delete(key)
-	leader, ok := getLeader()
+	leader, ok := syn.getLeader()
 	if ok {
 		return syn.delete(leader, key)
 	}
@@ -101,7 +128,7 @@ func Get(key string) (*mem.Item, bool) {
 		return value, true
 	}
 
-	leader, ok := getLeader()
+	leader, ok := syn.getLeader()
 	if ok {
 		return syn.get(leader, key)
 	}
