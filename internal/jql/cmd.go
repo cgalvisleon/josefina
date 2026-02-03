@@ -53,10 +53,6 @@ func newCmd(command Command, model *dbs.Model) *Cmd {
 }
 
 func toCmd(cmd et.Json) (*Cmd, error) {
-	command, err := getCommand(cmd)
-	if err != nil {
-		return nil, err
-	}
 	database := cmd.Str("database")
 	schema := cmd.Str("schema")
 	name := cmd.Str("name")

@@ -12,6 +12,18 @@ type Ql struct {
 * @return *Ql, error
 **/
 func ToQl(query et.Json) (*Ql, error) {
+	command, err := getCommand(query)
+	if err != nil {
+		return nil, err
+	}
+
+	switch command {
+	case SELECT:
+		return &Ql{}, nil
+	case INSERT, UPDATE, DELETE, UPSERT:
+		return &Ql{}, nil
+	}
+
 	return &Ql{}, nil
 }
 
