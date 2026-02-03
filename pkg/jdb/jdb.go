@@ -30,12 +30,12 @@ func Load() error {
 		return nil
 	}
 
-	err := core.Load(node.getLeader)
+	err := cache.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
 
-	err = cache.Load(node.getLeader)
+	err = core.Load(node.getLeader)
 	if err != nil {
 		return err
 	}

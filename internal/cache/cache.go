@@ -19,7 +19,7 @@ var (
 
 /**
 * Load: Loads the cache
-* @param fn func() (string, bool)
+* @param getLeader func() (string, bool)
 * @return error
 **/
 func Load(getLeader func() (string, bool)) error {
