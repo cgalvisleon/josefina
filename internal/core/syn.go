@@ -93,3 +93,36 @@ func (s *Core) GetDb(require et.Json, response *DbResult) error {
 	response.Exists = exists
 	return nil
 }
+
+/**
+* dropDb: Drops a database
+* @params to, name string
+* @return error
+**/
+func (s *Core) dropDb(to, name string) error {
+	var response *DbResult
+	err := jrpc.CallRpc(to, "Core.DropDb", et.Json{
+		"name": name,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* DropDb: Drops a database
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) DropDb(require et.Json, response *bool) error {
+	name := require.Str("name")
+	err := DropDb(name)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}

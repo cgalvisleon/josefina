@@ -179,6 +179,14 @@ func AddDb(db *DB) {
 }
 
 /**
+* RemoveDb: Removes a database from the global map
+* @param name string
+**/
+func RemoveDb(name string) {
+	delete(dbs, name)
+}
+
+/**
 * CoreDb: Returns the core database
 * @return *DB, error
 **/

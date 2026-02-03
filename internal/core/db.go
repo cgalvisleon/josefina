@@ -125,10 +125,21 @@ func GetDb(name string, dest *mod.DB) (bool, error) {
 * @return error
 **/
 func DropDb(name string) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.dropDb(leader, name)
+	}
+
 	err := initDbs()
 	if err != nil {
 		return err
 	}
 
-	return dbs.Remove(name)
+	err = dbs.Remove(name)
+	if err != nil {
+		return err
+	}
+
+	mod.RemoveDb(name)
+	return nil
 }
