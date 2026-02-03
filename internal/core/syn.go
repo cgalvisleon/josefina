@@ -523,3 +523,38 @@ func (s *Core) GetUser(require et.Json, response *et.Json) error {
 	*response = result
 	return nil
 }
+
+/**
+* changuePassword: Changues the password of a user
+* @params to string, username string
+* @return error
+**/
+func (s *Core) changuePassword(to, username, password string) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Core.ChanguePassword", et.Json{
+		"username": username,
+		"password": password,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* ChanguePassword: Changues the password of a user
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) ChanguePassword(require et.Json, response *bool) error {
+	username := require.Str("username")
+	password := require.Str("password")
+	err := ChanguePassword(username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
