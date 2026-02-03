@@ -24,11 +24,13 @@ func init() {
 
 /**
 * Load: Loads the cache
-* @param fn getLeaderFn
+* @param getLeader func() (string, bool)
 * @return error
 **/
-func Load(fn getLeaderFn) error {
-	getLeader = fn
+func Load(getLeader func() (string, bool), getNextHost func() string, isStrict bool) error {
+	node.getLeader = getLeader
+	node.nextHost = getNextHost
+	node.isStrict = isStrict
 
 	hostname, _ := os.Hostname()
 	port := envar.GetInt("RPC_PORT", 4200)

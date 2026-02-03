@@ -8,8 +8,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/dbs"
 )
 
-type getLeaderFn func() (string, bool)
-
 type Jql struct{}
 
 var (
