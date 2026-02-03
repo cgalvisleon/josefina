@@ -121,10 +121,20 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 * @return error
 **/
 func DropModel(name string) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.dropModel(leader, name)
+	}
+
 	err := initModels()
 	if err != nil {
 		return err
 	}
 
-	return models.Remove(name)
+	err = models.Remove(name)
+	if err != nil {
+		return err
+	}
+
+	return mod.DropModel(name)
 }
