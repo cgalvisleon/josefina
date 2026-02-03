@@ -120,6 +120,38 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 }
 
 /**
+* createDb: Creates a new database
+* @param name string
+* @return *DB, error
+**/
+func createDb(name string) (*DB, error) {
+	name = utility.Normalize(name)
+	path := envar.GetStr("DATA_PATH", "./data")
+	result := &DB{
+		Name:    name,
+		Version: version,
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
+	dbs[name] = result
+
+	return result, nil
+}
+
+/**
+* CreteDb: Creates a new database
+* @param name string
+* @return *DB, error
+**/
+func CreteDb(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	return createDb(name)
+}
+
+/**
 * GetDb: Returns a database by name
 * @param name string
 * @return *DB, error
@@ -129,20 +161,25 @@ func GetDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
+	name = utility.Normalize(name)
 	result, ok := dbs[name]
 	if ok {
 		return result, nil
 	}
 
-	name = utility.Normalize(name)
-	path := envar.GetStr("DATA_PATH", "./data")
-	result = &DB{
-		Name:    name,
-		Version: version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
-	}
-	dbs[name] = result
+	return createDb(name)
+}
 
-	return result, nil
+/**
+* CoreDb: Returns the core database
+* @return *DB, error
+**/
+func CoreDb() (*DB, error) {
+	name := "josefina"
+	result, ok := dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	return createDb(name)
 }

@@ -24,7 +24,7 @@ func initSessions() error {
 		return nil
 	}
 
-	db, err := mod.GetDb(appName)
+	db, err := mod.CoreDb()
 	if err != nil {
 		return err
 	}

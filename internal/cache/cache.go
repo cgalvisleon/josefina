@@ -49,7 +49,7 @@ func initModel() error {
 		return nil
 	}
 
-	db, err := mod.GetDb(database)
+	db, err := mod.CoreDb()
 	if err != nil {
 		return err
 	}
