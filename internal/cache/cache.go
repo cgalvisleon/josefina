@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	cache    *mod.Model
-	database = "josefina"
+	cache *mod.Model
 )
 
 /**
