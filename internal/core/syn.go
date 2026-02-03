@@ -126,3 +126,42 @@ func (s *Core) DropDb(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* createModel: Creates a model
+* @params to, database, schema, name string, version int
+* @return *mod.Model, error
+**/
+func (s *Core) createModel(to, database, schema, name string, version int) (*mod.Model, error) {
+	var response *mod.Model
+	err := jrpc.CallRpc(to, "Core.CreateModel", et.Json{
+		"database": database,
+		"schema":   schema,
+		"name":     name,
+		"version":  version,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* CreateModel: Creates a model
+* @param require et.Json, response *mod.Model
+* @return error
+**/
+func (s *Core) CreateModel(require et.Json, response *mod.Model) error {
+	database := require.Str("database")
+	schema := require.Str("schema")
+	name := require.Str("name")
+	version := require.Int("version")
+	result, err := CreateModel(database, schema, name, version)
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
+}
