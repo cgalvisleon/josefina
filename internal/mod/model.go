@@ -16,7 +16,12 @@ var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	models                   map[string]*Model
 )
+
+func init() {
+	models = make(map[string]*Model)
+}
 
 type Trigger struct {
 	Name       string `json:"name"`

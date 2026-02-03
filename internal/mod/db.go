@@ -20,8 +20,9 @@ type DB struct {
 }
 
 var (
-	version string = "0.0.1"
-	dbs     map[string]*DB
+	version  string = "0.0.1"
+	dbs      map[string]*DB
+	isStrict bool
 )
 
 func init() {
@@ -71,6 +72,14 @@ func (s *DB) SetDebug(debug bool) {
 			model.isDebug = debug
 		}
 	}
+}
+
+/**
+* SetStrict
+* @param strict bool
+**/
+func (s *DB) SetStrict(strict bool) {
+	s.IsStrict = strict
 }
 
 /**
@@ -127,13 +136,16 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *DB, error
 **/
 func GetDb(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
 	result, ok := dbs[name]
 	if ok {
 		return result, nil
 	}
 
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	if !isStrict {
+		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 	}
 
 	name = utility.Normalize(name)
