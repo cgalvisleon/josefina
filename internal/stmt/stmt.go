@@ -11,6 +11,28 @@ type CreateUserStmt struct {
 
 func (CreateUserStmt) stmt() {}
 
+type GetUserStmt struct {
+	Username string
+	Password string
+}
+
+func (GetUserStmt) stmt() {}
+
+type DropUserStmt struct {
+	Username string
+	Password string
+}
+
+func (DropUserStmt) stmt() {}
+
+type ChangePasswordStmt struct {
+	Username    string
+	OldPassword string
+	NewPassword string
+}
+
+func (ChangePasswordStmt) stmt() {}
+
 type CreateDbStmt struct {
 	Name string
 }
@@ -28,3 +50,30 @@ type DropDbStmt struct {
 }
 
 func (DropDbStmt) stmt() {}
+
+type CreateSerieStmt struct {
+	Tag    string
+	Format string
+	Value  int
+}
+
+func (CreateSerieStmt) stmt() {}
+
+type SetSerieStmt struct {
+	Tag   string
+	Value int
+}
+
+func (SetSerieStmt) stmt() {}
+
+type GetSerieStmt struct {
+	Tag string
+}
+
+func (GetSerieStmt) stmt() {}
+
+type DropSerieStmt struct {
+	Tag string
+}
+
+func (DropSerieStmt) stmt() {}
