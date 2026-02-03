@@ -101,19 +101,19 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 		return syn.getModel(leader, from, dest)
 	}
 
-	var err error
-	dest, err = mod.GetModel(from)
-	if err != nil {
-		return false, err
+	result, exists := mod.GetModel(from)
+	if exists {
+		*dest = *result
+		return true, nil
 	}
 
-	err = initModels()
+	err := initModels()
 	if err != nil {
 		return false, err
 	}
 
 	key := from.Key()
-	exists, err := models.Get(key, &dest)
+	exists, err = models.Get(key, &dest)
 	if err != nil {
 		return false, err
 	}
