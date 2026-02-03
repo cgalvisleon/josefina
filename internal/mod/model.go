@@ -569,17 +569,16 @@ func (s *Model) Selects(fields ...string) *Wheres {
 /**
 * GetModel: Returns a model by name
 * @param from *From
-* @return bool
+* @return *Model, bool
 **/
-func GetModel(from *From, dest *Model) bool {
+func GetModel(from *From) (*Model, bool) {
 	key := from.Key()
 	result, ok := models[key]
 	if ok {
-		dest = result
-		return true
+		return result, true
 	}
 
-	return false
+	return nil, false
 }
 
 /**

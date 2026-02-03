@@ -2,6 +2,7 @@ package mod
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Mod struct{}
@@ -67,11 +69,12 @@ func (s *Mod) removeObject(from *From, idx string) error {
 func (s *Mod) RemoveObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
-	model, err := GetModel(from)
-	if err != nil {
-		return err
+	model, exists := GetModel(from)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
-	err = model.RemoveObject(idx)
+
+	err := model.RemoveObject(idx)
 	if err != nil {
 		return err
 	}
@@ -108,11 +111,12 @@ func (s *Mod) PutObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Json("data")
-	model, err := GetModel(from)
-	if err != nil {
-		return err
+	model, exists := GetModel(from)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
-	err = model.PutObject(idx, data)
+
+	err := model.PutObject(idx, data)
 	if err != nil {
 		return err
 	}
@@ -145,14 +149,15 @@ func (s *Mod) isExisted(from *From, field, idx string) (bool, error) {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Mod) IsExisted(require et.Json, response *bool) error {
+func (s *Mod) IsExisteds(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
-	model, err := GetModel(from)
-	if err != nil {
-		return err
+	model, exists := GetModel(from)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
+
 	exists, err := model.IsExisted(field, idx)
 	if err != nil {
 		return err
