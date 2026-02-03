@@ -80,6 +80,7 @@ var (
 	MSG_CLIENT_NOT_AUTHENTICATION  = "client not authentication"
 	MSG_DB_NOT_EXISTS              = "database not exists"
 	MSG_MODEL_NOT_EXISTS           = "model not exists"
+	MSG_UNSUPPORTED_STATEMENT_TYPE = "unsupported statement type: %T"
 )
 
 func init() {
@@ -144,5 +145,6 @@ func init() {
 		MSG_CLIENT_NOT_AUTHENTICATION = "cliente no autenticado"
 		MSG_DB_NOT_EXISTS = "database no existe"
 		MSG_MODEL_NOT_EXISTS = "model no existe"
+		MSG_UNSUPPORTED_STATEMENT_TYPE = "tipo de statement no soportado: %T"
 	}
 }
