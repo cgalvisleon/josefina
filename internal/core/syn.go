@@ -496,10 +496,11 @@ func (s *Core) DropUser(require et.Json, response *bool) error {
 * @params to string, username string
 * @return error
 **/
-func (s *Core) getUser(to, username string) (et.Json, error) {
+func (s *Core) getUser(to, username, password string) (et.Json, error) {
 	var response et.Json
 	err := jrpc.CallRpc(to, "Core.GetUser", et.Json{
 		"username": username,
+		"password": password,
 	}, &response)
 	if err != nil {
 		return nil, err
@@ -515,7 +516,8 @@ func (s *Core) getUser(to, username string) (et.Json, error) {
 **/
 func (s *Core) GetUser(require et.Json, response *et.Json) error {
 	username := require.Str("username")
-	result, err := GetUser(username, "")
+	password := require.Str("password")
+	result, err := GetUser(username, password)
 	if err != nil {
 		return err
 	}
