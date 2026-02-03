@@ -4,7 +4,7 @@ import "github.com/cgalvisleon/josefina/internal/mod"
 
 var (
 	appName string = "josefina"
-	mdbs    *mod.Model
+	dbs     *mod.Model
 )
 
 /**
@@ -12,7 +12,7 @@ var (
 * @return error
 **/
 func initDbs() error {
-	if mdbs != nil {
+	if dbs != nil {
 		return nil
 	}
 
@@ -21,11 +21,11 @@ func initDbs() error {
 		return err
 	}
 
-	mdbs, err = db.NewModel("", "dbs", true, 1)
+	dbs, err = db.NewModel("", "dbs", true, 1)
 	if err != nil {
 		return err
 	}
-	if err := mdbs.Init(); err != nil {
+	if err := dbs.Init(); err != nil {
 		return err
 	}
 
@@ -49,7 +49,7 @@ func SetDb(db *mod.DB) error {
 	}
 
 	key := db.Name
-	err = mdbs.Put(key, bt)
+	err = dbs.Put(key, bt)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func GetDb(name string, dest *mod.DB) (bool, error) {
 		return false, err
 	}
 
-	exists, err := mdbs.Get(name, &dest)
+	exists, err := dbs.Get(name, &dest)
 	if err != nil {
 		return false, err
 	}
