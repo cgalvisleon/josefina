@@ -1,4 +1,4 @@
-package model
+package mod
 
 import (
 	"encoding/gob"

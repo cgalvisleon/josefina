@@ -2,10 +2,10 @@ package core
 
 import (
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
-var transactions *dbs.Model
+var transactions *mod.Model
 
 /**
 * initTransactions: Initializes the transactions model
@@ -16,7 +16,7 @@ func initTransactions() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(appName)
+	db, err := mod.GetDb(appName)
 	if err != nil {
 		return err
 	}

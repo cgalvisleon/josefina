@@ -1,12 +1,10 @@
 package core
 
-import (
-	"github.com/cgalvisleon/josefina/internal/dbs"
-)
+import "github.com/cgalvisleon/josefina/internal/mod"
 
 var (
 	appName string = "josefina"
-	mdbs    *dbs.Model
+	mdbs    *mod.Model
 )
 
 /**
@@ -18,7 +16,7 @@ func initDbs() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(appName)
+	db, err := mod.GetDb(appName)
 	if err != nil {
 		return err
 	}
@@ -39,7 +37,7 @@ func initDbs() error {
 * @param db *DB
 * @return error
 **/
-func SetDb(db *dbs.DB) error {
+func SetDb(db *mod.DB) error {
 	err := initDbs()
 	if err != nil {
 		return err
@@ -64,7 +62,7 @@ func SetDb(db *dbs.DB) error {
 * @param name string, dest *jdb.Model
 * @return bool, error
 **/
-func GetDb(name string, dest *dbs.DB) (bool, error) {
+func GetDb(name string, dest *mod.DB) (bool, error) {
 	err := initDbs()
 	if err != nil {
 		return false, err

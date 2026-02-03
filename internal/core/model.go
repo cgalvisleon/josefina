@@ -1,11 +1,9 @@
 package core
 
-import (
-	"github.com/cgalvisleon/josefina/internal/dbs"
-)
+import "github.com/cgalvisleon/josefina/internal/mod"
 
 var (
-	models *dbs.Model
+	models *mod.Model
 )
 
 /**
@@ -17,7 +15,7 @@ func initModels() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(appName)
+	db, err := mod.GetDb(appName)
 	if err != nil {
 		return err
 	}
@@ -35,10 +33,10 @@ func initModels() error {
 
 /**
 * SetModel: Sets a model
-* @param model *dbs.Model
+* @param model *mod.Model
 * @return error
 **/
-func SetModel(model *dbs.Model) error {
+func SetModel(model *mod.Model) error {
 	err := initModels()
 	if err != nil {
 		return err
@@ -60,10 +58,10 @@ func SetModel(model *dbs.Model) error {
 
 /**
 * getModel: Gets a model
-* @param from *dbs.From, dest *dbs.Model
+* @param from *mod.From, dest *mod.Model
 * @return bool, error
 **/
-func GetModel(from *dbs.From, dest *dbs.Model) (bool, error) {
+func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 	err := initModels()
 	if err != nil {
 		return false, err

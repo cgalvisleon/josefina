@@ -5,13 +5,13 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
 type Cache struct{}
 
 var (
-	cache    *dbs.Model
+	cache    *mod.Model
 	database = "josefina"
 )
 
@@ -24,7 +24,7 @@ func initModel() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(database)
+	db, err := mod.GetDb(database)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package model
+package mod
 
 type Detail struct {
 	To              *From             `json:"to"`

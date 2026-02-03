@@ -1,4 +1,4 @@
-package model
+package mod
 
 import (
 	"github.com/cgalvisleon/et/et"

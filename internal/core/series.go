@@ -6,11 +6,11 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
-var series *dbs.Model
+var series *mod.Model
 
 /**
 * initSeries: Initializes the series model
@@ -22,7 +22,7 @@ func initSeries() error {
 		return nil
 	}
 
-	db, err := dbs.GetDb(appName)
+	db, err := mod.GetDb(appName)
 	if err != nil {
 		return err
 	}
@@ -31,9 +31,9 @@ func initSeries() error {
 	if err != nil {
 		return err
 	}
-	series.DefineAtrib("tag", dbs.TpText, "")
-	series.DefineAtrib("value", dbs.TpInt, 0)
-	series.DefineAtrib("format", dbs.TpText, "")
+	series.DefineAtrib("tag", mod.TpText, "")
+	series.DefineAtrib("value", mod.TpInt, 0)
+	series.DefineAtrib("format", mod.TpText, "")
 	series.DefinePrimaryKeys("tag")
 	if err := series.Init(); err != nil {
 		return err
@@ -88,7 +88,7 @@ func DropSerie(tag string) error {
 
 	_, err = series.
 		Delete().
-		Where(dbs.Eq("tag", tag)).
+		Where(mod.Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
@@ -112,7 +112,7 @@ func SetSerie(tag string, value int) error {
 		Update(et.Json{
 			"value": value,
 		}).
-		Where(dbs.Eq("tag", tag)).
+		Where(mod.Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
@@ -134,12 +134,12 @@ func GetSerie(tag string) (et.Json, error) {
 
 	items, err := series.
 		Update(et.Json{}).
-		BeforeUpdateFn(func(tx *dbs.Tx, old, new et.Json) error {
+		BeforeUpdateFn(func(tx *mod.Tx, old, new et.Json) error {
 			value := old.Int("value")
 			new["value"] = value + 1
 			return nil
 		}).
-		Where(dbs.Eq("tag", tag)).
+		Where(mod.Eq("tag", tag)).
 		Execute(nil)
 	if err != nil {
 		return et.Json{}, err
