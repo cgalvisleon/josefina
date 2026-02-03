@@ -14,7 +14,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/mod"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type NodeState int

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cgalvisleon/josefina/internal/jql"
 	"github.com/cgalvisleon/josefina/internal/mod"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/dop251/goja"
 )
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 type Schema struct {

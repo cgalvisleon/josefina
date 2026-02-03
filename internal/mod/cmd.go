@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Command string

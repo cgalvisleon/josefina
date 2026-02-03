@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/josefina/internal/mod"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (

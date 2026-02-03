@@ -8,7 +8,7 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/dbs"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Node struct {

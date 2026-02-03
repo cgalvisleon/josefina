@@ -12,7 +12,7 @@ import (
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/mod"
-	"github.com/cgalvisleon/josefina/pkg/msg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 func init() {

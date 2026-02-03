@@ -8,8 +8,8 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
-	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
 var (
