@@ -117,13 +117,13 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 
 /**
 * DropModel: Removes a model
-* @param name string
+* @param from *mod.From
 * @return error
 **/
-func DropModel(name string) error {
+func DropModel(from *mod.From) error {
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.dropModel(leader, name)
+		return syn.dropModel(leader, from)
 	}
 
 	err := initModels()
@@ -131,10 +131,11 @@ func DropModel(name string) error {
 		return err
 	}
 
-	err = models.Remove(name)
+	key := from.Key()
+	err = models.Remove(key)
 	if err != nil {
 		return err
 	}
 
-	return mod.DropModel(name)
+	return mod.DropModel(key)
 }

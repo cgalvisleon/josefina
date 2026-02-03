@@ -577,11 +577,10 @@ func LoadModels(model *Model) error {
 
 /**
 * DropModel: Drops a model
-* @param name string
+* @param key string
 * @return error
 **/
-func DropModel(name string) error {
-	key := name
+func DropModel(key string) error {
 	_, ok := models[key]
 	if ok {
 		delete(models, key)

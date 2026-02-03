@@ -210,3 +210,43 @@ func (s *Core) GetModel(require et.Json, response *ModelResult) error {
 	response.Exists = exists
 	return nil
 }
+
+/**
+* dropModel: Drops a model
+* @params to string, from *mod.From, dest *mod.Model
+* @return bool, error
+**/
+func (s *Core) dropModel(to string, from *mod.From, dest *mod.Model) (bool, error) {
+	var response *ModelResult
+	err := jrpc.CallRpc(to, "Core.DropModel", et.Json{
+		"database": from.Database,
+		"schema":   from.Schema,
+		"name":     from.Name,
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	dest = response.Model
+	return response.Exists, nil
+}
+
+/**
+* DropModel: Gets a model
+* @param require et.Json, response *ModelResult
+* @return error
+**/
+func (s *Core) DropModel(require et.Json, response *ModelResult) error {
+	from := &mod.From{
+		Database: require.Str("database"),
+		Schema:   require.Str("schema"),
+		Name:     require.Str("name"),
+	}
+	exists, err := GetModel(from, response.Model)
+	if err != nil {
+		return err
+	}
+
+	response.Exists = exists
+	return nil
+}
