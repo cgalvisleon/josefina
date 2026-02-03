@@ -490,13 +490,14 @@ func (s *Core) CreateUser(require et.Json, response *bool) error {
 
 /**
 * dropUser: Drops a user
-* @params to string, username string
+* @params to string, username, password string
 * @return error
 **/
-func (s *Core) dropUser(to, username string) error {
+func (s *Core) dropUser(to, username, password string) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Core.DropUser", et.Json{
 		"username": username,
+		"password": password,
 	}, &response)
 	if err != nil {
 		return err
@@ -512,7 +513,8 @@ func (s *Core) dropUser(to, username string) error {
 **/
 func (s *Core) DropUser(require et.Json, response *bool) error {
 	username := require.Str("username")
-	err := DropUser(username)
+	password := require.Str("password")
+	err := DropUser(username, password)
 	if err != nil {
 		return err
 	}
@@ -558,14 +560,15 @@ func (s *Core) GetUser(require et.Json, response *et.Json) error {
 
 /**
 * changuePassword: Changues the password of a user
-* @params to string, username string
+* @params to string, username, oldPassword, newPassword string
 * @return error
 **/
-func (s *Core) changuePassword(to, username, password string) error {
+func (s *Core) changuePassword(to, username, oldPassword, newPassword string) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Core.ChanguePassword", et.Json{
-		"username": username,
-		"password": password,
+		"username":    username,
+		"oldPassword": oldPassword,
+		"newPassword": newPassword,
 	}, &response)
 	if err != nil {
 		return err
@@ -581,8 +584,9 @@ func (s *Core) changuePassword(to, username, password string) error {
 **/
 func (s *Core) ChanguePassword(require et.Json, response *bool) error {
 	username := require.Str("username")
-	password := require.Str("password")
-	err := ChanguePassword(username, password)
+	oldPassword := require.Str("oldPassword")
+	newPassword := require.Str("newPassword")
+	err := ChanguePassword(username, oldPassword, newPassword)
 	if err != nil {
 		return err
 	}

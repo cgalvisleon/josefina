@@ -5,19 +5,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
-type Command string
-
-const (
-	SELECT Command = "SELECT"
-	INSERT Command = "INSERT"
-	UPDATE Command = "UPDATE"
-	DELETE Command = "DELETE"
-	UPSERT Command = "UPSERT"
-	CREATE Command = "CREATE"
-	DROP   Command = "DROP"
-	CHANGE Command = "CHANGE"
-)
-
 type Cmd struct {
 	address string
 	command Command

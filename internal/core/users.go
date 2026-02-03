@@ -99,13 +99,13 @@ func CreateUser(username, password string) error {
 
 /**
 * DropUser: Drops a user
-* @param username string
+* @param username, password string
 * @return error
 **/
-func DropUser(username string) error {
+func DropUser(username, password string) error {
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.dropUser(leader, username)
+		return syn.dropUser(leader, username, password)
 	}
 
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -164,20 +164,23 @@ func GetUser(username, password string) (et.Json, error) {
 
 /**
 * ChanguePassword: Changues the password of a user
-* @param username, password string
+* @param username, oldPassword, newPassword string
 * @return error
 **/
-func ChanguePassword(username, password string) error {
+func ChanguePassword(username, oldPassword, newPassword string) error {
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.changuePassword(leader, username, password)
+		return syn.changuePassword(leader, username, oldPassword, newPassword)
 	}
 
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
-	if !utility.ValidStr(password, 6, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	if !utility.ValidStr(oldPassword, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "oldPassword")
+	}
+	if !utility.ValidStr(newPassword, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "newPassword")
 	}
 
 	err := initUsers()
@@ -196,9 +199,10 @@ func ChanguePassword(username, password string) error {
 
 	_, err = users.
 		Update(et.Json{
-			"password": password,
+			"password": newPassword,
 		}).
 		Where(mod.Eq("username", username)).
+		And(mod.Eq("password", oldPassword)).
 		Execute(nil)
 	return err
 }
