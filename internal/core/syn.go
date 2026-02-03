@@ -286,3 +286,38 @@ func (s *Core) CreateSerie(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* setSerie: Creates a serie
+* @params to string, tag, format string, value int
+* @return error
+**/
+func (s *Core) setSerie(to, tag string, value int) error {
+	var response *ModelResult
+	err := jrpc.CallRpc(to, "Core.SetSerie", et.Json{
+		"tag":   tag,
+		"value": value,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SetSerie: Gets a model
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) SetSerie(require et.Json, response *bool) error {
+	tag := require.Str("tag")
+	value := require.Int("value")
+	err := SetSerie(tag, value)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
