@@ -40,9 +40,15 @@ func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result, err := session.ToJson()
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	response.ITEM(w, r, http.StatusOK, et.Item{
 		Ok:     true,
-		Result: session.ToJson(),
+		Result: result,
 	})
 }
 
