@@ -549,11 +549,11 @@ func (s *Model) Selects(fields ...string) *Wheres {
 }
 
 /**
-* getModel: Returns a model by name
+* GetModel: Returns a model by name
 * @param from *From
 * @return *Model, error
 **/
-func getModels(from *From) (*Model, error) {
+func GetModel(from *From) (*Model, error) {
 	key := from.Key()
 	result, ok := models[key]
 	if ok {
@@ -561,4 +561,16 @@ func getModels(from *From) (*Model, error) {
 	}
 
 	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+}
+
+/**
+* LoadModels: Loads the models
+* @return error
+**/
+func LoadModels(model *Model) error {
+	if model.IsInit {
+		model.IsInit = false
+	}
+
+	return model.Init()
 }

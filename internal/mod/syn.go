@@ -67,7 +67,7 @@ func (s *Dbs) removeObject(from *From, idx string) error {
 func (s *Dbs) RemoveObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
-	model, err := getModel(from)
+	model, err := GetModel(from)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (s *Dbs) PutObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Json("data")
-	model, err := getModel(from)
+	model, err := GetModel(from)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (s *Dbs) IsExisted(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
-	model, err := getModel(from)
+	model, err := GetModel(from)
 	if err != nil {
 		return err
 	}
