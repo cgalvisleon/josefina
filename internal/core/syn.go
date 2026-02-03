@@ -422,3 +422,38 @@ func (s *Core) CreateSession(require et.Json, response *Session) error {
 	response = session
 	return nil
 }
+
+/**
+* createUser: Creates a user
+* @params to string, username, password string
+* @return error
+**/
+func (s *Core) createUser(to, username, password string) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Core.CreateUser", et.Json{
+		"username": username,
+		"password": password,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* CreateUser: Creates a user
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) CreateUser(require et.Json, response *bool) error {
+	username := require.Str("username")
+	password := require.Str("password")
+	err := CreateUser(username, password)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
