@@ -306,7 +306,7 @@ func (s *Core) setSerie(to, tag string, value int) error {
 }
 
 /**
-* SetSerie: Gets a model
+* SetSerie: Sets a serie
 * @param require et.Json, response *bool
 * @return error
 **/
@@ -319,5 +319,38 @@ func (s *Core) SetSerie(require et.Json, response *bool) error {
 	}
 
 	*response = true
+	return nil
+}
+
+/**
+* getSerie: Gets a serie
+* @params to string, tag string
+* @return error
+**/
+func (s *Core) getSerie(to, tag string) (et.Json, error) {
+	var response et.Json
+	err := jrpc.CallRpc(to, "Core.GetSerie", et.Json{
+		"tag": tag,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetSerie: Gets a serie
+* @param require et.Json, response *et.Json
+* @return error
+**/
+func (s *Core) GetSerie(require et.Json, response *et.Json) error {
+	tag := require.Str("tag")
+	result, err := GetSerie(tag)
+	if err != nil {
+		return err
+	}
+
+	*response = result
 	return nil
 }
