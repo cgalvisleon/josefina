@@ -354,3 +354,36 @@ func (s *Core) GetSerie(require et.Json, response *et.Json) error {
 	*response = result
 	return nil
 }
+
+/**
+* dropSerie: Drops a serie
+* @params to string, tag string
+* @return error
+**/
+func (s *Core) dropSerie(to, tag string) error {
+	var response et.Json
+	err := jrpc.CallRpc(to, "Core.DropSerie", et.Json{
+		"tag": tag,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* DropSerie: Drops a serie
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) DropSerie(require et.Json, response *bool) error {
+	tag := require.Str("tag")
+	err := DropSerie(tag)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
