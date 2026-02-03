@@ -2,7 +2,6 @@ package mod
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
@@ -155,20 +154,20 @@ func CreteDb(name string) (*DB, error) {
 /**
 * GetDb: Returns a database by name
 * @param name string
-* @return *DB, error
+* @return bool, error
 **/
-func GetDb(name string) (*DB, error) {
+func GetDb(name string, dest *DB) (bool, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+		return false, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
-	result, ok := dbs[name]
+	dest, ok := dbs[name]
 	if ok {
-		return result, nil
+		return true, nil
 	}
 
-	return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	return false, nil
 }
 
 /**

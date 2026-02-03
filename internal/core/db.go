@@ -53,7 +53,11 @@ func CreateDb(name string) (*mod.DB, error) {
 		return nil, err
 	}
 
-	var result *mod.DB
+	result, err := mod.GetDb(name)
+	if err != nil {
+		return nil, err
+	}
+
 	exists, err := GetDb(name, result)
 	if err != nil {
 		return nil, err
