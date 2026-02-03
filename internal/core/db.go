@@ -54,11 +54,6 @@ func CreateDb(name string) (*mod.DB, error) {
 	}
 
 	var result *mod.DB
-	exists, err := mod.GetDb(name, result)
-	if err != nil {
-		return nil, err
-	}
-
 	exists, err := GetDb(name, result)
 	if err != nil {
 		return nil, err
@@ -68,18 +63,23 @@ func CreateDb(name string) (*mod.DB, error) {
 		return result, fmt.Errorf(msg.MSG_DB_EXISTS, name)
 	}
 
-	bt, err := db.Serialize()
+	result, err = mod.CreteDb(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	key := db.Name
+	bt, err := result.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	key := result.Name
 	err = dbs.Put(key, bt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return result, nil
 }
 
 /**
@@ -113,7 +113,7 @@ func GetDb(name string, dest *mod.DB) (bool, error) {
 	}
 
 	if exists {
-		return true, nil
+		mod.AddDb(dest)
 	}
 
 	return exists, nil
