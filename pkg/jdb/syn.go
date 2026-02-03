@@ -11,7 +11,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -139,7 +139,7 @@ func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) erro
 * @param to string, models map[string]*Model
 * @return error
 **/
-func (s *Nodes) reportModels(to string, models map[string]*dbs.Model) error {
+func (s *Nodes) reportModels(to string, models map[string]*mod.Model) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Nodes.ReportModels", models, &response)
 	if err != nil {
@@ -154,7 +154,7 @@ func (s *Nodes) reportModels(to string, models map[string]*dbs.Model) error {
 * @param require map[string]*Model, response true
 * @return error
 **/
-func (s *Nodes) ReportModels(require map[string]*dbs.Model, response *bool) error {
+func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) error {
 	err := node.reportModels(require)
 	if err != nil {
 		return err

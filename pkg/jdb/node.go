@@ -13,7 +13,7 @@ import (
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 )
 
@@ -53,8 +53,8 @@ type Node struct {
 	Address       string                `json:"address"`
 	Port          int                   `json:"port"`
 	isStrict      bool                  `json:"-"`
-	dbs           map[string]*dbs.DB    `json:"-"`
-	models        map[string]*dbs.Model `json:"-"`
+	dbs           map[string]*mod.DB    `json:"-"`
+	models        map[string]*mod.Model `json:"-"`
 	rpcs          map[string]et.Json    `json:"-"`
 	peers         []string              `json:"-"`
 	state         NodeState             `json:"-"`
@@ -86,8 +86,8 @@ func newNode(host string, port int, isStrict bool) *Node {
 		Version:     version,
 		isStrict:    isStrict,
 		rpcs:        make(map[string]et.Json),
-		dbs:         make(map[string]*dbs.DB),
-		models:      make(map[string]*dbs.Model),
+		dbs:         make(map[string]*mod.DB),
+		models:      make(map[string]*mod.Model),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
@@ -260,10 +260,10 @@ func (s *Node) SetIsStrict(isStrict bool) {
 
 /**
 * reportModels: Reports the models
-* @param models map[string]*dbs.Model
+* @param models map[string]*mod.Model
 * @return error
 **/
-func (s *Node) reportModels(models map[string]*dbs.Model) error {
+func (s *Node) reportModels(models map[string]*mod.Model) error {
 	leader, ok := s.getLeader()
 	if ok {
 		return syn.reportModels(leader, models)

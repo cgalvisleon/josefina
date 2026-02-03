@@ -3,8 +3,8 @@ package jdb
 import (
 	"fmt"
 
-	"github.com/cgalvisleon/josefina/internal/dbs"
 	"github.com/cgalvisleon/josefina/internal/jql"
+	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/pkg/msg"
 	"github.com/dop251/goja"
 )
@@ -13,7 +13,7 @@ import (
 * wrapperModel: Wraps the model
 * @param vm *Vm
 **/
-func wrapperModel(vm *dbs.Vm) {
+func wrapperModel(vm *mod.Vm) {
 	vm.Set("model", func(call goja.FunctionCall) goja.Value {
 		args := call.Arguments
 		if len(args) != 3 {
