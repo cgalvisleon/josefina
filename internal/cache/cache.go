@@ -8,8 +8,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
-type Cache struct{}
-
 var (
 	cache    *mod.Model
 	database = "josefina"

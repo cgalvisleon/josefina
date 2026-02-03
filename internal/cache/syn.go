@@ -19,12 +19,12 @@ type Result struct {
 	exists bool
 }
 
-type MemCache struct{}
+type Cache struct{}
 
 type getLeaderFn func() (string, bool)
 
 var (
-	syn       *MemCache
+	syn       *Cache
 	host      string
 	getLeader getLeaderFn
 )
@@ -36,7 +36,7 @@ func init() {
 	port := envar.GetInt("RPC_PORT", 4200)
 	host = fmt.Sprintf("%s:%d", hostname, port)
 
-	syn = &MemCache{}
+	syn = &Cache{}
 	_, err := jrpc.Mount(host, syn)
 	if err != nil {
 		logs.Panic(err)
@@ -58,9 +58,9 @@ func Load(fn getLeaderFn) error {
 * @params to string, key string, value interface{}, duration time.Duration
 * @return error
 **/
-func (s *MemCache) set(to, key string, value interface{}, duration time.Duration) (*mem.Item, error) {
+func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (*mem.Item, error) {
 	var response *mem.Item
-	err := jrpc.CallRpc(to, "MemCache.Set", et.Json{
+	err := jrpc.CallRpc(to, "Cache.Set", et.Json{
 		"key":      key,
 		"value":    value,
 		"duration": duration,
@@ -77,7 +77,7 @@ func (s *MemCache) set(to, key string, value interface{}, duration time.Duration
 * @param require et.Json, response *mem.Item
 * @return error
 **/
-func (s *MemCache) Set(require et.Json, response *mem.Item) error {
+func (s *Cache) Set(require et.Json, response *mem.Item) error {
 	key := require.Str("key")
 	value := require.Get("value")
 	duration := time.Duration(require.Int("duration"))
@@ -95,9 +95,9 @@ func (s *MemCache) Set(require et.Json, response *mem.Item) error {
 * @params to string, key string
 * @return error
 **/
-func (s *MemCache) delete(to, key string) (bool, error) {
+func (s *Cache) delete(to, key string) (bool, error) {
 	var response *bool
-	err := jrpc.CallRpc(to, "MemCache.Delete", et.Json{
+	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {
@@ -112,7 +112,7 @@ func (s *MemCache) delete(to, key string) (bool, error) {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *MemCache) Delete(require et.Json, response *bool) error {
+func (s *Cache) Delete(require et.Json, response *bool) error {
 	key := require.Str("key")
 	result, err := Delete(key)
 	if err != nil {
@@ -128,9 +128,9 @@ func (s *MemCache) Delete(require et.Json, response *bool) error {
 * @params to string, key string
 * @return error
 **/
-func (s *MemCache) get(to, key string) (*mem.Item, bool) {
+func (s *Cache) get(to, key string) (*mem.Item, bool) {
 	var response *Result
-	err := jrpc.CallRpc(to, "MemCache.Delete", et.Json{
+	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {
@@ -145,7 +145,7 @@ func (s *MemCache) get(to, key string) (*mem.Item, bool) {
 * @param require et.Json, response *Result
 * @return error
 **/
-func (s *MemCache) Get(require et.Json, response *Result) error {
+func (s *Cache) Get(require et.Json, response *Result) error {
 	key := require.Str("key")
 	result, exists := Get(key)
 	if !exists {
