@@ -101,7 +101,13 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 		return syn.getModel(leader, from, dest)
 	}
 
-	err := initModels()
+	var err error
+	dest, err = mod.GetModel(from)
+	if err != nil {
+		return false, err
+	}
+
+	err = initModels()
 	if err != nil {
 		return false, err
 	}
