@@ -189,6 +189,7 @@ func ChanguePassword(username, password string) error {
 	if err != nil {
 		return err
 	}
+
 	if !ok {
 		return errors.New(msg.MSG_USER_NOT_FOUND)
 	}
