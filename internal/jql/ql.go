@@ -3,7 +3,7 @@ package jql
 import "github.com/cgalvisleon/et/et"
 
 type Ql struct {
-	host string
+	address string
 }
 
 /**

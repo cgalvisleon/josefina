@@ -53,7 +53,7 @@ func Load(fn getLeaderFn) error {
 **/
 func (s *Jql) exec(cmd Cmd) (et.Items, error) {
 	var response et.Items
-	err := jrpc.CallRpc(cmd.host, "Jql.Exec", cmd, &response)
+	err := jrpc.CallRpc(cmd.address, "Jql.Exec", cmd, &response)
 	if err != nil {
 		return et.Items{}, err
 	}
@@ -78,7 +78,7 @@ func (s *Jql) Exec(require Cmd, response et.Items) error {
 **/
 func (s *Jql) run(ql Ql) (et.Items, error) {
 	var response et.Items
-	err := jrpc.CallRpc(ql.host, "Jql.Run", ql, &response)
+	err := jrpc.CallRpc(ql.address, "Jql.Run", ql, &response)
 	if err != nil {
 		return et.Items{}, err
 	}
