@@ -24,7 +24,7 @@ func Authenticate(next http.Handler) http.Handler {
 		}
 
 		token := r.Header.Get("Authorization")
-		result, err := node.authenticate(token)
+		result, err := core.Authenticate(token)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusUnauthorized, msg.MSG_CLIENT_NOT_AUTHENTICATION)
 			return

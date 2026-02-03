@@ -53,7 +53,6 @@ type Node struct {
 	Address       string                `json:"address"`
 	Port          int                   `json:"port"`
 	isStrict      bool                  `json:"-"`
-	dbs           map[string]*mod.DB    `json:"-"`
 	models        map[string]*mod.Model `json:"-"`
 	rpcs          map[string]et.Json    `json:"-"`
 	peers         []string              `json:"-"`
@@ -85,9 +84,8 @@ func newNode(host string, port int, isStrict bool) *Node {
 		Port:        port,
 		Version:     version,
 		isStrict:    isStrict,
-		rpcs:        make(map[string]et.Json),
-		dbs:         make(map[string]*mod.DB),
 		models:      make(map[string]*mod.Model),
+		rpcs:        make(map[string]et.Json),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
@@ -116,7 +114,6 @@ func (s *Node) ToJson() et.Json {
 		"version": s.Version,
 		"rpcs":    s.rpcs,
 		"peers":   s.peers,
-		"models":  s.models,
 	}
 }
 
@@ -248,14 +245,6 @@ func (s *Node) Ping(to string) bool {
 	}
 
 	return true
-}
-
-/**
-* SetIsStrict
-* @param isStrict bool
-**/
-func (s *Node) SetIsStrict(isStrict bool) {
-	s.isStrict = isStrict
 }
 
 /**
