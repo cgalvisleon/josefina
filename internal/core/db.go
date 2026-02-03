@@ -75,3 +75,17 @@ func GetDb(name string, dest *mod.DB) (bool, error) {
 
 	return exists, nil
 }
+
+/**
+* DropDb: Removes a db
+* @param name string
+* @return error
+**/
+func DropDb(name string) error {
+	err := initDbs()
+	if err != nil {
+		return err
+	}
+
+	return dbs.Remove(name)
+}

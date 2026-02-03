@@ -72,28 +72,6 @@ func CreateSerie(tag, format string, value int) error {
 }
 
 /**
-* DropSerie: Drops a serie
-* @param tag string
-* @return error
-**/
-func DropSerie(tag string) error {
-	if !utility.ValidStr(tag, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
-	}
-
-	err := initSeries()
-	if err != nil {
-		return err
-	}
-
-	_, err = series.
-		Delete().
-		Where(mod.Eq("tag", tag)).
-		Execute(nil)
-	return err
-}
-
-/**
 * SetSerie: Sets a serie
 * @param tag string, value int
 * @return error
@@ -158,4 +136,26 @@ func GetSerie(tag string) (et.Json, error) {
 		"value": value,
 		"code":  code,
 	}, nil
+}
+
+/**
+* DropSerie: Drops a serie
+* @param tag string
+* @return error
+**/
+func DropSerie(tag string) error {
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	err := initSeries()
+	if err != nil {
+		return err
+	}
+
+	_, err = series.
+		Delete().
+		Where(mod.Eq("tag", tag)).
+		Execute(nil)
+	return err
 }

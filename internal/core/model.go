@@ -75,3 +75,17 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 
 	return exists, nil
 }
+
+/**
+* DropModel: Removes a model
+* @param name string
+* @return error
+**/
+func DropModel(name string) error {
+	err := initModels()
+	if err != nil {
+		return err
+	}
+
+	return models.Remove(name)
+}
