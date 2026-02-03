@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
@@ -567,6 +568,24 @@ func (s *Model) Selects(fields ...string) *Wheres {
 }
 
 /**
+* loadModel: Loads a model
+* @param model *Model
+* @return error
+**/
+func loadModel(model *Model) (*Model, error) {
+	if model.IsInit {
+		model.IsInit = false
+	}
+
+	err := model.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
+}
+
+/**
 * GetModel: Returns a model by name
 * @param from *From
 * @return *Model, bool
@@ -582,15 +601,18 @@ func GetModel(from *From) (*Model, bool) {
 }
 
 /**
-* LoadModels: Loads the models
+* loadModel
+* @params from *From, field, idx string
 * @return error
 **/
-func LoadModels(model *Model) error {
-	if model.IsInit {
-		model.IsInit = false
+func LoadModel(to string, model *Model) (*Model, error) {
+	var response *Model
+	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
+	if err != nil {
+		return nil, err
 	}
 
-	return model.Init()
+	return response, nil
 }
 
 /**
