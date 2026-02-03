@@ -18,6 +18,11 @@ type DbResult struct {
 	Db     *mod.DB
 }
 
+type ModelResult struct {
+	Exists bool
+	Model  *mod.Model
+}
+
 var (
 	syn *Core
 )
@@ -163,5 +168,45 @@ func (s *Core) CreateModel(require et.Json, response *mod.Model) error {
 	}
 
 	response = result
+	return nil
+}
+
+/**
+* getModel: Gets a model
+* @params to string, from *mod.From, dest *mod.Model
+* @return bool, error
+**/
+func (s *Core) getModel(to string, from *mod.From, dest *mod.Model) (bool, error) {
+	var response *ModelResult
+	err := jrpc.CallRpc(to, "Core.GetModel", et.Json{
+		"database": from.Database,
+		"schema":   from.Schema,
+		"name":     from.Name,
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	dest = response.Model
+	return response.Exists, nil
+}
+
+/**
+* GetModel: Gets a model
+* @param require et.Json, response *ModelResult
+* @return error
+**/
+func (s *Core) GetModel(require et.Json, response *ModelResult) error {
+	from := &mod.From{
+		Database: require.Str("database"),
+		Schema:   require.Str("schema"),
+		Name:     require.Str("name"),
+	}
+	exists, err := GetModel(from, response.Model)
+	if err != nil {
+		return err
+	}
+
+	response.Exists = exists
 	return nil
 }
