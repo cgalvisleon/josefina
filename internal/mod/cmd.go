@@ -18,23 +18,17 @@ const (
 )
 
 type Cmd struct {
-	model                *Model            `json:"-"`
-	data                 et.Json           `json:"-"`
-	command              Command           `json:"-"`
-	wheres               *Wheres           `json:"-"`
-	beforeTriggerInserts []*Trigger        `json:"-"`
-	beforeTriggerUpdates []*Trigger        `json:"-"`
-	beforeTriggerDeletes []*Trigger        `json:"-"`
-	afterTriggerInserts  []*Trigger        `json:"-"`
-	afterTriggerUpdates  []*Trigger        `json:"-"`
-	afterTriggerDeletes  []*Trigger        `json:"-"`
-	beforeInserts        []TriggerFunction `json:"-"`
-	afterInserts         []TriggerFunction `json:"-"`
-	beforeUpdates        []TriggerFunction `json:"-"`
-	afterUpdates         []TriggerFunction `json:"-"`
-	beforeDeletes        []TriggerFunction `json:"-"`
-	afterDeletes         []TriggerFunction `json:"-"`
-	isDebug              bool              `json:"-"`
+	model         *Model            `json:"-"`
+	data          et.Json           `json:"-"`
+	command       Command           `json:"-"`
+	wheres        *Wheres           `json:"-"`
+	beforeInserts []TriggerFunction `json:"-"`
+	afterInserts  []TriggerFunction `json:"-"`
+	beforeUpdates []TriggerFunction `json:"-"`
+	afterUpdates  []TriggerFunction `json:"-"`
+	beforeDeletes []TriggerFunction `json:"-"`
+	afterDeletes  []TriggerFunction `json:"-"`
+	isDebug       bool              `json:"-"`
 }
 
 /**
@@ -44,21 +38,15 @@ type Cmd struct {
 **/
 func newCmd(model *Model) *Cmd {
 	result := &Cmd{
-		model:                model,
-		data:                 et.Json{},
-		wheres:               newWhere(),
-		beforeTriggerInserts: make([]*Trigger, 0),
-		beforeTriggerUpdates: make([]*Trigger, 0),
-		beforeTriggerDeletes: make([]*Trigger, 0),
-		afterTriggerInserts:  make([]*Trigger, 0),
-		afterTriggerUpdates:  make([]*Trigger, 0),
-		afterTriggerDeletes:  make([]*Trigger, 0),
-		beforeInserts:        make([]TriggerFunction, 0),
-		afterInserts:         make([]TriggerFunction, 0),
-		beforeUpdates:        make([]TriggerFunction, 0),
-		afterUpdates:         make([]TriggerFunction, 0),
-		beforeDeletes:        make([]TriggerFunction, 0),
-		afterDeletes:         make([]TriggerFunction, 0),
+		model:         model,
+		data:          et.Json{},
+		wheres:        newWhere(),
+		beforeInserts: make([]TriggerFunction, 0),
+		afterInserts:  make([]TriggerFunction, 0),
+		beforeUpdates: make([]TriggerFunction, 0),
+		afterUpdates:  make([]TriggerFunction, 0),
+		beforeDeletes: make([]TriggerFunction, 0),
+		afterDeletes:  make([]TriggerFunction, 0),
 	}
 	for _, trigger := range model.BeforeInserts {
 		result.beforeTriggerInserts = append(result.beforeTriggerInserts, trigger)

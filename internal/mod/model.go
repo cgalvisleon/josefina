@@ -23,9 +23,21 @@ func init() {
 	models = make(map[string]*Model)
 }
 
+type EventTrigger string
+
+const (
+	BeforeInsert EventTrigger = "before_insert"
+	AfterInsert  EventTrigger = "after_insert"
+	BeforeUpdate EventTrigger = "before_update"
+	AfterUpdate  EventTrigger = "after_update"
+	BeforeDelete EventTrigger = "before_delete"
+	AfterDelete  EventTrigger = "after_delete"
+)
+
 type Trigger struct {
-	Name       string `json:"name"`
-	Definition []byte `json:"definition"`
+	Event      EventTrigger `json:"event"`
+	Name       string       `json:"name"`
+	Definition []byte       `json:"definition"`
 }
 
 type TriggerFunction func(tx *Tx, old, new et.Json) error
@@ -44,17 +56,17 @@ type Model struct {
 	Rollups       map[string]*Detail          `json:"rollups"`
 	Relations     map[string]*Detail          `json:"relations"`
 	Calcs         map[string][]byte           `json:"calcs"`
-	BeforeInserts []*Trigger                  `json:"before_inserts"`
-	BeforeUpdates []*Trigger                  `json:"before_updates"`
-	BeforeDeletes []*Trigger                  `json:"before_deletes"`
-	AfterInserts  []*Trigger                  `json:"after_inserts"`
-	AfterUpdates  []*Trigger                  `json:"after_updates"`
-	AfterDeletes  []*Trigger                  `json:"after_deletes"`
+	Triggers      []*Trigger                  `json:"triggers"`
+	beforeInserts []TriggerFunction           `json:"-"`
+	afterInserts  []TriggerFunction           `json:"-"`
+	beforeUpdates []TriggerFunction           `json:"-"`
+	afterUpdates  []TriggerFunction           `json:"-"`
+	beforeDeletes []TriggerFunction           `json:"-"`
+	afterDeletes  []TriggerFunction           `json:"-"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
 	IsStrict      bool                        `json:"is_strict"`
 	stores        map[string]*store.FileStore `json:"-"`
-	triggers      map[string]*Vm              `json:"-"`
 	schema        *Schema                     `json:"-"`
 }
 
@@ -419,11 +431,12 @@ func (s *Model) Count() (int, error) {
 * @return void
 **/
 func (s *Model) AddBeforeInsert(name string, fn []byte) {
-	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeInsert })
 	if idx != -1 {
-		s.BeforeInserts[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeInsert, Name: name, Definition: fn})
 	}
-	s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: fn})
 }
 
 /**
@@ -432,11 +445,12 @@ func (s *Model) AddBeforeInsert(name string, fn []byte) {
 * @return void
 **/
 func (s *Model) AddAfterInsert(name string, fn []byte) {
-	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterInsert })
 	if idx != -1 {
-		s.AfterInserts[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterInsert, Name: name, Definition: fn})
 	}
-	s.AfterInserts = append(s.AfterInserts, &Trigger{Name: name, Definition: fn})
 }
 
 /**
@@ -445,11 +459,12 @@ func (s *Model) AddAfterInsert(name string, fn []byte) {
 * @return void
 **/
 func (s *Model) AddBeforeUpdate(name string, fn []byte) {
-	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeUpdate })
 	if idx != -1 {
-		s.BeforeUpdates[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeUpdate, Name: name, Definition: fn})
 	}
-	s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: fn})
 }
 
 /**
@@ -458,11 +473,12 @@ func (s *Model) AddBeforeUpdate(name string, fn []byte) {
 * @return void
 **/
 func (s *Model) AddAfterUpdate(name string, fn []byte) {
-	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterUpdate })
 	if idx != -1 {
-		s.AfterUpdates[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterUpdate, Name: name, Definition: fn})
 	}
-	s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: fn})
 }
 
 /**
@@ -471,11 +487,12 @@ func (s *Model) AddAfterUpdate(name string, fn []byte) {
 * @return void
 **/
 func (s *Model) AddBeforeDelete(name string, fn []byte) {
-	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeDelete })
 	if idx != -1 {
-		s.BeforeDeletes[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeDelete, Name: name, Definition: fn})
 	}
-	s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: fn})
 }
 
 /**
@@ -484,11 +501,12 @@ func (s *Model) AddBeforeDelete(name string, fn []byte) {
 * @return void
 **/
 func (s *Model) AddAfterDelete(name string, fn []byte) {
-	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterDelete })
 	if idx != -1 {
-		s.AfterDeletes[idx].Definition = fn
+		s.Triggers[idx].Definition = fn
+	} else {
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterDelete, Name: name, Definition: fn})
 	}
-	s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: fn})
 }
 
 /**
