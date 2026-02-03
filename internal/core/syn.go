@@ -457,3 +457,69 @@ func (s *Core) CreateUser(require et.Json, response *bool) error {
 	*response = true
 	return nil
 }
+
+/**
+* dropUser: Drops a user
+* @params to string, username string
+* @return error
+**/
+func (s *Core) dropUser(to, username string) error {
+	var response bool
+	err := jrpc.CallRpc(to, "Core.DropUser", et.Json{
+		"username": username,
+	}, &response)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* DropUser: Drops a user
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Core) DropUser(require et.Json, response *bool) error {
+	username := require.Str("username")
+	err := DropUser(username)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
+* getUser: Gets a user
+* @params to string, username string
+* @return error
+**/
+func (s *Core) getUser(to, username string) (et.Json, error) {
+	var response et.Json
+	err := jrpc.CallRpc(to, "Core.GetUser", et.Json{
+		"username": username,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetUser: Gets a user
+* @param require et.Json, response *et.Json
+* @return error
+**/
+func (s *Core) GetUser(require et.Json, response *et.Json) error {
+	username := require.Str("username")
+	result, err := GetUser(username, "")
+	if err != nil {
+		return err
+	}
+
+	*response = result
+	return nil
+}
