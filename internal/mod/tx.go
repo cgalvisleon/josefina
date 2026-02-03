@@ -1,6 +1,7 @@
 package mod
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -77,21 +78,35 @@ func GetTx(tx *Tx) (*Tx, bool) {
 }
 
 /**
-* toJson
-* @return et.Json, error
+* Serialize
+* @return []byte, error
 **/
-func (s Tx) toJson() et.Json {
-	transactions := []et.Json{}
-	for _, transaction := range s.Transactions {
-		transactions = append(transactions, transaction.toJson())
+func (s *Tx) Serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return et.Json{
-		"startedAt":    s.StartedAt,
-		"endedAt":      s.EndedAt,
-		"id":           s.ID,
-		"transactions": transactions,
+	return result, nil
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s *Tx) ToJson() (et.Json, error) {
+	definition, err := s.Serialize()
+	if err != nil {
+		return et.Json{}, err
 	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -100,7 +115,11 @@ func (s Tx) toJson() et.Json {
 **/
 func (s *Tx) change() error {
 	s.EndedAt = timezone.Now()
-	data := s.toJson()
+	data, err := s.ToJson()
+	if err != nil {
+		return err
+	}
+
 	if s.isDebug {
 		logs.Debug(data.ToString())
 	}

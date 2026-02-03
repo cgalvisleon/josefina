@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
@@ -34,10 +33,15 @@ func initTransactions() error {
 
 /**
 * SetTransaction: Sets a Transaction
-* @param key string, data et.Json
+* @param key string, tx *mod.Tx
 * @return error
 **/
-func SetTransaction(key string, data et.Json) error {
+func SetTransaction(key string, tx *mod.Tx) error {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.setTransaction(leader, key, tx)
+	}
+
 	err := initTransactions()
 	if err != nil {
 		return err
@@ -47,6 +51,7 @@ func SetTransaction(key string, data et.Json) error {
 		key = transactions.GenKey()
 	}
 
+	data := tx.ToJson()
 	err = transactions.PutObject(key, data)
 	if err != nil {
 		return err
