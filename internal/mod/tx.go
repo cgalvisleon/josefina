@@ -49,12 +49,11 @@ func newTransaction(from *From, cmd Command, idx string, data et.Json, status St
 }
 
 type Tx struct {
-	StartedAt    time.Time                   `json:"startedAt"`
-	EndedAt      time.Time                   `json:"endedAt"`
-	ID           string                      `json:"id"`
-	Transactions []*Transaction              `json:"transactions"`
-	onChange     func(string, et.Json) error `json:"-"`
-	isDebug      bool                        `json:"-"`
+	StartedAt    time.Time      `json:"startedAt"`
+	EndedAt      time.Time      `json:"endedAt"`
+	ID           string         `json:"id"`
+	Transactions []*Transaction `json:"transactions"`
+	isDebug      bool           `json:"-"`
 }
 
 /**
@@ -96,14 +95,6 @@ func (s Tx) toJson() et.Json {
 }
 
 /**
-* SetOnChange
-* @param onChange func(string, et.Json) error
-**/
-func (s *Tx) SetOnChange(onChange func(string, et.Json) error) {
-	s.onChange = onChange
-}
-
-/**
 * Save
 * @return error
 **/
@@ -112,10 +103,6 @@ func (s *Tx) change() error {
 	data := s.toJson()
 	if s.isDebug {
 		logs.Debug(data.ToString())
-	}
-
-	if s.onChange != nil {
-		return s.onChange(s.ID, data)
 	}
 
 	return nil
