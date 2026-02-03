@@ -11,10 +11,10 @@ import (
 	"github.com/cgalvisleon/et/logs"
 )
 
-type Dbs struct{}
+type Mod struct{}
 
 var (
-	syn     *Dbs
+	syn     *Mod
 	address string
 )
 
@@ -34,7 +34,7 @@ func init() {
 	port := envar.GetInt("RPC_PORT", 4200)
 	address = fmt.Sprintf("%s:%d", hostname, port)
 
-	syn = &Dbs{}
+	syn = &Mod{}
 	_, err := jrpc.Mount(address, syn)
 	if err != nil {
 		logs.Panic(err)
@@ -46,9 +46,9 @@ func init() {
 * @params from *From, idx string
 * @return error
 **/
-func (s *Dbs) removeObject(from *From, idx string) error {
+func (s *Mod) removeObject(from *From, idx string) error {
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Dbs.RemoveObject", et.Json{
+	err := jrpc.CallRpc(from.Address, "Mod.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -64,7 +64,7 @@ func (s *Dbs) removeObject(from *From, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Dbs) RemoveObject(require et.Json, response *bool) error {
+func (s *Mod) RemoveObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	model, err := GetModel(from)
@@ -85,9 +85,9 @@ func (s *Dbs) RemoveObject(require et.Json, response *bool) error {
 * @params from *From, idx string, data et.Json
 * @return error
 **/
-func (s *Dbs) putObject(from *From, idx string, data et.Json) error {
+func (s *Mod) putObject(from *From, idx string, data et.Json) error {
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Dbs.PutObject", et.Json{
+	err := jrpc.CallRpc(from.Address, "Mod.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -104,7 +104,7 @@ func (s *Dbs) putObject(from *From, idx string, data et.Json) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Dbs) PutObject(require et.Json, response *bool) error {
+func (s *Mod) PutObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Json("data")
@@ -126,9 +126,9 @@ func (s *Dbs) PutObject(require et.Json, response *bool) error {
 * @params from *From, field, idx string
 * @return error
 **/
-func (s *Dbs) isExisted(from *From, field, idx string) (bool, error) {
+func (s *Mod) isExisted(from *From, field, idx string) (bool, error) {
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Dbs.IsExisted", et.Json{
+	err := jrpc.CallRpc(from.Address, "Mod.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,
@@ -145,7 +145,7 @@ func (s *Dbs) isExisted(from *From, field, idx string) (bool, error) {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Dbs) IsExisted(require et.Json, response *bool) error {
+func (s *Mod) IsExisted(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")

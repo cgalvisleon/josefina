@@ -29,8 +29,8 @@ func Load(fn func() (string, bool)) error {
 	}
 
 	port := envar.GetInt("RPC_PORT", 4200)
-	adress = fmt.Sprintf("%s:%d", hostname, port)
-	_, err = jrpc.Mount(adress, syn)
+	address = fmt.Sprintf("%s:%d", hostname, port)
+	_, err = jrpc.Mount(address, syn)
 	if err != nil {
 		logs.Panic(err)
 	}

@@ -53,6 +53,7 @@ func CreteDb(name string) (*mod.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if exists {
 		return nil, fmt.Errorf(msg.MSG_DB_EXISTS, name)
 	}

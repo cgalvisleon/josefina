@@ -20,8 +20,8 @@ type Cache struct {
 }
 
 var (
-	syn    *Cache
-	adress string
+	syn     *Cache
+	address string
 )
 
 func init() {
