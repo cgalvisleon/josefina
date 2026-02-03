@@ -34,9 +34,18 @@ type Cmd struct {
 
 func newCmd(command Command, model *dbs.Model) *Cmd {
 	return &Cmd{
-		address: model.Address,
-		command: command,
-		model:   model,
+		address:      model.Address,
+		command:      command,
+		model:        model,
+		where:        &dbs.Wheres{},
+		data:         make([]et.Json, 0),
+		new:          et.Json{},
+		beforeInsert: make(map[string]dbs.Trigger, 0),
+		beforeUpdate: make(map[string]dbs.Trigger, 0),
+		beforeDelete: make(map[string]dbs.Trigger, 0),
+		afterInsert:  make(map[string]dbs.Trigger, 0),
+		afterUpdate:  make(map[string]dbs.Trigger, 0),
+		afterDelete:  make(map[string]dbs.Trigger, 0),
 	}
 }
 
@@ -44,6 +53,15 @@ func toCmd(cmd et.Json) (*Cmd, error) {
 	return &Cmd{}, nil
 }
 
-func (s *Cmd) run() (et.Items, error) {
+func (s *Cmd) toJson() et.Json {
+	return et.Json{}
+}
+
+func (s *Cmd) debug() *Cmd {
+	s.isDebug = true
+	return s
+}
+
+func (s *Cmd) run(tx *dbs.Tx) (et.Items, error) {
 	return et.Items{}, nil
 }
