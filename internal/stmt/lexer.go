@@ -15,6 +15,7 @@ const (
 	tokString
 	tokComma
 	tokSemicolon
+	tokNewline
 )
 
 type token struct {
@@ -47,6 +48,9 @@ func (l *lexer) next() token {
 	case ';':
 		l.i++
 		return token{typ: tokSemicolon, lit: ";", pos: start}
+	case '\n':
+		l.i++
+		return token{typ: tokNewline, lit: "\n", pos: start}
 	case '\'', '"':
 		lit, err := l.readQuoted(r)
 		if err != nil {
@@ -65,7 +69,11 @@ func (l *lexer) next() token {
 
 func (l *lexer) skipSpaces() {
 	for l.i < len(l.src) {
-		if !unicode.IsSpace(l.src[l.i]) {
+		r := l.src[l.i]
+		if r == '\n' {
+			return
+		}
+		if !unicode.IsSpace(r) {
 			return
 		}
 		l.i++
@@ -80,7 +88,7 @@ func (l *lexer) readIdent() string {
 	start := l.i
 	for l.i < len(l.src) {
 		r := l.src[l.i]
-		if unicode.IsSpace(r) || r == ',' || r == ';' {
+		if r == '\n' || unicode.IsSpace(r) || r == ',' || r == ';' {
 			break
 		}
 		l.i++

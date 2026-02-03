@@ -12,9 +12,36 @@ type Parser struct {
 }
 
 func ParseText(input string) (Stmt, error) {
+	stmts, err := ParseTextAll(input)
+	if err != nil {
+		return nil, err
+	}
+	if len(stmts) != 1 {
+		return nil, fmt.Errorf("expected 1 statement, got %d", len(stmts))
+	}
+	return stmts[0], nil
+}
+
+func ParseTextAll(input string) ([]Stmt, error) {
 	p := &Parser{l: newLexer(input)}
 	p.cur = p.l.next()
-	return p.parseStmt()
+
+	result := make([]Stmt, 0)
+	for {
+		p.skipSeps()
+		if p.cur.typ == tokError {
+			return nil, fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
+		}
+		if p.cur.typ == tokEOF {
+			return result, nil
+		}
+
+		st, err := p.parseStmt()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, st)
+	}
 }
 
 func (p *Parser) parseStmt() (Stmt, error) {
@@ -102,7 +129,7 @@ func (p *Parser) parseCreateUser() (Stmt, error) {
 		return nil, err
 	}
 
-	if err := p.consumeEnd("password"); err != nil {
+	if err := p.consumeTerm("password"); err != nil {
 		return nil, err
 	}
 
@@ -114,7 +141,7 @@ func (p *Parser) parseCreateDb() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("db name"); err != nil {
+	if err := p.consumeTerm("db name"); err != nil {
 		return nil, err
 	}
 	return CreateDbStmt{Name: name}, nil
@@ -125,7 +152,7 @@ func (p *Parser) parseGetDb() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("db name"); err != nil {
+	if err := p.consumeTerm("db name"); err != nil {
 		return nil, err
 	}
 	return GetDbStmt{Name: name}, nil
@@ -136,7 +163,7 @@ func (p *Parser) parseDropDb() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("db name"); err != nil {
+	if err := p.consumeTerm("db name"); err != nil {
 		return nil, err
 	}
 	return DropDbStmt{Name: name}, nil
@@ -151,7 +178,7 @@ func (p *Parser) parseGetUser() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("password"); err != nil {
+	if err := p.consumeTerm("password"); err != nil {
 		return nil, err
 	}
 	return GetUserStmt{Username: username, Password: password}, nil
@@ -166,7 +193,7 @@ func (p *Parser) parseDropUser() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("password"); err != nil {
+	if err := p.consumeTerm("password"); err != nil {
 		return nil, err
 	}
 	return DropUserStmt{Username: username, Password: password}, nil
@@ -185,7 +212,7 @@ func (p *Parser) parseChangePassword() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("new password"); err != nil {
+	if err := p.consumeTerm("new password"); err != nil {
 		return nil, err
 	}
 	return ChangePasswordStmt{Username: username, OldPassword: oldPassword, NewPassword: newPassword}, nil
@@ -204,7 +231,7 @@ func (p *Parser) parseCreateSerie() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("serie value"); err != nil {
+	if err := p.consumeTerm("serie value"); err != nil {
 		return nil, err
 	}
 	return CreateSerieStmt{Tag: tag, Format: format, Value: value}, nil
@@ -219,7 +246,7 @@ func (p *Parser) parseSetSerie() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("serie value"); err != nil {
+	if err := p.consumeTerm("serie value"); err != nil {
 		return nil, err
 	}
 	return SetSerieStmt{Tag: tag, Value: value}, nil
@@ -230,7 +257,7 @@ func (p *Parser) parseGetSerie() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("serie tag"); err != nil {
+	if err := p.consumeTerm("serie tag"); err != nil {
 		return nil, err
 	}
 	return GetSerieStmt{Tag: tag}, nil
@@ -241,7 +268,7 @@ func (p *Parser) parseDropSerie() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeEnd("serie tag"); err != nil {
+	if err := p.consumeTerm("serie tag"); err != nil {
 		return nil, err
 	}
 	return DropSerieStmt{Tag: tag}, nil
@@ -318,6 +345,12 @@ func (p *Parser) consumeEnd(after string) error {
 	if p.cur.typ == tokSemicolon {
 		p.advance()
 	}
+	if p.cur.typ == tokNewline {
+		p.advance()
+	}
+	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+		p.advance()
+	}
 	if p.cur.typ == tokError {
 		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
 	}
@@ -325,4 +358,23 @@ func (p *Parser) consumeEnd(after string) error {
 		return p.errf("unexpected token after " + after)
 	}
 	return nil
+}
+
+func (p *Parser) consumeTerm(after string) error {
+	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+		p.advance()
+	}
+	if p.cur.typ == tokError {
+		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
+	}
+	if p.cur.typ == tokEOF {
+		return nil
+	}
+	return p.errf("unexpected token after " + after)
+}
+
+func (p *Parser) skipSeps() {
+	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+		p.advance()
+	}
 }
