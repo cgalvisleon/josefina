@@ -1,9 +1,10 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/cgalvisleon/josefina/internal/jql"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/dop251/goja"
@@ -21,10 +22,19 @@ func wrapperModel(vm *mod.Vm) {
 		}
 		database := args[0].String()
 		schema := args[1].String()
-		model := args[2].String()
-		result, err := jql.GetModel(database, schema, model)
+		name := args[2].String()
+		var result *mod.Model
+		exists, err := core.GetModel(&mod.From{
+			Database: database,
+			Schema:   schema,
+			Name:     name,
+		}, result)
 		if err != nil {
 			panic(vm.NewGoError(err))
+		}
+
+		if !exists {
+			panic(vm.NewGoError(errors.New(msg.MSG_MODEL_NOT_EXISTS)))
 		}
 
 		return vm.ToValue(result)

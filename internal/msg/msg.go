@@ -139,10 +139,10 @@ func init() {
 		MSG_BYE = "Chao"
 		MSG_HOLA = "hola"
 		MSG_CHANNEL_NOT_FOUND = "channel no encontrado (%s)"
-		MSG_COMMAND_NOT_FOUND = "command not found"
-		MSG_INTERNAL_ERROR = "internal error"
-		MSG_CLIENT_NOT_AUTHENTICATION = "client not authentication"
-		MSG_DB_NOT_EXISTS = "database not exists"
-		MSG_MODEL_NOT_EXISTS = "model not exists"
+		MSG_COMMAND_NOT_FOUND = "command no encontrado"
+		MSG_INTERNAL_ERROR = "error interno"
+		MSG_CLIENT_NOT_AUTHENTICATION = "cliente no autenticado"
+		MSG_DB_NOT_EXISTS = "database no existe"
+		MSG_MODEL_NOT_EXISTS = "model no existe"
 	}
 }
