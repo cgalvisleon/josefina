@@ -93,14 +93,14 @@ func (s *Node) startElection() {
 	s.state = Candidate
 	s.term++
 	term := s.term
-	s.votedFor = s.Host
+	s.votedFor = s.Address
 	votes := 1
 	s.mu.Unlock()
 
 	total := len(s.peers)
 	for _, peer := range s.peers {
 		go func(peer string) {
-			args := RequestVoteArgs{Term: term, CandidateID: s.Host}
+			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
 			res := syn.requestVote(peer, &args, &reply)
 			if res.Error != nil {
@@ -134,10 +134,10 @@ func (s *Node) startElection() {
 **/
 func (s *Node) becomeLeader() {
 	s.state = Leader
-	s.leaderID = s.Host
+	s.leaderID = s.Address
 	s.lastHeartbeat = timezone.Now()
 
-	logs.Debugf("I am leader %s", s.Host)
+	logs.Debugf("I am leader %s", s.Address)
 
 	go s.heartbeatLoop()
 }
@@ -159,12 +159,12 @@ func (s *Node) heartbeatLoop() {
 		s.mu.Unlock()
 
 		for _, peer := range s.peers {
-			if peer == s.Host {
+			if peer == s.Address {
 				continue
 			}
 
 			go func(peer string) {
-				args := HeartbeatArgs{Term: term, LeaderID: s.Host}
+				args := HeartbeatArgs{Term: term, LeaderID: s.Address}
 				var reply HeartbeatReply
 				res := syn.heartbeat(peer, &args, &reply)
 				if res.Ok {
@@ -241,7 +241,7 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	s.lastHeartbeat = timezone.Now()
 
 	if oldLeader != args.LeaderID {
-		logs.Logf("Set leader %s in %s", args.LeaderID, s.Host)
+		logs.Logf("Set leader %s in %s", args.LeaderID, s.Address)
 		s.onChangeLeader()
 	}
 

@@ -51,7 +51,7 @@ type Client struct {
 type Node struct {
 	PackageName   string                `json:"packageName"`
 	Version       string                `json:"version"`
-	Host          string                `json:"host"`
+	Address       string                `json:"address"`
 	Port          int                   `json:"port"`
 	isStrict      bool                  `json:"-"`
 	dbs           map[string]*dbs.DB    `json:"-"`
@@ -82,7 +82,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
 		PackageName: appName,
-		Host:        address,
+		Address:     address,
 		Port:        port,
 		Version:     version,
 		isStrict:    isStrict,
@@ -96,7 +96,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 		clientMu:    sync.RWMutex{},
 	}
 	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
-		result.onConnect(subscriber.Name, WebSocket, result.Host)
+		result.onConnect(subscriber.Name, WebSocket, result.Address)
 	})
 	result.ws.OnDisconnection(func(subscriber *ws.Subscriber) {
 		result.onDisconnect(subscriber.Name)
@@ -112,7 +112,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 func (s *Node) ToJson() et.Json {
 	leader, _ := s.getLeader()
 	return et.Json{
-		"host":    s.Host,
+		"address": s.Address,
 		"leader":  leader,
 		"version": s.Version,
 		"rpcs":    s.rpcs,
@@ -127,7 +127,7 @@ func (s *Node) ToJson() et.Json {
 **/
 func (s *Node) helpCheck() et.Json {
 	return et.Json{
-		"host":    s.Host,
+		"address": s.Address,
 		"leader":  s.leaderID,
 		"version": s.Version,
 		"peers":   s.peers,
@@ -140,7 +140,7 @@ func (s *Node) helpCheck() et.Json {
 * @return error
 **/
 func (s *Node) mount(services any) error {
-	router, err := jrpc.Mount(s.Host, services)
+	router, err := jrpc.Mount(s.Address, services)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (s *Node) addNode(node string) {
 func (s *Node) nextHost() string {
 	t := len(s.peers)
 	if t == 0 {
-		return s.Host
+		return s.Address
 	}
 
 	s.turn++
@@ -194,7 +194,7 @@ func (n *Node) getLeader() (string, bool) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	result := n.leaderID
-	return result, result != n.Host && result != ""
+	return result, result != n.Address && result != ""
 }
 
 /**
@@ -348,7 +348,7 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 
 	loadModel := func(result *dbs.Model) (*dbs.Model, error) {
 		to := s.nextHost()
-		if to == s.Host {
+		if to == s.Address {
 			err := s.loadModel(result)
 			if err != nil {
 				return nil, err

@@ -50,7 +50,7 @@ func init() {
 **/
 func (s *Nodes) ping(to string) error {
 	var response string
-	err := jrpc.CallRpc(to, "Nodes.Ping", node.Host, &response)
+	err := jrpc.CallRpc(to, "Nodes.Ping", node.Address, &response)
 	if err != nil {
 		return err
 	}
