@@ -33,13 +33,13 @@ func initTransactions() error {
 
 /**
 * SetTransaction: Sets a Transaction
-* @param key string, tx *mod.Tx
+* @param tx *mod.Tx
 * @return error
 **/
-func SetTransaction(key string, tx *mod.Tx) error {
+func SetTransaction(tx *mod.Tx) error {
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.setTransaction(leader, key, tx)
+		return syn.setTransaction(leader, tx)
 	}
 
 	err := initTransactions()
@@ -47,12 +47,12 @@ func SetTransaction(key string, tx *mod.Tx) error {
 		return err
 	}
 
-	if key == "" {
-		key = transactions.GenKey()
+	data, err := tx.ToJson()
+	if err != nil {
+		return err
 	}
 
-	data := tx.ToJson()
-	err = transactions.PutObject(key, data)
+	err = transactions.PutObject(tx.ID, data)
 	if err != nil {
 		return err
 	}
