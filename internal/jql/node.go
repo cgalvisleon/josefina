@@ -97,6 +97,19 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
+	leader, ok := s.getLeader()
+	if ok {
+		return syn.getModel(leader, database, schema, name)
+	}
+
+	key := modelKey(database, schema, name)
+	s.modelMu.RLock()
+	result, ok := s.models[key]
+	s.modelMu.RUnlock()
+	if ok {
+		return result, nil
+	}
+
 	loadModel := func(result *dbs.Model) (*dbs.Model, error) {
 		to := s.nextHost()
 		if to == s.address {
@@ -111,19 +124,6 @@ func (s *Node) getModel(database, schema, name string) (*dbs.Model, error) {
 			}
 		}
 
-		return result, nil
-	}
-
-	leader, ok := s.getLeader()
-	if ok {
-		return syn.getModel(leader, database, schema, name)
-	}
-
-	key := modelKey(database, schema, name)
-	s.modelMu.RLock()
-	result, ok := s.models[key]
-	s.modelMu.RUnlock()
-	if ok {
 		return result, nil
 	}
 

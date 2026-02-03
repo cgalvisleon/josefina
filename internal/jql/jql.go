@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/dbs"
@@ -46,6 +45,11 @@ func Load(getLeader func() (string, bool), getNextHost func() string, isStrict b
 	return nil
 }
 
-func toQuery(query et.Json) (*Jql, error) {
-	return &Jql{}, nil
+/**
+* GetModel: Returns a model
+* @param database, schema, name string
+* @return (*Model, error)
+**/
+func GetModel(database, schema, name string) (*dbs.Model, error) {
+	return node.getModel(database, schema, name)
 }

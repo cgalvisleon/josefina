@@ -60,7 +60,7 @@ func toCmd(cmd et.Json) (*Cmd, error) {
 	database := cmd.Str("database")
 	schema := cmd.Str("schema")
 	name := cmd.Str("name")
-	model, err := getModel(database, schema, name)
+	model, err := node.getModel(database, schema, name)
 	if err != nil {
 		return nil, err
 	}
