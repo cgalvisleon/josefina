@@ -1,16 +1,25 @@
 package jql
 
-import db "github.com/cgalvisleon/josefina/internal/dbs"
+import (
+	"fmt"
+	"os"
 
-type Jql struct{}
+	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrpc"
+	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/josefina/internal/dbs"
+)
 
 var (
-	dbs       map[string]*db.DB
-	getLeader getLeaderFn
+	node *Node
 )
 
 func init() {
-	dbs = make(map[string]*db.DB, 0)
+	node = &Node{
+		address: "",
+		dbs:     make(map[string]*dbs.DB, 0),
+	}
 }
 
 /**
@@ -20,5 +29,25 @@ func init() {
 **/
 func Load(fn getLeaderFn) error {
 	getLeader = fn
+
+	hostname, _ := os.Hostname()
+	port := envar.GetInt("RPC_PORT", 4200)
+	address := fmt.Sprintf("%s:%d", hostname, port)
+
+	syn = &Jql{}
+	_, err := jrpc.Mount(address, syn)
+	if err != nil {
+		logs.Panic(err)
+	}
+
+	node.address = address
 	return nil
+}
+
+func toQuery(query et.Json) (*Jql, error) {
+	return &Jql{}, nil
+}
+
+func (s *Jql) run() (et.Items, error) {
+	return et.Items{}, nil
 }

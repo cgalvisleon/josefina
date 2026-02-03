@@ -2,13 +2,9 @@ package jql
 
 import (
 	"encoding/gob"
-	"fmt"
-	"os"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/dbs"
 )
 
@@ -17,23 +13,12 @@ type getLeaderFn func() (string, bool)
 type Jql struct{}
 
 var (
-	syn     *Jql
-	address string
+	syn *Jql
 )
 
 func init() {
 	gob.Register(Ql{})
 	gob.Register(Cmd{})
-
-	hostname, _ := os.Hostname()
-	port := envar.GetInt("RPC_PORT", 4200)
-	address = fmt.Sprintf("%s:%d", hostname, port)
-
-	syn = &Jql{}
-	_, err := jrpc.Mount(address, syn)
-	if err != nil {
-		logs.Panic(err)
-	}
 }
 
 /**
