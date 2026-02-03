@@ -165,42 +165,6 @@ func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) erro
 }
 
 /**
-* setTransaction: Sets a transaction
-* @param to, key string, data et.Json
-* @return error
-**/
-func (s *Nodes) setTransaction(to, key string, data et.Json) error {
-	args := et.Json{
-		"key":  key,
-		"data": data,
-	}
-	var reply bool
-	err := jrpc.CallRpc(to, "Nodes.SetTransaction", args, &reply)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* SetTransaction: Sets a transaction
-* @param require et.Json, response *bool
-* @return error
-**/
-func (s *Nodes) SetTransaction(require et.Json, response *bool) error {
-	key := require.Str("key")
-	data := require.Json("data")
-	err := node.setTransaction(key, data)
-	if err != nil {
-		return err
-	}
-
-	*response = true
-	return nil
-}
-
-/**
 * authenticate: Authenticates a user
 * @param to, device, database, username, password string
 * @return error
