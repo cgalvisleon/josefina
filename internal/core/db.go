@@ -53,7 +53,8 @@ func CreateDb(name string) (*mod.DB, error) {
 		return nil, err
 	}
 
-	result, err := mod.GetDb(name)
+	var result *mod.DB
+	exists, err := mod.GetDb(name, result)
 	if err != nil {
 		return nil, err
 	}
@@ -87,14 +88,32 @@ func CreateDb(name string) (*mod.DB, error) {
 * @return bool, error
 **/
 func GetDb(name string, dest *mod.DB) (bool, error) {
-	err := initDbs()
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.getDb(leader, name, dest)
+	}
+
+	exists, err := mod.GetDb(name, dest)
 	if err != nil {
 		return false, err
 	}
 
-	exists, err := dbs.Get(name, &dest)
+	if exists {
+		return true, nil
+	}
+
+	err = initDbs()
 	if err != nil {
 		return false, err
+	}
+
+	exists, err = dbs.Get(name, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	if exists {
+		return true, nil
 	}
 
 	return exists, nil

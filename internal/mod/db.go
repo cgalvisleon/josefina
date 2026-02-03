@@ -133,7 +133,7 @@ func createDb(name string) (*DB, error) {
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
-	dbs[name] = result
+	AddDb(result)
 
 	return result, nil
 }
@@ -168,6 +168,14 @@ func GetDb(name string, dest *DB) (bool, error) {
 	}
 
 	return false, nil
+}
+
+/**
+* AddDb: Adds a database to the global map
+* @param db *DB
+**/
+func AddDb(db *DB) {
+	dbs[db.Name] = db
 }
 
 /**
