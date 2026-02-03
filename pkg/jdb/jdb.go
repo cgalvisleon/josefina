@@ -34,7 +34,7 @@ func Load() error {
 		return err
 	}
 
-	err = jql.Load(node.getLeader)
+	err = jql.Load(node.getLeader, node.nextHost, node.isStrict)
 	if err != nil {
 		return err
 	}
