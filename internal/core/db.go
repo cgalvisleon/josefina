@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -60,7 +60,7 @@ func CreateDb(name string) (*mod.DB, error) {
 	}
 
 	if exists {
-		return result, fmt.Errorf(msg.MSG_DB_EXISTS, name)
+		return result, errors.New(msg.MSG_DB_NOT_EXISTS)
 	}
 
 	result, err = mod.CreteDb(name)

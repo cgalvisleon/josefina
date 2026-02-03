@@ -1,6 +1,11 @@
 package core
 
-import "github.com/cgalvisleon/josefina/internal/mod"
+import (
+	"errors"
+
+	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/msg"
+)
 
 var (
 	models *mod.Model
@@ -39,26 +44,50 @@ func initModels() error {
 func CreateModel(database, schema, name string, version int) (*mod.Model, error) {
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.dropDb(leader, name)
+		return syn.createModel(leader, database, schema, name, version)
 	}
 
-	err := initModels()
+	var result *mod.Model
+	exists, err := GetModel(&mod.From{
+		Database: database,
+		Schema:   schema,
+		Name:     name,
+	}, result)
 	if err != nil {
 		return nil, err
 	}
 
-	bt, err := model.Serialize()
-	if err != nil {
-		return err
+	if exists {
+		return nil, errors.New(msg.MSG_MODEL_NOT_EXISTS)
 	}
 
-	key := model.Key()
+	var db *mod.DB
+	exists, err = GetDb(database, db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_EXISTS)
+	}
+
+	result, err = db.NewModel(schema, name, false, version)
+	if err != nil {
+		return nil, err
+	}
+
+	bt, err := result.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	key := result.Key()
 	err = models.Put(key, bt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return result, nil
 }
 
 /**
@@ -67,6 +96,11 @@ func CreateModel(database, schema, name string, version int) (*mod.Model, error)
 * @return bool, error
 **/
 func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.getModel(leader, from, dest)
+	}
+
 	err := initModels()
 	if err != nil {
 		return false, err
