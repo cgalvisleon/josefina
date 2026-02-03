@@ -50,23 +50,23 @@ func (s *Vm) Run(script string) (goja.Value, error) {
 * @param trigger *Trigger, tx *Tx, old et.Json, new et.Json
 * @return error
 **/
-func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
-	model := s.model
-	vm, ok := model.triggers[trigger.Name]
-	if !ok {
-		vm = newVm()
-		model.triggers[trigger.Name] = vm
-	}
+// func (s *Cmd) runTrigger(trigger *Trigger, tx *Tx, old, new et.Json) error {
+// 	model := s.model
+// 	vm, ok := model.triggers[trigger.Name]
+// 	if !ok {
+// 		vm = newVm()
+// 		model.triggers[trigger.Name] = vm
+// 	}
 
-	vm.Set("self", model)
-	vm.Set("tx", tx)
-	vm.Set("old", old)
-	vm.Set("new", new)
-	script := string(trigger.Definition)
-	_, err := vm.Run(script)
-	if err != nil {
-		return err
-	}
+// 	vm.Set("self", model)
+// 	vm.Set("tx", tx)
+// 	vm.Set("old", old)
+// 	vm.Set("new", new)
+// 	script := string(trigger.Definition)
+// 	_, err := vm.Run(script)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
