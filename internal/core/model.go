@@ -32,14 +32,19 @@ func initModels() error {
 }
 
 /**
-* SetModel: Sets a model
-* @param model *mod.Model
-* @return error
+* CreateModel: Creates a model
+* @param database, schema, name string, version int
+* @return *mod.Model, error
 **/
-func SetModel(model *mod.Model) error {
+func CreateModel(database, schema, name string, version int) (*mod.Model, error) {
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.dropDb(leader, name)
+	}
+
 	err := initModels()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	bt, err := model.Serialize()

@@ -574,3 +574,18 @@ func LoadModels(model *Model) error {
 
 	return model.Init()
 }
+
+/**
+* DropModel: Drops a model
+* @param name string
+* @return error
+**/
+func DropModel(name string) error {
+	key := name
+	_, ok := models[key]
+	if ok {
+		delete(models, key)
+	}
+
+	return nil
+}
