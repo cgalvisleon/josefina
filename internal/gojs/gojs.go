@@ -1,4 +1,4 @@
-package mod
+package gojs
 
 import (
 	"github.com/cgalvisleon/et/et"
