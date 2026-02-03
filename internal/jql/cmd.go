@@ -2,7 +2,7 @@ package jql
 
 import (
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
 type Command string
@@ -19,47 +19,28 @@ const (
 )
 
 type Cmd struct {
-	address      string
-	command      Command
-	model        *dbs.Model
-	where        *dbs.Wheres
-	data         []et.Json
-	new          et.Json
-	beforeInsert map[string]dbs.Trigger
-	beforeUpdate map[string]dbs.Trigger
-	beforeDelete map[string]dbs.Trigger
-	afterInsert  map[string]dbs.Trigger
-	afterUpdate  map[string]dbs.Trigger
-	afterDelete  map[string]dbs.Trigger
-	tx           *dbs.Tx
-	isDebug      bool
+	address string
+	command Command
+	model   *mod.Model
+	where   *mod.Wheres
+	data    []et.Json
+	new     et.Json
+	tx      *mod.Tx
+	isDebug bool
 }
 
-func newCmd(command Command, model *dbs.Model) *Cmd {
+func newCmd(command Command, model *mod.Model) *Cmd {
 	return &Cmd{
-		address:      model.Address,
-		command:      command,
-		model:        model,
-		where:        &dbs.Wheres{},
-		data:         make([]et.Json, 0),
-		new:          et.Json{},
-		beforeInsert: make(map[string]dbs.Trigger, 0),
-		beforeUpdate: make(map[string]dbs.Trigger, 0),
-		beforeDelete: make(map[string]dbs.Trigger, 0),
-		afterInsert:  make(map[string]dbs.Trigger, 0),
-		afterUpdate:  make(map[string]dbs.Trigger, 0),
-		afterDelete:  make(map[string]dbs.Trigger, 0),
+		address: model.Address,
+		command: command,
+		model:   model,
+		where:   &mod.Wheres{},
+		data:    make([]et.Json, 0),
+		new:     et.Json{},
 	}
 }
 
 func toCmd(cmd et.Json) (*Cmd, error) {
-	database := cmd.Str("database")
-	schema := cmd.Str("schema")
-	name := cmd.Str("name")
-	model, err := node.getModel(database, schema, name)
-	if err != nil {
-		return nil, err
-	}
 	return &Cmd{}, nil
 }
 
@@ -72,7 +53,7 @@ func (s *Cmd) debug() *Cmd {
 	return s
 }
 
-func (s *Cmd) run(tx *dbs.Tx) (et.Items, error) {
-	tx, _ = dbs.GetTx(tx)
+func (s *Cmd) run(tx *mod.Tx) (et.Items, error) {
+	tx, _ = mod.GetTx(tx)
 	return et.Items{}, nil
 }

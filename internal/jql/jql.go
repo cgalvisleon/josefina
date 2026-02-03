@@ -7,7 +7,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/internal/dbs"
+	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 func init() {
 	node = &Node{
 		address: "",
-		dbs:     make(map[string]*dbs.DB, 0),
+		dbs:     make(map[string]*mod.DB, 0),
 	}
 }
 
@@ -43,13 +43,4 @@ func Load(getLeader func() (string, bool), getNextHost func() string, isStrict b
 
 	node.address = address
 	return nil
-}
-
-/**
-* GetModel: Returns a model
-* @param database, schema, name string
-* @return (*Model, error)
-**/
-func GetModel(database, schema, name string) (*dbs.Model, error) {
-	return node.getModel(database, schema, name)
 }
