@@ -11,15 +11,10 @@ import (
 )
 
 var (
-	appName  string = "josefina"
-	version  string = "0.0.1"
-	node     *Node
-	hostname string = ""
+	appName string = "josefina"
+	version string = "0.0.1"
+	node    *Node
 )
-
-func init() {
-	hostname, _ = os.Hostname()
-}
 
 /**
 * Load: Initializes josefine
@@ -45,6 +40,7 @@ func Load() error {
 		return err
 	}
 
+	hostname, _ := os.Hostname()
 	port := envar.GetInt("RPC_PORT", 4200)
 	isStrict := envar.GetBool("IS_STRICT", false)
 	node = newNode(hostname, port, isStrict)
