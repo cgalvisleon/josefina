@@ -8,12 +8,12 @@ import (
 
 type Stmt interface {
 	stmt()
-	toJson() (et.Json, error)
+	ToJson() (et.Json, error)
 }
 
 type BaseStmt struct{}
 
-func (b BaseStmt) toJson() (et.Json, error) {
+func (b BaseStmt) ToJson() (et.Json, error) {
 	bt, err := json.Marshal(b)
 	if err != nil {
 		return et.Json{}, err

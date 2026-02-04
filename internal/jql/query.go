@@ -1,11 +1,7 @@
 package jql
 
 import (
-	"fmt"
-
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
@@ -26,22 +22,27 @@ func Query(query string) ([]et.Json, error) {
 	}
 
 	for _, st := range stmts {
-		switch s := st.(type) {
-		case stmt.CreateDbStmt:
-			_, err := core.CreateDb(s.Name)
-			if err != nil {
-				return res(et.Json{}, err)
-			}
-
-			_, err = res(et.Json{
-				"message": "Database created successfully",
-			}, nil)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+		item, err := st.ToJson()
+		res(item, err)
+		if err != nil {
+			return nil, err
 		}
+		// switch s := st.(type) {
+		// case stmt.CreateDbStmt:
+		// 	_, err := core.CreateDb(s.Name)
+		// 	if err != nil {
+		// 		return res(et.Json{}, err)
+		// 	}
+
+		// 	_, err = res(et.Json{
+		// 		"message": "Database created successfully",
+		// 	}, nil)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
+		// default:
+		// 	return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+		// }
 	}
 
 	return result, nil
