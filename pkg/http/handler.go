@@ -52,12 +52,34 @@ func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
-* query
+* jQuery
+* @param w http.ResponseWriter, r *http.Request
+* @return error
+**/
+func (s *Router) jQuery(w http.ResponseWriter, r *http.Request) {
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := r.Context()
+	result, err := jdb.JQuery(ctx, body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
+* Query
 * @param w http.ResponseWriter, r *http.Request
 * @return error
 **/
 func (s *Router) query(w http.ResponseWriter, r *http.Request) {
-	body, err := response.GetBody(r)
+	body, err := response.GetStr(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return

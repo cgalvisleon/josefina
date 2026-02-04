@@ -12,11 +12,11 @@ import (
 )
 
 /**
-* Query: Executes a query
+* JQuery: Executes a query
 * @param ctx context.Context, query et.Json
 * @return et.Items, error
 **/
-func Query(ctx context.Context, query et.Json) (et.Items, error) {
+func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
 	app := ctx.Value("app").(string)
 	device := ctx.Value("device").(string)
 	username := ctx.Value("username").(string)
@@ -37,4 +37,22 @@ func Query(ctx context.Context, query et.Json) (et.Items, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* Query: Executes a query
+* @param ctx context.Context, query string
+* @return et.Items, error
+**/
+func Query(ctx context.Context, query string) (et.Items, error) {
+	app := ctx.Value("app").(string)
+	device := ctx.Value("device").(string)
+	username := ctx.Value("username").(string)
+	key := fmt.Sprintf("%s:%s:%s", app, device, username)
+	_, exists := cache.GetStr(key)
+	if !exists {
+		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	}
+
+	return et.Items{}, nil
 }
