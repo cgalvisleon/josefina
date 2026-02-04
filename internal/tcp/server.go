@@ -65,10 +65,10 @@ func (s *Server) handle(conn net.Conn) {
 }
 
 /**
-* Start
+* Listen
 * @return error
 **/
-func (s *Server) Start() error {
+func (s *Server) Listen() error {
 	address := fmt.Sprintf(":%d", s.port)
 	ln, err := net.Listen("tcp", address)
 	if err != nil {

@@ -43,7 +43,7 @@ const (
 
 type Client struct {
 	Username string       `json:"username"`
-	Host     string       `json:"host"`
+	Address  string       `json:"address"`
 	Status   Status       `json:"status"`
 	Type     TpConnection `json:"type"`
 }
@@ -443,15 +443,15 @@ func (s *Node) Auth(require et.Json, response *core.Session) error {
 
 /**
 * onConnect: Sets the client
-* @param username string, tpConnection TpConnection, host string
+* @param username string, tpConnection TpConnection, address string
 **/
-func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
+func (s *Node) onConnect(username string, tpConnection TpConnection, address string) error {
 	leader, ok := s.getLeader()
 	if ok {
 		args := et.Json{
 			"username":     username,
 			"tpConnection": tpConnection,
-			"host":         host,
+			"address":      address,
 		}
 		var dest bool
 		err := jrpc.CallRpc(leader, "Node.OnConnect", args, &dest)
@@ -465,7 +465,7 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 	s.clientMu.Lock()
 	s.clients[username] = &Client{
 		Username: username,
-		Host:     host,
+		Address:  address,
 		Type:     tpConnection,
 		Status:   Connected,
 	}
@@ -482,8 +482,8 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 func (s *Node) OnConnect(require et.Json, response *bool) error {
 	username := require.Str("username")
 	tpConnection := TpConnection(require.Int("tpConnection"))
-	host := require.Str("host")
-	err := s.onConnect(username, tpConnection, host)
+	address := require.Str("address")
+	err := s.onConnect(username, tpConnection, address)
 	if err != nil {
 		return err
 	}
