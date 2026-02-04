@@ -200,9 +200,11 @@ func (s *Node) start() error {
 	s.state = Follower
 	s.lastHeartbeat = timezone.Now()
 	s.mu.Unlock()
+	go s.electionLoop()
+
 	s.ws.Start()
 	s.ws.SetDebug(s.isDebug)
-	go s.electionLoop()
+
 	s.started = true
 
 	return nil
@@ -307,9 +309,9 @@ func (s *Node) reportModels(models map[string]*catalog.Model) error {
 	}
 
 	for key, model := range models {
-		s.mu.Lock()
+		s.modelMu.Lock()
 		s.models[key] = model
-		s.mu.Unlock()
+		s.modelMu.Unlock()
 	}
 
 	return nil
