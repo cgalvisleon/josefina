@@ -10,7 +10,7 @@ import (
 )
 
 func Query(query string) ([]et.Json, error) {
-	st, err := stmt.ParseText(query)
+	stmts, err := stmt.ParseText(query)
 	if err != nil {
 		return []et.Json{}, err
 	}
@@ -25,17 +25,24 @@ func Query(query string) ([]et.Json, error) {
 		return result, nil
 	}
 
-	switch s := st.(type) {
-	case *stmt.CreateDbStmt:
-		_, err := core.CreateDb(s.Name)
-		if err != nil {
-			return res(et.Json{}, err)
-		}
+	for _, st := range stmts {
+		switch s := st.(type) {
+		case stmt.CreateDbStmt:
+			_, err := core.CreateDb(s.Name)
+			if err != nil {
+				return res(et.Json{}, err)
+			}
 
-		return res(et.Json{
-			"message": "Database created successfully",
-		}, nil)
-	default:
-		return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+			_, err = res(et.Json{
+				"message": "Database created successfully",
+			}, nil)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+		}
 	}
+
+	return result, nil
 }

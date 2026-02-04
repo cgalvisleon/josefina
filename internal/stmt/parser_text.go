@@ -11,15 +11,8 @@ type Parser struct {
 	cur token
 }
 
-func ParseText(input string) (Stmt, error) {
-	stmts, err := ParseTextAll(input)
-	if err != nil {
-		return nil, err
-	}
-	if len(stmts) != 1 {
-		return nil, fmt.Errorf("expected 1 statement, got %d", len(stmts))
-	}
-	return stmts[0], nil
+func ParseText(input string) ([]Stmt, error) {
+	return ParseTextAll(input)
 }
 
 func ParseTextAll(input string) ([]Stmt, error) {
