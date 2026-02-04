@@ -4,6 +4,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/server"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
 	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
@@ -53,5 +54,18 @@ func (s *Service) Start() {
 	}
 	if s.ws != nil {
 		s.ws.Start()
+	}
+
+	utility.AppWait()
+
+	s.onClose()
+}
+
+func (s *Service) onClose() {
+	if s.ettp != nil {
+		s.ettp.Close()
+	}
+	if s.ws != nil {
+		s.ws.Close()
 	}
 }
