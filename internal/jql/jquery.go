@@ -7,11 +7,11 @@ type Ql struct {
 }
 
 /**
-* ToQl: Returns a Ql
+* JQuery: Returns a Ql
 * @param query et.Json
 * @return *Ql, error
 **/
-func ToQl(query et.Json) (*Ql, error) {
+func JQuery(query et.Json) (*Ql, error) {
 	command, err := getCommand(query)
 	if err != nil {
 		return nil, err
