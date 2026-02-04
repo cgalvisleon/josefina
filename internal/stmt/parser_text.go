@@ -88,12 +88,12 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		default:
 			return nil, p.errf("unknown DROP target")
 		}
-	case "USER":
+	case "USE":
 		switch strings.ToUpper(obj) {
 		case "DATABASE":
 			return p.parseUseDb()
 		default:
-			return nil, p.errf("unknown USER command")
+			return nil, p.errf("unknown USE command")
 		}
 	case "SET":
 		switch strings.ToUpper(obj) {
@@ -349,16 +349,22 @@ func (p *Parser) errf(msg string) error {
 }
 
 func (p *Parser) consumeTerm(after string) error {
-	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
-		p.advance()
-	}
 	if p.cur.typ == tokError {
 		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
 	}
 	if p.cur.typ == tokEOF {
 		return nil
 	}
-	return p.errf("unexpected token after " + after)
+	if p.cur.typ != tokSemicolon && p.cur.typ != tokNewline {
+		return p.errf("expected ';' or newline after " + after)
+	}
+	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+		p.advance()
+	}
+	if p.cur.typ == tokError {
+		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
+	}
+	return nil
 }
 
 func (p *Parser) skipSeps() {
