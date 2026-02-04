@@ -11,7 +11,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
@@ -52,12 +51,11 @@ type Node struct {
 	PackageName   string                    `json:"packageName"`
 	Version       string                    `json:"version"`
 	Address       string                    `json:"address"`
-	rpcPort       int                       `json:"-"`
-	tcpPort       int                       `json:"-"`
+	port          int                       `json:"-"`
 	isStrict      bool                      `json:"-"`
 	models        map[string]*catalog.Model `json:"-"`
 	rpcs          map[string]et.Json        `json:"-"`
-	rpcPeers      []string                  `json:"-"`
+	peers         []string                  `json:"-"`
 	state         NodeState                 `json:"-"`
 	term          int                       `json:"-"`
 	votedFor      string                    `json:"-"`
@@ -65,7 +63,6 @@ type Node struct {
 	lastHeartbeat time.Time                 `json:"-"`
 	turn          int                       `json:"-"`
 	started       bool                      `json:"-"`
-	ws            *ws.Hub                   `json:"-"`
 	clients       map[string]*Client        `json:"-"`
 	mu            sync.Mutex                `json:"-"`
 	modelMu       sync.RWMutex              `json:"-"`
@@ -78,29 +75,21 @@ type Node struct {
 * @param host string, port int
 * @return *Node
 **/
-func newNode(host string, rpcPort, tcpPort int, isStrict bool) *Node {
-	address := fmt.Sprintf(`%s:%d`, host, rpcPort)
+func newNode(host string, port int, isStrict bool) *Node {
+	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
 		PackageName: appName,
 		Address:     address,
 		Version:     version,
-		rpcPort:     rpcPort,
-		tcpPort:     tcpPort,
+		port:        port,
 		isStrict:    isStrict,
 		models:      make(map[string]*catalog.Model),
 		rpcs:        make(map[string]et.Json),
-		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
 		modelMu:     sync.RWMutex{},
 		clientMu:    sync.RWMutex{},
 	}
-	result.ws.OnConnection(func(subscriber *ws.Subscriber) {
-		result.onConnect(subscriber.Name, WebSocket, result.Address)
-	})
-	result.ws.OnDisconnection(func(subscriber *ws.Subscriber) {
-		result.onDisconnect(subscriber.Name)
-	})
 
 	return result
 }
@@ -112,11 +101,11 @@ func newNode(host string, rpcPort, tcpPort int, isStrict bool) *Node {
 func (s *Node) toJson() et.Json {
 	leader, _ := s.getLeader()
 	return et.Json{
-		"address":  s.Address,
-		"leader":   leader,
-		"version":  s.Version,
-		"rpcs":     s.rpcs,
-		"rpcPeers": s.rpcPeers,
+		"address": s.Address,
+		"leader":  leader,
+		"version": s.Version,
+		"rpcs":    s.rpcs,
+		"peers":   s.peers,
 	}
 }
 
@@ -139,27 +128,19 @@ func (s *Node) mount(services any) error {
 }
 
 /**
-* addRpcPeer
+* addPeer
 * @param node string
 **/
-func (s *Node) addRpcPeer(node string) {
-	s.rpcPeers = append(s.rpcPeers, node)
+func (s *Node) addPeer(node string) {
+	s.peers = append(s.peers, node)
 }
 
 /**
-* addTcpPeer
-* @param node string
-**/
-func (s *Node) addTcpPeer(node string) {
-	s.tcp.AddNode(node)
-}
-
-/**
-* nextRpc
+* next
 * @return string
 **/
-func (s *Node) nextRpc() string {
-	t := len(s.rpcPeers)
+func (s *Node) next() string {
+	t := len(s.peers)
 	if t == 0 {
 		return s.Address
 	}
@@ -169,7 +150,7 @@ func (s *Node) nextRpc() string {
 		s.turn = 1
 	}
 
-	return s.rpcPeers[s.turn]
+	return s.peers[s.turn]
 }
 
 /**
@@ -198,33 +179,19 @@ func (s *Node) start() error {
 	}
 
 	for _, node := range nodes {
-		s.addRpcPeer(node)
+		s.addPeer(node)
 	}
 
-	err = jrpc.Start(s.rpcPort)
+	err = jrpc.Start(s.port)
 	if err != nil {
 		return err
 	}
-
-	nodes, err = getTcpNodes()
-	if err != nil {
-		return err
-	}
-
-	for _, node := range nodes {
-		s.addTcpPeer(node)
-	}
-
-	logs.Fatal(s.tcp.Listen())
 
 	s.mu.Lock()
 	s.state = Follower
 	s.lastHeartbeat = timezone.Now()
 	s.mu.Unlock()
 	go s.electionLoop()
-
-	s.ws.Start()
-	s.ws.SetDebug(s.isDebug)
 
 	s.started = true
 
@@ -298,7 +265,7 @@ func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 	}
 
 	if !response.IsInit {
-		host := s.nextRpc()
+		host := s.next()
 		response, err = s.loadModel(host, response)
 		if err != nil {
 			return err
