@@ -495,11 +495,32 @@ func (s *Node) OnConnect(require et.Json, response *bool) error {
 func (s *Node) onDisconnect(username string) error {
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.onDisconnect(leader, username)
+		var dest bool
+		err := jrpc.CallRpc(leader, "Node.OnDisconnect", username, &dest)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	s.clientMu.Lock()
 	delete(s.clients, username)
 	s.clientMu.Unlock()
+	return nil
+}
+
+/**
+* OnDisconnect: Handles a disconnection
+* @param require string, response *boolean
+* @return error
+**/
+func (s *Node) OnDisconnect(require string, response *bool) error {
+	err := s.onDisconnect(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
 	return nil
 }

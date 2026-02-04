@@ -2,7 +2,6 @@ package jdb
 
 import (
 	"encoding/gob"
-	"errors"
 	"time"
 
 	"github.com/cgalvisleon/et/claim"
@@ -10,7 +9,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 func init() {
@@ -105,46 +103,4 @@ func (s *Nodes) heartbeat(to string, require *HeartbeatArgs, response *Heartbeat
 func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	err := node.heartbeat(require, response)
 	return err
-}
-
-/**
-* onDisconnect: Handles a disconnection
-* @param to, idx string, dest any
-* @return error
-**/
-func (s *Nodes) onDisconnect(to string, username string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	args := et.Json{
-		"username": username,
-	}
-	var dest bool
-	err := jrpc.CallRpc(to, "Nodes.OnDisconnect", args, &dest)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* OnDisconnect: Handles a disconnection
-* @param require et.Json, response *boolean
-* @return error
-**/
-func (s *Nodes) OnDisconnect(require et.Json, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	username := require.Str("username")
-	err := node.onDisconnect(username)
-	if err != nil {
-		return err
-	}
-
-	*response = true
-	return nil
 }
