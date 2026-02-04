@@ -1,11 +1,14 @@
 package tcp
 
 type Server struct {
-	port int
+	port  int
+	nodes []*Node
+	b     *Balancer
 }
 
 func NewServer(port int) *Server {
 	return &Server{
-		port: port,
+		port:  port,
+		nodes: []*Node{},
 	}
 }
