@@ -199,13 +199,13 @@ func (s *Node) start() error {
 }
 
 /**
-* ping
+* Ping
 * @param to string
 * @return bool
 **/
-func (s *Node) ping(to string) bool {
+func (s *Node) Ping(to string) bool {
 	var response string
-	err := jrpc.CallRpc(to, "Node.Ping", s.Address, &response)
+	err := jrpc.CallRpc(to, "Node.Pong", s.Address, &response)
 	if err != nil {
 		return false
 	}
@@ -215,11 +215,11 @@ func (s *Node) ping(to string) bool {
 }
 
 /**
-* Ping: Pings the leader
+* Pong: Pings the leader
 * @param response *string
 * @return error
 **/
-func (s *Node) Ping(require string, response *string) error {
+func (s *Node) Pong(require string, response *string) error {
 	logs.Log(s.PackageName, "ping:", require)
 	*response = "pong"
 	return nil
