@@ -12,11 +12,11 @@ import (
 )
 
 /**
-* JQuery: Executes a query
+* Query: Executes a query
 * @param ctx context.Context, query et.Json
 * @return et.Items, error
 **/
-func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
+func Query(ctx context.Context, query et.Json) (et.Items, error) {
 	app := ctx.Value("app").(string)
 	device := ctx.Value("device").(string)
 	username := ctx.Value("username").(string)

@@ -64,7 +64,7 @@ func (s *Router) query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	result, err := jdb.JQuery(ctx, body)
+	result, err := jdb.Query(ctx, body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
