@@ -47,7 +47,17 @@ func Load() error {
 		return nil
 	}
 
-	err := catalog.Load(node.getLeader)
+	hostname, _ := os.Hostname()
+	port := envar.GetInt("RPC_PORT", 4200)
+	isStrict := envar.GetBool("IS_STRICT", false)
+	node = newNode(hostname, port, isStrict)
+
+	err := node.mount(node)
+	if err != nil {
+		return err
+	}
+
+	err = catalog.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
@@ -63,16 +73,6 @@ func Load() error {
 	}
 
 	err = jql.Load(node.getLeader, node.isStrict)
-	if err != nil {
-		return err
-	}
-
-	hostname, _ := os.Hostname()
-	port := envar.GetInt("RPC_PORT", 4200)
-	isStrict := envar.GetBool("IS_STRICT", false)
-	node = newNode(hostname, port, isStrict)
-
-	err = node.mount(node)
 	if err != nil {
 		return err
 	}
