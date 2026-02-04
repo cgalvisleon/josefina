@@ -3,21 +3,19 @@ package mod
 import (
 	"encoding/gob"
 	"errors"
-	"fmt"
-	"os"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type Mod struct{}
+type Mod struct {
+	getLeader func() (string, bool)
+	address   string
+}
 
 var (
-	syn     *Mod
-	address string
+	syn *Mod
 )
 
 func init() {
@@ -31,16 +29,7 @@ func init() {
 	gob.Register(Model{})
 	gob.Register(Tx{})
 	gob.Register(Transaction{})
-
-	hostname, _ := os.Hostname()
-	port := envar.GetInt("RPC_PORT", 4200)
-	address = fmt.Sprintf("%s:%d", hostname, port)
-
 	syn = &Mod{}
-	_, err := jrpc.Mount(address, syn)
-	if err != nil {
-		logs.Panic(err)
-	}
 }
 
 /**

@@ -143,7 +143,7 @@ func (s *Model) Init() error {
 		}
 	}
 
-	s.Address = address
+	s.Address = syn.address
 	s.IsInit = true
 	models[s.Key()] = s
 	return nil
