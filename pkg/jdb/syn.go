@@ -45,21 +45,6 @@ func init() {
 }
 
 /**
-* ping
-* @return error
-**/
-func (s *Nodes) ping(to string) error {
-	var response string
-	err := jrpc.CallRpc(to, "Nodes.Ping", node.Address, &response)
-	if err != nil {
-		return err
-	}
-
-	logs.Logf(node.PackageName, "%s:%s", response, to)
-	return nil
-}
-
-/**
 * Ping: Pings the leader
 * @param response *string
 * @return error
@@ -166,16 +151,24 @@ func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) erro
 
 /**
 * GetModel: Gets a model
-* @param require *mod.From, response *mod.ModelResult
+* @param require *mod.From, response *mod.Model
 * @return error
 **/
-func (s *Nodes) GetModel(require *mod.From, response *mod.ModelResult) error {
-	err := node.getModel(require, response)
+func (s *Nodes) GetModel(require *mod.From, response *mod.Model) error {
+	exists, err := core.GetModel(require, response)
 	if err != nil {
 		return err
 	}
 
-	*response = true
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	if !response.IsInit {
+		host := node.nextHost()
+		return s.GetModel(require, response)
+	}
+
 	return nil
 }
 

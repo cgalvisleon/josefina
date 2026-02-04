@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/cache"
@@ -202,11 +203,6 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	err := s.mount(syn)
-	if err != nil {
-		return err
-	}
-
 	nodes, err := getNodes()
 	if err != nil {
 		return err
@@ -234,17 +230,18 @@ func (s *Node) start() error {
 }
 
 /**
-* Ping
+* ping
 * @param to string
 * @return bool
 **/
-func (s *Node) Ping(to string) bool {
-	err := syn.ping(to)
+func (s *Node) ping(to string) bool {
+	var response string
+	err := jrpc.CallRpc(to, "Nodes.Ping", node.Address, &response)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return true
+	logs.Logf(node.PackageName, "%s:%s", response, to)
 }
 
 /**

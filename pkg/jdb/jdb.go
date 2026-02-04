@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/jql"
+	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
 var (
@@ -25,12 +26,17 @@ func Load() error {
 		return nil
 	}
 
-	err := cache.Load(node.getLeader)
+	err := mod.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
 
 	err = core.Load(node.getLeader)
+	if err != nil {
+		return err
+	}
+
+	err = cache.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
@@ -44,6 +50,16 @@ func Load() error {
 	port := envar.GetInt("RPC_PORT", 4200)
 	isStrict := envar.GetBool("IS_STRICT", false)
 	node = newNode(hostname, port, isStrict)
+
+	err = node.mount(node)
+	if err != nil {
+		return err
+	}
+
+	err = node.mount(syn)
+	if err != nil {
+		return err
+	}
 
 	go node.start()
 
