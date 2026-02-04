@@ -18,12 +18,12 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type NodeState int
+type nodeState int
 
 const (
-	Follower NodeState = iota
-	Candidate
-	Leader
+	follower nodeState = iota
+	candidate
+	leader
 )
 
 type TpConnection int
@@ -260,7 +260,12 @@ func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
 
 	if !response.IsInit {
 		host := node.nextHost()
-		return mod.LoadModel(require, response)
+		response, err = mod.LoadModel(host, response)
+		if err != nil {
+			return err
+		}
+
+		mod.
 	}
 
 	return nil
