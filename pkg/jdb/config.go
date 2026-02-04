@@ -36,16 +36,3 @@ func getRpcNodes() ([]string, error) {
 
 	return config.RPC, nil
 }
-
-/**
-* getTcpNodes: Returns the tcp nodes
-* @return []string, error
-**/
-func getTcpNodes() ([]string, error) {
-	config, err := getConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config.TCP, nil
-}
