@@ -48,9 +48,10 @@ func Load() error {
 	}
 
 	hostname, _ := os.Hostname()
-	port := envar.GetInt("RPC_PORT", 4200)
+	rpcPort := envar.GetInt("RPC_PORT", 4200)
+	tcpPort := envar.GetInt("TCP_PORT", 4300)
 	isStrict := envar.GetBool("IS_STRICT", false)
-	node = newNode(hostname, port, isStrict)
+	node = newNode(hostname, rpcPort, tcpPort, isStrict)
 
 	err := node.mount(node)
 	if err != nil {

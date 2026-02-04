@@ -53,7 +53,8 @@ type Node struct {
 	PackageName   string                    `json:"packageName"`
 	Version       string                    `json:"version"`
 	Address       string                    `json:"address"`
-	Port          int                       `json:"port"`
+	rpcPort       int                       `json:"-"`
+	tcpPort       int                       `json:"-"`
 	isStrict      bool                      `json:"-"`
 	models        map[string]*catalog.Model `json:"-"`
 	rpcs          map[string]et.Json        `json:"-"`
@@ -85,8 +86,9 @@ func newNode(host string, rpcPort, tcpPort int, isStrict bool) *Node {
 	result := &Node{
 		PackageName: appName,
 		Address:     address,
-		Port:        rpcPort,
 		Version:     version,
+		rpcPort:     rpcPort,
+		tcpPort:     tcpPort,
 		isStrict:    isStrict,
 		models:      make(map[string]*catalog.Model),
 		rpcs:        make(map[string]et.Json),
@@ -204,7 +206,7 @@ func (s *Node) start() error {
 		s.addRpcPeer(node)
 	}
 
-	err = jrpc.Start(s.Port)
+	err = jrpc.Start(s.rpcPort)
 	if err != nil {
 		return err
 	}
