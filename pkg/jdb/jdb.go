@@ -1,10 +1,14 @@
 package jdb
 
 import (
+	"encoding/gob"
 	"os"
+	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/jql"
@@ -16,6 +20,23 @@ var (
 	version string = "0.0.1"
 	node    *Node
 )
+
+func init() {
+	gob.Register(time.Time{})
+	gob.Register(et.Json{})
+	gob.Register([]et.Json{})
+	gob.Register(et.Item{})
+	gob.Register(et.Items{})
+	gob.Register(et.List{})
+	gob.Register(claim.Claim{})
+	gob.Register(core.Session{})
+	gob.Register(RequestVoteArgs{})
+	gob.Register(RequestVoteReply{})
+	gob.Register(HeartbeatArgs{})
+	gob.Register(HeartbeatReply{})
+	gob.Register(mem.Item{})
+	gob.Register(Client{})
+}
 
 /**
 * Load: Initializes josefine
@@ -52,11 +73,6 @@ func Load() error {
 	node = newNode(hostname, port, isStrict)
 
 	err = node.mount(node)
-	if err != nil {
-		return err
-	}
-
-	err = node.mount(syn)
 	if err != nil {
 		return err
 	}
