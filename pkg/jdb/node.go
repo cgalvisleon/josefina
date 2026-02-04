@@ -244,34 +244,6 @@ func (s *Node) Ping(require string, response *string) error {
 }
 
 /**
-* GetModel: Gets a model
-* @param require *mod.From, response *mod.Model
-* @return error
-**/
-func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
-	exists, err := core.GetModel(require, response)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.New(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	if !response.IsInit {
-		host := node.nextHost()
-		response, err = mod.LoadModel(host, response)
-		if err != nil {
-			return err
-		}
-
-		mod.
-	}
-
-	return nil
-}
-
-/**
 * reportModels: Reports the models
 * @param models map[string]*mod.Model
 * @return error

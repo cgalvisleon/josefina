@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
@@ -582,21 +581,6 @@ func loadModel(model *Model) (*Model, error) {
 	}
 
 	return model, nil
-}
-
-/**
-* LoadModel: Loads a model
-* @param to string, model *Model
-* @return (*Model, error)
-**/
-func LoadModel(to string, model *Model) (*Model, error) {
-	var response *Model
-	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
 }
 
 /**

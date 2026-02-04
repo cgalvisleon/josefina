@@ -56,6 +56,11 @@ func Load() error {
 		return err
 	}
 
+	err = node.mount(leader)
+	if err != nil {
+		return err
+	}
+
 	err = node.mount(syn)
 	if err != nil {
 		return err
