@@ -62,7 +62,7 @@ func Load() error {
 		return err
 	}
 
-	err = jql.Load(node.getLeader, node.nextHost, node.isStrict)
+	err = jql.Load(node.getLeader, node.isStrict)
 	if err != nil {
 		return err
 	}

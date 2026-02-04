@@ -23,12 +23,11 @@ func init() {
 
 /**
 * Load: Loads the cache
-* @param getLeader func() (string, bool)
+* @param getLeader func() (string, bool), isStrict bool
 * @return error
 **/
-func Load(getLeader func() (string, bool), getNextHost func() string, isStrict bool) error {
+func Load(getLeader func() (string, bool), isStrict bool) error {
 	node.getLeader = getLeader
-	node.nextHost = getNextHost
 	node.isStrict = isStrict
 
 	hostname, _ := os.Hostname()

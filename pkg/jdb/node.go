@@ -56,7 +56,8 @@ type Node struct {
 	isStrict      bool                      `json:"-"`
 	models        map[string]*catalog.Model `json:"-"`
 	rpcs          map[string]et.Json        `json:"-"`
-	peers         []string                  `json:"-"`
+	rpcPeers      []string                  `json:"-"`
+	tcpPeers      []string                  `json:"-"`
 	state         NodeState                 `json:"-"`
 	term          int                       `json:"-"`
 	votedFor      string                    `json:"-"`
@@ -110,11 +111,12 @@ func newNode(host string, port int, isStrict bool) *Node {
 func (s *Node) toJson() et.Json {
 	leader, _ := s.getLeader()
 	return et.Json{
-		"address": s.Address,
-		"leader":  leader,
-		"version": s.Version,
-		"rpcs":    s.rpcs,
-		"peers":   s.peers,
+		"address":  s.Address,
+		"leader":   leader,
+		"version":  s.Version,
+		"rpcs":     s.rpcs,
+		"rpcPeers": s.rpcPeers,
+		"tcpPeers": s.tcpPeers,
 	}
 }
 
@@ -137,19 +139,27 @@ func (s *Node) mount(services any) error {
 }
 
 /**
-* addNode
+* addRpcPeer
 * @param node string
 **/
-func (s *Node) addNode(node string) {
-	s.peers = append(s.peers, node)
+func (s *Node) addRpcPeer(node string) {
+	s.rpcPeers = append(s.rpcPeers, node)
 }
 
 /**
-* nextHost
+* addTcpPeer
+* @param node string
+**/
+func (s *Node) addTcpPeer(node string) {
+	s.tcpPeers = append(s.tcpPeers, node)
+}
+
+/**
+* nextRpc
 * @return string
 **/
-func (s *Node) nextHost() string {
-	t := len(s.peers)
+func (s *Node) nextRpc() string {
+	t := len(s.rpcPeers)
 	if t == 0 {
 		return s.Address
 	}
@@ -159,7 +169,7 @@ func (s *Node) nextHost() string {
 		s.turn = 1
 	}
 
-	return s.peers[s.turn]
+	return s.rpcPeers[s.turn]
 }
 
 /**
@@ -188,7 +198,7 @@ func (s *Node) start() error {
 	}
 
 	for _, node := range nodes {
-		s.addNode(node)
+		s.addRpcPeer(node)
 	}
 
 	err = jrpc.Start(s.Port)
@@ -277,7 +287,7 @@ func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 	}
 
 	if !response.IsInit {
-		host := node.nextHost()
+		host := s.nextRpc()
 		response, err = s.loadModel(host, response)
 		if err != nil {
 			return err

@@ -13,5 +13,4 @@ type Node struct {
 	modelMu   sync.RWMutex
 	isStrict  bool
 	getLeader func() (string, bool)
-	nextHost  func() string
 }
