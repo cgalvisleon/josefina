@@ -182,7 +182,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	nodes, err := getNodes()
+	nodes, err := getRpcNodes()
 	if err != nil {
 		return err
 	}

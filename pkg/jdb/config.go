@@ -5,7 +5,8 @@ import (
 )
 
 type Config struct {
-	Nodes []string `json:"nodes"`
+	RPC []string `json:"rpc"`
+	TCP []string `json:"tcp"`
 }
 
 /**
@@ -24,14 +25,27 @@ func getConfig() (*Config, error) {
 }
 
 /**
-* getNodes: Returns the nodes
+* getRpcNodes: Returns the rpc nodes
 * @return []string, error
 **/
-func getNodes() ([]string, error) {
+func getRpcNodes() ([]string, error) {
 	config, err := getConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return config.Nodes, nil
+	return config.RPC, nil
+}
+
+/**
+* getTcpNodes: Returns the tcp nodes
+* @return []string, error
+**/
+func getTcpNodes() ([]string, error) {
+	config, err := getConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return config.TCP, nil
 }
