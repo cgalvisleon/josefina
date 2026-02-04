@@ -81,7 +81,7 @@ var (
 	MSG_DB_NOT_EXISTS              = "database not exists"
 	MSG_MODEL_NOT_EXISTS           = "model not exists"
 	MSG_UNSUPPORTED_STATEMENT_TYPE = "unsupported statement type: %T"
-	MSG_TCP_LISTENING              = "TCP balancer listening on :%d"
+	MSG_TCP_LISTENING              = "TCP listening on :%d"
 )
 
 func init() {
@@ -147,6 +147,6 @@ func init() {
 		MSG_DB_NOT_EXISTS = "database no existe"
 		MSG_MODEL_NOT_EXISTS = "model no existe"
 		MSG_UNSUPPORTED_STATEMENT_TYPE = "tipo de statement no soportado: %T"
-		MSG_TCP_LISTENING = "TCP balancer listening on :%d"
+		MSG_TCP_LISTENING = "TCP listening on :%d"
 	}
 }

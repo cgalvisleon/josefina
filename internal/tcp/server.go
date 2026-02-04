@@ -3,31 +3,41 @@ package tcp
 import (
 	"fmt"
 	"net"
+	"sync/atomic"
 
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type NodeState int
+type Mode int
 
 const (
-	Follower NodeState = iota
-	Leader
+	ModeServer Mode = iota
+	ModeBalancer
 )
 
 type Server struct {
 	port  int
 	nodes []*Node
 	b     *Balancer
-	state NodeState
-	ln    net.Listener
+	mode  atomic.Value
 }
 
-func NewServer(port int) *Server {
-	return &Server{
+func NewServer(port int, mode Mode) *Server {
+	result := &Server{
 		port:  port,
 		nodes: []*Node{},
 	}
+	result.mode.Store(mode)
+	return result
+}
+
+/**
+* setMode
+* @param m Mode
+**/
+func (s *Server) setMode(m Mode) {
+	s.mode.Store(m)
 }
 
 /**
@@ -40,39 +50,37 @@ func (s *Server) AddNode(address string) {
 }
 
 /**
+* handle
+* @param conn net.Conn
+**/
+func (s *Server) handle(conn net.Conn) {
+	mode := s.mode.Load().(Mode)
+
+	switch mode {
+	case ModeBalancer:
+		s.handleBalancer(conn)
+	default:
+		s.handleServer(conn)
+	}
+}
+
+/**
 * Start
-* @param state NodeState
 * @return error
 **/
-func (s *Server) Start(state NodeState) error {
-	var err error
-	s.state = state
-	if s.ln != nil {
-		err = s.ln.Close()
-		if err != nil {
-			return err
-		}
-	}
-
-	s.ln, err = net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+func (s *Server) Start() error {
+	address := fmt.Sprintf(":%d", s.port)
+	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
 	}
 
-	if s.state == Leader {
-		logs.Logf("TCP", msg.MSG_TCP_LISTENING, s.port)
-		s.b = NewBalancer(s.nodes)
-		for {
-			conn, err := s.ln.Accept()
-			if err != nil {
-				continue
-			}
-
-			go Proxy(conn, s.b)
+	logs.Logf("TCP", msg.MSG_TCP_LISTENING, s.port)
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			continue
 		}
-	} else {
-
+		go s.handle(conn)
 	}
-
-	return nil
 }
