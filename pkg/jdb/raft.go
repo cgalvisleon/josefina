@@ -80,7 +80,7 @@ func (s *Node) electionLoop() {
 		state := s.state
 		s.mu.Unlock()
 
-		if elapsed > heartbeatInterval && state == Follower {
+		if elapsed > heartbeatInterval && state != Leader {
 			s.startElection()
 		}
 	}
@@ -90,29 +90,20 @@ func (s *Node) electionLoop() {
 * startElection
 **/
 func (s *Node) startElection() {
+	defer func() {
+	}()
+
 	s.mu.Lock()
 	s.state = Candidate
 	s.term++
 	term := s.term
 	s.votedFor = s.Address
 	s.mu.Unlock()
-	votes := 0
+	votes := 1
 
-	peers := []string{}
-	total := 0
+	total := len(s.peers)
 	for _, peer := range s.peers {
-		ok := s.ping(peer)
-		if ok {
-			peers = append(peers, peer)
-			total++
-		}
-	}
-
-	for _, peer := range peers {
 		go func(peer string) {
-			s.mu.Lock()
-			defer s.mu.Unlock()
-
 			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
 			res := requestVote(peer, &args, &reply)
@@ -121,6 +112,9 @@ func (s *Node) startElection() {
 			}
 
 			if res.Ok {
+				s.mu.Lock()
+				defer s.mu.Unlock()
+
 				if reply.Term > s.term {
 					s.term = reply.Term
 					s.state = Follower

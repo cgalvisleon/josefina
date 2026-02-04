@@ -33,7 +33,7 @@ func initSessions() error {
 	if err != nil {
 		return err
 	}
-	if err := series.Init(); err != nil {
+	if err := sessions.Init(); err != nil {
 		return err
 	}
 
