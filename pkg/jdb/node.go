@@ -137,14 +137,6 @@ func (s *Node) mount(services any) error {
 }
 
 /**
-* setDebug
-* @param debug bool
-**/
-func (s *Node) setDebug(debug bool) {
-	s.isDebug = debug
-}
-
-/**
 * addNode
 * @param node string
 **/
