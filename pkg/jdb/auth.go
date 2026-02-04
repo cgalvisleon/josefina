@@ -53,11 +53,11 @@ func applyMiddlewares(handler http.Handler, middlewares []func(http.Handler) htt
 }
 
 /**
-* applyAuthenticate
+* ApplyAuthenticate
 * @param handler http.Handler
 * @return http.Handler
 **/
-func applyAuthenticate(handler http.Handler) http.Handler {
+func ApplyAuthenticate(handler http.Handler) http.Handler {
 	middlewares := []func(http.Handler) http.Handler{
 		Authenticate,
 	}

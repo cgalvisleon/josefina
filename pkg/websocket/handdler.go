@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
@@ -17,26 +19,35 @@ import (
 * @param w http.ResponseWriter, r *http.Request
 **/
 func WsUpgrader(w http.ResponseWriter, r *http.Request) {
-	conn, err := ws.Upgrader(w, r)
+	socket, err := ws.Upgrader(w, r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if conn == nil {
+	if socket == nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, "Connection is nil")
 		return
 	}
 
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		_, err := hub.Connect(conn, ctx)
-		if err != nil {
-			response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}))
-	handler.ServeHTTP(w, r)
+	token := r.Header.Get("Authorization")
+	result, err := core.Authenticate(token)
+	if err != nil {
+		ws.SendError(socket, err)
+		socket.Close()
+		return
+	}
+
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "sessionId", result.Id)
+	ctx = context.WithValue(ctx, "app", result.App)
+	ctx = context.WithValue(ctx, "device", result.Device)
+	ctx = context.WithValue(ctx, "username", result.Username)
+	_, err = hub.Connect(socket, ctx)
+	if err != nil {
+		ws.SendError(socket, err)
+		socket.Close()
+	}
 }
 
 /**
@@ -45,7 +56,7 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpTopic(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -69,7 +80,7 @@ func HttpTopic(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpQueue(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -93,7 +104,7 @@ func HttpQueue(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpStack(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -117,7 +128,7 @@ func HttpStack(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpRemove(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -145,7 +156,7 @@ func HttpRemove(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -175,7 +186,7 @@ func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -205,7 +216,7 @@ func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpSendTo(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -239,7 +250,7 @@ func HttpSendTo(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpPublish(w http.ResponseWriter, r *http.Request) {
-	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.ApplyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
