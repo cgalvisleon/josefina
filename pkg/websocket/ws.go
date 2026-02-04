@@ -13,14 +13,14 @@ var (
 )
 
 func Init(h *ws.Hub) http.Handler {
-	hub = h
-	hub.OnConnection(func(sub *ws.Subscriber) {
+	h.OnConnection(func(sub *ws.Subscriber) {
 		logs.Debug("Connection:", sub.Name)
 	})
-	hub.OnDisconnection(func(sub *ws.Subscriber) {
+	h.OnDisconnection(func(sub *ws.Subscriber) {
 		logs.Debug("Disconnection:", sub.Name)
 	})
 
+	hub = h
 	r := chi.NewRouter()
 	r.Get("/", WsUpgrader)
 	r.Post("/topic", HttpTopic)

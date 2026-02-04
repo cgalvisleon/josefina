@@ -48,5 +48,10 @@ func New() *Service {
 * @return
 **/
 func (s *Service) Start() {
-	s.ettp.Start()
+	if s.ettp != nil {
+		s.ettp.Start()
+	}
+	if s.ws != nil {
+		s.ws.Start()
+	}
 }

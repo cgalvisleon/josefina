@@ -39,7 +39,7 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	ctx = context.WithValue(ctx, "sessionId", result.Id)
+	ctx = context.WithValue(ctx, "sessionId", result.ID)
 	ctx = context.WithValue(ctx, "app", result.App)
 	ctx = context.WithValue(ctx, "device", result.Device)
 	ctx = context.WithValue(ctx, "username", result.Username)

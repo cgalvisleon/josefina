@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"math/rand"
+	"slices"
 	"sync"
 	"time"
 
@@ -99,8 +100,14 @@ func (s *Node) startElection() {
 	term := s.term
 	s.votedFor = s.Address
 	s.mu.Unlock()
-	votes := 1
 
+	idx := slices.Index(s.peers, s.Address)
+	if idx != -1 {
+		s.becomeLeader()
+		return
+	}
+
+	votes := 1
 	total := len(s.peers)
 	for _, peer := range s.peers {
 		go func(peer string) {
