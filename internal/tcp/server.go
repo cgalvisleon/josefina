@@ -12,8 +12,8 @@ import (
 type Mode int
 
 const (
-	ModeServer Mode = iota
-	ModeBalancer
+	Follower Mode = iota
+	Leader
 )
 
 type Server struct {
@@ -28,15 +28,15 @@ func NewServer(port int) *Server {
 		port:  port,
 		nodes: []*Node{},
 	}
-	result.mode.Store(ModeServer)
+	result.mode.Store(Follower)
 	return result
 }
 
 /**
-* setMode
+* SetMode
 * @param m Mode
 **/
-func (s *Server) setMode(m Mode) {
+func (s *Server) SetMode(m Mode) {
 	s.mode.Store(m)
 }
 
@@ -57,7 +57,7 @@ func (s *Server) handle(conn net.Conn) {
 	mode := s.mode.Load().(Mode)
 
 	switch mode {
-	case ModeBalancer:
+	case Leader:
 		s.handleBalancer(conn)
 	default:
 		s.handleServer(conn)

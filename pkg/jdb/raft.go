@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/internal/tcp"
 )
 
 var (
@@ -141,6 +142,7 @@ func (s *Node) becomeLeader() {
 	logs.Logf(s.PackageName, "I am leader %s", s.Address)
 
 	go s.heartbeatLoop()
+	s.tcp.SetMode(tcp.Leader)
 }
 
 /**
