@@ -3,6 +3,7 @@ package websocket
 import (
 	"net/http"
 
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/ws"
 	"github.com/go-chi/chi/v5"
 )
@@ -13,6 +14,13 @@ var (
 
 func Init(h *ws.Hub) http.Handler {
 	hub = h
+	hub.OnConnection(func(sub *ws.Subscriber) {
+		logs.Debug("Connection:", sub.Name)
+	})
+	hub.OnDisconnection(func(sub *ws.Subscriber) {
+		logs.Debug("Disconnection:", sub.Name)
+	})
+
 	r := chi.NewRouter()
 	r.Get("/", WsUpgrader)
 	r.Post("/topic", HttpTopic)
