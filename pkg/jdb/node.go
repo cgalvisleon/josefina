@@ -444,7 +444,18 @@ func (s *Node) Auth(require et.Json, response *core.Session) error {
 func (s *Node) onConnect(username string, tpConnection TpConnection, host string) error {
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.onConnect(leader, username, tpConnection, host)
+		args := et.Json{
+			"username":     username,
+			"tpConnection": tpConnection,
+			"host":         host,
+		}
+		var dest bool
+		err := jrpc.CallRpc(leader, "Node.OnConnect", args, &dest)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	s.clientMu.Lock()
@@ -456,6 +467,24 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, host string
 	}
 	s.clientMu.Unlock()
 
+	return nil
+}
+
+/**
+* OnConnect: Handles a connection
+* @param require et.Json, response *boolean
+* @return error
+**/
+func (s *Node) OnConnect(require et.Json, response *bool) error {
+	username := require.Str("username")
+	tpConnection := TpConnection(require.Int("tpConnection"))
+	host := require.Str("host")
+	err := s.onConnect(username, tpConnection, host)
+	if err != nil {
+		return err
+	}
+
+	*response = true
 	return nil
 }
 

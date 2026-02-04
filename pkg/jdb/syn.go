@@ -27,6 +27,7 @@ func init() {
 	gob.Register(HeartbeatArgs{})
 	gob.Register(HeartbeatReply{})
 	gob.Register(mem.Item{})
+	gob.Register(Client{})
 }
 
 type AnyResult struct {
@@ -104,52 +105,6 @@ func (s *Nodes) heartbeat(to string, require *HeartbeatArgs, response *Heartbeat
 func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	err := node.heartbeat(require, response)
 	return err
-}
-
-/**
-* onConnect: Handles a connection
-* @param to, idx string, dest any
-* @return error
-**/
-func (s *Nodes) onConnect(to string, username string, tpConnection TpConnection, host string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	args := et.Json{
-		"username":     username,
-		"tpConnection": tpConnection,
-		"host":         host,
-	}
-	var dest bool
-	err := jrpc.CallRpc(to, "Nodes.OnConnect", args, &dest)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* OnConnect: Handles a connection
-* @param require et.Json, response *boolean
-* @return error
-**/
-func (s *Nodes) OnConnect(require et.Json, response *bool) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	username := require.Str("username")
-	tpConnection := TpConnection(require.Int("tpConnection"))
-	host := require.Str("host")
-	err := node.onConnect(username, tpConnection, host)
-	if err != nil {
-		return err
-	}
-
-	*response = true
-	return nil
 }
 
 /**
