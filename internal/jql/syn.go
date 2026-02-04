@@ -16,6 +16,7 @@ var (
 func init() {
 	gob.Register(Ql{})
 	gob.Register(Cmd{})
+	syn = &Jql{}
 }
 
 func (j *Jql) LoadModel(require et.Json, response *catalog.Model) error {

@@ -34,7 +34,6 @@ func Load(getLeader func() (string, bool), isStrict bool) error {
 	port := envar.GetInt("RPC_PORT", 4200)
 	address := fmt.Sprintf("%s:%d", hostname, port)
 
-	syn = &Jql{}
 	_, err := jrpc.Mount(address, syn)
 	if err != nil {
 		logs.Panic(err)
