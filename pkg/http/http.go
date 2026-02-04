@@ -22,9 +22,9 @@ func Init() (http.Handler, error) {
 	}
 
 	r := chi.NewRouter()
-	server := newRouter(PackageName)
+	server := httpRouter(PackageName)
 	r.Mount(server.PackagePath, server.Routes())
-	r.Mount("/", server.WsRouter())
+	r.Mount("/", server.wsRouter())
 
 	return r, nil
 }

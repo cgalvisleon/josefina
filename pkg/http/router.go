@@ -20,7 +20,7 @@ type Router struct {
 	Hostname    string
 }
 
-func newRouter(name string) *Router {
+func httpRouter(name string) *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
@@ -51,10 +51,10 @@ func (s *Router) Routes() http.Handler {
 }
 
 /**
-* WsRouter
+* wsRouter
 * @return http.Handler
 **/
-func (s *Router) WsRouter() http.Handler {
+func (s *Router) wsRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/ws", jdb.WsUpgrader)
 	r.Post("/ws/topic", jdb.HttpTopic)
