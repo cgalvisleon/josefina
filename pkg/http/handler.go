@@ -52,11 +52,11 @@ func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
-* jql
+* query
 * @param w http.ResponseWriter, r *http.Request
 * @return error
 **/
-func (s *Router) jQuery(w http.ResponseWriter, r *http.Request) {
+func (s *Router) query(w http.ResponseWriter, r *http.Request) {
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
