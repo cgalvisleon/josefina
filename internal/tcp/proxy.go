@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func Handle(client net.Conn, b *Balancer) {
+func Proxy(client net.Conn, b *Balancer) {
 	defer client.Close()
 
 	node := b.Next()
