@@ -138,7 +138,7 @@ func (s *Node) becomeLeader() {
 	s.leaderID = s.Address
 	s.lastHeartbeat = timezone.Now()
 
-	logs.Debugf("I am leader %s", s.Address)
+	logs.Logf(s.PackageName, "I am leader %s", s.Address)
 
 	go s.heartbeatLoop()
 }
