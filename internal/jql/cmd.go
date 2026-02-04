@@ -2,26 +2,26 @@ package jql
 
 import (
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 type Cmd struct {
 	address string
 	command Command
-	model   *mod.Model
-	where   *mod.Wheres
+	model   *catalog.Model
+	where   *catalog.Wheres
 	data    []et.Json
 	new     et.Json
-	tx      *mod.Tx
+	tx      *catalog.Tx
 	isDebug bool
 }
 
-func newCmd(command Command, model *mod.Model) *Cmd {
+func newCmd(command Command, model *catalog.Model) *Cmd {
 	return &Cmd{
 		address: model.Address,
 		command: command,
 		model:   model,
-		where:   &mod.Wheres{},
+		where:   &catalog.Wheres{},
 		data:    make([]et.Json, 0),
 		new:     et.Json{},
 	}
@@ -40,7 +40,7 @@ func (s *Cmd) debug() *Cmd {
 	return s
 }
 
-func (s *Cmd) run(tx *mod.Tx) (et.Items, error) {
-	tx, _ = mod.GetTx(tx)
+func (s *Cmd) run(tx *catalog.Tx) (et.Items, error) {
+	tx, _ = catalog.GetTx(tx)
 	return et.Items{}, nil
 }

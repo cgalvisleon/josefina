@@ -3,13 +3,13 @@ package jql
 import (
 	"sync"
 
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 type Node struct {
 	address   string
-	dbs       map[string]*mod.DB
-	models    map[string]*mod.Model
+	dbs       map[string]*catalog.DB
+	models    map[string]*catalog.Model
 	modelMu   sync.RWMutex
 	isStrict  bool
 	getLeader func() (string, bool)

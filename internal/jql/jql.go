@@ -7,7 +7,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 func init() {
 	node = &Node{
 		address: "",
-		dbs:     make(map[string]*mod.DB, 0),
+		dbs:     make(map[string]*catalog.DB, 0),
 	}
 }
 

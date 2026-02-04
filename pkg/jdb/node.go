@@ -13,8 +13,8 @@ import (
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -49,27 +49,27 @@ type Client struct {
 }
 
 type Node struct {
-	PackageName   string                `json:"packageName"`
-	Version       string                `json:"version"`
-	Address       string                `json:"address"`
-	Port          int                   `json:"port"`
-	isStrict      bool                  `json:"-"`
-	models        map[string]*mod.Model `json:"-"`
-	rpcs          map[string]et.Json    `json:"-"`
-	peers         []string              `json:"-"`
-	state         NodeState             `json:"-"`
-	term          int                   `json:"-"`
-	votedFor      string                `json:"-"`
-	leaderID      string                `json:"-"`
-	lastHeartbeat time.Time             `json:"-"`
-	turn          int                   `json:"-"`
-	started       bool                  `json:"-"`
-	ws            *ws.Hub               `json:"-"`
-	clients       map[string]*Client    `json:"-"`
-	mu            sync.Mutex            `json:"-"`
-	modelMu       sync.RWMutex          `json:"-"`
-	clientMu      sync.RWMutex          `json:"-"`
-	isDebug       bool                  `json:"-"`
+	PackageName   string                    `json:"packageName"`
+	Version       string                    `json:"version"`
+	Address       string                    `json:"address"`
+	Port          int                       `json:"port"`
+	isStrict      bool                      `json:"-"`
+	models        map[string]*catalog.Model `json:"-"`
+	rpcs          map[string]et.Json        `json:"-"`
+	peers         []string                  `json:"-"`
+	state         NodeState                 `json:"-"`
+	term          int                       `json:"-"`
+	votedFor      string                    `json:"-"`
+	leaderID      string                    `json:"-"`
+	lastHeartbeat time.Time                 `json:"-"`
+	turn          int                       `json:"-"`
+	started       bool                      `json:"-"`
+	ws            *ws.Hub                   `json:"-"`
+	clients       map[string]*Client        `json:"-"`
+	mu            sync.Mutex                `json:"-"`
+	modelMu       sync.RWMutex              `json:"-"`
+	clientMu      sync.RWMutex              `json:"-"`
+	isDebug       bool                      `json:"-"`
 }
 
 /**
@@ -85,7 +85,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 		Port:        port,
 		Version:     version,
 		isStrict:    isStrict,
-		models:      make(map[string]*mod.Model),
+		models:      make(map[string]*catalog.Model),
 		rpcs:        make(map[string]et.Json),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
@@ -240,8 +240,8 @@ func (s *Node) Ping(require string, response *string) error {
 * @param to string, model *Model
 * @return (*Model, error)
 **/
-func (s *Node) loadModel(to string, model *mod.Model) (*mod.Model, error) {
-	var response *mod.Model
+func (s *Node) loadModel(to string, model *catalog.Model) (*catalog.Model, error) {
+	var response *catalog.Model
 	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
 	if err != nil {
 		return nil, err
@@ -252,10 +252,10 @@ func (s *Node) loadModel(to string, model *mod.Model) (*mod.Model, error) {
 
 /**
 * GetModel: Gets a model
-* @param require *mod.From, response *mod.Model
+* @param require *catalog.From, response *catalog.Model
 * @return error
 **/
-func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
+func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 	key := require.Key()
 	s.modelMu.RLock()
 	result, ok := s.models[key]
@@ -291,10 +291,10 @@ func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
 
 /**
 * reportModels: Reports the models
-* @param models map[string]*mod.Model
+* @param models map[string]*catalog.Model
 * @return error
 **/
-func (s *Node) reportModels(models map[string]*mod.Model) error {
+func (s *Node) reportModels(models map[string]*catalog.Model) error {
 	leader, ok := s.getLeader()
 	if ok {
 		var response bool
@@ -320,7 +320,7 @@ func (s *Node) reportModels(models map[string]*mod.Model) error {
 * @param require map[string]*Model, response true
 * @return error
 **/
-func (s *Node) ReportModels(require map[string]*mod.Model, response *bool) error {
+func (s *Node) ReportModels(require map[string]*catalog.Model, response *bool) error {
 	err := s.reportModels(require)
 	if err != nil {
 		return err

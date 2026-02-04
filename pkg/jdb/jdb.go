@@ -10,9 +10,9 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/jql"
-	"github.com/cgalvisleon/josefina/internal/mod"
 )
 
 var (
@@ -47,7 +47,7 @@ func Load() error {
 		return nil
 	}
 
-	err := mod.Load(node.getLeader)
+	err := catalog.Load(node.getLeader)
 	if err != nil {
 		return err
 	}
