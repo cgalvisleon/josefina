@@ -23,12 +23,12 @@ type Server struct {
 	mode  atomic.Value
 }
 
-func NewServer(port int, mode Mode) *Server {
+func NewServer(port int) *Server {
 	result := &Server{
 		port:  port,
 		nodes: []*Node{},
 	}
-	result.mode.Store(mode)
+	result.mode.Store(ModeServer)
 	return result
 }
 

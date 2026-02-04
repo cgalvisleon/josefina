@@ -16,6 +16,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/internal/tcp"
 )
 
 type NodeState int
@@ -67,6 +68,7 @@ type Node struct {
 	started       bool                      `json:"-"`
 	ws            *ws.Hub                   `json:"-"`
 	clients       map[string]*Client        `json:"-"`
+	tcp           *tcp.Server               `json:"-"`
 	mu            sync.Mutex                `json:"-"`
 	modelMu       sync.RWMutex              `json:"-"`
 	clientMu      sync.RWMutex              `json:"-"`
@@ -78,18 +80,19 @@ type Node struct {
 * @param host string, port int
 * @return *Node
 **/
-func newNode(host string, port int, isStrict bool) *Node {
-	address := fmt.Sprintf(`%s:%d`, host, port)
+func newNode(host string, rpcPort, tcpPort int, isStrict bool) *Node {
+	address := fmt.Sprintf(`%s:%d`, host, rpcPort)
 	result := &Node{
 		PackageName: appName,
 		Address:     address,
-		Port:        port,
+		Port:        rpcPort,
 		Version:     version,
 		isStrict:    isStrict,
 		models:      make(map[string]*catalog.Model),
 		rpcs:        make(map[string]et.Json),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
+		tcp:         tcp.NewServer(tcpPort),
 		mu:          sync.Mutex{},
 		modelMu:     sync.RWMutex{},
 		clientMu:    sync.RWMutex{},
