@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
 /**
@@ -27,9 +28,9 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		_, err := node.ws.Connect(conn, ctx)
+		_, err := hub.Connect(conn, ctx)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -44,7 +45,7 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpTopic(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -57,7 +58,7 @@ func HttpTopic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		node.ws.Topic(channel)
+		hub.Topic(channel)
 	}))
 	handler.ServeHTTP(w, r)
 }
@@ -68,7 +69,7 @@ func HttpTopic(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpQueue(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -81,7 +82,7 @@ func HttpQueue(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		node.ws.Queue(channel)
+		hub.Queue(channel)
 	}))
 	handler.ServeHTTP(w, r)
 }
@@ -92,7 +93,7 @@ func HttpQueue(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpStack(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -105,7 +106,7 @@ func HttpStack(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		node.ws.Stack(channel)
+		hub.Stack(channel)
 	}))
 	handler.ServeHTTP(w, r)
 }
@@ -116,7 +117,7 @@ func HttpStack(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpRemove(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -129,7 +130,7 @@ func HttpRemove(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = node.ws.Remove(channel)
+		err = hub.Remove(channel)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -144,7 +145,7 @@ func HttpRemove(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -159,7 +160,7 @@ func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
 
 		ctx := r.Context()
 		username := ctx.Value("username").(string)
-		err = node.ws.Subscribe(channel, username)
+		err = hub.Subscribe(channel, username)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -174,7 +175,7 @@ func HttpSubscribe(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -189,7 +190,7 @@ func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
 
 		ctx := r.Context()
 		username := ctx.Value("username").(string)
-		err = node.ws.Unsubscribe(channel, username)
+		err = hub.Unsubscribe(channel, username)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -204,7 +205,7 @@ func HttpUnsubscribe(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpSendTo(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -223,7 +224,7 @@ func HttpSendTo(w http.ResponseWriter, r *http.Request) {
 			"username": username,
 		}, to)
 
-		_, err = node.ws.SendTo(to, ms)
+		_, err = hub.SendTo(to, ms)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -238,7 +239,7 @@ func HttpSendTo(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func HttpPublish(w http.ResponseWriter, r *http.Request) {
-	handler := applyAuthenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := jdb.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := response.GetBody(r)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -258,7 +259,7 @@ func HttpPublish(w http.ResponseWriter, r *http.Request) {
 		}, []string{})
 		ms.Channel = channel
 		ms.Message = body.Str("message")
-		_, err = node.ws.Publish(channel, ms)
+		_, err = hub.Publish(channel, ms)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 			return

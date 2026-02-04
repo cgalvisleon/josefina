@@ -3,10 +3,16 @@ package v1
 import (
 	"net/http"
 
+	"github.com/cgalvisleon/et/ws"
 	"github.com/go-chi/chi/v5"
 )
 
-func Init() http.Handler {
+var (
+	hub *ws.Hub
+)
+
+func Init(h *ws.Hub) http.Handler {
+	hub = h
 	r := chi.NewRouter()
 	r.Get("/", WsUpgrader)
 	r.Post("/topic", HttpTopic)

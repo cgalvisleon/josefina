@@ -1,12 +1,14 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/server"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/et/ws"
 	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
+	ws "github.com/cgalvisleon/josefina/pkg/ws"
 )
 
 var (
@@ -47,4 +49,13 @@ func New() *Service {
 **/
 func (s *Service) Start() {
 	s.ettp.Start()
+}
+
+/**
+* Ws
+* @return http.Handler
+**/
+func (s *Service) websocket() http.Handler {
+	result := ws.Init(s.ws)
+	return result
 }
