@@ -21,20 +21,6 @@ type Transaction struct {
 }
 
 /**
-* getFrom: Gets the from
-* @return *From
-**/
-func (s *Transaction) toJson() et.Json {
-	return et.Json{
-		"from":    s.From,
-		"command": s.Command,
-		"idx":     s.Idx,
-		"data":    s.Data,
-		"status":  s.Status,
-	}
-}
-
-/**
 * newTransaction: Creates a new Transaction
 * @param from *From, cmd Command, idx string, data et.Json, status Status
 * @return *Transaction
