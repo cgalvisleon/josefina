@@ -165,6 +165,21 @@ func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) erro
 }
 
 /**
+* GetModel: Gets a model
+* @param require *mod.From, response *mod.ModelResult
+* @return error
+**/
+func (s *Nodes) GetModel(require *mod.From, response *mod.ModelResult) error {
+	err := node.getModel(require, response)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * authenticate: Authenticates a user
 * @param to, device, database, username, password string
 * @return error

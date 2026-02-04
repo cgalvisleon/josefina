@@ -9,6 +9,11 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type DbResult struct {
+	Exists bool
+	Db     *DB
+}
+
 type ModelResult struct {
 	Exists bool
 	Model  *Model
@@ -34,6 +39,8 @@ func init() {
 	gob.Register(Model{})
 	gob.Register(Tx{})
 	gob.Register(Transaction{})
+	gob.Register(DbResult{})
+	gob.Register(ModelResult{})
 	syn = &Mod{}
 }
 

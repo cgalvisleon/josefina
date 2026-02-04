@@ -1,8 +1,6 @@
 package core
 
 import (
-	"encoding/gob"
-
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/josefina/internal/mod"
@@ -13,22 +11,11 @@ type Core struct {
 	address   string
 }
 
-type DbResult struct {
-	Exists bool
-	Db     *mod.DB
-}
-
-type ModelResult struct {
-	Exists bool
-	Model  *mod.Model
-}
-
 var (
 	syn *Core
 )
 
 func init() {
-	gob.Register(DbResult{})
 	syn = &Core{}
 }
 
@@ -71,10 +58,8 @@ func (s *Core) CreateDb(require et.Json, response *mod.DB) error {
 * @return bool, error
 **/
 func (s *Core) getDb(to, name string, dest *mod.DB) (bool, error) {
-	var response *DbResult
-	err := jrpc.CallRpc(to, "Core.GetDb", et.Json{
-		"name": name,
-	}, &response)
+	var response *mod.DbResult
+	err := jrpc.CallRpc(to, "Core.GetDb", name, &response)
 	if err != nil {
 		return false, err
 	}
@@ -85,12 +70,11 @@ func (s *Core) getDb(to, name string, dest *mod.DB) (bool, error) {
 
 /**
 * GetDb: Gets a database
-* @param require et.Json, response *mod.DB
+* @param require et.Json, response *mod.DbResult
 * @return error
 **/
-func (s *Core) GetDb(require et.Json, response *DbResult) error {
-	name := require.Str("name")
-	exists, err := GetDb(name, response.Db)
+func (s *Core) GetDb(require string, response *mod.DbResult) error {
+	exists, err := GetDb(require, response.Db)
 	if err != nil {
 		return err
 	}
@@ -105,10 +89,8 @@ func (s *Core) GetDb(require et.Json, response *DbResult) error {
 * @return error
 **/
 func (s *Core) dropDb(to, name string) error {
-	var response *DbResult
-	err := jrpc.CallRpc(to, "Core.DropDb", et.Json{
-		"name": name,
-	}, &response)
+	var response bool
+	err := jrpc.CallRpc(to, "Core.DropDb", name, &response)
 	if err != nil {
 		return err
 	}
@@ -177,7 +159,7 @@ func (s *Core) CreateModel(require et.Json, response *mod.Model) error {
 * @return bool, error
 **/
 func (s *Core) getModel(to string, from *mod.From, dest *mod.Model) (bool, error) {
-	var response *ModelResult
+	var response *mod.ModelResult
 	err := jrpc.CallRpc(to, "Core.GetModel", et.Json{
 		"database": from.Database,
 		"schema":   from.Schema,
@@ -193,10 +175,10 @@ func (s *Core) getModel(to string, from *mod.From, dest *mod.Model) (bool, error
 
 /**
 * GetModel: Gets a model
-* @param require et.Json, response *ModelResult
+* @param require et.Json, response *mod.ModelResult
 * @return error
 **/
-func (s *Core) GetModel(require et.Json, response *ModelResult) error {
+func (s *Core) GetModel(require et.Json, response *mod.ModelResult) error {
 	from := &mod.From{
 		Database: require.Str("database"),
 		Schema:   require.Str("schema"),
@@ -217,7 +199,7 @@ func (s *Core) GetModel(require et.Json, response *ModelResult) error {
 * @return error
 **/
 func (s *Core) dropModel(to string, from *mod.From) error {
-	var response *ModelResult
+	var response bool
 	err := jrpc.CallRpc(to, "Core.DropModel", et.Json{
 		"database": from.Database,
 		"schema":   from.Schema,
@@ -256,7 +238,7 @@ func (s *Core) DropModel(require et.Json, response *bool) error {
 * @return error
 **/
 func (s *Core) createSerie(to, tag, format string, value int) error {
-	var response *ModelResult
+	var response bool
 	err := jrpc.CallRpc(to, "Core.CreateSerie", et.Json{
 		"tag":    tag,
 		"format": format,
@@ -293,7 +275,7 @@ func (s *Core) CreateSerie(require et.Json, response *bool) error {
 * @return error
 **/
 func (s *Core) setSerie(to, tag string, value int) error {
-	var response *ModelResult
+	var response bool
 	err := jrpc.CallRpc(to, "Core.SetSerie", et.Json{
 		"tag":   tag,
 		"value": value,
