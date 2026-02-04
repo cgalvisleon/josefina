@@ -1,8 +1,6 @@
 package jql
 
 import (
-	"encoding/gob"
-
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
@@ -18,8 +16,6 @@ var (
 )
 
 func init() {
-	gob.Register(Ql{})
-	gob.Register(Cmd{})
 	syn = &Jql{}
 }
 

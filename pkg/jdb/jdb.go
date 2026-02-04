@@ -122,16 +122,17 @@ func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
 		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
 
-	ql, err := jql.JQuery(query)
+	items, err := jql.JQuery(query)
 	if err != nil {
 		return et.Items{}, err
 	}
 
-	result, err := ql.Run()
 	if err != nil {
 		return et.Items{}, err
 	}
 
+	result := et.Items{}
+	result.Add(items...)
 	return result, nil
 }
 
@@ -150,14 +151,12 @@ func Query(ctx context.Context, query string) (et.Items, error) {
 		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
 
-	sql, err := jql.Query(query)
+	items, err := jql.Query(query)
 	if err != nil {
 		return et.Items{}, err
 	}
 
-	if len(sql) == 0 {
-		return et.Items{}, errors.New(msg.MSG_QUERY_NOT_FOUND)
-	}
-
-	return et.Items{}, nil
+	result := et.Items{}
+	result.Add(items...)
+	return result, nil
 }

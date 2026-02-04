@@ -2,35 +2,12 @@ package jql
 
 import "github.com/cgalvisleon/et/et"
 
-type Ql struct {
-	address string
-}
-
 /**
 * JQuery: Returns a Ql
 * @param query et.Json
-* @return *Ql, error
+* @return []et.Json, error
 **/
-func JQuery(query et.Json) (*Ql, error) {
-	command, err := getCommand(query)
-	if err != nil {
-		return nil, err
-	}
+func JQuery(query et.Json) ([]et.Json, error) {
 
-	switch command {
-	case SELECT:
-		return &Ql{}, nil
-	case INSERT, UPDATE, DELETE, UPSERT:
-		return &Ql{}, nil
-	}
-
-	return &Ql{}, nil
-}
-
-/**
-* Run: Runs the query
-* @return et.Items, error
-**/
-func (s *Ql) Run() (et.Items, error) {
-	return et.Items{}, nil
+	return []et.Json{}, nil
 }
