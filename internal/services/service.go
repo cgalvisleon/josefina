@@ -23,7 +23,7 @@ type Service struct {
 func New() *Service {
 	result := &Service{
 		ettp: server.New(appName),
-		ws:   ws.New(),
+		ws:   websocket.New(),
 	}
 
 	err := jdb.Load()
@@ -37,7 +37,7 @@ func New() *Service {
 	result.ettp.Mount("/", latest)
 	result.ettp.Mount("/v1", latest)
 
-	wsHandler := websocket.Init(result.ws)
+	wsHandler := websocket.Init()
 	result.ettp.Mount("/ws", wsHandler)
 
 	return result

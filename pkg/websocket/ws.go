@@ -12,15 +12,22 @@ var (
 	hub *ws.Hub
 )
 
-func Init(h *ws.Hub) http.Handler {
-	h.OnConnection(func(sub *ws.Subscriber) {
+func New() *ws.Hub {
+	if hub == nil {
+		hub = ws.New()
+	}
+
+	return hub
+}
+
+func Init() http.Handler {
+	hub.OnConnection(func(sub *ws.Subscriber) {
 		logs.Debug("Connection:", sub.Name)
 	})
-	h.OnDisconnection(func(sub *ws.Subscriber) {
+	hub.OnDisconnection(func(sub *ws.Subscriber) {
 		logs.Debug("Disconnection:", sub.Name)
 	})
 
-	hub = h
 	r := chi.NewRouter()
 	r.Get("/", WsUpgrader)
 	r.Post("/topic", HttpTopic)
