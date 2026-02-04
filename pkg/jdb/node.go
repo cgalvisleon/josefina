@@ -254,7 +254,7 @@ func (s *Node) Ping(require string, response *string) error {
 **/
 func (s *Node) loadModel(to string, model *catalog.Model) (*catalog.Model, error) {
 	var response *catalog.Model
-	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
+	err := jrpc.CallRpc(to, "Sync.LoadModel", model, &response)
 	if err != nil {
 		return nil, err
 	}

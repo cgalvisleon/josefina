@@ -19,13 +19,13 @@ type ModelResult struct {
 	Model  *Model
 }
 
-type Mod struct {
+type Sync struct {
 	getLeader func() (string, bool)
 	address   string
 }
 
 var (
-	syn *Mod
+	syn *Sync
 )
 
 func init() {
@@ -41,7 +41,7 @@ func init() {
 	gob.Register(Transaction{})
 	gob.Register(DbResult{})
 	gob.Register(ModelResult{})
-	syn = &Mod{}
+	syn = &Sync{}
 }
 
 /**
@@ -49,7 +49,7 @@ func init() {
 * @params from *From
 * @return (*Model, bool)
 **/
-func (s *Mod) getModel(from *From) (*Model, bool) {
+func (s *Sync) getModel(from *From) (*Model, bool) {
 	leader, ok := s.getLeader()
 	if !ok {
 		return nil, false
@@ -69,7 +69,7 @@ func (s *Mod) getModel(from *From) (*Model, bool) {
 * @param require *Model, response *Model
 * @return error
 **/
-func (s *Mod) LoadModel(require *Model, response *Model) error {
+func (s *Sync) LoadModel(require *Model, response *Model) error {
 	result, err := loadModel(require)
 	if err != nil {
 		return err
@@ -84,14 +84,14 @@ func (s *Mod) LoadModel(require *Model, response *Model) error {
 * @params from *From, idx string
 * @return error
 **/
-func (s *Mod) removeObject(from *From, idx string) error {
+func (s *Sync) removeObject(from *From, idx string) error {
 	model, exists := s.getModel(from)
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Mod.RemoveObject", et.Json{
+	err := jrpc.CallRpc(model.Address, "Sync.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -107,7 +107,7 @@ func (s *Mod) removeObject(from *From, idx string) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Mod) RemoveObject(require et.Json, response *bool) error {
+func (s *Sync) RemoveObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	model, exists := GetModel(from)
@@ -129,14 +129,14 @@ func (s *Mod) RemoveObject(require et.Json, response *bool) error {
 * @params from *From, idx string, data et.Json
 * @return error
 **/
-func (s *Mod) putObject(from *From, idx string, data et.Json) error {
+func (s *Sync) putObject(from *From, idx string, data et.Json) error {
 	model, exists := s.getModel(from)
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Mod.PutObject", et.Json{
+	err := jrpc.CallRpc(model.Address, "Sync.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -153,7 +153,7 @@ func (s *Mod) putObject(from *From, idx string, data et.Json) error {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Mod) PutObject(require et.Json, response *bool) error {
+func (s *Sync) PutObject(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	idx := require.Str("idx")
 	data := require.Json("data")
@@ -176,14 +176,14 @@ func (s *Mod) PutObject(require et.Json, response *bool) error {
 * @params from *From, field, idx string
 * @return error
 **/
-func (s *Mod) isExisted(from *From, field, idx string) (bool, error) {
+func (s *Sync) isExisted(from *From, field, idx string) (bool, error) {
 	model, exists := s.getModel(from)
 	if !exists {
 		return false, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Mod.IsExisted", et.Json{
+	err := jrpc.CallRpc(model.Address, "Sync.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,
@@ -200,7 +200,7 @@ func (s *Mod) isExisted(from *From, field, idx string) (bool, error) {
 * @param require et.Json, response *bool
 * @return error
 **/
-func (s *Mod) IsExisteds(require et.Json, response *bool) error {
+func (s *Sync) IsExisteds(require et.Json, response *bool) error {
 	from := ToFrom(require.Json("from"))
 	field := require.Str("field")
 	idx := require.Str("idx")
