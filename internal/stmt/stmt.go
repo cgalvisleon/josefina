@@ -51,6 +51,12 @@ type DropDbStmt struct {
 
 func (DropDbStmt) stmt() {}
 
+type UseDbStmt struct {
+	Name string
+}
+
+func (UseDbStmt) stmt() {}
+
 type CreateSerieStmt struct {
 	Tag    string
 	Format string

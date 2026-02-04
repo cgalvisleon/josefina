@@ -66,7 +66,7 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		switch strings.ToUpper(obj) {
 		case "USER":
 			return p.parseCreateUser()
-		case "DB":
+		case "DATABASE":
 			return p.parseCreateDb()
 		case "SERIE":
 			return p.parseCreateSerie()
@@ -75,7 +75,7 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		}
 	case "GET":
 		switch strings.ToUpper(obj) {
-		case "DB":
+		case "DATABASE":
 			return p.parseGetDb()
 		case "USER":
 			return p.parseGetUser()
@@ -86,7 +86,7 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		}
 	case "DROP":
 		switch strings.ToUpper(obj) {
-		case "DB":
+		case "DATABASE":
 			return p.parseDropDb()
 		case "USER":
 			return p.parseDropUser()
@@ -94,6 +94,13 @@ func (p *Parser) parseStmt() (Stmt, error) {
 			return p.parseDropSerie()
 		default:
 			return nil, p.errf("unknown DROP target")
+		}
+	case "USER":
+		switch strings.ToUpper(obj) {
+		case "DATABASE":
+			return p.parseUseDb()
+		default:
+			return nil, p.errf("unknown USER command")
 		}
 	case "SET":
 		switch strings.ToUpper(obj) {
@@ -145,6 +152,17 @@ func (p *Parser) parseCreateDb() (Stmt, error) {
 		return nil, err
 	}
 	return CreateDbStmt{Name: name}, nil
+}
+
+func (p *Parser) parseUseDb() (Stmt, error) {
+	name, err := p.parseValue()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeTerm("db name"); err != nil {
+		return nil, err
+	}
+	return UseDbStmt{Name: name}, nil
 }
 
 func (p *Parser) parseGetDb() (Stmt, error) {
@@ -333,31 +351,8 @@ func (p *Parser) advance() {
 	p.cur = p.l.next()
 }
 
-func (p *Parser) isKeyword(want string) bool {
-	return p.cur.typ == tokIdent && strings.EqualFold(p.cur.lit, want)
-}
-
 func (p *Parser) errf(msg string) error {
 	return fmt.Errorf("%s at %d", msg, p.cur.pos)
-}
-
-func (p *Parser) consumeEnd(after string) error {
-	if p.cur.typ == tokSemicolon {
-		p.advance()
-	}
-	if p.cur.typ == tokNewline {
-		p.advance()
-	}
-	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
-		p.advance()
-	}
-	if p.cur.typ == tokError {
-		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
-	}
-	if p.cur.typ != tokEOF {
-		return p.errf("unexpected token after " + after)
-	}
-	return nil
 }
 
 func (p *Parser) consumeTerm(after string) error {
