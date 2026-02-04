@@ -80,7 +80,7 @@ func (s *Node) electionLoop() {
 		state := s.state
 		s.mu.Unlock()
 
-		if elapsed > heartbeatInterval && state != Leader {
+		if elapsed > heartbeatInterval && state == Follower {
 			s.startElection()
 		}
 	}
@@ -95,22 +95,32 @@ func (s *Node) startElection() {
 	s.term++
 	term := s.term
 	s.votedFor = s.Address
-	votes := 1
 	s.mu.Unlock()
+	votes := 0
 
-	total := len(s.peers)
+	peers := []string{}
+	total := 0
 	for _, peer := range s.peers {
+		ok := s.ping(peer)
+		if ok {
+			peers = append(peers, peer)
+			total++
+		}
+	}
+
+	for _, peer := range peers {
 		go func(peer string) {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+
 			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
 			res := requestVote(peer, &args, &reply)
 			if res.Error != nil {
 				total--
 			}
-			if res.Ok {
-				s.mu.Lock()
-				defer s.mu.Unlock()
 
+			if res.Ok {
 				if reply.Term > s.term {
 					s.term = reply.Term
 					s.state = Follower
@@ -134,9 +144,11 @@ func (s *Node) startElection() {
 * becomeLeader
 **/
 func (s *Node) becomeLeader() {
+	s.mu.Lock()
 	s.state = Leader
 	s.leaderID = s.Address
 	s.lastHeartbeat = timezone.Now()
+	s.mu.Unlock()
 
 	logs.Logf(s.PackageName, "I am leader %s", s.Address)
 
