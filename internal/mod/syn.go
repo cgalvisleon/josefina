@@ -56,7 +56,7 @@ func (s *Mod) getModel(from *From) (*Model, bool) {
 	}
 
 	var response *ModelResult
-	err := jrpc.CallRpc(leader, "Leader.GetModel", from, &response)
+	err := jrpc.CallRpc(leader, "Node.GetModel", from, &response)
 	if err != nil {
 		return nil, false
 	}

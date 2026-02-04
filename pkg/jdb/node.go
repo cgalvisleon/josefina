@@ -18,12 +18,12 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type nodeState int
+type NodeState int
 
 const (
-	follower nodeState = iota
-	candidate
-	leader
+	Follower NodeState = iota
+	Candidate
+	Leader
 )
 
 type TpConnection int
@@ -104,10 +104,10 @@ func newNode(host string, port int, isStrict bool) *Node {
 }
 
 /**
-* ToJson: Converts the node to a json
+* toJson: Converts the node to a json
 * @return et.Json
 **/
-func (s *Node) ToJson() et.Json {
+func (s *Node) toJson() et.Json {
 	leader, _ := s.getLeader()
 	return et.Json{
 		"address": s.Address,
@@ -205,7 +205,7 @@ func (s *Node) start() error {
 	}
 
 	s.mu.Lock()
-	s.state = Follower
+	s.state = follower
 	s.lastHeartbeat = timezone.Now()
 	s.mu.Unlock()
 	s.ws.Start()
@@ -240,6 +240,59 @@ func (s *Node) ping(to string) bool {
 func (s *Node) Ping(require string, response *string) error {
 	logs.Log(s.PackageName, "ping:", require)
 	*response = "pong"
+	return nil
+}
+
+/**
+* loadModel: Loads a model
+* @param to string, model *Model
+* @return (*Model, error)
+**/
+func (s *Node) loadModel(to string, model *mod.Model) (*mod.Model, error) {
+	var response *mod.Model
+	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+/**
+* GetModel: Gets a model
+* @param require *mod.From, response *mod.Model
+* @return error
+**/
+func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
+	s.modelMu.RLock()
+	result, ok := s.models[require.Key()]
+	s.modelMu.RUnlock()
+	if ok {
+		response = result
+		return nil
+	}
+
+	exists, err := core.GetModel(require, response)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	if !response.IsInit {
+		host := node.nextHost()
+		response, err = s.loadModel(host, response)
+		if err != nil {
+			return err
+		}
+
+		s.modelMu.Lock()
+		s.models[response.Key()] = response
+		s.modelMu.Unlock()
+	}
+
 	return nil
 }
 

@@ -79,7 +79,7 @@ func (s *Node) electionLoop() {
 		state := s.state
 		s.mu.Unlock()
 
-		if elapsed > heartbeatInterval && state != leader {
+		if elapsed > heartbeatInterval && state != Leader {
 			s.startElection()
 		}
 	}
@@ -90,7 +90,7 @@ func (s *Node) electionLoop() {
 **/
 func (s *Node) startElection() {
 	s.mu.Lock()
-	s.state = candidate
+	s.state = Candidate
 	s.term++
 	term := s.term
 	s.votedFor = s.Address
@@ -112,12 +112,12 @@ func (s *Node) startElection() {
 
 				if reply.Term > s.term {
 					s.term = reply.Term
-					s.state = follower
+					s.state = Follower
 					s.votedFor = ""
 					return
 				}
 
-				if s.state == candidate && reply.VoteGranted && term == s.term {
+				if s.state == Candidate && reply.VoteGranted && term == s.term {
 					votes++
 					needed := majority(total)
 					if votes >= needed {
@@ -151,7 +151,7 @@ func (s *Node) heartbeatLoop() {
 
 	for range ticker.C {
 		s.mu.Lock()
-		if s.state != leader {
+		if s.state != Leader {
 			s.mu.Unlock()
 			return
 		}
@@ -173,7 +173,7 @@ func (s *Node) heartbeatLoop() {
 
 					if reply.Term > s.term {
 						s.term = reply.Term
-						s.state = follower
+						s.state = Follower
 						s.votedFor = ""
 					}
 				}
@@ -199,7 +199,7 @@ func (s *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 
 	if args.Term > s.term {
 		s.term = args.Term
-		s.state = follower
+		s.state = Follower
 		s.votedFor = ""
 	}
 
@@ -236,7 +236,7 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	}
 
 	oldLeader := s.leaderID
-	s.state = follower
+	s.state = Follower
 	s.leaderID = args.LeaderID
 	s.lastHeartbeat = timezone.Now()
 

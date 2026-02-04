@@ -56,11 +56,6 @@ func Load() error {
 		return err
 	}
 
-	err = node.mount(leader)
-	if err != nil {
-		return err
-	}
-
 	err = node.mount(syn)
 	if err != nil {
 		return err
@@ -88,6 +83,6 @@ func HelpCheck() et.Item {
 
 	return et.Item{
 		Ok:     true,
-		Result: node.helpCheck(),
+		Result: node.toJson(),
 	}
 }
