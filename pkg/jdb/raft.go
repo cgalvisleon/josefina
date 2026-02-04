@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 )
@@ -102,7 +103,7 @@ func (s *Node) startElection() {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
-			res := syn.requestVote(peer, &args, &reply)
+			res := requestVote(peer, &args, &reply)
 			if res.Error != nil {
 				total--
 			}
@@ -166,7 +167,7 @@ func (s *Node) heartbeatLoop() {
 			go func(peer string) {
 				args := HeartbeatArgs{Term: term, LeaderID: s.Address}
 				var reply HeartbeatReply
-				res := syn.heartbeat(peer, &args, &reply)
+				res := heartbeat(peer, &args, &reply)
 				if res.Ok {
 					s.mu.Lock()
 					defer s.mu.Unlock()
@@ -258,4 +259,68 @@ func (s *Node) onChangeLeader() {
 	if err != nil {
 		logs.Errorf("onChangeLeader: %s", err)
 	}
+}
+
+/**
+* requestVote
+* @param to string, require *RequestVoteArgs, response *RequestVoteReply
+* @return *ResponseBool
+**/
+func requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) *ResponseBool {
+	var res RequestVoteReply
+	err := jrpc.CallRpc(to, "Node.RequestVote", require, &res)
+	if err != nil {
+		return &ResponseBool{
+			Ok:    false,
+			Error: err,
+		}
+	}
+
+	*response = res
+	return &ResponseBool{
+		Ok:    true,
+		Error: nil,
+	}
+}
+
+/**
+* RequestVote: Requests a vote
+* @param require *RequestVoteArgs, response *RequestVoteReply
+* @return error
+**/
+func (s *Node) RequestVote(require *RequestVoteArgs, response *RequestVoteReply) error {
+	err := s.requestVote(require, response)
+	return err
+}
+
+/**
+* heartbeat: Sends a heartbeat
+* @param require *HeartbeatArgs, response *HeartbeatReply
+* @return error
+**/
+func heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
+	var res HeartbeatReply
+	err := jrpc.CallRpc(to, "Node.Heartbeat", require, &res)
+	if err != nil {
+		return &ResponseBool{
+			Ok:    false,
+			Error: err,
+		}
+	}
+
+	*response = res
+	return &ResponseBool{
+		Ok:    true,
+		Error: nil,
+	}
+}
+
+/**
+* Heartbeat: Sends a heartbeat
+* @param require *HeartbeatArgs, response *HeartbeatReply
+* @return error
+**/
+func (s *Node) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
+	err := s.heartbeat(require, response)
+	return err
 }
