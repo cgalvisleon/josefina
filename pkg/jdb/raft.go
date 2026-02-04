@@ -8,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/cgalvisleon/josefina/internal/tcp"
 )
 
 var (
@@ -99,8 +98,8 @@ func (s *Node) startElection() {
 	votes := 1
 	s.mu.Unlock()
 
-	total := len(s.rpcPeers)
-	for _, peer := range s.rpcPeers {
+	total := len(s.peers)
+	for _, peer := range s.peers {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
@@ -142,7 +141,6 @@ func (s *Node) becomeLeader() {
 	logs.Logf(s.PackageName, "I am leader %s", s.Address)
 
 	go s.heartbeatLoop()
-	s.tcp.SetMode(tcp.Leader)
 }
 
 /**
@@ -161,7 +159,7 @@ func (s *Node) heartbeatLoop() {
 		term := s.term
 		s.mu.Unlock()
 
-		for _, peer := range s.rpcPeers {
+		for _, peer := range s.peers {
 			if peer == s.Address {
 				continue
 			}
