@@ -23,12 +23,12 @@ func init() {
 
 /**
 * Load: Loads the cache
-* @param getLeader func() (string, bool), isStrict bool
+* @param getLeader func() (string, bool)
 * @return error
 **/
-func Load(getLeader func() (string, bool), isStrict bool) error {
-	node.getLeader = getLeader
-	node.isStrict = isStrict
+func Load(getLeader func() (string, bool)) error {
+	syn.getLeader = getLeader
+	syn.isStrict = envar.GetBool("IS_STRICT", false)
 
 	hostname, _ := os.Hostname()
 	port := envar.GetInt("RPC_PORT", 4200)

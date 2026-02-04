@@ -7,7 +7,11 @@ import (
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
-type Jql struct{}
+type Jql struct {
+	getLeader func() (string, bool)
+	address   string
+	isStrict  bool
+}
 
 var (
 	syn *Jql
