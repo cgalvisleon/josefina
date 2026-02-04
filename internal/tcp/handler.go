@@ -43,7 +43,6 @@ func (s *Server) handleBalancer(client net.Conn) {
 	node.Conns.Add(1)
 	defer node.Conns.Add(-1)
 
-	// Copia bidireccional
 	go io.Copy(backend, client)
 	io.Copy(client, backend)
 }

@@ -59,7 +59,6 @@ type Node struct {
 	models        map[string]*catalog.Model `json:"-"`
 	rpcs          map[string]et.Json        `json:"-"`
 	rpcPeers      []string                  `json:"-"`
-	tcpPeers      []string                  `json:"-"`
 	state         NodeState                 `json:"-"`
 	term          int                       `json:"-"`
 	votedFor      string                    `json:"-"`
@@ -121,7 +120,6 @@ func (s *Node) toJson() et.Json {
 		"version":  s.Version,
 		"rpcs":     s.rpcs,
 		"rpcPeers": s.rpcPeers,
-		"tcpPeers": s.tcpPeers,
 	}
 }
 
@@ -156,7 +154,7 @@ func (s *Node) addRpcPeer(node string) {
 * @param node string
 **/
 func (s *Node) addTcpPeer(node string) {
-	s.tcpPeers = append(s.tcpPeers, node)
+	s.tcp.AddNode(node)
 }
 
 /**
@@ -210,6 +208,17 @@ func (s *Node) start() error {
 	if err != nil {
 		return err
 	}
+
+	nodes, err = getTcpNodes()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range nodes {
+		s.addTcpPeer(node)
+	}
+
+	logs.Fatal(s.tcp.Listen())
 
 	s.mu.Lock()
 	s.state = Follower

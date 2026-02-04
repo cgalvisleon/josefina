@@ -5,8 +5,13 @@ import (
 	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
 )
 
-func New() (*server.Ettp, error) {
-	result, err := server.New(v1.PackageName)
+type Service struct {
+	ettp *server.Ettp
+}
+
+func New() (*Service, error) {
+	result := &Service{}
+	result.ettp, err := server.New(v1.PackageName)
 	if err != nil {
 		return nil, err
 	}
@@ -17,4 +22,8 @@ func New() (*server.Ettp, error) {
 	result.OnClose(v1.Close)
 
 	return result, nil
+}
+
+func (s *Service) Start() {
+	s.ettp.Start()
 }

@@ -23,15 +23,6 @@ type Server struct {
 	mode  atomic.Value
 }
 
-func NewServer(port int) *Server {
-	result := &Server{
-		port:  port,
-		nodes: []*Node{},
-	}
-	result.mode.Store(Follower)
-	return result
-}
-
 /**
 * SetMode
 * @param m Mode
@@ -45,7 +36,7 @@ func (s *Server) SetMode(m Mode) {
 * @param address string
 **/
 func (s *Server) AddNode(address string) {
-	node := NewNode(address)
+	node := newNode(address)
 	s.nodes = append(s.nodes, node)
 }
 
