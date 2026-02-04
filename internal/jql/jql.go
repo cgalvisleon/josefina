@@ -7,19 +7,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/internal/catalog"
 )
-
-var (
-	node *Node
-)
-
-func init() {
-	node = &Node{
-		address: "",
-		dbs:     make(map[string]*catalog.DB, 0),
-	}
-}
 
 /**
 * Load: Loads the cache
@@ -39,6 +27,6 @@ func Load(getLeader func() (string, bool)) error {
 		logs.Panic(err)
 	}
 
-	node.address = address
+	syn.address = address
 	return nil
 }
