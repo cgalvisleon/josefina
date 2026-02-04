@@ -9,6 +9,11 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type ModelResult struct {
+	Exists bool
+	Model  *Model
+}
+
 type Mod struct {
 	getLeader func() (string, bool)
 	address   string
@@ -33,13 +38,38 @@ func init() {
 }
 
 /**
+* getModel
+* @params from *From
+* @return (*Model, bool)
+**/
+func (s *Mod) getModel(from *From) (*Model, bool) {
+	leader, ok := s.getLeader()
+	if !ok {
+		return nil, false
+	}
+
+	var response *ModelResult
+	err := jrpc.CallRpc(leader, "Node.GetModel", from, &response)
+	if err != nil {
+		return nil, false
+	}
+
+	return response.Model, response.Exists
+}
+
+/**
 * removeObject
 * @params from *From, idx string
 * @return error
 **/
 func (s *Mod) removeObject(from *From, idx string) error {
+	model, exists := s.getModel(from)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Mod.RemoveObject", et.Json{
+	err := jrpc.CallRpc(model.Address, "Mod.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -78,8 +108,13 @@ func (s *Mod) RemoveObject(require et.Json, response *bool) error {
 * @return error
 **/
 func (s *Mod) putObject(from *From, idx string, data et.Json) error {
+	model, exists := s.getModel(from)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Mod.PutObject", et.Json{
+	err := jrpc.CallRpc(model.Address, "Mod.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -120,8 +155,13 @@ func (s *Mod) PutObject(require et.Json, response *bool) error {
 * @return error
 **/
 func (s *Mod) isExisted(from *From, field, idx string) (bool, error) {
+	model, exists := s.getModel(from)
+	if !exists {
+		return false, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
 	var response bool
-	err := jrpc.CallRpc(from.Address, "Mod.IsExisted", et.Json{
+	err := jrpc.CallRpc(model.Address, "Mod.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,

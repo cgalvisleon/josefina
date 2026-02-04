@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
@@ -45,6 +44,8 @@ type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 type Model struct {
 	*From         `json:"from"`
+	Address       string                      `json:"-"`
+	IsInit        bool                        `json:"-"`
 	Fields        map[string]*Field           `json:"fields"`
 	Path          string                      `json:"path"`
 	Indexes       []string                    `json:"indexes"`
@@ -598,21 +599,6 @@ func GetModel(from *From) (*Model, bool) {
 	}
 
 	return nil, false
-}
-
-/**
-* loadModel
-* @params from *From, field, idx string
-* @return error
-**/
-func LoadModel(to string, model *Model) (*Model, error) {
-	var response *Model
-	err := jrpc.CallRpc(to, "Mod.LoadModel", model, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
 }
 
 /**
