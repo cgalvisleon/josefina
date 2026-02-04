@@ -107,46 +107,6 @@ func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) erro
 }
 
 /**
-* auth: Authenticates a user
-* @param to, device, database, username, password string
-* @return error
-**/
-func (s *Nodes) auth(to, device, database, username, password string) (*core.Session, error) {
-	args := et.Json{
-		"device":   device,
-		"database": database,
-		"username": username,
-		"password": password,
-	}
-	var reply *core.Session
-	err := jrpc.CallRpc(to, "Nodes.Auth", args, &reply)
-	if err != nil {
-		return nil, err
-	}
-
-	return reply, nil
-}
-
-/**
-* Auth: Authenticates a user
-* @param require et.Json, response *Session
-* @return error
-**/
-func (s *Nodes) Auth(require et.Json, response *core.Session) error {
-	device := require.Str("device")
-	database := require.Str("database")
-	username := require.Str("username")
-	password := require.Str("password")
-	result, err := node.auth(device, database, username, password)
-	if err != nil {
-		return err
-	}
-
-	response = result
-	return nil
-}
-
-/**
 * onConnect: Handles a connection
 * @param to, idx string, dest any
 * @return error

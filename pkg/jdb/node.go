@@ -381,7 +381,19 @@ func (s *Node) Authenticate(require string, response *claim.Claim) error {
 func (s *Node) auth(device, database, username, password string) (*core.Session, error) {
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.auth(leader, device, database, username, password)
+		args := et.Json{
+			"device":   device,
+			"database": database,
+			"username": username,
+			"password": password,
+		}
+		var reply *core.Session
+		err := jrpc.CallRpc(leader, "Node.Auth", args, &reply)
+		if err != nil {
+			return nil, err
+		}
+
+		return reply, nil
 	}
 
 	item, err := core.GetUser(username, password)
@@ -404,6 +416,25 @@ func (s *Node) auth(device, database, username, password string) (*core.Session,
 	}
 
 	return result, nil
+}
+
+/**
+* Auth: Authenticates a user
+* @param require et.Json, response *Session
+* @return error
+**/
+func (s *Node) Auth(require et.Json, response *core.Session) error {
+	device := require.Str("device")
+	database := require.Str("database")
+	username := require.Str("username")
+	password := require.Str("password")
+	result, err := s.auth(device, database, username, password)
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
 }
 
 /**
