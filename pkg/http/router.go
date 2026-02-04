@@ -20,7 +20,7 @@ type Router struct {
 	Hostname    string
 }
 
-func httpRouter(name string) *Router {
+func newRouter(name string) *Router {
 	hostname, _ := os.Hostname()
 	return &Router{
 		ctx:         context.Background(),
@@ -47,20 +47,5 @@ func (s *Router) Routes() http.Handler {
 	router.Private(r, router.Post, "/jquery", s.jQuery, s.PackageName, s.PackagePath, host)
 
 	middleware.SetServiceName(s.PackageName)
-	return r
-}
-
-/**
-* wsRouter
-* @return http.Handler
-**/
-func (s *Router) wsRouter() http.Handler {
-	r := chi.NewRouter()
-	r.Get("/ws", jdb.WsUpgrader)
-	r.Post("/ws/topic", jdb.HttpTopic)
-	r.Post("/ws/queue", jdb.HttpQueue)
-	r.Post("/ws/stack", jdb.HttpStack)
-	r.Post("/ws/remove", jdb.HttpRemove)
-	r.Post("/ws/subscribe", jdb.HttpSubscribe)
 	return r
 }

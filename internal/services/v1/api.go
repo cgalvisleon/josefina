@@ -4,22 +4,25 @@ import (
 	"net/http"
 
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
-	pkg "github.com/cgalvisleon/josefina/pkg/http"
+	api "github.com/cgalvisleon/josefina/pkg/http"
+	ws "github.com/cgalvisleon/josefina/pkg/ws"
 )
 
-var PackageName = pkg.PackageName
-
 /**
-* New
+* Api
 * @return http.Handler
 **/
-func New() http.Handler {
-	result, err := pkg.Init()
-	if err != nil {
-		logs.Panic(err)
-	}
+func Api() http.Handler {
+	result := api.Init()
+	return result
+}
 
+/**
+* Ws
+* @return http.Handler
+**/
+func Ws() http.Handler {
+	result := ws.Init()
 	return result
 }
 

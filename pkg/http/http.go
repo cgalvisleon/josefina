@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -13,18 +12,12 @@ var (
 
 /**
 * Init
-* @return error
+* @return http.Handler
 **/
-func Init() (http.Handler, error) {
-	err := jdb.Load()
-	if err != nil {
-		return nil, err
-	}
-
+func Init() http.Handler {
 	r := chi.NewRouter()
-	server := httpRouter(PackageName)
-	r.Mount(server.PackagePath, server.Routes())
-	r.Mount("/", server.wsRouter())
+	rt := newRouter(PackageName)
+	r.Mount(rt.PackagePath, rt.Routes())
 
-	return r, nil
+	return r
 }
