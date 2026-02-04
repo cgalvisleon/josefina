@@ -119,19 +119,6 @@ func (s *Node) ToJson() et.Json {
 }
 
 /**
-* helpCheck: Returns the help check
-* @return et.Json
-**/
-func (s *Node) helpCheck() et.Json {
-	return et.Json{
-		"address": s.Address,
-		"leader":  s.leaderID,
-		"version": s.Version,
-		"peers":   s.peers,
-	}
-}
-
-/**
 * mount: Mounts the services
 * @param services any
 * @return error
@@ -150,10 +137,10 @@ func (s *Node) mount(services any) error {
 }
 
 /**
-* SetDebug
+* setDebug
 * @param debug bool
 **/
-func (s *Node) SetDebug(debug bool) {
+func (s *Node) setDebug(debug bool) {
 	s.isDebug = debug
 }
 
@@ -236,12 +223,47 @@ func (s *Node) start() error {
 **/
 func (s *Node) ping(to string) bool {
 	var response string
-	err := jrpc.CallRpc(to, "Nodes.Ping", node.Address, &response)
+	err := jrpc.CallRpc(to, "Node.Ping", s.Address, &response)
+	if err != nil {
+		return false
+	}
+
+	logs.Logf(s.PackageName, "%s:%s", response, to)
+	return true
+}
+
+/**
+* Ping: Pings the leader
+* @param response *string
+* @return error
+**/
+func (s *Node) Ping(require string, response *string) error {
+	logs.Log(s.PackageName, "ping:", require)
+	*response = "pong"
+	return nil
+}
+
+/**
+* GetModel: Gets a model
+* @param require *mod.From, response *mod.Model
+* @return error
+**/
+func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
+	exists, err := core.GetModel(require, response)
 	if err != nil {
 		return err
 	}
 
-	logs.Logf(node.PackageName, "%s:%s", response, to)
+	if !exists {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	if !response.IsInit {
+		host := node.nextHost()
+		return s.GetModel(require, response)
+	}
+
+	return nil
 }
 
 /**

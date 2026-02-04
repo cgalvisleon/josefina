@@ -574,10 +574,7 @@ func (s *Model) Selects(fields ...string) *Wheres {
 * @return error
 **/
 func loadModel(model *Model) (*Model, error) {
-	if model.IsInit {
-		model.IsInit = false
-	}
-
+	model.IsInit = false
 	err := model.Init()
 	if err != nil {
 		return nil, err

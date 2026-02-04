@@ -65,6 +65,21 @@ func (s *Mod) getModel(from *From) (*Model, bool) {
 }
 
 /**
+* IsExisted: Checks if an object exists
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Mod) LoadModel(require *Model, response *Model) error {
+	result, err := loadModel(require)
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
+}
+
+/**
 * removeObject
 * @params from *From, idx string
 * @return error
@@ -200,20 +215,5 @@ func (s *Mod) IsExisteds(require et.Json, response *bool) error {
 	}
 
 	*response = exists
-	return nil
-}
-
-/**
-* IsExisted: Checks if an object exists
-* @param require et.Json, response *bool
-* @return error
-**/
-func (s *Mod) LoadModel(require *Model, response *Model) error {
-	result, err := loadModel(require)
-	if err != nil {
-		return err
-	}
-
-	response = result
 	return nil
 }

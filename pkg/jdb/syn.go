@@ -8,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/mod"
@@ -42,17 +41,6 @@ var syn *Nodes
 
 func init() {
 	syn = &Nodes{}
-}
-
-/**
-* Ping: Pings the leader
-* @param response *string
-* @return error
-**/
-func (s *Nodes) Ping(require string, response *string) error {
-	logs.Log(node.PackageName, "ping:", require)
-	*response = "pong"
-	return nil
 }
 
 /**
@@ -146,29 +134,6 @@ func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) erro
 	}
 
 	*response = true
-	return nil
-}
-
-/**
-* GetModel: Gets a model
-* @param require *mod.From, response *mod.Model
-* @return error
-**/
-func (s *Nodes) GetModel(require *mod.From, response *mod.Model) error {
-	exists, err := core.GetModel(require, response)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.New(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	if !response.IsInit {
-		host := node.nextHost()
-		return s.GetModel(require, response)
-	}
-
 	return nil
 }
 
