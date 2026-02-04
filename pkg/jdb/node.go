@@ -264,8 +264,9 @@ func (s *Node) loadModel(to string, model *mod.Model) (*mod.Model, error) {
 * @return error
 **/
 func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
+	key := require.Key()
 	s.modelMu.RLock()
-	result, ok := s.models[require.Key()]
+	result, ok := s.models[key]
 	s.modelMu.RUnlock()
 	if ok {
 		response = result
@@ -287,11 +288,11 @@ func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
 		if err != nil {
 			return err
 		}
-
-		s.modelMu.Lock()
-		s.models[response.Key()] = response
-		s.modelMu.Unlock()
 	}
+
+	s.modelMu.Lock()
+	s.models[key] = response
+	s.modelMu.Unlock()
 
 	return nil
 }
@@ -304,7 +305,13 @@ func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
 func (s *Node) reportModels(models map[string]*mod.Model) error {
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.reportModels(leader, models)
+		var response bool
+		err := jrpc.CallRpc(leader, "Node.ReportModels", models, &response)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	for key, model := range models {
@@ -317,6 +324,21 @@ func (s *Node) reportModels(models map[string]*mod.Model) error {
 }
 
 /**
+* ReportModels: Reports models
+* @param require map[string]*Model, response true
+* @return error
+**/
+func (s *Node) ReportModels(require map[string]*mod.Model, response *bool) error {
+	err := s.reportModels(require)
+	if err != nil {
+		return err
+	}
+
+	*response = true
+	return nil
+}
+
+/**
 * authenticate: Authenticates a user
 * @param token string
 * @return *claim.Claim, error
@@ -324,10 +346,31 @@ func (s *Node) reportModels(models map[string]*mod.Model) error {
 func (s *Node) authenticate(token string) (*claim.Claim, error) {
 	leader, ok := s.getLeader()
 	if ok {
-		return syn.authenticate(leader, token)
+		var reply *claim.Claim
+		err := jrpc.CallRpc(leader, "Node.Authenticate", token, &reply)
+		if err != nil {
+			return nil, err
+		}
+
+		return reply, nil
 	}
 
 	return core.Authenticate(token)
+}
+
+/**
+* Auth: Authenticates a user
+* @param require string, response *Claim
+* @return error
+**/
+func (s *Node) Authenticate(require string, response *claim.Claim) error {
+	result, err := s.authenticate(require)
+	if err != nil {
+		return err
+	}
+
+	response = result
+	return nil
 }
 
 /**

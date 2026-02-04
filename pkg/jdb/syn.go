@@ -10,7 +10,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/mod"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -105,70 +104,6 @@ func (s *Nodes) heartbeat(to string, require *HeartbeatArgs, response *Heartbeat
 func (s *Nodes) Heartbeat(require *HeartbeatArgs, response *HeartbeatReply) error {
 	err := node.heartbeat(require, response)
 	return err
-}
-
-/**
-* reportModels: Reports models
-* @param to string, models map[string]*Model
-* @return error
-**/
-func (s *Nodes) reportModels(to string, models map[string]*mod.Model) error {
-	var response bool
-	err := jrpc.CallRpc(to, "Nodes.ReportModels", models, &response)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* ReportModels: Reports models
-* @param require map[string]*Model, response true
-* @return error
-**/
-func (s *Nodes) ReportModels(require map[string]*mod.Model, response *bool) error {
-	err := node.reportModels(require)
-	if err != nil {
-		return err
-	}
-
-	*response = true
-	return nil
-}
-
-/**
-* authenticate: Authenticates a user
-* @param to, device, database, username, password string
-* @return error
-**/
-func (s *Nodes) authenticate(to, token string) (*claim.Claim, error) {
-	args := et.Json{
-		"token": token,
-	}
-	var reply *claim.Claim
-	err := jrpc.CallRpc(to, "Nodes.Authenticate", args, &reply)
-	if err != nil {
-		return nil, err
-	}
-
-	return reply, nil
-}
-
-/**
-* Auth: Authenticates a user
-* @param require et.Json, response *Session
-* @return error
-**/
-func (s *Nodes) Authenticate(require et.Json, response *claim.Claim) error {
-	token := require.Str("token")
-	result, err := node.authenticate(token)
-	if err != nil {
-		return err
-	}
-
-	response = result
-	return nil
 }
 
 /**
