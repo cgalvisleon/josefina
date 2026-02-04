@@ -3,13 +3,13 @@ package core
 import (
 	"errors"
 
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (
 	appName string = "josefina"
-	dbs     *mod.Model
+	dbs     *catalog.Model
 )
 
 /**
@@ -21,7 +21,7 @@ func initDbs() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func initDbs() error {
 * @param name string
 * @return *DB, error
 **/
-func CreateDb(name string) (*mod.DB, error) {
+func CreateDb(name string) (*catalog.DB, error) {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.createDb(leader, name)
@@ -53,7 +53,7 @@ func CreateDb(name string) (*mod.DB, error) {
 		return nil, err
 	}
 
-	var result *mod.DB
+	var result *catalog.DB
 	exists, err := GetDb(name, result)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func CreateDb(name string) (*mod.DB, error) {
 		return result, errors.New(msg.MSG_DB_NOT_EXISTS)
 	}
 
-	result, err = mod.CreteDb(name)
+	result, err = catalog.CreteDb(name)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func CreateDb(name string) (*mod.DB, error) {
 * @param name string, dest *jdb.Model
 * @return bool, error
 **/
-func GetDb(name string, dest *mod.DB) (bool, error) {
+func GetDb(name string, dest *catalog.DB) (bool, error) {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.getDb(leader, name, dest)
 	}
 
-	exists, err := mod.GetDb(name, dest)
+	exists, err := catalog.GetDb(name, dest)
 	if err != nil {
 		return false, err
 	}
@@ -113,7 +113,7 @@ func GetDb(name string, dest *mod.DB) (bool, error) {
 	}
 
 	if exists {
-		mod.AddDb(dest)
+		catalog.AddDb(dest)
 	}
 
 	return exists, nil
@@ -140,6 +140,6 @@ func DropDb(name string) error {
 		return err
 	}
 
-	mod.RemoveDb(name)
+	catalog.RemoveDb(name)
 	return nil
 }

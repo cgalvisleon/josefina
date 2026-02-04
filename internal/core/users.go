@@ -7,11 +7,11 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-var users *mod.Model
+var users *catalog.Model
 
 /**
 * initUsers: Initializes the users model
@@ -23,7 +23,7 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}
@@ -32,12 +32,12 @@ func initUsers() error {
 	if err != nil {
 		return err
 	}
-	users.DefineAtrib(mod.ID, mod.TpKey, "")
-	users.DefineAtrib("username", mod.TpText, "")
-	users.DefineAtrib("password", mod.TpText, "")
+	users.DefineAtrib(catalog.ID, catalog.TpKey, "")
+	users.DefineAtrib("username", catalog.TpText, "")
+	users.DefineAtrib("password", catalog.TpText, "")
 	users.DefineHidden("password")
 	users.DefinePrimaryKeys("username")
-	users.DefineUnique(mod.ID)
+	users.DefineUnique(catalog.ID)
 	if err := users.Init(); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func initUsers() error {
 		password := envar.GetStr("PASSWORD", "admin")
 		idx := users.GenKey()
 		err := users.PutObject(idx, et.Json{
-			mod.ID:     idx,
+			catalog.ID: idx,
 			"username": useranme,
 			"password": password,
 		})
@@ -89,7 +89,7 @@ func CreateUser(username, password string) error {
 
 	_, err = users.
 		Insert(et.Json{
-			mod.ID:     users.GenKey(),
+			catalog.ID: users.GenKey(),
 			"username": username,
 			"password": password,
 		}).
@@ -119,7 +119,7 @@ func DropUser(username, password string) error {
 
 	_, err = users.
 		Delete().
-		Where(mod.Eq("username", username)).
+		Where(catalog.Eq("username", username)).
 		Execute(nil)
 	return err
 }
@@ -149,8 +149,8 @@ func GetUser(username, password string) (et.Json, error) {
 
 	item, err := users.
 		Selects().
-		Where(mod.Eq("username", username)).
-		And(mod.Eq("password", password)).
+		Where(catalog.Eq("username", username)).
+		And(catalog.Eq("password", password)).
 		Run(nil)
 	if err != nil {
 		return nil, err
@@ -201,8 +201,8 @@ func ChanguePassword(username, oldPassword, newPassword string) error {
 		Update(et.Json{
 			"password": newPassword,
 		}).
-		Where(mod.Eq("username", username)).
-		And(mod.Eq("password", oldPassword)).
+		Where(catalog.Eq("username", username)).
+		And(catalog.Eq("password", oldPassword)).
 		Execute(nil)
 	return err
 }

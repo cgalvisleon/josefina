@@ -8,11 +8,11 @@ import (
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-var sessions *mod.Model
+var sessions *catalog.Model
 
 /**
 * initSessions: Initializes the sessions model
@@ -24,7 +24,7 @@ func initSessions() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}

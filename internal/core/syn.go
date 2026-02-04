@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 type Core struct {
@@ -22,10 +22,10 @@ func init() {
 /**
 * createDb: Creates a database
 * @params to string, name string
-* @return *mod.DB, error
+* @return *catalog.DB, error
 **/
-func (s *Core) createDb(to, name string) (*mod.DB, error) {
-	var response *mod.DB
+func (s *Core) createDb(to, name string) (*catalog.DB, error) {
+	var response *catalog.DB
 	err := jrpc.CallRpc(to, "Core.CreateDb", et.Json{
 		"name": name,
 	}, &response)
@@ -38,10 +38,10 @@ func (s *Core) createDb(to, name string) (*mod.DB, error) {
 
 /**
 * CreateDb: Creates a database
-* @param require et.Json, response *mod.DB
+* @param require et.Json, response *catalog.DB
 * @return error
 **/
-func (s *Core) CreateDb(require et.Json, response *mod.DB) error {
+func (s *Core) CreateDb(require et.Json, response *catalog.DB) error {
 	name := require.Str("name")
 	result, err := CreateDb(name)
 	if err != nil {
@@ -57,8 +57,8 @@ func (s *Core) CreateDb(require et.Json, response *mod.DB) error {
 * @params to, name string, dest *DbResult
 * @return bool, error
 **/
-func (s *Core) getDb(to, name string, dest *mod.DB) (bool, error) {
-	var response *mod.DbResult
+func (s *Core) getDb(to, name string, dest *catalog.DB) (bool, error) {
+	var response *catalog.DbResult
 	err := jrpc.CallRpc(to, "Core.GetDb", name, &response)
 	if err != nil {
 		return false, err
@@ -70,10 +70,10 @@ func (s *Core) getDb(to, name string, dest *mod.DB) (bool, error) {
 
 /**
 * GetDb: Gets a database
-* @param require et.Json, response *mod.DbResult
+* @param require et.Json, response *catalog.DbResult
 * @return error
 **/
-func (s *Core) GetDb(require string, response *mod.DbResult) error {
+func (s *Core) GetDb(require string, response *catalog.DbResult) error {
 	exists, err := GetDb(require, response.Db)
 	if err != nil {
 		return err
@@ -117,10 +117,10 @@ func (s *Core) DropDb(require et.Json, response *bool) error {
 /**
 * createModel: Creates a model
 * @params to, database, schema, name string, version int
-* @return *mod.Model, error
+* @return *catalog.Model, error
 **/
-func (s *Core) createModel(to, database, schema, name string, version int) (*mod.Model, error) {
-	var response *mod.Model
+func (s *Core) createModel(to, database, schema, name string, version int) (*catalog.Model, error) {
+	var response *catalog.Model
 	err := jrpc.CallRpc(to, "Core.CreateModel", et.Json{
 		"database": database,
 		"schema":   schema,
@@ -136,10 +136,10 @@ func (s *Core) createModel(to, database, schema, name string, version int) (*mod
 
 /**
 * CreateModel: Creates a model
-* @param require et.Json, response *mod.Model
+* @param require et.Json, response *catalog.Model
 * @return error
 **/
-func (s *Core) CreateModel(require et.Json, response *mod.Model) error {
+func (s *Core) CreateModel(require et.Json, response *catalog.Model) error {
 	database := require.Str("database")
 	schema := require.Str("schema")
 	name := require.Str("name")
@@ -155,11 +155,11 @@ func (s *Core) CreateModel(require et.Json, response *mod.Model) error {
 
 /**
 * getModel: Gets a model
-* @params to string, from *mod.From, dest *mod.Model
+* @params to string, from *catalog.From, dest *catalog.Model
 * @return bool, error
 **/
-func (s *Core) getModel(to string, from *mod.From, dest *mod.Model) (bool, error) {
-	var response *mod.ModelResult
+func (s *Core) getModel(to string, from *catalog.From, dest *catalog.Model) (bool, error) {
+	var response *catalog.ModelResult
 	err := jrpc.CallRpc(to, "Core.GetModel", et.Json{
 		"database": from.Database,
 		"schema":   from.Schema,
@@ -175,11 +175,11 @@ func (s *Core) getModel(to string, from *mod.From, dest *mod.Model) (bool, error
 
 /**
 * GetModel: Gets a model
-* @param require et.Json, response *mod.ModelResult
+* @param require et.Json, response *catalog.ModelResult
 * @return error
 **/
-func (s *Core) GetModel(require et.Json, response *mod.ModelResult) error {
-	from := &mod.From{
+func (s *Core) GetModel(require et.Json, response *catalog.ModelResult) error {
+	from := &catalog.From{
 		Database: require.Str("database"),
 		Schema:   require.Str("schema"),
 		Name:     require.Str("name"),
@@ -195,10 +195,10 @@ func (s *Core) GetModel(require et.Json, response *mod.ModelResult) error {
 
 /**
 * dropModel: Drops a model
-* @params to string, from *mod.From
+* @params to string, from *catalog.From
 * @return error
 **/
-func (s *Core) dropModel(to string, from *mod.From) error {
+func (s *Core) dropModel(to string, from *catalog.From) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Core.DropModel", et.Json{
 		"database": from.Database,
@@ -218,7 +218,7 @@ func (s *Core) dropModel(to string, from *mod.From) error {
 * @return error
 **/
 func (s *Core) DropModel(require et.Json, response *bool) error {
-	from := &mod.From{
+	from := &catalog.From{
 		Database: require.Str("database"),
 		Schema:   require.Str("schema"),
 		Name:     require.Str("name"),
@@ -407,10 +407,10 @@ func (s *Core) CreateSession(require et.Json, response *Session) error {
 
 /**
 * setTransaction: Sets a transaction
-* @params to string, tx *mod.Tx
+* @params to string, tx *catalog.Tx
 * @return error
 **/
-func (s *Core) setTransaction(to string, tx *mod.Tx) error {
+func (s *Core) setTransaction(to string, tx *catalog.Tx) error {
 	var response bool
 	err := jrpc.CallRpc(to, "Core.SetTransaction", tx, &response)
 	if err != nil {
@@ -422,10 +422,10 @@ func (s *Core) setTransaction(to string, tx *mod.Tx) error {
 
 /**
 * SetTransaction: Sets a transaction
-* @param require *mod.Tx, response *bool
+* @param require *catalog.Tx, response *bool
 * @return error
 **/
-func (s *Core) SetTransaction(require *mod.Tx, response *bool) error {
+func (s *Core) SetTransaction(require *catalog.Tx, response *bool) error {
 	err := SetTransaction(require)
 	if err != nil {
 		return err

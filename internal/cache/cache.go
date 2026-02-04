@@ -10,11 +10,11 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 var (
-	cache *mod.Model
+	cache *catalog.Model
 )
 
 /**
@@ -49,7 +49,7 @@ func initModel() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}

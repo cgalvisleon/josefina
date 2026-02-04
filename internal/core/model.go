@@ -3,12 +3,12 @@ package core
 import (
 	"errors"
 
-	"github.com/cgalvisleon/josefina/internal/mod"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (
-	models *mod.Model
+	models *catalog.Model
 )
 
 /**
@@ -20,7 +20,7 @@ func initModels() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}
@@ -39,16 +39,16 @@ func initModels() error {
 /**
 * CreateModel: Creates a model
 * @param database, schema, name string, version int
-* @return *mod.Model, error
+* @return *catalog.Model, error
 **/
-func CreateModel(database, schema, name string, version int) (*mod.Model, error) {
+func CreateModel(database, schema, name string, version int) (*catalog.Model, error) {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.createModel(leader, database, schema, name, version)
 	}
 
-	var result *mod.Model
-	exists, err := GetModel(&mod.From{
+	var result *catalog.Model
+	exists, err := GetModel(&catalog.From{
 		Database: database,
 		Schema:   schema,
 		Name:     name,
@@ -61,7 +61,7 @@ func CreateModel(database, schema, name string, version int) (*mod.Model, error)
 		return nil, errors.New(msg.MSG_MODEL_NOT_EXISTS)
 	}
 
-	var db *mod.DB
+	var db *catalog.DB
 	exists, err = GetDb(database, db)
 	if err != nil {
 		return nil, err
@@ -92,16 +92,16 @@ func CreateModel(database, schema, name string, version int) (*mod.Model, error)
 
 /**
 * getModel: Gets a model
-* @param from *mod.From, dest *mod.Model
+* @param from *catalog.From, dest *catalog.Model
 * @return bool, error
 **/
-func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
+func GetModel(from *catalog.From, dest *catalog.Model) (bool, error) {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.getModel(leader, from, dest)
 	}
 
-	result, exists := mod.GetModel(from)
+	result, exists := catalog.GetModel(from)
 	if exists {
 		*dest = *result
 		return true, nil
@@ -123,10 +123,10 @@ func GetModel(from *mod.From, dest *mod.Model) (bool, error) {
 
 /**
 * DropModel: Removes a model
-* @param from *mod.From
+* @param from *catalog.From
 * @return error
 **/
-func DropModel(from *mod.From) error {
+func DropModel(from *catalog.From) error {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.dropModel(leader, from)
@@ -143,5 +143,5 @@ func DropModel(from *mod.From) error {
 		return err
 	}
 
-	return mod.DropModel(key)
+	return catalog.DropModel(key)
 }

@@ -1,10 +1,8 @@
 package core
 
-import (
-	"github.com/cgalvisleon/josefina/internal/mod"
-)
+import "github.com/cgalvisleon/josefina/internal/catalog"
 
-var transactions *mod.Model
+var transactions *catalog.Model
 
 /**
 * initTransactions: Initializes the transactions model
@@ -15,7 +13,7 @@ func initTransactions() error {
 		return nil
 	}
 
-	db, err := mod.CoreDb()
+	db, err := catalog.CoreDb()
 	if err != nil {
 		return err
 	}
@@ -33,10 +31,10 @@ func initTransactions() error {
 
 /**
 * SetTransaction: Sets a Transaction
-* @param tx *mod.Tx
+* @param tx *catalog.Tx
 * @return error
 **/
-func SetTransaction(tx *mod.Tx) error {
+func SetTransaction(tx *catalog.Tx) error {
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.setTransaction(leader, tx)
