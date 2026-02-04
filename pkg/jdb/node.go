@@ -16,7 +16,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
-	"github.com/cgalvisleon/josefina/internal/tcp"
 )
 
 type NodeState int
@@ -68,7 +67,6 @@ type Node struct {
 	started       bool                      `json:"-"`
 	ws            *ws.Hub                   `json:"-"`
 	clients       map[string]*Client        `json:"-"`
-	tcp           *tcp.Server               `json:"-"`
 	mu            sync.Mutex                `json:"-"`
 	modelMu       sync.RWMutex              `json:"-"`
 	clientMu      sync.RWMutex              `json:"-"`
@@ -93,7 +91,6 @@ func newNode(host string, rpcPort, tcpPort int, isStrict bool) *Node {
 		rpcs:        make(map[string]et.Json),
 		ws:          ws.NewWs(),
 		clients:     make(map[string]*Client),
-		tcp:         tcp.NewServer(tcpPort),
 		mu:          sync.Mutex{},
 		modelMu:     sync.RWMutex{},
 		clientMu:    sync.RWMutex{},
