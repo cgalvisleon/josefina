@@ -1,7 +1,10 @@
 package jdb
 
 import (
+	"context"
 	"encoding/gob"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/jql"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (
@@ -101,4 +105,59 @@ func HelpCheck() et.Item {
 		Ok:     true,
 		Result: node.toJson(),
 	}
+}
+
+/**
+* JQuery: Executes a query
+* @param ctx context.Context, query et.Json
+* @return et.Items, error
+**/
+func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
+	app := ctx.Value("app").(string)
+	device := ctx.Value("device").(string)
+	username := ctx.Value("username").(string)
+	key := fmt.Sprintf("%s:%s:%s", app, device, username)
+	_, exists := cache.GetStr(key)
+	if !exists {
+		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	}
+
+	ql, err := jql.ToQl(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result, err := ql.Run()
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* Query: Executes a query
+* @param ctx context.Context, query string
+* @return et.Items, error
+**/
+func Query(ctx context.Context, query string) (et.Items, error) {
+	app := ctx.Value("app").(string)
+	device := ctx.Value("device").(string)
+	username := ctx.Value("username").(string)
+	key := fmt.Sprintf("%s:%s:%s", app, device, username)
+	_, exists := cache.GetStr(key)
+	if !exists {
+		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	}
+
+	sql, err := jql.Sql(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	if len(sql) == 0 {
+		return et.Items{}, errors.New(msg.MSG_QUERY_NOT_FOUND)
+	}
+
+	return et.Items{}, nil
 }

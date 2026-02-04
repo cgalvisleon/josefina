@@ -9,10 +9,10 @@ import (
 	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
-func Sql(query string) []et.Item {
+func Sql(query string) ([]et.Item, error) {
 	st, err := stmt.ParseText(query)
 	if err != nil {
-		return []et.Item{}
+		return []et.Item{}, err
 	}
 
 	result := []et.Item{}
@@ -37,13 +37,13 @@ func Sql(query string) []et.Item {
 	case *stmt.CreateDbStmt:
 		_, err := core.CreateDb(s.Name)
 		if err != nil {
-			return res(et.Json{}, err)
+			return res(et.Json{}, err), err
 		}
 
 		return res(et.Json{
 			"message": "Database created successfully",
-		}, nil)
+		}, nil), nil
 	default:
-		return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+		return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st)), fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st)
 	}
 }
