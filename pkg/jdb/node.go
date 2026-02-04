@@ -205,7 +205,7 @@ func (s *Node) start() error {
 	}
 
 	s.mu.Lock()
-	s.state = follower
+	s.state = Follower
 	s.lastHeartbeat = timezone.Now()
 	s.mu.Unlock()
 	s.ws.Start()
