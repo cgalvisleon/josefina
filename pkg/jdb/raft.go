@@ -98,8 +98,8 @@ func (s *Node) startElection() {
 	votes := 1
 	s.mu.Unlock()
 
-	total := len(s.peers)
-	for _, peer := range s.peers {
+	total := len(s.rpcPeers)
+	for _, peer := range s.rpcPeers {
 		go func(peer string) {
 			args := RequestVoteArgs{Term: term, CandidateID: s.Address}
 			var reply RequestVoteReply
@@ -159,7 +159,7 @@ func (s *Node) heartbeatLoop() {
 		term := s.term
 		s.mu.Unlock()
 
-		for _, peer := range s.peers {
+		for _, peer := range s.rpcPeers {
 			if peer == s.Address {
 				continue
 			}
