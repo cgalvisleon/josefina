@@ -65,8 +65,8 @@ func (s *Mod) getModel(from *From) (*Model, bool) {
 }
 
 /**
-* IsExisted: Checks if an object exists
-* @param require et.Json, response *bool
+* LoadModel: Loads a model
+* @param require *Model, response *Model
 * @return error
 **/
 func (s *Mod) LoadModel(require *Model, response *Model) error {

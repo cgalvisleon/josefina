@@ -260,7 +260,7 @@ func (s *Node) GetModel(require *mod.From, response *mod.Model) error {
 
 	if !response.IsInit {
 		host := node.nextHost()
-		return s.GetModel(require, response)
+		return mod.LoadModel(require, response)
 	}
 
 	return nil
