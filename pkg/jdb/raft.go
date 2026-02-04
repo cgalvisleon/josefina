@@ -144,11 +144,9 @@ func (s *Node) startElection() {
 * becomeLeader
 **/
 func (s *Node) becomeLeader() {
-	s.mu.Lock()
 	s.state = Leader
 	s.leaderID = s.Address
 	s.lastHeartbeat = timezone.Now()
-	s.mu.Unlock()
 
 	logs.Logf(s.PackageName, "I am leader %s", s.Address)
 
