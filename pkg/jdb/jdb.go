@@ -127,10 +127,6 @@ func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
 		return et.Items{}, err
 	}
 
-	if err != nil {
-		return et.Items{}, err
-	}
-
 	result := et.Items{}
 	result.Add(items...)
 	return result, nil
