@@ -41,6 +41,10 @@ func (l *lexer) next() token {
 	}
 
 	r := l.src[l.i]
+	if r == '/' && l.isLineStart(l.i) && l.i+1 < len(l.src) && l.src[l.i+1] == '/' {
+		l.skipLineComment()
+		return l.next()
+	}
 	switch r {
 	case ',':
 		l.i++
@@ -133,4 +137,26 @@ func (l *lexer) readQuoted(quote rune) (string, error) {
 		l.i++
 	}
 	return "", fmt.Errorf("unterminated string")
+}
+
+func (l *lexer) isLineStart(i int) bool {
+	for j := i - 1; j >= 0; j-- {
+		r := l.src[j]
+		if r == '\n' {
+			return true
+		}
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func (l *lexer) skipLineComment() {
+	for l.i < len(l.src) {
+		if l.src[l.i] == '\n' {
+			return
+		}
+		l.i++
+	}
 }
