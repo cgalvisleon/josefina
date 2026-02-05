@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 var (
@@ -76,10 +77,10 @@ func (s *Node) electionLoop() {
 		timeout := randomBetween(1500, 3000)
 		time.Sleep(timeout)
 
-		s.mu.Lock()
+		s.mu.RLock()
 		elapsed := time.Since(s.lastHeartbeat)
 		state := s.state
-		s.mu.Unlock()
+		s.mu.RUnlock()
 
 		if elapsed > heartbeatInterval && state != Leader {
 			s.startElection()
@@ -121,16 +122,15 @@ func (s *Node) startElection() {
 
 			if res.Ok {
 				s.mu.Lock()
+				defer s.mu.Unlock()
+
 				if reply.Term > s.term {
 					s.term = reply.Term
 					s.state = Follower
 					s.votedFor = ""
-					s.mu.Unlock()
 					return
 				}
-				s.mu.Unlock()
 
-				s.mu.Lock()
 				if s.state == Candidate && reply.VoteGranted && term == s.term {
 					votes++
 					needed := majority(total)
@@ -138,7 +138,6 @@ func (s *Node) startElection() {
 						s.becomeLeader()
 					}
 				}
-				s.mu.Unlock()
 			}
 		}(peer)
 	}
@@ -169,13 +168,13 @@ func (s *Node) heartbeatLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		s.mu.Lock()
-		if s.state != Leader {
-			s.mu.Unlock()
+		s.mu.RLock()
+		state := s.state
+		term := s.term
+		s.mu.RUnlock()
+		if state != Leader {
 			return
 		}
-		term := s.term
-		s.mu.Unlock()
 
 		for _, peer := range s.peers {
 			if peer == s.Address {
@@ -188,12 +187,13 @@ func (s *Node) heartbeatLoop() {
 				res := heartbeat(peer, &args, &reply)
 				if res.Ok {
 					s.mu.Lock()
+					defer s.mu.Unlock()
+
 					if reply.Term > s.term {
 						s.term = reply.Term
 						s.state = Follower
 						s.votedFor = ""
 					}
-					s.mu.Unlock()
 				}
 			}(peer)
 		}
@@ -239,12 +239,14 @@ func (s *Node) requestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 * @return error
 **/
 func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
+	changedLeader := false
+
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if args.Term < s.term {
 		reply.Term = s.term
 		reply.Ok = false
+		s.mu.Unlock()
 		return nil
 	}
 
@@ -260,11 +262,16 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 
 	if oldLeader != args.LeaderID {
 		logs.Logf(appName, "Set leader %s in %s", args.LeaderID, s.Address)
-		s.onChangeLeader()
+		changedLeader = true
 	}
 
 	reply.Term = s.term
 	reply.Ok = true
+	s.mu.Unlock()
+
+	if changedLeader {
+		s.onChangeLeader()
+	}
 	return nil
 }
 
@@ -272,7 +279,14 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 * onChangeLeader
 **/
 func (s *Node) onChangeLeader() {
-	err := s.reportModels(s.models)
+	s.modelMu.RLock()
+	models := make(map[string]*catalog.Model, len(s.models))
+	for k, v := range s.models {
+		models[k] = v
+	}
+	s.modelMu.RUnlock()
+
+	err := s.reportModels(models)
 	if err != nil {
 		logs.Errorf("onChangeLeader: %s", err)
 	}
