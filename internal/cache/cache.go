@@ -142,6 +142,10 @@ func delete(key, origin string) (bool, error) {
 
 	leader, ok := syn.getLeader()
 	if ok {
+		if leader == origin {
+			return result, nil
+		}
+
 		return syn.delete(leader, key, origin)
 	}
 
@@ -181,12 +185,41 @@ func delete(key, origin string) (bool, error) {
 }
 
 /**
+* Delete: Deletes a cache value
+* @param key string
+* @return bool, error
+**/
+func Delete(key string) (bool, error) {
+	return delete(key, syn.address)
+}
+
+/**
 * Exists: Checks if a cache value exists
 * @param key string
 * @return bool
 **/
-func Exists(key string) bool {
-	return mem.Exists(key)
+func Exists(key string) (bool, error) {
+	exists := mem.Exists(key)
+	if exists {
+		return true, nil
+	}
+
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.exists(leader, key)
+	}
+
+	err := initModel()
+	if err != nil {
+		return false, err
+	}
+
+	exists, err = cache.Exists(key)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 /**

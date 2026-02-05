@@ -104,6 +104,39 @@ func (s *Cache) Delete(require et.Json, response *bool) error {
 }
 
 /**
+* exists: Deletes a cache value
+* @params to string, key string
+* @return error
+**/
+func (s *Cache) exists(to, key string) (bool, error) {
+	var response *bool
+	err := jrpc.CallRpc(to, "Cache.Exists", et.Json{
+		"key": key,
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	return *response, nil
+}
+
+/**
+* Exists: Gets a cache value
+* @param require et.Json, response *bool
+* @return error
+**/
+func (s *Cache) Exists(require et.Json, response *bool) error {
+	key := require.Str("key")
+	exists, err := Exists(key)
+	if err != nil {
+		return err
+	}
+
+	*response = exists
+	return nil
+}
+
+/**
 * get: Deletes a cache value
 * @params to string, key string
 * @return error

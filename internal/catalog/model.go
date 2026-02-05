@@ -415,6 +415,15 @@ func (s *Model) IsExisted(field, idx string) (bool, error) {
 }
 
 /**
+* Exists: Checks if index exists in model
+* @param idx string
+* @return bool, error
+**/
+func (s *Model) Exists(idx string) (bool, error) {
+	return s.IsExisted(INDEX, idx)
+}
+
+/**
 * Count: Counts the model
 * @return int, error
 **/
