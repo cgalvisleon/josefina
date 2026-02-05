@@ -73,10 +73,11 @@ func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 * @params to string, key string
 * @return error
 **/
-func (s *Cache) delete(to, key string) (bool, error) {
+func (s *Cache) delete(to, key, origin string) (bool, error) {
 	var response *bool
 	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
-		"key": key,
+		"key":    key,
+		"origin": origin,
 	}, &response)
 	if err != nil {
 		return false, err
@@ -92,7 +93,8 @@ func (s *Cache) delete(to, key string) (bool, error) {
 **/
 func (s *Cache) Delete(require et.Json, response *bool) error {
 	key := require.Str("key")
-	result, err := Delete(key)
+	origin := require.Str("origin")
+	result, err := delete(key, origin)
 	if err != nil {
 		return err
 	}

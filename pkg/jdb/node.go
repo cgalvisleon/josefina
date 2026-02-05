@@ -161,6 +161,10 @@ func (s *Node) next() string {
 func (n *Node) getLeader() (string, bool) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	if !n.inCluster {
+		return "", false
+	}
+
 	result := n.leaderID
 	return result, result != n.Address && result != ""
 }

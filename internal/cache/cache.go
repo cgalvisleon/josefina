@@ -133,16 +133,16 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 }
 
 /**
-* Delete: Gets a cache value as an int
+* delete: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func Delete(key string) (bool, error) {
+func delete(key, origin string) (bool, error) {
 	result := mem.Delete(key)
 
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.delete(leader, key)
+		return syn.delete(leader, key, origin)
 	}
 
 	err := initModel()
@@ -154,6 +154,28 @@ func Delete(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	if leader != syn.address {
+		return result, nil
+	}
+
+	go func() {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return
+		}
+		for _, node := range nodes {
+			if node == origin {
+				continue
+			}
+
+			if node == leader {
+				continue
+			}
+
+			syn.delete(node, key, leader)
+		}
+	}()
 
 	return result, nil
 }
