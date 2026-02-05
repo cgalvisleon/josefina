@@ -33,10 +33,7 @@ type Stmt interface {
 	stmt()
 }
 
-type BaseStmt struct{}
-
 type CreateUserStmt struct {
-	BaseStmt
 	Username string
 	Password string
 }
@@ -44,7 +41,6 @@ type CreateUserStmt struct {
 func (CreateUserStmt) stmt() {}
 
 type GetUserStmt struct {
-	BaseStmt
 	Username string
 	Password string
 }
@@ -52,7 +48,6 @@ type GetUserStmt struct {
 func (GetUserStmt) stmt() {}
 
 type DropUserStmt struct {
-	BaseStmt
 	Username string
 	Password string
 }
@@ -60,7 +55,6 @@ type DropUserStmt struct {
 func (DropUserStmt) stmt() {}
 
 type ChangePasswordStmt struct {
-	BaseStmt
 	Username    string
 	OldPassword string
 	NewPassword string
@@ -69,60 +63,25 @@ type ChangePasswordStmt struct {
 func (ChangePasswordStmt) stmt() {}
 
 type CreateDbStmt struct {
-	BaseStmt
 	Name string
 }
 
 func (CreateDbStmt) stmt() {}
 
 type GetDbStmt struct {
-	BaseStmt
 	Name string
 }
 
 func (GetDbStmt) stmt() {}
 
 type DropDbStmt struct {
-	BaseStmt
 	Name string
 }
 
 func (DropDbStmt) stmt() {}
 
 type UseDbStmt struct {
-	BaseStmt
 	Name string
 }
 
 func (UseDbStmt) stmt() {}
-
-type CreateSerieStmt struct {
-	BaseStmt
-	Tag    string
-	Format string
-	Value  int
-}
-
-func (CreateSerieStmt) stmt() {}
-
-type SetSerieStmt struct {
-	BaseStmt
-	Tag   string
-	Value int
-}
-
-func (SetSerieStmt) stmt() {}
-
-type GetSerieStmt struct {
-	BaseStmt
-	Tag string
-}
-
-func (GetSerieStmt) stmt() {}
-
-type DropSerieStmt struct {
-	BaseStmt
-	Tag string
-}
-
-func (DropSerieStmt) stmt() {}
