@@ -124,6 +124,15 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 }
 
 /**
+* Set: Sets a cache value
+* @param key string, value interface{}, duration time.Duration
+* @return interface{}, error
+**/
+func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+	return set(key, value, duration, syn.address)
+}
+
+/**
 * Delete: Gets a cache value as an int
 * @param key string
 * @return int, bool
