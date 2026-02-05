@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/config"
 )
 
 var (
@@ -78,6 +79,10 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 
 	leader, ok := syn.getLeader()
 	if ok {
+		if leader == origin {
+			return result, nil
+		}
+
 		return syn.set(leader, key, value, duration, origin)
 	}
 
@@ -92,6 +97,28 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 			return nil, err
 		}
 	}
+
+	if leader != syn.address {
+		return result, nil
+	}
+
+	go func() {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return
+		}
+		for _, node := range nodes {
+			if node == origin {
+				continue
+			}
+
+			if node == leader {
+				continue
+			}
+
+			syn.set(node, key, value, duration, leader)
+		}
+	}()
 
 	return result, nil
 }

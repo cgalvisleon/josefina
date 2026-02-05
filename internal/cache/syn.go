@@ -31,15 +31,16 @@ func init() {
 
 /**
 * set: Sets a cache value
-* @params to string, key string, value interface{}, duration time.Duration
+* @params to string, key string, value interface{}, duration time.Duration, origin string
 * @return error
 **/
-func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+func (s *Cache) set(to, key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
 	var response *mem.Entry
 	err := jrpc.CallRpc(to, "Cache.Set", et.Json{
 		"key":      key,
 		"value":    value,
 		"duration": duration,
+		"origin":   origin,
 	}, &response)
 	if err != nil {
 		return nil, err
@@ -57,7 +58,8 @@ func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 	key := require.Str("key")
 	value := require.Get("value")
 	duration := time.Duration(require.Int("duration"))
-	result, err := Set(key, value, duration)
+	origin := require.Str("origin")
+	result, err := set(key, value, duration, origin)
 	if err != nil {
 		return err
 	}
