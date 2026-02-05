@@ -515,12 +515,16 @@ func (s *FileStore) Put(id string, value any) error {
 		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
-	data, err := json.Marshal(value)
-	if err != nil {
-		return err
+	bt, ok := value.([]byte)
+	if !ok {
+		var err error
+		bt, err = json.Marshal(value)
+		if err != nil {
+			return err
+		}
 	}
 
-	ref, err := s.appendRecord(id, data, Active)
+	ref, err := s.appendRecord(id, bt, Active)
 	if err != nil {
 		return err
 	}
@@ -536,7 +540,7 @@ func (s *FileStore) Put(id string, value any) error {
 	s.indexMu.Unlock()
 
 	for _, fn := range s.onPut {
-		fn(id, data)
+		fn(id, bt)
 	}
 
 	if s.isDebug {
