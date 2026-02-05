@@ -31,7 +31,6 @@ func ToJson(v any) (et.Json, error) {
 
 type Stmt interface {
 	stmt()
-	ToJson() (et.Json, error)
 }
 
 type BaseStmt struct{}
@@ -43,9 +42,6 @@ type CreateUserStmt struct {
 }
 
 func (CreateUserStmt) stmt() {}
-func (s CreateUserStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type GetUserStmt struct {
 	BaseStmt
@@ -54,9 +50,6 @@ type GetUserStmt struct {
 }
 
 func (GetUserStmt) stmt() {}
-func (s GetUserStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type DropUserStmt struct {
 	BaseStmt
@@ -65,9 +58,6 @@ type DropUserStmt struct {
 }
 
 func (DropUserStmt) stmt() {}
-func (s DropUserStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type ChangePasswordStmt struct {
 	BaseStmt
@@ -77,9 +67,6 @@ type ChangePasswordStmt struct {
 }
 
 func (ChangePasswordStmt) stmt() {}
-func (s ChangePasswordStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type CreateDbStmt struct {
 	BaseStmt
@@ -87,9 +74,6 @@ type CreateDbStmt struct {
 }
 
 func (CreateDbStmt) stmt() {}
-func (s CreateDbStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type GetDbStmt struct {
 	BaseStmt
@@ -97,9 +81,6 @@ type GetDbStmt struct {
 }
 
 func (GetDbStmt) stmt() {}
-func (s GetDbStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type DropDbStmt struct {
 	BaseStmt
@@ -107,9 +88,6 @@ type DropDbStmt struct {
 }
 
 func (DropDbStmt) stmt() {}
-func (s DropDbStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type UseDbStmt struct {
 	BaseStmt
@@ -117,9 +95,6 @@ type UseDbStmt struct {
 }
 
 func (UseDbStmt) stmt() {}
-func (s UseDbStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type CreateSerieStmt struct {
 	BaseStmt
@@ -129,9 +104,6 @@ type CreateSerieStmt struct {
 }
 
 func (CreateSerieStmt) stmt() {}
-func (s CreateSerieStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type SetSerieStmt struct {
 	BaseStmt
@@ -140,9 +112,6 @@ type SetSerieStmt struct {
 }
 
 func (SetSerieStmt) stmt() {}
-func (s SetSerieStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type GetSerieStmt struct {
 	BaseStmt
@@ -150,9 +119,6 @@ type GetSerieStmt struct {
 }
 
 func (GetSerieStmt) stmt() {}
-func (s GetSerieStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
 
 type DropSerieStmt struct {
 	BaseStmt
@@ -160,6 +126,3 @@ type DropSerieStmt struct {
 }
 
 func (DropSerieStmt) stmt() {}
-func (s DropSerieStmt) ToJson() (et.Json, error) {
-	return ToJson(s)
-}
