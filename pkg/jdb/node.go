@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/config"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -172,7 +173,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	nodes, err := getRpcNodes()
+	nodes, err := config.GetNodes()
 	if err != nil {
 		return err
 	}

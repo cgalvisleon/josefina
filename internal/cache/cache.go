@@ -67,10 +67,10 @@ func initModel() error {
 
 /**
 * Set: Sets a cache value
-* @param key string, value interface{}, duration time.Duration
+* @param key string, value interface{}, duration time.Duration, origin string
 * @return interface{}, error
 **/
-func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+func set(key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
 	result, err := mem.Set(key, value, duration)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 
 	leader, ok := syn.getLeader()
 	if ok {
-		return syn.set(leader, key, value, duration)
+		return syn.set(leader, key, value, duration, origin)
 	}
 
 	err = initModel()
@@ -91,10 +91,6 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if !ok {
-
 	}
 
 	return result, nil
