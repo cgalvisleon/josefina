@@ -107,7 +107,7 @@ func GetDb(name string, dest *catalog.DB) (bool, error) {
 		return false, err
 	}
 
-	exists, err = dbs.Get(name, &dest)
+	exists, err = dbs.Get(name, dest)
 	if err != nil {
 		return false, err
 	}
