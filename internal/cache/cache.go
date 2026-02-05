@@ -11,7 +11,6 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
-	"github.com/cgalvisleon/josefina/internal/config"
 )
 
 var (
@@ -67,23 +66,19 @@ func initModel() error {
 }
 
 /**
-* set: Sets a cache value
+* Set: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func set(key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
+func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
 	result, err := mem.Set(key, value, duration)
 	if err != nil {
 		return nil, err
 	}
 
 	leader, ok := syn.getLeader()
-	if leader == origin {
-		return result, nil
-	}
-
 	if ok {
-		return syn.set(leader, key, value, duration, origin)
+		return syn.set(leader, key, value, duration)
 	}
 
 	err = initModel()
@@ -99,65 +94,6 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 	}
 
 	if !ok {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, node := range nodes {
-			if node != origin {
-				syn.set(node, key, value, duration, origin)
-			}
-		}
-
-	}
-
-	return result, nil
-}
-
-/**
-* Set: Sets a cache value
-* @param key string, value interface{}, duration time.Duration
-* @return interface{}, error
-**/
-func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
-	return set(key, value, duration, syn.address)
-}
-
-/**
-* delete: Gets a cache value as an int
-* @param key, origin string
-* @return int, bool
-**/
-func delete(key, origin string) (bool, error) {
-	result := mem.Delete(key)
-
-	leader, ok := syn.getLeader()
-	if ok && leader != origin {
-		return syn.delete(leader, key, origin)
-	}
-
-	err := initModel()
-	if err != nil {
-		return false, err
-	}
-
-	err = cache.Remove(key)
-	if err != nil {
-		return false, err
-	}
-
-	if !ok {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return false, err
-		}
-
-		for _, node := range nodes {
-			if node != origin {
-				syn.delete(node, key, leader)
-			}
-		}
 
 	}
 
@@ -170,7 +106,24 @@ func delete(key, origin string) (bool, error) {
 * @return int, bool
 **/
 func Delete(key string) (bool, error) {
-	return delete(key, syn.address)
+	result := mem.Delete(key)
+
+	leader, ok := syn.getLeader()
+	if ok {
+		return syn.delete(leader, key)
+	}
+
+	err := initModel()
+	if err != nil {
+		return false, err
+	}
+
+	err = cache.Remove(key)
+	if err != nil {
+		return false, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -188,7 +141,7 @@ func Exists(key string) bool {
 * @return *mem.Entry
 **/
 func Get(key string) (*mem.Entry, bool) {
-	value, exists := mem.GetItem(key)
+	value, exists := mem.GetEntry(key)
 	if exists {
 		return value, true
 	}
@@ -248,13 +201,14 @@ func GetStr(key string) (string, bool) {
 * @param key string
 * @return int, bool
 **/
-func GetInt(key string) (int, bool) {
+func GetInt(key string) (int, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Int(), true
+		result, err := item.Int()
+		return result, true, err
 	}
 
-	return 0, false
+	return 0, false, nil
 }
 
 /**
@@ -262,13 +216,14 @@ func GetInt(key string) (int, bool) {
 * @param key string
 * @return int64, bool
 **/
-func GetInt64(key string) (int64, bool) {
+func GetInt64(key string) (int64, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Int64(), true
+		result, err := item.Int64()
+		return result, true, err
 	}
 
-	return 0, false
+	return 0, false, nil
 }
 
 /**
@@ -276,13 +231,14 @@ func GetInt64(key string) (int64, bool) {
 * @param key string
 * @return float64, bool
 **/
-func GetFloat64(key string) (float64, bool) {
+func GetFloat64(key string) (float64, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Float(), true
+		result, err := item.Float()
+		return result, true, err
 	}
 
-	return 0, false
+	return 0, false, nil
 }
 
 /**
@@ -290,13 +246,14 @@ func GetFloat64(key string) (float64, bool) {
 * @param key string
 * @return int, bool
 **/
-func GetBool(key string) (bool, bool) {
+func GetBool(key string) (bool, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Bool(), true
+		result, err := item.Bool()
+		return result, true, err
 	}
 
-	return false, false
+	return false, false, nil
 }
 
 /**
@@ -304,13 +261,14 @@ func GetBool(key string) (bool, bool) {
 * @param key string
 * @return int, bool
 **/
-func GetTime(key string) (time.Time, bool) {
+func GetTime(key string) (time.Time, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Time(), true
+		result, err := item.Time()
+		return result, true, err
 	}
 
-	return time.Time{}, false
+	return time.Time{}, false, nil
 }
 
 /**
@@ -318,13 +276,14 @@ func GetTime(key string) (time.Time, bool) {
 * @param key string
 * @return int, bool
 **/
-func GetDuration(key string) (time.Duration, bool) {
+func GetDuration(key string) (time.Duration, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Duration(), true
+		result, err := item.Duration()
+		return result, true, err
 	}
 
-	return 0, false
+	return 0, false, nil
 }
 
 /**
@@ -332,13 +291,14 @@ func GetDuration(key string) (time.Duration, bool) {
 * @param key string
 * @return et.Json, bool
 **/
-func GetJson(key string) (et.Json, bool) {
+func GetJson(key string) (et.Json, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Json(), true
+		result, err := item.Json()
+		return result, true, err
 	}
 
-	return nil, false
+	return nil, false, nil
 }
 
 /**
@@ -346,11 +306,12 @@ func GetJson(key string) (et.Json, bool) {
 * @param key string
 * @return int, bool
 **/
-func GetArrayJson(key string) ([]et.Json, bool) {
+func GetArrayJson(key string) ([]et.Json, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.ArrayJson(), true
+		result, err := item.ArrayJson()
+		return result, true, err
 	}
 
-	return []et.Json{}, false
+	return []et.Json{}, false, nil
 }
