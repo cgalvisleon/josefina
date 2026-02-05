@@ -85,8 +85,8 @@ func (s *Session) ToJson() (et.Json, error) {
 * @return *Session, error
 **/
 func CreateSession(device, username string) (*Session, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.createSession(leader, device, username)
 	}
 

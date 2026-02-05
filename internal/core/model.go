@@ -42,8 +42,8 @@ func initModels() error {
 * @return *catalog.Model, error
 **/
 func CreateModel(database, schema, name string, version int) (*catalog.Model, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.createModel(leader, database, schema, name, version)
 	}
 
@@ -91,8 +91,8 @@ func CreateModel(database, schema, name string, version int) (*catalog.Model, er
 * @return bool, error
 **/
 func GetModel(from *catalog.From, dest *catalog.Model) (bool, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.getModel(leader, from, dest)
 	}
 
@@ -122,8 +122,8 @@ func GetModel(from *catalog.From, dest *catalog.Model) (bool, error) {
 * @return error
 **/
 func DropModel(from *catalog.From) error {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.dropModel(leader, from)
 	}
 

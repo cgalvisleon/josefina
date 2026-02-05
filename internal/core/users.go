@@ -70,8 +70,8 @@ func initUsers() error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.createUser(leader, username, password)
 	}
 
@@ -103,8 +103,8 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username, password string) error {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.dropUser(leader, username, password)
 	}
 
@@ -130,8 +130,8 @@ func DropUser(username, password string) error {
 * @return et.Json, error
 **/
 func GetUser(username, password string) (et.Json, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.getUser(leader, username, password)
 	}
 
@@ -168,8 +168,8 @@ func GetUser(username, password string) (et.Json, error) {
 * @return error
 **/
 func ChanguePassword(username, oldPassword, newPassword string) error {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.changuePassword(leader, username, oldPassword, newPassword)
 	}
 
@@ -188,7 +188,7 @@ func ChanguePassword(username, oldPassword, newPassword string) error {
 		return err
 	}
 
-	ok, err = users.IsExisted("username", username)
+	ok, err := users.IsExisted("username", username)
 	if err != nil {
 		return err
 	}

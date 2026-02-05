@@ -43,8 +43,8 @@ func initDbs() error {
 * @return *DB, error
 **/
 func CreateDb(name string) (*catalog.DB, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.createDb(leader, name)
 	}
 
@@ -83,8 +83,8 @@ func CreateDb(name string) (*catalog.DB, error) {
 * @return bool, error
 **/
 func GetDb(name string, dest *catalog.DB) (bool, error) {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.getDb(leader, name, dest)
 	}
 
@@ -120,8 +120,8 @@ func GetDb(name string, dest *catalog.DB) (bool, error) {
 * @return error
 **/
 func DropDb(name string) error {
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.dropDb(leader, name)
 	}
 

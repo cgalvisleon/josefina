@@ -270,8 +270,8 @@ func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 * @return error
 **/
 func (s *Node) reportModels(models map[string]*catalog.Model) error {
-	leader, ok := s.getLeader()
-	if ok {
+	leader, imLeader := s.getLeader()
+	if !imLeader {
 		var response bool
 		err := jrpc.CallRpc(leader, "Node.ReportModels", models, &response)
 		if err != nil {
@@ -310,8 +310,8 @@ func (s *Node) ReportModels(require map[string]*catalog.Model, response *bool) e
 * @param username string, tpConnection TpConnection, address string
 **/
 func (s *Node) onConnect(username string, tpConnection TpConnection, address string) error {
-	leader, ok := s.getLeader()
-	if ok {
+	leader, imLeader := s.getLeader()
+	if !imLeader {
 		args := et.Json{
 			"username":     username,
 			"tpConnection": tpConnection,
@@ -361,8 +361,8 @@ func (s *Node) OnConnect(require et.Json, response *bool) error {
 * @param username string
 **/
 func (s *Node) onDisconnect(username string) error {
-	leader, ok := s.getLeader()
-	if ok {
+	leader, imLeader := s.getLeader()
+	if !imLeader {
 		var dest bool
 		err := jrpc.CallRpc(leader, "Node.OnDisconnect", username, &dest)
 		if err != nil {

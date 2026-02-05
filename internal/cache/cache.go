@@ -134,13 +134,10 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 func delete(key, origin string) (bool, error) {
 	result := mem.Delete(key)
 
-	leader, ok := syn.getLeader()
-	if ok {
-		if leader == origin {
-			return result, nil
-		}
-
-		return syn.delete(leader, key, origin)
+	_, imLeader := syn.getLeader()
+	if !imLeader {
+		logs.Debugf("Sync:%s to:%s delete key:%s", syn.address, origin, key)
+		return true, nil
 	}
 
 	err := initModel()
@@ -153,28 +150,6 @@ func delete(key, origin string) (bool, error) {
 		return false, err
 	}
 
-	if leader != syn.address {
-		return result, nil
-	}
-
-	go func() {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return
-		}
-		for _, node := range nodes {
-			if node == origin {
-				continue
-			}
-
-			if node == leader {
-				continue
-			}
-
-			syn.delete(node, key, leader)
-		}
-	}()
-
 	return result, nil
 }
 
@@ -184,7 +159,26 @@ func delete(key, origin string) (bool, error) {
 * @return bool, error
 **/
 func Delete(key string) (bool, error) {
-	return delete(key, syn.address)
+	result, err := delete(key, syn.address)
+	if err != nil {
+		return false, err
+	}
+
+	go func() {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return
+		}
+		for _, node := range nodes {
+			if node == syn.address {
+				continue
+			}
+
+			syn.delete(node, key, syn.address)
+		}
+	}()
+
+	return result, nil
 }
 
 /**
@@ -198,8 +192,8 @@ func Exists(key string) (bool, error) {
 		return true, nil
 	}
 
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		return syn.exists(leader, key)
 	}
 
@@ -236,8 +230,8 @@ func Get(key string) (*mem.Entry, bool) {
 		return result, exists
 	}
 
-	leader, ok := syn.getLeader()
-	if ok {
+	leader, imLeader := syn.getLeader()
+	if !imLeader {
 		result, exists := syn.get(leader, key)
 		if !exists {
 			return nil, false

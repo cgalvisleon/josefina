@@ -50,8 +50,8 @@ func init() {
 * @return (*Model, bool)
 **/
 func (s *Sync) getModel(from *From) (*Model, bool) {
-	leader, ok := s.getLeader()
-	if !ok {
+	leader, imLeader := s.getLeader()
+	if imLeader {
 		return nil, false
 	}
 
