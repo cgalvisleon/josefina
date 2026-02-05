@@ -1,12 +1,96 @@
 package jdb
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
-func query(query string, args ...any) ([]et.Json, error) {
-	stmts, err := stmt.ParseText(query)
+/**
+* quoted
+* @param val any
+* @return any
+**/
+func quoted(val any) any {
+	format := `'%v'`
+	switch v := val.(type) {
+	case string:
+		return fmt.Sprintf(format, v)
+	case int:
+		return v
+	case float64:
+		return v
+	case float32:
+		return v
+	case int16:
+		return v
+	case int32:
+		return v
+	case int64:
+		return v
+	case bool:
+		return v
+	case time.Time:
+		return fmt.Sprintf(format, v.Format("2006-01-02 15:04:05"))
+	case et.Json:
+		return fmt.Sprintf(format, v.ToString())
+	case map[string]interface{}:
+		return fmt.Sprintf(format, et.Json(v).ToString())
+	case []string, []et.Json, []interface{}, []map[string]interface{}:
+		bt, err := json.Marshal(v)
+		if err != nil {
+			logs.Errorf("Quote, type:%v, value:%v, error marshalling array: %v", reflect.TypeOf(v), v, err)
+			return strs.Format(format, `[]`)
+		}
+		return fmt.Sprintf(format, string(bt))
+	case []uint8:
+		b := []byte(val.([]uint8))
+		return fmt.Sprintf("'\\x%s'", hex.EncodeToString(b))
+	case nil:
+		return fmt.Sprintf(`%s`, "NULL")
+	default:
+		logs.Errorf("Quote, type:%v, value:%v", reflect.TypeOf(v), v)
+		return val
+	}
+}
+
+/**
+* sqlParce
+* @param sql string, args ...any
+* @return string
+**/
+func sqlParce(sql string, args ...any) string {
+	for i := range args {
+		old := strs.Format(`$%d`, i+1)
+		new := strs.Format(`{$%d}`, i+1)
+		sql = strings.ReplaceAll(sql, old, new)
+	}
+
+	for i, arg := range args {
+		old := fmt.Sprintf(`{$%d}`, i+1)
+		new := fmt.Sprintf(`%v`, quoted(arg))
+		sql = strings.ReplaceAll(sql, old, new)
+	}
+
+	return sql
+}
+
+/**
+* query
+* @param sql string, args ...any
+* @return []et.Json, error
+**/
+func query(sql string, args ...any) ([]et.Json, error) {
+	sql = sqlParce(sql, args...)
+	stmts, err := stmt.ParseText(sql)
 	if err != nil {
 		return []et.Json{}, err
 	}
