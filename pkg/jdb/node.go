@@ -194,6 +194,7 @@ func (s *Node) start() error {
 
 	s.mu.Lock()
 	s.state = Follower
+	s.inCluster = len(nodes) > 1
 	s.lastHeartbeat = timezone.Now()
 	s.mu.Unlock()
 

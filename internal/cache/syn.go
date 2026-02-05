@@ -26,6 +26,8 @@ var (
 
 func init() {
 	gob.Register(mem.Entry{})
+	gob.Register(time.Time{})
+	gob.Register(time.Duration(0))
 	syn = &Cache{}
 }
 
@@ -57,7 +59,7 @@ func (s *Cache) set(to, key string, value interface{}, duration time.Duration, o
 func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 	key := require.Str("key")
 	value := require.Get("value")
-	duration := time.Duration(require.Int("duration"))
+	duration := time.Duration(require.Int64("duration"))
 	origin := require.Str("origin")
 	result, err := set(key, value, duration, origin)
 	if err != nil {
