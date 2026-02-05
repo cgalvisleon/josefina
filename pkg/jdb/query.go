@@ -11,6 +11,8 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/josefina/internal/core"
+	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
@@ -98,7 +100,7 @@ func query(sql string, args ...any) ([]et.Json, error) {
 	result := []et.Json{}
 	res := func(item et.Json, err error) ([]et.Json, error) {
 		if err != nil {
-			return nil, err
+			return result, err
 		}
 
 		result = append(result, item)
@@ -106,27 +108,22 @@ func query(sql string, args ...any) ([]et.Json, error) {
 	}
 
 	for _, st := range stmts {
-		item, err := stmt.ToJson(st)
-		res(item, err)
-		if err != nil {
-			return nil, err
-		}
-		// switch s := st.(type) {
-		// case stmt.CreateDbStmt:
-		// 	_, err := core.CreateDb(s.Name)
-		// 	if err != nil {
-		// 		return res(et.Json{}, err)
-		// 	}
+		switch s := st.(type) {
+		case stmt.CreateDbStmt:
+			_, err := core.CreateDb(s.Name)
+			if err != nil {
+				return res(et.Json{}, err)
+			}
 
-		// 	_, err = res(et.Json{
-		// 		"message": "Database created successfully",
-		// 	}, nil)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// default:
-		// 	return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
-		// }
+			_, err = res(et.Json{
+				"message": "Database created successfully",
+			}, nil)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return res(et.Json{}, fmt.Errorf(msg.MSG_UNSUPPORTED_STATEMENT_TYPE, st))
+		}
 	}
 
 	return result, nil
