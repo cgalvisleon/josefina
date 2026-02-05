@@ -15,7 +15,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/jql"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -76,11 +75,6 @@ func Load() error {
 		return err
 	}
 
-	err = jql.Load(node.getLeader)
-	if err != nil {
-		return err
-	}
-
 	go node.start()
 
 	return nil
@@ -123,6 +117,31 @@ func Query(ctx context.Context, sql string, args ...any) (et.Items, error) {
 	}
 
 	items, err := query(sql, args...)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result := et.Items{}
+	result.Add(items...)
+	return result, nil
+}
+
+/**
+* JQuery: Executes a query
+* @param ctx context.Context, query et.Json
+* @return et.Items, error
+**/
+func JQuery(ctx context.Context, query et.Json) (et.Items, error) {
+	app := ctx.Value("app").(string)
+	device := ctx.Value("device").(string)
+	username := ctx.Value("username").(string)
+	key := fmt.Sprintf("%s:%s:%s", app, device, username)
+	_, exists := cache.GetStr(key)
+	if !exists {
+		return et.Items{}, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	}
+
+	items, err := jquery(query)
 	if err != nil {
 		return et.Items{}, err
 	}
