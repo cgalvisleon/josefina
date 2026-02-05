@@ -60,7 +60,7 @@ func CreateDb(name string) (*catalog.DB, error) {
 	}
 
 	if exists {
-		return result, errors.New(msg.MSG_DB_NOT_EXISTS)
+		return nil, errors.New(msg.MSG_DB_NOT_EXISTS)
 	}
 
 	result, err = catalog.CreteDb(name)
