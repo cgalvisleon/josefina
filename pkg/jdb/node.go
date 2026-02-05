@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
@@ -317,41 +316,6 @@ func (s *Node) ReportModels(require map[string]*catalog.Model, response *bool) e
 	}
 
 	*response = true
-	return nil
-}
-
-/**
-* authenticate: Authenticates a user
-* @param token string
-* @return *claim.Claim, error
-**/
-func (s *Node) authenticate(token string) (*claim.Claim, error) {
-	leader, ok := s.getLeader()
-	if ok {
-		var reply *claim.Claim
-		err := jrpc.CallRpc(leader, "Node.Authenticate", token, &reply)
-		if err != nil {
-			return nil, err
-		}
-
-		return reply, nil
-	}
-
-	return core.Authenticate(token)
-}
-
-/**
-* Auth: Authenticates a user
-* @param require string, response *Claim
-* @return error
-**/
-func (s *Node) Authenticate(require string, response *claim.Claim) error {
-	result, err := s.authenticate(require)
-	if err != nil {
-		return err
-	}
-
-	response = result
 	return nil
 }
 
