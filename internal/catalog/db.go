@@ -162,7 +162,8 @@ func GetDb(name string, dest *DB) (bool, error) {
 	}
 
 	name = utility.Normalize(name)
-	dest, ok := dbs[name]
+	var ok bool
+	dest, ok = dbs[name]
 	if ok {
 		return true, nil
 	}
