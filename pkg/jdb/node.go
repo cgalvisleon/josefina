@@ -57,6 +57,7 @@ type Node struct {
 	rpcs          map[string]et.Json        `json:"-"`
 	peers         []string                  `json:"-"`
 	state         NodeState                 `json:"-"`
+	inCluster     bool                      `json:"-"`
 	term          int                       `json:"-"`
 	votedFor      string                    `json:"-"`
 	leaderID      string                    `json:"-"`

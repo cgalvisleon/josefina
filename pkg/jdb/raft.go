@@ -91,21 +91,22 @@ func (s *Node) electionLoop() {
 * startElection
 **/
 func (s *Node) startElection() {
-	defer func() {
-	}()
+	idx := slices.Index(s.peers, s.Address)
+	if idx == -1 {
+		s.mu.Lock()
+		s.inCluster = false
+		s.becomeLeader()
+		s.mu.Unlock()
+		return
+	}
 
 	s.mu.Lock()
+	s.inCluster = true
 	s.state = Candidate
 	s.term++
 	term := s.term
 	s.votedFor = s.Address
 	s.mu.Unlock()
-
-	idx := slices.Index(s.peers, s.Address)
-	if idx != -1 {
-		s.becomeLeader()
-		return
-	}
 
 	votes := 1
 	total := len(s.peers)
@@ -158,6 +159,10 @@ func (s *Node) becomeLeader() {
 * heartbeatLoop
 **/
 func (s *Node) heartbeatLoop() {
+	if !s.inCluster {
+		return
+	}
+
 	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
