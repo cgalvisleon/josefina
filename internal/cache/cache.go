@@ -120,6 +120,15 @@ func Delete(key string) (bool, error) {
 }
 
 /**
+* Exists: Checks if a cache value exists
+* @param key string
+* @return bool
+**/
+func Exists(key string) bool {
+	return mem.Exists(key)
+}
+
+/**
 * Get: Gets a cache value
 * @param key string
 * @return *mem.Item
