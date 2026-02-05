@@ -40,31 +40,6 @@ func Authenticate(next http.Handler) http.Handler {
 }
 
 /**
-* applyMiddleware
-* @param middlewares []func(http.Handler) http.Handler, next http.Handler
-* @return http.Handler
-**/
-func applyMiddlewares(handler http.Handler, middlewares []func(http.Handler) http.Handler) http.Handler {
-	for _, middleware := range middlewares {
-		handler = middleware(handler)
-	}
-
-	return handler
-}
-
-/**
-* ApplyAuthenticate
-* @param handler http.Handler
-* @return http.Handler
-**/
-func pplyAuthenticate(handler http.Handler) http.Handler {
-	middlewares := []func(http.Handler) http.Handler{
-		Authenticate,
-	}
-	return applyMiddlewares(handler, middlewares)
-}
-
-/**
 * SignIn: Authenticate a user
 * @param device, username, password string
 * @return *Session, error
