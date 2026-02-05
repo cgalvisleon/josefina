@@ -258,7 +258,7 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	s.lastHeartbeat = timezone.Now()
 
 	if oldLeader != args.LeaderID {
-		logs.Logf("Set leader %s in %s", args.LeaderID, s.Address)
+		logs.Logf(appName, "Set leader %s in %s", args.LeaderID, s.Address)
 		s.onChangeLeader()
 	}
 
