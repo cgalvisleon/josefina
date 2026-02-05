@@ -73,10 +73,10 @@ type Model struct {
 }
 
 /**
-* Serialize
+* serialize
 * @return []byte, error
 **/
-func (s *Model) Serialize() ([]byte, error) {
+func (s *Model) serialize() ([]byte, error) {
 	result, err := json.Marshal(s)
 	if err != nil {
 		return []byte{}, err
@@ -90,7 +90,7 @@ func (s *Model) Serialize() ([]byte, error) {
 * @return et.Json, error
 **/
 func (s *Model) ToJson() (et.Json, error) {
-	definition, err := s.Serialize()
+	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
 	}

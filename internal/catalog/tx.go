@@ -65,10 +65,10 @@ func GetTx(tx *Tx) (*Tx, bool) {
 }
 
 /**
-* Serialize
+* serialize
 * @return []byte, error
 **/
-func (s *Tx) Serialize() ([]byte, error) {
+func (s *Tx) serialize() ([]byte, error) {
 	result, err := json.Marshal(s)
 	if err != nil {
 		return []byte{}, err
@@ -82,7 +82,7 @@ func (s *Tx) Serialize() ([]byte, error) {
 * @return et.Json, error
 **/
 func (s *Tx) ToJson() (et.Json, error) {
-	definition, err := s.Serialize()
+	definition, err := s.serialize()
 	if err != nil {
 		return et.Json{}, err
 	}
