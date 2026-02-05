@@ -37,7 +37,7 @@ func init() {
 	gob.Register(RequestVoteReply{})
 	gob.Register(HeartbeatArgs{})
 	gob.Register(HeartbeatReply{})
-	gob.Register(mem.Item{})
+	gob.Register(mem.Entry{})
 	gob.Register(Client{})
 }
 
