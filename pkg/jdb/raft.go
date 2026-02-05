@@ -70,9 +70,30 @@ type HeartbeatReply struct {
 }
 
 /**
+* getLeader
+* @return string, error
+**/
+func (n *Node) getLeader() (string, bool) {
+	n.mu.RLock()
+	inCluster := n.inCluster
+	result := n.leaderID
+	n.mu.RUnlock()
+	if !inCluster {
+		return "", false
+	}
+	return result, result != n.Address && result != ""
+}
+
+/**
 * electionLoop
 **/
 func (s *Node) electionLoop() {
+	s.mu.Lock()
+	s.state = Follower
+	s.inCluster = len(s.peers) > 1
+	s.lastHeartbeat = timezone.Now()
+	s.mu.Unlock()
+
 	for {
 		timeout := randomBetween(1500, 3000)
 		time.Sleep(timeout)

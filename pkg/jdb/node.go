@@ -9,7 +9,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/config"
 	"github.com/cgalvisleon/josefina/internal/core"
@@ -155,21 +154,6 @@ func (s *Node) next() string {
 }
 
 /**
-* getLeader
-* @return string, error
-**/
-func (n *Node) getLeader() (string, bool) {
-	n.mu.RLock()
-	inCluster := n.inCluster
-	result := n.leaderID
-	n.mu.RUnlock()
-	if !inCluster {
-		return "", false
-	}
-	return result, result != n.Address && result != ""
-}
-
-/**
 * start
 * @return error
 **/
@@ -191,12 +175,6 @@ func (s *Node) start() error {
 	if err != nil {
 		return err
 	}
-
-	s.mu.Lock()
-	s.state = Follower
-	s.inCluster = len(nodes) > 1
-	s.lastHeartbeat = timezone.Now()
-	s.mu.Unlock()
 
 	go s.electionLoop()
 
