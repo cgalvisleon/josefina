@@ -43,7 +43,7 @@ func (s *Router) Routes() http.Handler {
 	r.Use(middleware.Recoverer)
 	router.SetAutentication(jdb.Authenticate)
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
-	router.Public(r, router.Post, "/signin", s.auth, s.PackageName, s.PackagePath, host)
+	router.Public(r, router.Post, "/signin", s.signin, s.PackageName, s.PackagePath, host)
 	router.Private(r, router.Post, "/jquery", s.jQuery, s.PackageName, s.PackagePath, host)
 	router.Private(r, router.Post, "/query", s.query, s.PackageName, s.PackagePath, host)
 

@@ -19,11 +19,11 @@ func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
-* auth
+* signin
 * @param w http.ResponseWriter, r *http.Request
 * @return error
 **/
-func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
+func (s *Router) signin(w http.ResponseWriter, r *http.Request) {
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
