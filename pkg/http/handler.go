@@ -33,7 +33,7 @@ func (s *Router) auth(w http.ResponseWriter, r *http.Request) {
 	device := body.Str("device")
 	username := body.Str("username")
 	password := body.Str("password")
-	session, err := jdb.Auth(device, username, password)
+	session, err := jdb.SignIn(device, username, password)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return

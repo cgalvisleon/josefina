@@ -65,11 +65,11 @@ func ApplyAuthenticate(handler http.Handler) http.Handler {
 }
 
 /**
-* Auth: Authenticate a user
+* SignIn: Authenticate a user
 * @param device, username, password string
 * @return *Session, error
 **/
-func Auth(device, username, password string) (*core.Session, error) {
+func SignIn(device, username, password string) (*core.Session, error) {
 	if !node.started {
 		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
 	}
@@ -80,5 +80,5 @@ func Auth(device, username, password string) (*core.Session, error) {
 		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	return node.auth(device, username, password)
+	return core.SignIn(device, username, password)
 }
