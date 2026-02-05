@@ -34,12 +34,13 @@ func init() {
 * @params to string, key string, value interface{}, duration time.Duration
 * @return error
 **/
-func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+func (s *Cache) set(to, key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
 	var response *mem.Entry
 	err := jrpc.CallRpc(to, "Cache.Set", et.Json{
 		"key":      key,
 		"value":    value,
 		"duration": duration,
+		"origin":   origin,
 	}, &response)
 	if err != nil {
 		return nil, err
@@ -57,7 +58,8 @@ func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 	key := require.Str("key")
 	value := require.Get("value")
 	duration := time.Duration(require.Int("duration"))
-	result, err := Set(key, value, duration)
+	origin := require.Str("origin")
+	result, err := set(key, value, duration, origin)
 	if err != nil {
 		return err
 	}
@@ -68,13 +70,14 @@ func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 
 /**
 * delete: Deletes a cache value
-* @params to string, key string
+* @params to string, key, origin string
 * @return error
 **/
-func (s *Cache) delete(to, key string) (bool, error) {
+func (s *Cache) delete(to, key, origin string) (bool, error) {
 	var response *bool
 	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
-		"key": key,
+		"key":    key,
+		"origin": origin,
 	}, &response)
 	if err != nil {
 		return false, err
@@ -90,7 +93,8 @@ func (s *Cache) delete(to, key string) (bool, error) {
 **/
 func (s *Cache) Delete(require et.Json, response *bool) error {
 	key := require.Str("key")
-	result, err := Delete(key)
+	origin := require.Str("origin")
+	result, err := delete(key, origin)
 	if err != nil {
 		return err
 	}

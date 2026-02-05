@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/config"
 )
 
 var (
@@ -66,19 +67,23 @@ func initModel() error {
 }
 
 /**
-* Set: Sets a cache value
+* set: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+func set(key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
 	result, err := mem.Set(key, value, duration)
 	if err != nil {
 		return nil, err
 	}
 
 	leader, ok := syn.getLeader()
+	if leader == origin {
+		return result, nil
+	}
+
 	if ok {
-		return syn.set(leader, key, value, duration)
+		return syn.set(leader, key, value, duration, origin)
 	}
 
 	err = initModel()
@@ -94,6 +99,16 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 	}
 
 	if !ok {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, node := range nodes {
+			if node != origin {
+				syn.set(node, key, value, duration, origin)
+			}
+		}
 
 	}
 
@@ -101,16 +116,25 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 }
 
 /**
-* Delete: Gets a cache value as an int
-* @param key string
+* Set: Sets a cache value
+* @param key string, value interface{}, duration time.Duration
+* @return interface{}, error
+**/
+func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+	return set(key, value, duration, syn.address)
+}
+
+/**
+* delete: Gets a cache value as an int
+* @param key, origin string
 * @return int, bool
 **/
-func Delete(key string) (bool, error) {
+func delete(key, origin string) (bool, error) {
 	result := mem.Delete(key)
 
 	leader, ok := syn.getLeader()
-	if ok {
-		return syn.delete(leader, key)
+	if ok && leader != origin {
+		return syn.delete(leader, key, origin)
 	}
 
 	err := initModel()
@@ -123,7 +147,30 @@ func Delete(key string) (bool, error) {
 		return false, err
 	}
 
+	if !ok {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return false, err
+		}
+
+		for _, node := range nodes {
+			if node != origin {
+				syn.delete(node, key, leader)
+			}
+		}
+
+	}
+
 	return result, nil
+}
+
+/**
+* Delete: Gets a cache value as an int
+* @param key string
+* @return int, bool
+**/
+func Delete(key string) (bool, error) {
+	return delete(key, syn.address)
 }
 
 /**

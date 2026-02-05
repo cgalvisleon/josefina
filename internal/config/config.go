@@ -1,4 +1,4 @@
-package jdb
+package config
 
 import (
 	"github.com/cgalvisleon/et/file"
@@ -25,10 +25,10 @@ func getConfig() (*Config, error) {
 }
 
 /**
-* getRpcNodes: Returns the rpc nodes
+* GetNodes: Returns the nodes
 * @return []string, error
 **/
-func getRpcNodes() ([]string, error) {
+func GetNodes() ([]string, error) {
 	config, err := getConfig()
 	if err != nil {
 		return nil, err
