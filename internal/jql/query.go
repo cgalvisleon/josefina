@@ -22,7 +22,7 @@ func Query(query string) ([]et.Json, error) {
 	}
 
 	for _, st := range stmts {
-		item, err := st.ToJson()
+		item, err := stmt.ToJson(st)
 		res(item, err)
 		if err != nil {
 			return nil, err
