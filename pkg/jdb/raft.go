@@ -74,10 +74,10 @@ type HeartbeatReply struct {
 * @return string, error
 **/
 func (n *Node) getLeader() (string, bool) {
-	n.mu.RLock()
+	n.mu.Lock()
 	inCluster := n.inCluster
 	result := n.leaderID
-	n.mu.RUnlock()
+	n.mu.Unlock()
 	if !inCluster {
 		return "", false
 	}
@@ -98,10 +98,10 @@ func (s *Node) electionLoop() {
 		timeout := randomBetween(1500, 3000)
 		time.Sleep(timeout)
 
-		s.mu.RLock()
+		s.mu.Lock()
 		elapsed := time.Since(s.lastHeartbeat)
 		state := s.state
-		s.mu.RUnlock()
+		s.mu.Unlock()
 
 		if elapsed > heartbeatInterval && state != Leader {
 			s.startElection()
@@ -189,10 +189,10 @@ func (s *Node) heartbeatLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		s.mu.RLock()
+		s.mu.Lock()
 		state := s.state
 		term := s.term
-		s.mu.RUnlock()
+		s.mu.Unlock()
 		if state != Leader {
 			return
 		}
@@ -263,7 +263,6 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	changedLeader := false
 
 	s.mu.Lock()
-
 	if args.Term < s.term {
 		reply.Term = s.term
 		reply.Ok = false
@@ -282,7 +281,6 @@ func (s *Node) heartbeat(args *HeartbeatArgs, reply *HeartbeatReply) error {
 	s.lastHeartbeat = timezone.Now()
 
 	if oldLeader != args.LeaderID {
-		logs.Logf(appName, "Set leader %s in %s", args.LeaderID, s.Address)
 		changedLeader = true
 	}
 
@@ -311,6 +309,8 @@ func (s *Node) onChangeLeader() {
 	if err != nil {
 		logs.Errorf("onChangeLeader: %s", err)
 	}
+
+	logs.Logf(appName, "Set leader %s in %s", s.leaderID, s.Address)
 }
 
 /**

@@ -64,7 +64,7 @@ type Node struct {
 	turn          int                       `json:"-"`
 	started       bool                      `json:"-"`
 	clients       map[string]*Client        `json:"-"`
-	mu            sync.RWMutex              `json:"-"`
+	mu            sync.Mutex                `json:"-"`
 	modelMu       sync.RWMutex              `json:"-"`
 	clientMu      sync.RWMutex              `json:"-"`
 	isDebug       bool                      `json:"-"`
@@ -86,7 +86,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 		models:      make(map[string]*catalog.Model),
 		rpcs:        make(map[string]et.Json),
 		clients:     make(map[string]*Client),
-		mu:          sync.RWMutex{},
+		mu:          sync.Mutex{},
 		modelMu:     sync.RWMutex{},
 		clientMu:    sync.RWMutex{},
 	}

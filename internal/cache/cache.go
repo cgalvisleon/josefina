@@ -80,6 +80,7 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 	leader, ok := syn.getLeader()
 	if ok {
 		if leader == origin {
+			logs.Debugf("Sync:%s to:%s set key:%s value:%v", syn.address, origin, key, value)
 			return result, nil
 		}
 
