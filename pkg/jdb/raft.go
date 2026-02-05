@@ -121,15 +121,16 @@ func (s *Node) startElection() {
 
 			if res.Ok {
 				s.mu.Lock()
-				defer s.mu.Unlock()
-
 				if reply.Term > s.term {
 					s.term = reply.Term
 					s.state = Follower
 					s.votedFor = ""
+					s.mu.Unlock()
 					return
 				}
+				s.mu.Unlock()
 
+				s.mu.Lock()
 				if s.state == Candidate && reply.VoteGranted && term == s.term {
 					votes++
 					needed := majority(total)
@@ -137,6 +138,7 @@ func (s *Node) startElection() {
 						s.becomeLeader()
 					}
 				}
+				s.mu.Unlock()
 			}
 		}(peer)
 	}
@@ -186,13 +188,12 @@ func (s *Node) heartbeatLoop() {
 				res := heartbeat(peer, &args, &reply)
 				if res.Ok {
 					s.mu.Lock()
-					defer s.mu.Unlock()
-
 					if reply.Term > s.term {
 						s.term = reply.Term
 						s.state = Follower
 						s.votedFor = ""
 					}
+					s.mu.Unlock()
 				}
 			}(peer)
 		}
