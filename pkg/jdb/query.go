@@ -1,11 +1,11 @@
-package jql
+package jdb
 
 import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
-func Query(query string) ([]et.Json, error) {
+func query(query string, args ...any) ([]et.Json, error) {
 	stmts, err := stmt.ParseText(query)
 	if err != nil {
 		return []et.Json{}, err
