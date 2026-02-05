@@ -68,7 +68,7 @@ func initModel() error {
 
 /**
 * Set: Sets a cache value
-* @param key string, value interface{}, duration time.Duration, origin string
+* @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
 func set(key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
@@ -77,14 +77,10 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 		return nil, err
 	}
 
-	leader, ok := syn.getLeader()
-	if ok {
-		if leader == origin {
-			logs.Debugf("Sync:%s to:%s set key:%s value:%v", syn.address, origin, key, value)
-			return result, nil
-		}
-
-		return syn.set(leader, key, value, duration, origin)
+	_, imLeader := syn.getLeader()
+	if !imLeader {
+		logs.Debugf("Sync:%s to:%s set key:%s value:%v", syn.address, origin, key, value)
+		return result, nil
 	}
 
 	err = initModel()
@@ -99,28 +95,6 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 		}
 	}
 
-	if leader != syn.address {
-		return result, nil
-	}
-
-	go func() {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return
-		}
-		for _, node := range nodes {
-			if node == origin {
-				continue
-			}
-
-			if node == leader {
-				continue
-			}
-
-			syn.set(node, key, value, duration, leader)
-		}
-	}()
-
 	return result, nil
 }
 
@@ -130,7 +104,26 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 * @return interface{}, error
 **/
 func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
-	return set(key, value, duration, syn.address)
+	result, err := set(key, value, duration, syn.address)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		nodes, err := config.GetNodes()
+		if err != nil {
+			return
+		}
+		for _, node := range nodes {
+			if node == syn.address {
+				continue
+			}
+
+			syn.set(node, key, value, duration, syn.address)
+		}
+	}()
+
+	return result, nil
 }
 
 /**

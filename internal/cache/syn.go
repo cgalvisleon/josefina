@@ -33,7 +33,7 @@ func init() {
 
 /**
 * set: Sets a cache value
-* @params to string, key string, value interface{}, duration time.Duration, origin string
+* @params to string, key string, value interface{}, duration time.Duration
 * @return error
 **/
 func (s *Cache) set(to, key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {

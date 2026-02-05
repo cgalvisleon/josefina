@@ -81,7 +81,7 @@ func (n *Node) getLeader() (string, bool) {
 	if !inCluster {
 		return "", false
 	}
-	return result, result != n.Address && result != ""
+	return result, result != "" && result == n.Address
 }
 
 /**
