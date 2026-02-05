@@ -11,7 +11,7 @@ import (
 )
 
 type Result struct {
-	result *mem.Item
+	result *mem.Entry
 	exists bool
 }
 
@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	gob.Register(mem.Item{})
+	gob.Register(mem.Entry{})
 	syn = &Cache{}
 }
 
@@ -34,8 +34,8 @@ func init() {
 * @params to string, key string, value interface{}, duration time.Duration
 * @return error
 **/
-func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (*mem.Item, error) {
-	var response *mem.Item
+func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+	var response *mem.Entry
 	err := jrpc.CallRpc(to, "Cache.Set", et.Json{
 		"key":      key,
 		"value":    value,
@@ -50,10 +50,10 @@ func (s *Cache) set(to, key string, value interface{}, duration time.Duration) (
 
 /**
 * Set: Sets a cache value
-* @param require et.Json, response *mem.Item
+* @param require et.Json, response *mem.Entry
 * @return error
 **/
-func (s *Cache) Set(require et.Json, response *mem.Item) error {
+func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 	key := require.Str("key")
 	value := require.Get("value")
 	duration := time.Duration(require.Int("duration"))
@@ -104,7 +104,7 @@ func (s *Cache) Delete(require et.Json, response *bool) error {
 * @params to string, key string
 * @return error
 **/
-func (s *Cache) get(to, key string) (*mem.Item, bool) {
+func (s *Cache) get(to, key string) (*mem.Entry, bool) {
 	var response *Result
 	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
 		"key": key,

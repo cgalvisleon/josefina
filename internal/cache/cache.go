@@ -70,15 +70,18 @@ func initModel() error {
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func Set(key string, value interface{}, duration time.Duration) (*mem.Item, error) {
-	result := mem.Set(key, value, duration)
+func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+	result, err := mem.Set(key, value, duration)
+	if err != nil {
+		return nil, err
+	}
 
 	leader, ok := syn.getLeader()
 	if ok {
 		return syn.set(leader, key, value, duration)
 	}
 
-	err := initModel()
+	err = initModel()
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +91,10 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Item, erro
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if !ok {
+
 	}
 
 	return result, nil
@@ -131,15 +138,15 @@ func Exists(key string) bool {
 /**
 * Get: Gets a cache value
 * @param key string
-* @return *mem.Item
+* @return *mem.Entry
 **/
-func Get(key string) (*mem.Item, bool) {
+func Get(key string) (*mem.Entry, bool) {
 	value, exists := mem.GetItem(key)
 	if exists {
 		return value, true
 	}
 
-	set := func(result *mem.Item, exists bool) (*mem.Item, bool) {
+	set := func(result *mem.Entry, exists bool) (*mem.Entry, bool) {
 		expiration := result.Expiration
 		if expiration != 0 {
 			expiration = result.Expiration - time.Since(result.LastUpdate)
@@ -162,7 +169,7 @@ func Get(key string) (*mem.Item, bool) {
 		return nil, false
 	}
 
-	result := mem.Item{}
+	result := mem.Entry{}
 	exists, err = cache.Get(key, &result)
 	if err != nil {
 		return nil, false
