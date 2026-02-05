@@ -63,11 +63,11 @@ func quoted(val any) any {
 }
 
 /**
-* sqlParce
+* sqlParse
 * @param sql string, args ...any
 * @return string
 **/
-func sqlParce(sql string, args ...any) string {
+func sqlParse(sql string, args ...any) string {
 	for i := range args {
 		old := strs.Format(`$%d`, i+1)
 		new := strs.Format(`{$%d}`, i+1)
@@ -89,7 +89,7 @@ func sqlParce(sql string, args ...any) string {
 * @return []et.Json, error
 **/
 func query(sql string, args ...any) ([]et.Json, error) {
-	sql = sqlParce(sql, args...)
+	sql = sqlParse(sql, args...)
 	stmts, err := stmt.ParseText(sql)
 	if err != nil {
 		return []et.Json{}, err
