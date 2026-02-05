@@ -38,3 +38,31 @@ func Authenticate(token string) (*claim.Claim, error) {
 
 	return result, nil
 }
+
+/**
+* SignIn
+* @param device, username, password string
+* @return *Session, error
+**/
+func SignIn(device, username, password string) (*Session, error) {
+	item, err := GetUser(username, password)
+	if err != nil {
+		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
+	}
+
+	result, err := CreateSession(device, username)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
+	_, err = cache.Set(key, result.Token, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
