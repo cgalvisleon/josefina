@@ -11,7 +11,6 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -45,6 +44,7 @@ type Client struct {
 	Address  string       `json:"address"`
 	Status   Status       `json:"status"`
 	Type     TpConnection `json:"type"`
+	Database string       `json:"database"`
 }
 
 type Node struct {
@@ -353,34 +353,6 @@ func (s *Node) Authenticate(require string, response *claim.Claim) error {
 
 	response = result
 	return nil
-}
-
-/**
-* auth
-* @param device, username, password string
-* @return *Session, error
-**/
-func (s *Node) auth(device, username, password string) (*core.Session, error) {
-	item, err := core.GetUser(username, password)
-	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
-	}
-
-	result, err := core.CreateSession(device, username)
-	if err != nil {
-		return nil, err
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	_, err = cache.Set(key, result.Token, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 /**
