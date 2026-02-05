@@ -68,13 +68,8 @@ func CreateDb(name string) (*catalog.DB, error) {
 		return nil, err
 	}
 
-	bt, err := result.Serialize()
-	if err != nil {
-		return nil, err
-	}
-
 	key := result.Name
-	err = dbs.Put(key, bt)
+	err = dbs.Put(key, result)
 	if err != nil {
 		return nil, err
 	}

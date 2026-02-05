@@ -76,13 +76,8 @@ func CreateModel(database, schema, name string, version int) (*catalog.Model, er
 		return nil, err
 	}
 
-	bt, err := result.Serialize()
-	if err != nil {
-		return nil, err
-	}
-
 	key := result.Key()
-	err = models.Put(key, bt)
+	err = models.Put(key, result)
 	if err != nil {
 		return nil, err
 	}
