@@ -438,10 +438,10 @@ func (s *Model) Count() (int, error) {
 
 /**
 * For: Iterates over the model
-* @param fn func(idx string, data et.Json) (bool, error), asc bool, offset, limit, workers int
+* @param fn func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
 * @return bool, error
 **/
-func (s *Model) For(next func(idx string, data et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *Model) For(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	st, err := s.Source()
 	if err != nil {
 		return err

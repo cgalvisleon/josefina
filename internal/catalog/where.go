@@ -1,7 +1,6 @@
 package catalog
 
 import (
-	"encoding/json"
 	"errors"
 	"slices"
 
@@ -247,22 +246,11 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		return n < s.limit
 	}
 
-	st, err := model.Source()
-	if err != nil {
-		return nil, err
-	}
-
 	if len(s.conditions) == 0 {
 		// Items by data
 		next := true
 		asc := s.Order(INDEX)
-		err = st.For(func(id string, src []byte) (bool, error) {
-			item := et.Json{}
-			err := json.Unmarshal(src, &item)
-			if err != nil {
-				return false, err
-			}
-
+		err := model.For(func(idx string, item et.Json) (bool, error) {
 			next = addResult(item)
 			return next, nil
 		}, asc, s.offset, s.limit, s.workers)
@@ -383,13 +371,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	// Items by data
 	asc := s.Order(INDEX)
-	err = st.For(func(id string, src []byte) (bool, error) {
-		item := et.Json{}
-		err := json.Unmarshal(src, &item)
-		if err != nil {
-			return false, err
-		}
-
+	err := model.For(func(idx string, item et.Json) (bool, error) {
 		next = Validate(item, s.conditions)
 		return next, nil
 	}, asc, s.offset, s.limit, s.workers)
