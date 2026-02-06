@@ -86,17 +86,11 @@ func sqlParse(sql string, args ...any) string {
 }
 
 /**
-* query
-* @param sql string, args ...any
+* exec
+* @param stmts []stmt.Stmt
 * @return []et.Json, error
 **/
-func query(sql string, args ...any) ([]et.Json, error) {
-	sql = sqlParse(sql, args...)
-	stmts, err := stmt.ParseText(sql)
-	if err != nil {
-		return []et.Json{}, err
-	}
-
+func exec(stmts []stmt.Stmt) ([]et.Json, error) {
 	result := []et.Json{}
 	res := func(item et.Json, err error) ([]et.Json, error) {
 		if err != nil {
@@ -129,6 +123,31 @@ func query(sql string, args ...any) ([]et.Json, error) {
 	return result, nil
 }
 
+/**
+* query
+* @param sql string, args ...any
+* @return []et.Json, error
+**/
+func query(sql string, args ...any) ([]et.Json, error) {
+	sql = sqlParse(sql, args...)
+	stmts, err := stmt.ParseText(sql)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return exec(stmts)
+}
+
+/**
+* jquery
+* @param query et.Json
+* @return []et.Json, error
+**/
 func jquery(query et.Json) ([]et.Json, error) {
-	return nil, nil
+	stmts, err := stmt.ParseJson(query)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return exec(stmts)
 }
