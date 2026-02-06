@@ -123,10 +123,10 @@ func (s *Tx) change() error {
 }
 
 /**
-* addTransaction: Adds data to the Transaction
+* AddTransaction: Adds data to the Transaction
 * @param from *From, cmd Command, idx string, data et.Json
 **/
-func (s *Tx) addTransaction(from *From, cmd Command, idx string, data et.Json) error {
+func (s *Tx) AddTransaction(from *From, cmd Command, idx string, data et.Json) error {
 	transaction := newTransaction(from, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
 	return s.change()

@@ -625,11 +625,11 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 }
 
 /**
-* Iterate
+* For
 * @param fn func(id string, data []byte) bool, asc bool, offset, limit, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *FileStore) For(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
 	// 1. Seleccionar IDs
 	index, keys := s.getRecords(asc, offset, limit)
 

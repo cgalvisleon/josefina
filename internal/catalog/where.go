@@ -280,7 +280,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		// Items by data
 		next := true
 		asc := s.Order(INDEX)
-		err = st.Iterate(func(id string, src []byte) (bool, error) {
+		err = st.For(func(id string, src []byte) (bool, error) {
 			item := et.Json{}
 			err := json.Unmarshal(src, &item)
 			if err != nil {
@@ -407,7 +407,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	// Items by data
 	asc := s.Order(INDEX)
-	err = st.Iterate(func(id string, src []byte) (bool, error) {
+	err = st.For(func(id string, src []byte) (bool, error) {
 		item := et.Json{}
 		err := json.Unmarshal(src, &item)
 		if err != nil {
