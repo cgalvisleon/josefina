@@ -11,10 +11,20 @@ type Parser struct {
 	cur token
 }
 
+/**
+* ParseText: parses a string into a list of statements.
+* @param input: string to parse
+* @return list of statements
+**/
 func ParseText(input string) ([]Stmt, error) {
 	return ParseTextAll(input)
 }
 
+/**
+* ParseTextAll: parses a string into a list of statements.
+* @param input: string to parse
+* @return list of statements
+**/
 func ParseTextAll(input string) ([]Stmt, error) {
 	p := &Parser{l: newLexer(input)}
 	p.cur = p.l.next()
@@ -37,6 +47,10 @@ func ParseTextAll(input string) ([]Stmt, error) {
 	}
 }
 
+/**
+* parseStmt: parses a statement.
+* @return statement
+**/
 func (p *Parser) parseStmt() (Stmt, error) {
 	if p.cur.typ == tokError {
 		return nil, fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
@@ -114,6 +128,10 @@ func (p *Parser) parseStmt() (Stmt, error) {
 	}
 }
 
+/**
+* parseValue: parses a value.
+* @return string, error
+**/
 func (p *Parser) parseValue() (string, error) {
 	switch p.cur.typ {
 	case tokString, tokIdent:
@@ -132,6 +150,10 @@ func (p *Parser) parseValue() (string, error) {
 	}
 }
 
+/**
+* parseInt
+* @return int, error
+**/
 func (p *Parser) parseInt() (int, error) {
 	if p.cur.typ == tokError {
 		return 0, fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
@@ -154,6 +176,10 @@ func (p *Parser) parseInt() (int, error) {
 	return result, nil
 }
 
+/**
+* parseKeyword
+* @return string, error
+**/
 func (p *Parser) parseKeyword() (string, error) {
 	if p.cur.typ == tokError {
 		return "", fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
@@ -169,14 +195,26 @@ func (p *Parser) parseKeyword() (string, error) {
 	return kw, nil
 }
 
+/**
+* advance
+* @return void
+**/
 func (p *Parser) advance() {
 	p.cur = p.l.next()
 }
 
+/**
+* errf
+* @return error
+**/
 func (p *Parser) errf(msg string) error {
 	return fmt.Errorf("%s at %d", msg, p.cur.pos)
 }
 
+/**
+* consumeTerm
+* @return error
+**/
 func (p *Parser) consumeTerm(after string) error {
 	if p.cur.typ == tokError {
 		return fmt.Errorf("%s at %d", p.cur.lit, p.cur.pos)
@@ -196,6 +234,10 @@ func (p *Parser) consumeTerm(after string) error {
 	return nil
 }
 
+/**
+* skipSeps
+* @return void
+**/
 func (p *Parser) skipSeps() {
 	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
 		p.advance()
