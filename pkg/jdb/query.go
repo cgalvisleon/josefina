@@ -128,3 +128,7 @@ func query(sql string, args ...any) ([]et.Json, error) {
 
 	return result, nil
 }
+
+func jquery(query et.Json) ([]et.Json, error) {
+	return nil, nil
+}
