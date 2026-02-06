@@ -17,15 +17,6 @@ type Parser struct {
 * @return list of statements
 **/
 func ParseText(input string) ([]Stmt, error) {
-	return ParseTextAll(input)
-}
-
-/**
-* ParseTextAll: parses a string into a list of statements.
-* @param input: string to parse
-* @return list of statements
-**/
-func ParseTextAll(input string) ([]Stmt, error) {
 	p := &Parser{l: newLexer(input)}
 	p.cur = p.l.next()
 
