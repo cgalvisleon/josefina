@@ -27,7 +27,10 @@ func Authenticate(token string) (*claim.Claim, error) {
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists := cache.GetStr(key)
+	session, exists, err := cache.GetStr(key)
+	if err != nil {
+		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	}
 	if !exists {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}

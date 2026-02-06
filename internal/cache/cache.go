@@ -260,15 +260,16 @@ func Get(key string) (*mem.Entry, bool) {
 /**
 * GetStr: Gets a cache value as a string
 * @param key string
-* @return string, bool
+* @return string, bool, error
 **/
-func GetStr(key string) (string, bool) {
+func GetStr(key string) (string, bool, error) {
 	item, exists := Get(key)
 	if exists {
-		return item.Str(), true
+		result, err := item.Str()
+		return result, true, err
 	}
 
-	return "", false
+	return "", false, nil
 }
 
 /**
