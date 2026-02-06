@@ -2,7 +2,7 @@ package stmt
 
 type SetCacheStmt struct {
 	Key      string
-	Value    interface{}
+	Value    string
 	Duration float64
 }
 
