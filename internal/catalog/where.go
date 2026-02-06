@@ -359,9 +359,13 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	next := true
 	for _, item := range items {
-		next = Validate(item, s.conditions)
+		ok := Validate(item, s.conditions)
+		if !ok {
+			continue
+		}
+		next := addResult(item)
 		if !next {
-			return result, nil
+			break
 		}
 	}
 

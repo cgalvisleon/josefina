@@ -79,7 +79,7 @@ func (n *Node) getLeader() (string, bool) {
 	result := n.leaderID
 	n.mu.Unlock()
 	if !inCluster {
-		return "", false
+		return result, true
 	}
 	return result, result != "" && result == n.Address
 }
