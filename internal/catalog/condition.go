@@ -915,23 +915,30 @@ func NotBetween(field string, min, max any) *Condition {
 	return condition(field, BetweenValue{Min: min, Max: max}, OpNotBetween)
 }
 
-func validateItem(item et.Json, conditions []*Condition) bool {
-	next := true
-	var ok bool
+/**
+* Validate
+* @param item et.Json, conditions []*Condition
+* @return bool
+**/
+func Validate(item et.Json, conditions []*Condition) bool {
+	var result bool
 	for i, con := range conditions {
-		tmp := con.ApplyToObject(item)
+		ok := con.ApplyToObject(item)
 		if i == 0 {
-			ok = tmp
-		} else if con.Connector == And {
-			ok = ok && tmp
-		} else if con.Connector == Or {
-			ok = ok || tmp
+			result = ok
+			continue
 		}
 
-		if !ok {
+		if con.Connector == And {
+			result = result && ok
+		} else if con.Connector == Or {
+			result = result || ok
+		}
+
+		if !result {
 			break
 		}
 	}
 
-	return next
+	return result
 }

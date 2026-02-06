@@ -237,38 +237,14 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	addResult := func(item et.Json) bool {
 		if len(s.selects) == 0 {
-			item = Hidden(s.hidden, item)
+			item = Hidden(model.Hidden, item)
 		} else {
 			item = Select(s.selects, item)
+			item = Hidden(model.Hidden, item)
 		}
 		result = append(result, item)
 		n := len(result)
 		return n < s.limit
-	}
-
-	validateItem := func(item et.Json, conditions []*Condition) bool {
-		next := true
-		var ok bool
-		for i, con := range conditions {
-			tmp := con.ApplyToObject(item)
-			if i == 0 {
-				ok = tmp
-			} else if con.Connector == And {
-				ok = ok && tmp
-			} else if con.Connector == Or {
-				ok = ok || tmp
-			}
-
-			if !ok {
-				break
-			}
-		}
-
-		if ok {
-			next = addResult(item)
-		}
-
-		return next
 	}
 
 	st, err := model.Source()
@@ -395,7 +371,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	next := true
 	for _, item := range items {
-		next = validateItem(item, s.conditions)
+		next = Validate(item, s.conditions)
 		if !next {
 			return result, nil
 		}
@@ -414,7 +390,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 			return false, err
 		}
 
-		next = validateItem(item, s.conditions)
+		next = Validate(item, s.conditions)
 		return next, nil
 	}, asc, s.offset, s.limit, s.workers)
 	if err != nil {
