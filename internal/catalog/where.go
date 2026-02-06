@@ -250,7 +250,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		next := true
 		var ok bool
 		for i, con := range conditions {
-			tmp := con.ApplyToData(item)
+			tmp := con.ApplyToObject(item)
 			if i == 0 {
 				ok = tmp
 			} else if con.Connector == And {

@@ -682,12 +682,12 @@ func (s *Condition) ApplyToValue(val any) bool {
 }
 
 /**
-* ApplyToData
-* @param data et.Json
+* ApplyToObject
+* @param obj et.Json
 * @return bool
 **/
-func (s *Condition) ApplyToData(data et.Json) bool {
-	val, err := s.fieldValue(data)
+func (s *Condition) ApplyToObject(obj et.Json) bool {
+	val, err := s.fieldValue(obj)
 	if err != nil {
 		return false
 	}
@@ -913,4 +913,25 @@ func Between(field string, min, max any) *Condition {
 **/
 func NotBetween(field string, min, max any) *Condition {
 	return condition(field, BetweenValue{Min: min, Max: max}, OpNotBetween)
+}
+
+func validateItem(item et.Json, conditions []*Condition) bool {
+	next := true
+	var ok bool
+	for i, con := range conditions {
+		tmp := con.ApplyToObject(item)
+		if i == 0 {
+			ok = tmp
+		} else if con.Connector == And {
+			ok = ok && tmp
+		} else if con.Connector == Or {
+			ok = ok || tmp
+		}
+
+		if !ok {
+			break
+		}
+	}
+
+	return next
 }
