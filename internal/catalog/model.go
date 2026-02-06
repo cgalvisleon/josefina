@@ -438,23 +438,23 @@ func (s *Model) Count() (int, error) {
 
 /**
 * For: Iterates over the model
-* @param fn func(id string, data et.Json) (bool, error), asc bool, offset, limit, workers int
+* @param fn func(idx string, data et.Json) (bool, error), asc bool, offset, limit, workers int
 * @return bool, error
 **/
-func (s *Model) For(next func(data et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *Model) For(next func(idx string, data et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	st, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	err = st.For(func(id string, src []byte) (bool, error) {
+	err = st.For(func(idx string, src []byte) (bool, error) {
 		item := et.Json{}
 		err := json.Unmarshal(src, &item)
 		if err != nil {
 			return false, err
 		}
 
-		return next(item)
+		return next(idx, item)
 	}, asc, offset, limit, workers)
 	if err != nil {
 		return err
