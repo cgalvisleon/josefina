@@ -24,10 +24,10 @@ func New() *ws.Hub {
 }
 
 func Init() http.Handler {
-	hub.OnConnection(func(sub *ws.Subscriber) {
+	hub.OnConnection(func(sub *ws.Client) {
 		logs.Debug("Connection:", sub.Name)
 	})
-	hub.OnDisconnection(func(sub *ws.Subscriber) {
+	hub.OnDisconnection(func(sub *ws.Client) {
 		logs.Debug("Disconnection:", sub.Name)
 	})
 

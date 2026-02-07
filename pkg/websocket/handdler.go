@@ -53,9 +53,9 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 
 /**
 * onListener
-* @param sub *ws.Subscriber, message []byte
+* @param sub *ws.Client, message []byte
 **/
-func onListener(sub *ws.Subscriber, message []byte) {
+func onListener(sub *ws.Client, message []byte) {
 	logs.Debug(sub.ToJson().ToString(), " message:", string(message))
 }
 

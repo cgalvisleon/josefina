@@ -33,7 +33,6 @@ func New() *Service {
 	}
 
 	result.ettp.OnClose(v1.Close)
-
 	latest := v1.Api()
 	result.ettp.Mount("/", latest)
 	result.ettp.Mount("/v1", latest)
