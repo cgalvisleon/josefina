@@ -18,6 +18,8 @@ func New() *ws.Hub {
 		hub = ws.New()
 	}
 
+	hub.OnListener(onListener)
+
 	return hub
 }
 

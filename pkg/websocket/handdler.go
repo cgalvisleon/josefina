@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
@@ -48,6 +49,14 @@ func WsUpgrader(w http.ResponseWriter, r *http.Request) {
 		ws.SendError(socket, err)
 		socket.Close()
 	}
+}
+
+/**
+* onListener
+* @param sub *ws.Subscriber, message []byte
+**/
+func onListener(sub *ws.Subscriber, message []byte) {
+	logs.Debug(sub.ToJson().ToString(), " message:", string(message))
 }
 
 /**
