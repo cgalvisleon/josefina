@@ -190,7 +190,7 @@ func (s *Node) start() error {
 **/
 func (s *Node) Ping(to string) bool {
 	var response string
-	err := jrpc.CallRpc(to, "Node.Pong", s.Address, &response)
+	err := jrpc.Call(to, "Node.Pong", s.Address, &response)
 	if err != nil {
 		return false
 	}
@@ -217,7 +217,7 @@ func (s *Node) Pong(require string, response *string) error {
 **/
 func (s *Node) loadModel(to string, model *catalog.Model) (*catalog.Model, error) {
 	var response *catalog.Model
-	err := jrpc.CallRpc(to, "Sync.LoadModel", model, &response)
+	err := jrpc.Call(to, "Sync.LoadModel", model, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (s *Node) reportModels(models map[string]*catalog.Model) error {
 	leader, imLeader := s.getLeader()
 	if !imLeader {
 		var response bool
-		err := jrpc.CallRpc(leader, "Node.ReportModels", models, &response)
+		err := jrpc.Call(leader, "Node.ReportModels", models, &response)
 		if err != nil {
 			return err
 		}
@@ -318,7 +318,7 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, address str
 			"address":      address,
 		}
 		var dest bool
-		err := jrpc.CallRpc(leader, "Node.OnConnect", args, &dest)
+		err := jrpc.Call(leader, "Node.OnConnect", args, &dest)
 		if err != nil {
 			return err
 		}
@@ -364,7 +364,7 @@ func (s *Node) onDisconnect(username string) error {
 	leader, imLeader := s.getLeader()
 	if !imLeader {
 		var dest bool
-		err := jrpc.CallRpc(leader, "Node.OnDisconnect", username, &dest)
+		err := jrpc.Call(leader, "Node.OnDisconnect", username, &dest)
 		if err != nil {
 			return err
 		}

@@ -26,7 +26,7 @@ func init() {
 **/
 func (s *Core) createDb(to, name string) (*catalog.DB, error) {
 	var response *catalog.DB
-	err := jrpc.CallRpc(to, "Core.CreateDb", et.Json{
+	err := jrpc.Call(to, "Core.CreateDb", et.Json{
 		"name": name,
 	}, &response)
 	if err != nil {
@@ -59,7 +59,7 @@ func (s *Core) CreateDb(require et.Json, response *catalog.DB) error {
 **/
 func (s *Core) getDb(to, name string, dest *catalog.DB) (bool, error) {
 	var response *catalog.DbResult
-	err := jrpc.CallRpc(to, "Core.GetDb", name, &response)
+	err := jrpc.Call(to, "Core.GetDb", name, &response)
 	if err != nil {
 		return false, err
 	}
@@ -90,7 +90,7 @@ func (s *Core) GetDb(require string, response *catalog.DbResult) error {
 **/
 func (s *Core) dropDb(to, name string) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.DropDb", name, &response)
+	err := jrpc.Call(to, "Core.DropDb", name, &response)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *Core) DropDb(require et.Json, response *bool) error {
 **/
 func (s *Core) createModel(to, database, schema, name string, version int) (*catalog.Model, error) {
 	var response *catalog.Model
-	err := jrpc.CallRpc(to, "Core.CreateModel", et.Json{
+	err := jrpc.Call(to, "Core.CreateModel", et.Json{
 		"database": database,
 		"schema":   schema,
 		"name":     name,
@@ -160,7 +160,7 @@ func (s *Core) CreateModel(require et.Json, response *catalog.Model) error {
 **/
 func (s *Core) getModel(to string, from *catalog.From, dest *catalog.Model) (bool, error) {
 	var response *catalog.ModelResult
-	err := jrpc.CallRpc(to, "Core.GetModel", et.Json{
+	err := jrpc.Call(to, "Core.GetModel", et.Json{
 		"database": from.Database,
 		"schema":   from.Schema,
 		"name":     from.Name,
@@ -200,7 +200,7 @@ func (s *Core) GetModel(require et.Json, response *catalog.ModelResult) error {
 **/
 func (s *Core) dropModel(to string, from *catalog.From) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.DropModel", et.Json{
+	err := jrpc.Call(to, "Core.DropModel", et.Json{
 		"database": from.Database,
 		"schema":   from.Schema,
 		"name":     from.Name,
@@ -239,7 +239,7 @@ func (s *Core) DropModel(require et.Json, response *bool) error {
 **/
 func (s *Core) createSerie(to, tag, format string, value int) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.CreateSerie", et.Json{
+	err := jrpc.Call(to, "Core.CreateSerie", et.Json{
 		"tag":    tag,
 		"format": format,
 		"value":  value,
@@ -276,7 +276,7 @@ func (s *Core) CreateSerie(require et.Json, response *bool) error {
 **/
 func (s *Core) setSerie(to, tag string, value int) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.SetSerie", et.Json{
+	err := jrpc.Call(to, "Core.SetSerie", et.Json{
 		"tag":   tag,
 		"value": value,
 	}, &response)
@@ -311,7 +311,7 @@ func (s *Core) SetSerie(require et.Json, response *bool) error {
 **/
 func (s *Core) getSerie(to, tag string) (et.Json, error) {
 	var response et.Json
-	err := jrpc.CallRpc(to, "Core.GetSerie", et.Json{
+	err := jrpc.Call(to, "Core.GetSerie", et.Json{
 		"tag": tag,
 	}, &response)
 	if err != nil {
@@ -344,7 +344,7 @@ func (s *Core) GetSerie(require et.Json, response *et.Json) error {
 **/
 func (s *Core) dropSerie(to, tag string) error {
 	var response et.Json
-	err := jrpc.CallRpc(to, "Core.DropSerie", et.Json{
+	err := jrpc.Call(to, "Core.DropSerie", et.Json{
 		"tag": tag,
 	}, &response)
 	if err != nil {
@@ -377,7 +377,7 @@ func (s *Core) DropSerie(require et.Json, response *bool) error {
 **/
 func (s *Core) createSession(to, device, username string) (*Session, error) {
 	var response *Session
-	err := jrpc.CallRpc(to, "Core.CreateSession", et.Json{
+	err := jrpc.Call(to, "Core.CreateSession", et.Json{
 		"device":   device,
 		"username": username,
 	}, &response)
@@ -412,7 +412,7 @@ func (s *Core) CreateSession(require et.Json, response *Session) error {
 **/
 func (s *Core) setTransaction(to string, tx *catalog.Tx) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.SetTransaction", tx, &response)
+	err := jrpc.Call(to, "Core.SetTransaction", tx, &response)
 	if err != nil {
 		return err
 	}
@@ -442,7 +442,7 @@ func (s *Core) SetTransaction(require *catalog.Tx, response *bool) error {
 **/
 func (s *Core) createUser(to, username, password string) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.CreateUser", et.Json{
+	err := jrpc.Call(to, "Core.CreateUser", et.Json{
 		"username": username,
 		"password": password,
 	}, &response)
@@ -477,7 +477,7 @@ func (s *Core) CreateUser(require et.Json, response *bool) error {
 **/
 func (s *Core) dropUser(to, username, password string) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.DropUser", et.Json{
+	err := jrpc.Call(to, "Core.DropUser", et.Json{
 		"username": username,
 		"password": password,
 	}, &response)
@@ -512,7 +512,7 @@ func (s *Core) DropUser(require et.Json, response *bool) error {
 **/
 func (s *Core) getUser(to, username, password string) (et.Json, error) {
 	var response et.Json
-	err := jrpc.CallRpc(to, "Core.GetUser", et.Json{
+	err := jrpc.Call(to, "Core.GetUser", et.Json{
 		"username": username,
 		"password": password,
 	}, &response)
@@ -547,7 +547,7 @@ func (s *Core) GetUser(require et.Json, response *et.Json) error {
 **/
 func (s *Core) changuePassword(to, username, oldPassword, newPassword string) error {
 	var response bool
-	err := jrpc.CallRpc(to, "Core.ChanguePassword", et.Json{
+	err := jrpc.Call(to, "Core.ChanguePassword", et.Json{
 		"username":    username,
 		"oldPassword": oldPassword,
 		"newPassword": newPassword,

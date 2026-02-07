@@ -56,7 +56,7 @@ func (s *Sync) getModel(from *From) (*Model, bool) {
 	}
 
 	var response *ModelResult
-	err := jrpc.CallRpc(leader, "Node.GetModel", from, &response)
+	err := jrpc.Call(leader, "Node.GetModel", from, &response)
 	if err != nil {
 		return nil, false
 	}
@@ -91,7 +91,7 @@ func (s *Sync) removeObject(from *From, idx string) error {
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Sync.RemoveObject", et.Json{
+	err := jrpc.Call(model.Address, "Sync.RemoveObject", et.Json{
 		"from": from,
 		"idx":  idx,
 	}, &response)
@@ -136,7 +136,7 @@ func (s *Sync) putObject(from *From, idx string, data et.Json) error {
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Sync.PutObject", et.Json{
+	err := jrpc.Call(model.Address, "Sync.PutObject", et.Json{
 		"from": from,
 		"idx":  idx,
 		"data": data,
@@ -183,7 +183,7 @@ func (s *Sync) isExisted(from *From, field, idx string) (bool, error) {
 	}
 
 	var response bool
-	err := jrpc.CallRpc(model.Address, "Sync.IsExisted", et.Json{
+	err := jrpc.Call(model.Address, "Sync.IsExisted", et.Json{
 		"from":  from,
 		"field": field,
 		"idx":   idx,

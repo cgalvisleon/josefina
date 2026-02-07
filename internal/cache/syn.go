@@ -38,7 +38,7 @@ func init() {
 **/
 func (s *Cache) set(to, key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
 	var response *mem.Entry
-	err := jrpc.CallRpc(to, "Cache.Set", et.Json{
+	err := jrpc.Call(to, "Cache.Set", et.Json{
 		"key":      key,
 		"value":    value,
 		"duration": duration,
@@ -77,7 +77,7 @@ func (s *Cache) Set(require et.Json, response *mem.Entry) error {
 **/
 func (s *Cache) delete(to, key, origin string) (bool, error) {
 	var response *bool
-	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
+	err := jrpc.Call(to, "Cache.Delete", et.Json{
 		"key":    key,
 		"origin": origin,
 	}, &response)
@@ -112,7 +112,7 @@ func (s *Cache) Delete(require et.Json, response *bool) error {
 **/
 func (s *Cache) exists(to, key string) (bool, error) {
 	var response *bool
-	err := jrpc.CallRpc(to, "Cache.Exists", et.Json{
+	err := jrpc.Call(to, "Cache.Exists", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {
@@ -145,7 +145,7 @@ func (s *Cache) Exists(require et.Json, response *bool) error {
 **/
 func (s *Cache) get(to, key string) (*mem.Entry, bool) {
 	var response *Result
-	err := jrpc.CallRpc(to, "Cache.Delete", et.Json{
+	err := jrpc.Call(to, "Cache.Delete", et.Json{
 		"key": key,
 	}, &response)
 	if err != nil {

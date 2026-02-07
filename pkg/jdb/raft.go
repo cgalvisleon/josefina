@@ -320,7 +320,7 @@ func (s *Node) onChangeLeader() {
 **/
 func requestVote(to string, require *RequestVoteArgs, response *RequestVoteReply) *ResponseBool {
 	var res RequestVoteReply
-	err := jrpc.CallRpc(to, "Node.RequestVote", require, &res)
+	err := jrpc.Call(to, "Node.RequestVote", require, &res)
 	if err != nil {
 		return &ResponseBool{
 			Ok:    false,
@@ -352,7 +352,7 @@ func (s *Node) RequestVote(require *RequestVoteArgs, response *RequestVoteReply)
 **/
 func heartbeat(to string, require *HeartbeatArgs, response *HeartbeatReply) *ResponseBool {
 	var res HeartbeatReply
-	err := jrpc.CallRpc(to, "Node.Heartbeat", require, &res)
+	err := jrpc.Call(to, "Node.Heartbeat", require, &res)
 	if err != nil {
 		return &ResponseBool{
 			Ok:    false,
