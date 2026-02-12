@@ -60,6 +60,10 @@ func (s *Service) Start() {
 	s.onClose()
 }
 
+/**
+* onClose
+* @return
+**/
 func (s *Service) onClose() {
 	if s.ettp != nil {
 		s.ettp.Close()

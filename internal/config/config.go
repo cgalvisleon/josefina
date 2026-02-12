@@ -21,6 +21,13 @@ func getConfig() (*Config, error) {
 		return nil, err
 	}
 
+	if result == nil {
+		return &Config{
+			RPC: []string{},
+			TCP: []string{},
+		}, nil
+	}
+
 	return result, nil
 }
 
