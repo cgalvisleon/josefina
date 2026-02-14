@@ -2,12 +2,10 @@ package http
 
 import (
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/server"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
 	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/cgalvisleon/josefina/pkg/websocket"
 )
 
@@ -21,15 +19,10 @@ type Service struct {
 }
 
 func New() *Service {
-	port := envar.GetInt("PORT", 3030)
+	port := envar.GetInt("HTTP_PORT", 3500)
 	result := &Service{
 		ettp: server.New(app, port),
 		ws:   websocket.New(),
-	}
-
-	err := jdb.Load()
-	if err != nil {
-		logs.Panic(err)
 	}
 
 	result.ettp.OnClose(v1.Close)

@@ -5,10 +5,9 @@ import (
 )
 
 type Config struct {
-	PORT     int      `json:"port"`
-	RPC      int      `json:"rpc"`
 	Nodes    []string `json:"nodes"`
 	IsStrict bool     `json:"is_strict"`
+	filePath string   `json:"-"`
 }
 
 /**
@@ -24,13 +23,15 @@ func getConfig() (*Config, error) {
 	}
 
 	if result == nil {
-		return &Config{
-			PORT:     1377,
-			RPC:      4200,
+		result = &Config{
 			Nodes:    []string{},
 			IsStrict: false,
-		}, nil
+		}
+
+		file.Write(filePath, result)
 	}
+
+	result.filePath = filePath
 
 	return result, nil
 }

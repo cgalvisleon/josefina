@@ -1,43 +1,25 @@
 package cache
 
 import (
-	"fmt"
-	"os"
 	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
-	"github.com/cgalvisleon/josefina/internal/config"
 )
 
 var (
-	cache *catalog.Model
+	cache   *catalog.Model
+	address string
 )
 
 /**
 * Load: Loads the cache
-* @param getLeader func() (string, bool)
+* @param string
 * @return error
 **/
-func Load(getLeader func() (string, bool)) error {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-
-	port := envar.GetInt("RPC_PORT", 4200)
-	address := fmt.Sprintf("%s:%d", hostname, port)
-	_, err = jrpc.Mount(address, syn)
-	if err != nil {
-		logs.Panic(err)
-	}
-
-	syn.getLeader = getLeader
-	syn.address = address
+func Load(addr string) error {
+	address = addr
 	return nil
 }
 
@@ -71,16 +53,10 @@ func initModel() error {
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func set(key string, value interface{}, duration time.Duration, origin string) (*mem.Entry, error) {
+func set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
 	result, err := mem.Set(key, value, duration)
 	if err != nil {
 		return nil, err
-	}
-
-	_, imLeader := syn.getLeader()
-	if !imLeader {
-		logs.Debugf("Sync:%s to:%s set key:%s value:%v", syn.address, origin, key, value)
-		return result, nil
 	}
 
 	err = initModel()
@@ -104,23 +80,13 @@ func set(key string, value interface{}, duration time.Duration, origin string) (
 * @return interface{}, error
 **/
 func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
-	result, err := set(key, value, duration, syn.address)
+	result, err := set(key, value, duration)
 	if err != nil {
 		return nil, err
 	}
 
 	go func() {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return
-		}
-		for _, node := range nodes {
-			if node == syn.address {
-				continue
-			}
 
-			syn.set(node, key, value, duration, syn.address)
-		}
 	}()
 
 	return result, nil
@@ -133,12 +99,6 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 **/
 func delete(key, origin string) (bool, error) {
 	result := mem.Delete(key)
-
-	_, imLeader := syn.getLeader()
-	if !imLeader {
-		logs.Debugf("Sync:%s to:%s delete key:%s", syn.address, origin, key)
-		return true, nil
-	}
 
 	err := initModel()
 	if err != nil {
@@ -159,26 +119,11 @@ func delete(key, origin string) (bool, error) {
 * @return bool, error
 **/
 func Delete(key string) (bool, error) {
-	result, err := delete(key, syn.address)
-	if err != nil {
-		return false, err
-	}
-
 	go func() {
-		nodes, err := config.GetNodes()
-		if err != nil {
-			return
-		}
-		for _, node := range nodes {
-			if node == syn.address {
-				continue
-			}
 
-			syn.delete(node, key, syn.address)
-		}
 	}()
 
-	return result, nil
+	return true, nil
 }
 
 /**
@@ -190,11 +135,6 @@ func Exists(key string) (bool, error) {
 	exists := mem.Exists(key)
 	if exists {
 		return true, nil
-	}
-
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.exists(leader, key)
 	}
 
 	err := initModel()
@@ -228,15 +168,6 @@ func Get(key string) (*mem.Entry, bool) {
 		}
 		mem.Set(key, result.Value, expiration)
 		return result, exists
-	}
-
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		result, exists := syn.get(leader, key)
-		if !exists {
-			return nil, false
-		}
-		return set(result, exists)
 	}
 
 	err := initModel()

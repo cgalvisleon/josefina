@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/claim"
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
@@ -48,7 +49,7 @@ func Load() error {
 		return err
 	}
 
-	port := config.PORT
+	port := envar.GetInt("TCP_PORT", 1377)
 	isStrict := config.IsStrict
 	node = newNode(port, isStrict)
 

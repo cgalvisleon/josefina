@@ -7,7 +7,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3500"],
+      "args": ["-tcp-port", "1377", "-http-port", "3500"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     },
@@ -17,7 +17,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3501"],
+      "args": ["-tcp-port", "1378", "-http-port", "3501"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     },
@@ -27,7 +27,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "3502"],
+      "args": ["-tcp-port", "1379", "-http-port", "3502"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     },
@@ -37,7 +37,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/client",
-      "args": ["-port", "3503"],
+      "args": ["-port", "1377"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env"
     }
