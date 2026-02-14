@@ -33,7 +33,7 @@ func New() *Service {
 * @return
 **/
 func (s *Service) Start() {
-	s.cli.Start()
+	go s.cli.Start()
 
 	utility.AppWait()
 

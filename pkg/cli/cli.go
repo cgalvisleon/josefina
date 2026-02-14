@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	lg "github.com/cgalvisleon/et/stdrout"
 	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
@@ -37,13 +38,15 @@ func NewConsole(client *jdb.Session) *Console {
 func (s *Console) Start() {
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("===================================")
-	fmt.Println("  TCP Client Console")
-	fmt.Println("  Escribe 'help' para comandos")
-	fmt.Println("===================================")
+	w := lg.Color(nil, lg.Blue, "\n===================================")
+	lg.Color(w, lg.Blue, "\n  TCP Client Console")
+	lg.Color(w, lg.Blue, "\n  Escribe 'help' para comandos")
+	lg.Color(w, lg.Blue, "\n===================================")
+	println(*w)
 
 	for {
-		fmt.Print("> ")
+		w := lg.Color(nil, lg.Reset, "> ")
+		fmt.Print(*w)
 
 		input, err := reader.ReadString('\n')
 		if err != nil {

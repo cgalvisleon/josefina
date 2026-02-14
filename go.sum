@@ -8,10 +8,6 @@ github.com/bwmarrin/snowflake v0.3.0 h1:xm67bEhkKh6ij1790JB83OujPR5CzNe8QuQqAgIS
 github.com/bwmarrin/snowflake v0.3.0/go.mod h1:NdZxfVWX+oR6y2K0o6qAYv6gIOP9rjG0/E9WsDpxqwE=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/cgalvisleon/et v1.0.12 h1:S//xNMeNZCHle+/KBs1sxj14nVCscA4bKB68X52kCuw=
-github.com/cgalvisleon/et v1.0.12/go.mod h1:4Va/SXWLY7/0oGT7qQdjHmeHKmi8fHtXoTEMftPwOPY=
-github.com/cgalvisleon/et v1.0.13 h1:bZ+oy4eG+Vv5z9qJgCJvuyW4Wemn4LPv0GsLHKnMtrw=
-github.com/cgalvisleon/et v1.0.13/go.mod h1:4Va/SXWLY7/0oGT7qQdjHmeHKmi8fHtXoTEMftPwOPY=
 github.com/cgalvisleon/et v1.0.14 h1:LYelevjdrTA5KCtBwKkFnAZKhIEhoDEZTiZaMy7GOwI=
 github.com/cgalvisleon/et v1.0.14/go.mod h1:4Va/SXWLY7/0oGT7qQdjHmeHKmi8fHtXoTEMftPwOPY=
 github.com/common-nighthawk/go-figure v0.0.0-20200609044655-c4b36f998cf2 h1:tjT4Jp4gxECvsJcYpAMtW2I3YqzBTPuB67OejxXs86s=

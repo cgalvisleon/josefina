@@ -47,6 +47,11 @@
       "name": "cluster",
       "configurations": ["node1", "node2", "node3"],
       "stopAll": true
+    },
+    {
+      "name": "server-client",
+      "configurations": ["node1", "client"],
+      "stopAll": true
     }
   ]
 }

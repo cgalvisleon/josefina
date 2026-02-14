@@ -12,4 +12,5 @@ git remote add origin https://github.com/cgalvisleon/josefina.git
 gofmt -w . && go run ./cmd/server -port 3500 -rpc 4300
 gofmt -w . && go run ./cmd/server -port 3501 -rpc 4301
 gofmt -w . && go run ./cmd/server -port 3502 -rpc 4302
+gofmt -w . && go run ./cmd/client -host 127.0.0.1:1377 -user cgalvisl -password 123456
 ```
