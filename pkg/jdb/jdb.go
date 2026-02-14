@@ -13,7 +13,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
-	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -51,20 +50,20 @@ func Load() error {
 	isStrict := envar.GetBool("IS_STRICT", false)
 	node = newNode(hostname, rpcPort, isStrict)
 
-	err := catalog.Load(node.getLeader)
-	if err != nil {
-		return err
-	}
+	// err := catalog.Load(node.Address())
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = core.Load(node.getLeader)
-	if err != nil {
-		return err
-	}
+	// err = core.Load(node.getLeader)
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = cache.Load(node.getLeader)
-	if err != nil {
-		return err
-	}
+	// err = cache.Load(node.getLeader)
+	// if err != nil {
+	// 	return err
+	// }
 
 	go node.start()
 
