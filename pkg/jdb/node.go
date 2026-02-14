@@ -47,7 +47,6 @@ type Node struct {
 	isStrict    bool                      `json:"-"`
 	models      map[string]*catalog.Model `json:"-"`
 	rpcs        map[string]et.Json        `json:"-"`
-	peers       []string                  `json:"-"`
 	turn        int                       `json:"-"`
 	started     bool                      `json:"-"`
 	clients     map[string]*Client        `json:"-"`
@@ -92,7 +91,7 @@ func (s *Node) toJson() et.Json {
 		"leader":  leader,
 		"version": s.Version,
 		"rpcs":    s.rpcs,
-		"peers":   s.peers,
+		"peers":   s.Peers,
 	}
 }
 
@@ -112,14 +111,6 @@ func (s *Node) mount(services any) error {
 	}
 
 	return nil
-}
-
-/**
-* addPeer
-* @param node string
-**/
-func (s *Node) addPeer(node string) {
-	s.peers = append(s.peers, node)
 }
 
 /**
@@ -155,7 +146,7 @@ func (s *Node) start() error {
 	}
 
 	for _, node := range nodes {
-		s.addPeer(node)
+		s.AddNode(node)
 	}
 
 	err = jrpc.Start(s.port)
