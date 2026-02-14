@@ -53,7 +53,7 @@ type Node struct {
 	clients     map[string]*Client        `json:"-"`
 	mu          sync.Mutex                `json:"-"`
 	muModel     sync.RWMutex              `json:"-"`
-	clientMu    sync.RWMutex              `json:"-"`
+	muClient    sync.RWMutex              `json:"-"`
 	isDebug     bool                      `json:"-"`
 }
 
@@ -75,7 +75,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
 		muModel:     sync.RWMutex{},
-		clientMu:    sync.RWMutex{},
+		muClient:    sync.RWMutex{},
 	}
 
 	return result
@@ -321,14 +321,14 @@ func (s *Node) onConnect(username string, tpConnection TpConnection, address str
 		return nil
 	}
 
-	s.clientMu.Lock()
+	s.muClient.Lock()
 	s.clients[username] = &Client{
 		Username: username,
 		Address:  address,
 		Type:     tpConnection,
 		Status:   Connected,
 	}
-	s.clientMu.Unlock()
+	s.muClient.Unlock()
 
 	return nil
 }
@@ -367,9 +367,9 @@ func (s *Node) onDisconnect(username string) error {
 		return nil
 	}
 
-	s.clientMu.Lock()
+	s.muClient.Lock()
 	delete(s.clients, username)
-	s.clientMu.Unlock()
+	s.muClient.Unlock()
 	return nil
 }
 
