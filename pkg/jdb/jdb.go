@@ -33,7 +33,7 @@ func init() {
 	gob.Register(claim.Claim{})
 	gob.Register(core.Session{})
 	gob.Register(mem.Entry{})
-	gob.Register(Client{})
+	gob.Register(Session{})
 }
 
 /**

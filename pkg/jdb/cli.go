@@ -9,12 +9,12 @@ import (
 
 type Console struct {
 	addr   string
-	client *Client
+	client *Session
 }
 
 var console *Console
 
-func startConsole(client *Client) {
+func startConsole(client *Session) {
 	if console == nil {
 		console = &Console{
 			client: client,

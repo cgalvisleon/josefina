@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
@@ -16,10 +17,12 @@ var (
 	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
 	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
 	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	muModel                  sync.RWMutex
 	models                   map[string]*Model
 )
 
 func init() {
+	muModel = sync.RWMutex{}
 	models = make(map[string]*Model)
 }
 
@@ -146,7 +149,9 @@ func (s *Model) Init() error {
 
 	s.Address = address
 	s.IsInit = true
+	muModel.Lock()
 	models[s.Key()] = s
+	muModel.Unlock()
 	return nil
 }
 
@@ -626,7 +631,9 @@ func LoadModel(model *Model) (*Model, error) {
 **/
 func GetModel(from *From) (*Model, bool) {
 	key := from.Key()
+	muModel.RLock()
 	result, ok := models[key]
+	muModel.RUnlock()
 	if ok {
 		return result, true
 	}
@@ -640,10 +647,12 @@ func GetModel(from *From) (*Model, bool) {
 * @return error
 **/
 func DropModel(key string) error {
+	muModel.Lock()
 	_, ok := models[key]
 	if ok {
 		delete(models, key)
 	}
+	muModel.Unlock()
 
 	return nil
 }
