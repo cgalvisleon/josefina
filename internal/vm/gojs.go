@@ -1,4 +1,4 @@
-package gojs
+package vm
 
 import (
 	"github.com/cgalvisleon/et/et"

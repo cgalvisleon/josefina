@@ -1,4 +1,4 @@
-package gojs
+package vm
 
 import (
 	"errors"
