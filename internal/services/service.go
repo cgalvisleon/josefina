@@ -1,9 +1,9 @@
 package http
 
 import (
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/server"
-	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
 	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
@@ -12,18 +12,18 @@ import (
 )
 
 var (
-	appName = "josefina"
+	app = "josefina"
 )
 
 type Service struct {
 	ettp *server.Ettp
 	ws   *ws.Hub
-	tcp  *tcp.Server
 }
 
 func New() *Service {
+	port := envar.GetInt("PORT", 3030)
 	result := &Service{
-		ettp: server.New(appName),
+		ettp: server.New(app, port),
 		ws:   websocket.New(),
 	}
 
@@ -51,6 +51,7 @@ func (s *Service) Start() {
 	if s.ettp != nil {
 		s.ettp.Start()
 	}
+
 	if s.ws != nil {
 		s.ws.Start()
 	}
@@ -68,6 +69,7 @@ func (s *Service) onClose() {
 	if s.ettp != nil {
 		s.ettp.Close()
 	}
+
 	if s.ws != nil {
 		s.ws.Close()
 	}

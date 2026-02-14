@@ -5,8 +5,10 @@ import (
 )
 
 type Config struct {
-	RPC []string `json:"rpc"`
-	TCP []string `json:"tcp"`
+	PORT     int      `json:"port"`
+	RPC      int      `json:"rpc"`
+	Nodes    []string `json:"nodes"`
+	IsStrict bool     `json:"is_strict"`
 }
 
 /**
@@ -23,8 +25,10 @@ func getConfig() (*Config, error) {
 
 	if result == nil {
 		return &Config{
-			RPC: []string{},
-			TCP: []string{},
+			PORT:     1377,
+			RPC:      4200,
+			Nodes:    []string{},
+			IsStrict: false,
 		}, nil
 	}
 
@@ -41,5 +45,5 @@ func GetNodes() ([]string, error) {
 		return nil, err
 	}
 
-	return config.RPC, nil
+	return config.Nodes, nil
 }
