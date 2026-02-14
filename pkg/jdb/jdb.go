@@ -33,10 +33,6 @@ func init() {
 	gob.Register(et.List{})
 	gob.Register(claim.Claim{})
 	gob.Register(core.Session{})
-	gob.Register(RequestVoteArgs{})
-	gob.Register(RequestVoteReply{})
-	gob.Register(HeartbeatArgs{})
-	gob.Register(HeartbeatReply{})
 	gob.Register(mem.Entry{})
 	gob.Register(Client{})
 }

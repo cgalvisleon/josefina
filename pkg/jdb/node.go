@@ -4,23 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/config"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
-)
-
-type NodeState int
-
-const (
-	Follower NodeState = iota
-	Candidate
-	Leader
 )
 
 type TpConnection int
@@ -47,27 +39,22 @@ type Client struct {
 }
 
 type Node struct {
-	PackageName   string                    `json:"packageName"`
-	Version       string                    `json:"version"`
-	Address       string                    `json:"address"`
-	port          int                       `json:"-"`
-	isStrict      bool                      `json:"-"`
-	models        map[string]*catalog.Model `json:"-"`
-	rpcs          map[string]et.Json        `json:"-"`
-	peers         []string                  `json:"-"`
-	state         NodeState                 `json:"-"`
-	inCluster     bool                      `json:"-"`
-	term          int                       `json:"-"`
-	votedFor      string                    `json:"-"`
-	leaderID      string                    `json:"-"`
-	lastHeartbeat time.Time                 `json:"-"`
-	turn          int                       `json:"-"`
-	started       bool                      `json:"-"`
-	clients       map[string]*Client        `json:"-"`
-	mu            sync.Mutex                `json:"-"`
-	modelMu       sync.RWMutex              `json:"-"`
-	clientMu      sync.RWMutex              `json:"-"`
-	isDebug       bool                      `json:"-"`
+	*tcp.Server
+	PackageName string                    `json:"packageName"`
+	Version     string                    `json:"version"`
+	Address     string                    `json:"address"`
+	port        int                       `json:"-"`
+	isStrict    bool                      `json:"-"`
+	models      map[string]*catalog.Model `json:"-"`
+	rpcs        map[string]et.Json        `json:"-"`
+	peers       []string                  `json:"-"`
+	turn        int                       `json:"-"`
+	started     bool                      `json:"-"`
+	clients     map[string]*Client        `json:"-"`
+	mu          sync.Mutex                `json:"-"`
+	muModel     sync.RWMutex              `json:"-"`
+	clientMu    sync.RWMutex              `json:"-"`
+	isDebug     bool                      `json:"-"`
 }
 
 /**
@@ -87,7 +74,7 @@ func newNode(host string, port int, isStrict bool) *Node {
 		rpcs:        make(map[string]et.Json),
 		clients:     make(map[string]*Client),
 		mu:          sync.Mutex{},
-		modelMu:     sync.RWMutex{},
+		muModel:     sync.RWMutex{},
 		clientMu:    sync.RWMutex{},
 	}
 
@@ -176,11 +163,19 @@ func (s *Node) start() error {
 		return err
 	}
 
-	go s.electionLoop()
+	go s.ElectionLoop()
 
 	s.started = true
 
 	return nil
+}
+
+/**
+* getLeader
+* @return string, error
+**/
+func (n *Node) getLeader() (string, bool) {
+	return n.LeaderID()
 }
 
 /**
@@ -232,9 +227,9 @@ func (s *Node) loadModel(to string, model *catalog.Model) (*catalog.Model, error
 **/
 func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 	key := require.Key()
-	s.modelMu.RLock()
+	s.muModel.RLock()
 	result, ok := s.models[key]
-	s.modelMu.RUnlock()
+	s.muModel.RUnlock()
 	if ok {
 		response = result
 		return nil
@@ -257,9 +252,9 @@ func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
 		}
 	}
 
-	s.modelMu.Lock()
+	s.muModel.Lock()
 	s.models[key] = response
-	s.modelMu.Unlock()
+	s.muModel.Unlock()
 
 	return nil
 }
@@ -282,9 +277,9 @@ func (s *Node) reportModels(models map[string]*catalog.Model) error {
 	}
 
 	for key, model := range models {
-		s.modelMu.Lock()
+		s.muModel.Lock()
 		s.models[key] = model
-		s.modelMu.Unlock()
+		s.muModel.Unlock()
 	}
 
 	return nil
