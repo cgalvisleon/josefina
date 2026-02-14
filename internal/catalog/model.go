@@ -73,10 +73,10 @@ type Model struct {
 }
 
 /**
-* serialize
+* Serialize
 * @return []byte, error
 **/
-func (s *Model) serialize() ([]byte, error) {
+func (s *Model) Serialize() ([]byte, error) {
 	result, err := json.Marshal(s)
 	if err != nil {
 		return []byte{}, err
@@ -90,7 +90,7 @@ func (s *Model) serialize() ([]byte, error) {
 * @return et.Json, error
 **/
 func (s *Model) ToJson() (et.Json, error) {
-	definition, err := s.serialize()
+	definition, err := s.Serialize()
 	if err != nil {
 		return et.Json{}, err
 	}
@@ -144,7 +144,7 @@ func (s *Model) Init() error {
 		}
 	}
 
-	s.Address = syn.address
+	s.Address = address
 	s.IsInit = true
 	models[s.Key()] = s
 	return nil
@@ -465,85 +465,85 @@ func (s *Model) For(next func(idx string, item et.Json) (bool, error), asc bool,
 
 /**
 * AddBeforeInsert
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddBeforeInsert(name string, fn []byte) {
+func (s *Model) AddBeforeInsert(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeInsert })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeInsert, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeInsert, Name: name, Definition: definition})
 	}
 }
 
 /**
 * AddAfterInsert
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddAfterInsert(name string, fn []byte) {
+func (s *Model) AddAfterInsert(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterInsert })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterInsert, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterInsert, Name: name, Definition: definition})
 	}
 }
 
 /**
 * AddBeforeUpdate
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddBeforeUpdate(name string, fn []byte) {
+func (s *Model) AddBeforeUpdate(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeUpdate })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeUpdate, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeUpdate, Name: name, Definition: definition})
 	}
 }
 
 /**
 * AddAfterUpdate
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddAfterUpdate(name string, fn []byte) {
+func (s *Model) AddAfterUpdate(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterUpdate })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterUpdate, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterUpdate, Name: name, Definition: definition})
 	}
 }
 
 /**
 * AddBeforeDelete
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddBeforeDelete(name string, fn []byte) {
+func (s *Model) AddBeforeDelete(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeDelete })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeDelete, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeDelete, Name: name, Definition: definition})
 	}
 }
 
 /**
 * AddAfterDelete
-* @param name string, fn []byte
+* @param name string, definition []byte
 * @return void
 **/
-func (s *Model) AddAfterDelete(name string, fn []byte) {
+func (s *Model) AddAfterDelete(name string, definition []byte) {
 	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterDelete })
 	if idx != -1 {
-		s.Triggers[idx].Definition = fn
+		s.Triggers[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterDelete, Name: name, Definition: fn})
+		s.Triggers = append(s.Triggers, &Trigger{Event: AfterDelete, Name: name, Definition: definition})
 	}
 }
 
@@ -605,11 +605,11 @@ func (s *Model) Selects(fields ...string) *Wheres {
 }
 
 /**
-* loadModel: Loads a model
+* LoadModel: Loads a model
 * @param model *Model
 * @return error
 **/
-func loadModel(model *Model) (*Model, error) {
+func LoadModel(model *Model) (*Model, error) {
 	model.IsInit = false
 	err := model.Init()
 	if err != nil {

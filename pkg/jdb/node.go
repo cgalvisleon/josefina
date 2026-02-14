@@ -1,18 +1,13 @@
 package jdb
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jrpc"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/config"
-	"github.com/cgalvisleon/josefina/internal/core"
-	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type TpConnection int
@@ -40,20 +35,18 @@ type Client struct {
 
 type Node struct {
 	*tcp.Server
-	PackageName string                    `json:"packageName"`
-	Version     string                    `json:"version"`
-	Address     string                    `json:"address"`
-	port        int                       `json:"-"`
-	isStrict    bool                      `json:"-"`
-	models      map[string]*catalog.Model `json:"-"`
-	rpcs        map[string]et.Json        `json:"-"`
-	turn        int                       `json:"-"`
-	started     bool                      `json:"-"`
-	clients     map[string]*Client        `json:"-"`
-	mu          sync.Mutex                `json:"-"`
-	muModel     sync.RWMutex              `json:"-"`
-	muClient    sync.RWMutex              `json:"-"`
-	isDebug     bool                      `json:"-"`
+	app      string                    `json:"-"`
+	version  string                    `json:"-"`
+	isStrict bool                      `json:"-"`
+	models   map[string]*catalog.Model `json:"-"`
+	rpcs     map[string]et.Json        `json:"-"`
+	turn     int                       `json:"-"`
+	started  bool                      `json:"-"`
+	clients  map[string]*Client        `json:"-"`
+	mu       sync.Mutex                `json:"-"`
+	muModel  sync.RWMutex              `json:"-"`
+	muClient sync.RWMutex              `json:"-"`
+	isDebug  bool                      `json:"-"`
 }
 
 /**
@@ -62,19 +55,17 @@ type Node struct {
 * @return *Node
 **/
 func newNode(host string, port int, isStrict bool) *Node {
-	address := fmt.Sprintf(`%s:%d`, host, port)
 	result := &Node{
-		PackageName: appName,
-		Address:     address,
-		Version:     version,
-		port:        port,
-		isStrict:    isStrict,
-		models:      make(map[string]*catalog.Model),
-		rpcs:        make(map[string]et.Json),
-		clients:     make(map[string]*Client),
-		mu:          sync.Mutex{},
-		muModel:     sync.RWMutex{},
-		muClient:    sync.RWMutex{},
+		Server:   tcp.NewServer(port),
+		app:      appName,
+		version:  version,
+		isStrict: isStrict,
+		models:   make(map[string]*catalog.Model),
+		rpcs:     make(map[string]et.Json),
+		clients:  make(map[string]*Client),
+		mu:       sync.Mutex{},
+		muModel:  sync.RWMutex{},
+		muClient: sync.RWMutex{},
 	}
 
 	return result
@@ -87,48 +78,14 @@ func newNode(host string, port int, isStrict bool) *Node {
 func (s *Node) toJson() et.Json {
 	leader, _ := s.getLeader()
 	return et.Json{
-		"address": s.Address,
+		"app":     s.app,
+		"address": s.Address(),
+		"port":    s.Port(),
+		"version": s.version,
 		"leader":  leader,
-		"version": s.Version,
 		"rpcs":    s.rpcs,
 		"peers":   s.Peers,
 	}
-}
-
-/**
-* mount: Mounts the services
-* @param services any
-* @return error
-**/
-func (s *Node) mount(services any) error {
-	router, err := jrpc.Mount(s.Address, services)
-	if err != nil {
-		return err
-	}
-
-	for name, rpc := range router {
-		s.rpcs[name] = rpc
-	}
-
-	return nil
-}
-
-/**
-* next
-* @return string
-**/
-func (s *Node) next() string {
-	t := len(s.peers)
-	if t == 0 {
-		return s.Address
-	}
-
-	s.turn++
-	if s.turn >= t {
-		s.turn = 1
-	}
-
-	return s.peers[s.turn]
 }
 
 /**
@@ -167,87 +124,6 @@ func (s *Node) start() error {
 **/
 func (n *Node) getLeader() (string, bool) {
 	return n.LeaderID()
-}
-
-/**
-* Ping
-* @param to string
-* @return bool
-**/
-func (s *Node) Ping(to string) bool {
-	var response string
-	err := jrpc.Call(to, "Node.Pong", s.Address, &response)
-	if err != nil {
-		return false
-	}
-
-	logs.Logf(s.PackageName, "%s:%s", response, to)
-	return true
-}
-
-/**
-* Pong: Pings the leader
-* @param response *string
-* @return error
-**/
-func (s *Node) Pong(require string, response *string) error {
-	logs.Log(s.PackageName, "ping:", require)
-	*response = "pong"
-	return nil
-}
-
-/**
-* loadModel: Loads a model
-* @param to string, model *Model
-* @return (*Model, error)
-**/
-func (s *Node) loadModel(to string, model *catalog.Model) (*catalog.Model, error) {
-	var response *catalog.Model
-	err := jrpc.Call(to, "Sync.LoadModel", model, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
-}
-
-/**
-* GetModel: Gets a model
-* @param require *catalog.From, response *catalog.Model
-* @return error
-**/
-func (s *Node) GetModel(require *catalog.From, response *catalog.Model) error {
-	key := require.Key()
-	s.muModel.RLock()
-	result, ok := s.models[key]
-	s.muModel.RUnlock()
-	if ok {
-		response = result
-		return nil
-	}
-
-	exists, err := core.GetModel(require, response)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.New(msg.MSG_MODEL_NOT_FOUND)
-	}
-
-	if !response.IsInit {
-		host := s.next()
-		response, err = s.loadModel(host, response)
-		if err != nil {
-			return err
-		}
-	}
-
-	s.muModel.Lock()
-	s.models[key] = response
-	s.muModel.Unlock()
-
-	return nil
 }
 
 /**

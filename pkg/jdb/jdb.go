@@ -51,12 +51,7 @@ func Load() error {
 	isStrict := envar.GetBool("IS_STRICT", false)
 	node = newNode(hostname, rpcPort, isStrict)
 
-	err := node.mount(node)
-	if err != nil {
-		return err
-	}
-
-	err = catalog.Load(node.getLeader)
+	err := catalog.Load(node.getLeader)
 	if err != nil {
 		return err
 	}

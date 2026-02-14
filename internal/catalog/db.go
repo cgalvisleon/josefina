@@ -29,10 +29,10 @@ func init() {
 }
 
 /**
-* serialize
+* Serialize
 * @return []byte, error
 **/
-func (s *DB) serialize() ([]byte, error) {
+func (s *DB) Serialize() ([]byte, error) {
 	result, err := json.Marshal(s)
 	if err != nil {
 		return []byte{}, err
@@ -46,7 +46,7 @@ func (s *DB) serialize() ([]byte, error) {
 * @return et.Json, error
 **/
 func (s *DB) ToJson() (et.Json, error) {
-	definition, err := s.serialize()
+	definition, err := s.Serialize()
 	if err != nil {
 		return et.Json{}, err
 	}

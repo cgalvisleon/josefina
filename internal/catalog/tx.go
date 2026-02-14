@@ -172,13 +172,13 @@ func (s *Tx) commit() error {
 		cmd := tr.Command
 		idx := tr.Idx
 		if cmd == DELETE {
-			err := syn.removeObject(tr.From, idx)
+			err := removeObject(tr.From, idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			err := syn.putObject(tr.From, idx, data)
+			err := putObject(tr.From, idx, data)
 			if err != nil {
 				return err
 			}
@@ -189,5 +189,17 @@ func (s *Tx) commit() error {
 		}
 	}
 
+	return nil
+}
+
+func isExisted(from *From, field, idx string) (bool, error) {
+	return false, nil
+}
+
+func removeObject(from *From, idx string) error {
+	return nil
+}
+
+func putObject(from *From, idx string, data et.Json) error {
 	return nil
 }
