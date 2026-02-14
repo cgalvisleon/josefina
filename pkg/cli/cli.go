@@ -1,26 +1,40 @@
-package jdb
+package cli
 
 import (
 	"bufio"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
 type Console struct {
 	addr   string
-	client *Session
+	client *jdb.Session
 }
 
 var console *Console
 
-func startConsole(client *Session) {
+/**
+* NewConsole
+* @param client *jdb.Session
+* @return *Console
+**/
+func NewConsole(client *jdb.Session) *Console {
 	if console == nil {
 		console = &Console{
 			client: client,
 		}
 	}
+	return console
+}
 
+/**
+* Start
+* @return
+**/
+func (s *Console) Start() {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("===================================")
@@ -38,10 +52,14 @@ func startConsole(client *Session) {
 		}
 
 		input = strings.TrimSpace(input)
-		console.handleCommand(input)
+		s.handleCommand(input)
 	}
 }
 
+/**
+* handleCommand
+* @param cmd string
+**/
 func (s *Console) handleCommand(cmd string) {
 	args := strings.Split(cmd, " ")
 

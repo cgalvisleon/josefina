@@ -2,37 +2,11 @@ package jdb
 
 import (
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
-
-type TpConnection int
-
-const (
-	HTTP TpConnection = iota
-	WebSocket
-	TCP
-)
-
-type Status int
-
-const (
-	Connected Status = iota
-	Disconnected
-)
-
-type Session struct {
-	CreatedAt time.Time    `json:"created_at"`
-	ID        string       `json:"id"`
-	Username  string       `json:"username"`
-	Address   string       `json:"address"`
-	Status    Status       `json:"status"`
-	Type      TpConnection `json:"type"`
-	Database  string       `json:"database"`
-}
 
 type Node struct {
 	*tcp.Server

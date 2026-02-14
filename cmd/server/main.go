@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/cgalvisleon/et/envar"
-	serv "github.com/cgalvisleon/josefina/internal/services"
+	serv "github.com/cgalvisleon/josefina/internal/server"
 )
 
 func main() {

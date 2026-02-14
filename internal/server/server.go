@@ -1,11 +1,11 @@
-package http
+package server
 
 import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/server"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/ws"
-	v1 "github.com/cgalvisleon/josefina/internal/services/v1"
+	v1 "github.com/cgalvisleon/josefina/internal/server/v1"
 	"github.com/cgalvisleon/josefina/pkg/websocket"
 )
 

@@ -2,17 +2,12 @@ package jdb
 
 import (
 	"context"
-	"encoding/gob"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
-	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -21,19 +16,6 @@ var (
 	version string = "0.0.1"
 	node    *Node
 )
-
-func init() {
-	gob.Register(time.Time{})
-	gob.Register(et.Json{})
-	gob.Register([]et.Json{})
-	gob.Register(et.Item{})
-	gob.Register(et.Items{})
-	gob.Register(et.List{})
-	gob.Register(claim.Claim{})
-	gob.Register(core.Session{})
-	gob.Register(mem.Entry{})
-	gob.Register(Session{})
-}
 
 /**
 * Load: Initializes josefine
