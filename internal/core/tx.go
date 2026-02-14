@@ -35,11 +35,6 @@ func initTransactions() error {
 * @return error
 **/
 func SetTransaction(tx *catalog.Tx) error {
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.setTransaction(leader, tx)
-	}
-
 	err := initTransactions()
 	if err != nil {
 		return err

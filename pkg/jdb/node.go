@@ -102,6 +102,11 @@ func (s *Node) start() error {
 		s.AddNode(node)
 	}
 
+	err = s.Start()
+	if err != nil {
+		return err
+	}
+
 	s.started = true
 
 	return nil

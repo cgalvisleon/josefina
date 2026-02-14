@@ -70,11 +70,6 @@ func initUsers() error {
 * @return error
 **/
 func CreateUser(username, password string) error {
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.createUser(leader, username, password)
-	}
-
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -103,11 +98,6 @@ func CreateUser(username, password string) error {
 * @return error
 **/
 func DropUser(username, password string) error {
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.dropUser(leader, username, password)
-	}
-
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -130,11 +120,6 @@ func DropUser(username, password string) error {
 * @return et.Json, error
 **/
 func GetUser(username, password string) (et.Json, error) {
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.getUser(leader, username, password)
-	}
-
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -168,11 +153,6 @@ func GetUser(username, password string) (et.Json, error) {
 * @return error
 **/
 func ChanguePassword(username, oldPassword, newPassword string) error {
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.changuePassword(leader, username, oldPassword, newPassword)
-	}
-
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}

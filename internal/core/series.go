@@ -52,11 +52,6 @@ func CreateSerie(tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.createSerie(leader, tag, format, value)
-	}
-
 	err := initSeries()
 	if err != nil {
 		return err
@@ -86,11 +81,6 @@ func SetSerie(tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.setSerie(leader, tag, value)
-	}
-
 	err := initSeries()
 	if err != nil {
 		return err
@@ -113,11 +103,6 @@ func SetSerie(tag string, value int) error {
 func GetSerie(tag string) (et.Json, error) {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
-	}
-
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.getSerie(leader, tag)
 	}
 
 	err := initSeries()
@@ -161,11 +146,6 @@ func GetSerie(tag string) (et.Json, error) {
 func DropSerie(tag string) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
-	}
-
-	leader, imLeader := syn.getLeader()
-	if !imLeader {
-		return syn.dropSerie(leader, tag)
 	}
 
 	err := initSeries()
