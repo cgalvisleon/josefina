@@ -106,13 +106,6 @@ func (s *Node) start() error {
 		s.AddNode(node)
 	}
 
-	err = jrpc.Start(s.port)
-	if err != nil {
-		return err
-	}
-
-	go s.ElectionLoop()
-
 	s.started = true
 
 	return nil
