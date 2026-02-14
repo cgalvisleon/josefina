@@ -5,11 +5,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/cgalvisleon/et/claim"
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/cache"
@@ -45,10 +43,14 @@ func Load() error {
 		return nil
 	}
 
-	hostname, _ := os.Hostname()
-	rpcPort := envar.GetInt("RPC_PORT", 4200)
-	isStrict := envar.GetBool("IS_STRICT", false)
-	node = newNode(hostname, rpcPort, isStrict)
+	config, err := getConfig()
+	if err != nil {
+		return err
+	}
+
+	port := config.PORT
+	isStrict := config.IsStrict
+	node = newNode(port, isStrict)
 
 	// err := catalog.Load(node.Address())
 	// if err != nil {

@@ -7,7 +7,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
-	"github.com/cgalvisleon/josefina/internal/config"
 )
 
 type TpConnection int
@@ -50,10 +49,10 @@ type Node struct {
 
 /**
 * newNode
-* @param host string, port int
+* @param port int
 * @return *Node
 **/
-func newNode(host string, port int, isStrict bool) *Node {
+func newNode(port int, isStrict bool) *Node {
 	result := &Node{
 		Server:    tcp.NewServer(port),
 		app:       appName,
@@ -93,7 +92,7 @@ func (s *Node) start() error {
 		return nil
 	}
 
-	nodes, err := config.GetNodes()
+	nodes, err := getNodes()
 	if err != nil {
 		return err
 	}

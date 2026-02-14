@@ -1,4 +1,4 @@
-package config
+package jdb
 
 import (
 	"github.com/cgalvisleon/et/file"
@@ -36,10 +36,10 @@ func getConfig() (*Config, error) {
 }
 
 /**
-* GetNodes: Returns the nodes
+* getNodes: Returns the nodes
 * @return []string, error
 **/
-func GetNodes() ([]string, error) {
+func getNodes() ([]string, error) {
 	config, err := getConfig()
 	if err != nil {
 		return nil, err
