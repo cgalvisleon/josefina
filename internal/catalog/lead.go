@@ -21,8 +21,8 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 	}
 
 	leader, imLeader := node.GetLeader()
-	if !imLeader {
-		res := node.Request(leader, "CreateDb", name)
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.CreateDb", name)
 		if res.Error != nil {
 			return nil, res.Error
 		}
