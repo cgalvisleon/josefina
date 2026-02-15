@@ -40,3 +40,30 @@ func ToFrom(def et.Json) *From {
 		Name:     def.Str("name"),
 	}
 }
+
+/**
+* isExisted: Checks if the object exists
+* @param from *From, field, idx string
+* @return bool, error
+**/
+func isExisted(from *From, field, idx string) (bool, error) {
+	return false, nil
+}
+
+/**
+* removeObject
+* @param from *From, idx string
+* @return error
+**/
+func removeObject(from *From, idx string) error {
+	return nil
+}
+
+/**
+* putObject
+* @param from *From, idx string, data et.Json
+* @return error
+**/
+func putObject(from *From, idx string, data et.Json) error {
+	return nil
+}

@@ -191,15 +191,3 @@ func (s *Tx) commit() error {
 
 	return nil
 }
-
-func isExisted(from *From, field, idx string) (bool, error) {
-	return false, nil
-}
-
-func removeObject(from *From, idx string) error {
-	return nil
-}
-
-func putObject(from *From, idx string, data et.Json) error {
-	return nil
-}

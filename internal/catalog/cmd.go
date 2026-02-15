@@ -179,6 +179,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 	}
 
+	// Validate foreign keys
 	for name, detail := range model.ForeignKeys {
 		if _, ok := new[name]; !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
