@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	errorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
-	errorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
-	errorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	ErrorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
+	ErrorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
+	ErrorFieldNotFound       = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	ErrorModelNotFound       = errors.New(msg.MSG_MODEL_NOT_FOUND)
 )
 
 type From struct {
@@ -159,6 +160,10 @@ func (s *Model) store(name string) (*store.FileStore, error) {
 * @return error
 **/
 func (s *Model) Init() error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	if s.IsInit {
 		return nil
 	}
@@ -174,11 +179,11 @@ func (s *Model) Init() error {
 		}
 	}
 
-	s.Address = address
+	s.Address = node.Address()
 	s.IsInit = true
-	muModel.Lock()
-	models[s.Key()] = s
-	muModel.Unlock()
+	node.muModel.Lock()
+	node.models[s.Key()] = s
+	node.muModel.Unlock()
 	return nil
 }
 
@@ -637,21 +642,6 @@ func (s *Model) Selects(fields ...string) *Wheres {
 }
 
 /**
-* LoadModel: Loads a model
-* @param model *Model
-* @return error
-**/
-func LoadModel(model *Model) (*Model, error) {
-	model.IsInit = false
-	err := model.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	return model, nil
-}
-
-/**
 * GetModel: Returns a model by name
 * @param from *From
 * @return *Model, bool
@@ -666,6 +656,21 @@ func GetModel(from *From) (*Model, bool) {
 	}
 
 	return nil, false
+}
+
+/**
+* LoadModel: Loads a model
+* @param model *Model
+* @return error
+**/
+func LoadModel(model *Model) (*Model, error) {
+	model.IsInit = false
+	err := model.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
 }
 
 /**

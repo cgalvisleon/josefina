@@ -111,11 +111,11 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 }
 
 /**
-* createDb: Creates a new database
+* CreateDb: Creates a new database
 * @param name string
 * @return *DB, error
 **/
-func createDb(name string) (*DB, error) {
+func CreateDb(name string) (*DB, error) {
 	if node == nil {
 		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -124,7 +124,7 @@ func createDb(name string) (*DB, error) {
 	path := envar.GetStr("DATA_PATH", "./data")
 	result := &DB{
 		Name:    name,
-		Version: version,
+		Version: node.version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
@@ -134,31 +134,22 @@ func createDb(name string) (*DB, error) {
 }
 
 /**
-* CreteDb: Creates a new database
-* @param name string
-* @return *DB, error
-**/
-func CreteDb(name string) (*DB, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	return createDb(name)
-}
-
-/**
 * GetDb: Returns a database by name
 * @param name string
 * @return bool, error
 **/
 func GetDb(name string, dest *DB) (bool, error) {
+	if node == nil {
+		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return false, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
 	var ok bool
-	dest, ok = dbs[name]
+	dest, ok = node.dbs[name]
 	if ok {
 		return true, nil
 	}

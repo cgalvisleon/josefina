@@ -261,7 +261,7 @@ func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 		// Get index
 		idx := old.ValStr("", INDEX)
 		if idx == "" {
-			return nil, errorRecordNotFound
+			return nil, ErrorRecordNotFound
 		}
 
 		// Update data
@@ -325,7 +325,7 @@ func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 		// Get index
 		idx := old.ValStr("", INDEX)
 		if idx == "" {
-			return nil, errorRecordNotFound
+			return nil, ErrorRecordNotFound
 		}
 
 		// Run before delete trigger function
@@ -370,11 +370,11 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 	for _, name := range model.PrimaryKeys {
 		source, ok := model.stores[name]
 		if !ok {
-			return nil, errorPrimaryKeysNotFound
+			return nil, ErrorPrimaryKeysNotFound
 		}
 		key := fmt.Sprintf("%v", new[name])
 		if key == "" {
-			return nil, errorPrimaryKeysNotFound
+			return nil, ErrorPrimaryKeysNotFound
 		}
 		exists = source.IsExist(key)
 		if !exists {
