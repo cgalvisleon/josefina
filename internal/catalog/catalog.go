@@ -1,5 +1,7 @@
 package catalog
 
+import "github.com/cgalvisleon/et/envar"
+
 var (
 	node *Node
 )
@@ -10,9 +12,12 @@ var (
 * @return error
 **/
 func Load(app string) error {
-	if node == nil {
+	if node != nil {
 		return nil
 	}
+
+	tpcPort := envar.GetInt("TPC_PORT", 8080)
+	node = newNode(tpcPort)
 
 	return nil
 }

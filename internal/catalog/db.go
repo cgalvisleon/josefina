@@ -116,6 +116,10 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *DB, error
 **/
 func createDb(name string) (*DB, error) {
+	if node == nil {
+		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	name = utility.Normalize(name)
 	path := envar.GetStr("DATA_PATH", "./data")
 	result := &DB{

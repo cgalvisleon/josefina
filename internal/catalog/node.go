@@ -1,10 +1,12 @@
 package catalog
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Node struct {
@@ -24,15 +26,20 @@ type Node struct {
 
 /**
 * newNode
-* @param port int, isStrict bool
+* @param port int
 * @return *Node
 **/
-func newNode(port int, isStrict bool) *Node {
+func newNode(port int) *Node {
+	config, err := getConfig()
+	if err != nil {
+		return nil
+	}
+
 	result := &Node{
 		Server:    tcp.NewServer(port),
 		app:       "josefina",
 		version:   "0.0.1",
-		isStrict:  isStrict,
+		isStrict:  config.IsStrict,
 		dbs:       make(map[string]*DB),
 		models:    make(map[string]*Model),
 		sessions:  make(map[string]*Session),
@@ -52,9 +59,10 @@ func (s *Node) toJson() et.Json {
 	leader, imLeader := s.LeaderID()
 	return et.Json{
 		"app":       s.app,
+		"version":   s.version,
+		"is_strict": s.isStrict,
 		"address":   s.Address(),
 		"port":      s.Port(),
-		"version":   s.version,
 		"leader":    leader,
 		"im_leader": imLeader,
 		"peers":     s.Peers,
@@ -93,8 +101,13 @@ func (s *Node) start() error {
 * getLeader
 * @return string, error
 **/
-func getLeader() (string, bool) {
-	return s.LeaderID()
+func getLeader() (string, bool, error) {
+	if node == nil {
+		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	leader, imLeader := node.LeaderID()
+	return leader, imLeader, nil
 }
 
 /**
