@@ -124,7 +124,7 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 
 		val, ok := data[field]
 		if !ok {
-			return nil, errorFieldNotFound
+			return nil, ErrorFieldNotFound
 		}
 
 		switch v := val.(type) {
@@ -143,7 +143,7 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 		}
 	}
 
-	return nil, errorFieldNotFound
+	return nil, ErrorFieldNotFound
 }
 
 /**
