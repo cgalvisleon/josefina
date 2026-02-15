@@ -204,6 +204,16 @@ func (s *Lead) LoadModel(model *Model) (*Model, error) {
 * @return error
 **/
 func (s *Lead) DropModel(key string) error {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.DropModel", key)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		return nil
+	}
+
 	node.muModel.Lock()
 	_, ok := node.models[key]
 	if ok {
