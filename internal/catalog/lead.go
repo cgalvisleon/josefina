@@ -28,7 +28,7 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 		}
 
 		var result *DB
-		err := res.Get(0, &result)
+		err := res.Get(&result)
 		if err != nil {
 			return nil, err
 		}
@@ -37,14 +37,59 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 	}
 
 	name = utility.Normalize(name)
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
 	path := envar.GetStr("DATA_PATH", "./data")
-	result := &DB{
+	result = &DB{
 		Name:    name,
 		Version: node.version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
-	AddDb(result)
+	node.dbs[name] = result
 
 	return result, nil
+}
+
+/**
+* GetDb: Returns a database by name
+* @param name string
+* @return *DB, bool, error
+**/
+func (s *Lead) GetDb(name string) (*DB, bool, error) {
+	if node == nil {
+		return nil, false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.CreateDb", name)
+		if res.Error != nil {
+			return nil, false, res.Error
+		}
+
+		var result *DB
+		var exists bool
+		err := res.Get(&result, &exists)
+		if err != nil {
+			return nil, false, err
+		}
+
+		return result, exists, nil
+	}
+
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, false, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	result, ok := node.dbs[name]
+	if ok {
+		return result, true, nil
+	}
+
+	return nil, false, nil
 }

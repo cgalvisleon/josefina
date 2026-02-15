@@ -111,61 +111,6 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 }
 
 /**
-* CreateDb: Creates a new database
-* @param name string
-* @return *DB, error
-**/
-func CreateDb(name string) (*DB, error) {
-	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	name = utility.Normalize(name)
-	path := envar.GetStr("DATA_PATH", "./data")
-	result := &DB{
-		Name:    name,
-		Version: node.version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
-	}
-	AddDb(result)
-
-	return result, nil
-}
-
-/**
-* GetDb: Returns a database by name
-* @param name string
-* @return bool, error
-**/
-func GetDb(name string, dest *DB) (bool, error) {
-	if node == nil {
-		return false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return false, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
-	var ok bool
-	dest, ok = node.dbs[name]
-	if ok {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-/**
-* AddDb: Adds a database to the global map
-* @param db *DB
-**/
-func AddDb(db *DB) {
-	dbs[db.Name] = db
-}
-
-/**
 * RemoveDb: Removes a database from the global map
 * @param name string
 **/
