@@ -48,7 +48,7 @@ func newNode(port int) *Node {
 		muSession: sync.RWMutex{},
 	}
 
-	result.OnInbound()
+	result.Mount(new(Lead))
 
 	return result
 }
