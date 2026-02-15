@@ -13,28 +13,32 @@ type Node struct {
 	version   string              `json:"-"`
 	isStrict  bool                `json:"-"`
 	started   bool                `json:"-"`
-	sessions  map[string]*Session `json:"-"`
+	dbs       map[string]*DB      `json:"-"`
 	models    map[string]*Model   `json:"-"`
-	muSession sync.RWMutex        `json:"-"`
+	sessions  map[string]*Session `json:"-"`
+	muDB      sync.RWMutex        `json:"-"`
 	muModel   sync.RWMutex        `json:"-"`
+	muSession sync.RWMutex        `json:"-"`
 	isDebug   bool                `json:"-"`
 }
 
 /**
 * newNode
-* @param port int
+* @param port int, isStrict bool
 * @return *Node
 **/
 func newNode(port int, isStrict bool) *Node {
 	result := &Node{
 		Server:    tcp.NewServer(port),
-		app:       appName,
-		version:   version,
+		app:       "josefina",
+		version:   "0.0.1",
 		isStrict:  isStrict,
-		sessions:  make(map[string]*Session),
+		dbs:       make(map[string]*DB),
 		models:    make(map[string]*Model),
-		muSession: sync.RWMutex{},
+		sessions:  make(map[string]*Session),
+		muDB:      sync.RWMutex{},
 		muModel:   sync.RWMutex{},
+		muSession: sync.RWMutex{},
 	}
 
 	return result
@@ -45,14 +49,15 @@ func newNode(port int, isStrict bool) *Node {
 * @return et.Json
 **/
 func (s *Node) toJson() et.Json {
-	leader, _ := s.getLeader()
+	leader, imLeader := s.LeaderID()
 	return et.Json{
-		"app":     s.app,
-		"address": s.Address(),
-		"port":    s.Port(),
-		"version": s.version,
-		"leader":  leader,
-		"peers":   s.Peers,
+		"app":       s.app,
+		"address":   s.Address(),
+		"port":      s.Port(),
+		"version":   s.version,
+		"leader":    leader,
+		"im_leader": imLeader,
+		"peers":     s.Peers,
 	}
 }
 
@@ -88,6 +93,33 @@ func (s *Node) start() error {
 * getLeader
 * @return string, error
 **/
-func (n *Node) getLeader() (string, bool) {
-	return n.LeaderID()
+func getLeader() (string, bool) {
+	return s.LeaderID()
+}
+
+/**
+* isExisted: Checks if the object exists
+* @param from *From, field, idx string
+* @return bool, error
+**/
+func isExisted(from *From, field, idx string) (bool, error) {
+	return false, nil
+}
+
+/**
+* removeObject
+* @param from *From, idx string
+* @return error
+**/
+func removeObject(from *From, idx string) error {
+	return nil
+}
+
+/**
+* putObject
+* @param from *From, idx string, data et.Json
+* @return error
+**/
+func putObject(from *From, idx string, data et.Json) error {
+	return nil
 }

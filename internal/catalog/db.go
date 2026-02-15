@@ -19,15 +19,6 @@ type DB struct {
 	isDebug  bool               `json:"-"`
 }
 
-var (
-	version string = "0.0.1"
-	dbs     map[string]*DB
-)
-
-func init() {
-	dbs = make(map[string]*DB)
-}
-
 /**
 * Serialize
 * @return []byte, error

@@ -1,16 +1,18 @@
 package catalog
 
 var (
-	address string
+	node *Node
 )
 
 /**
 * Load: Loads the cache
-* @param addr string
+* @param app string
 * @return error
 **/
-func Load(addr string) error {
-	address = addr
+func Load(app string) error {
+	if node == nil {
+		return nil
+	}
 
 	return nil
 }

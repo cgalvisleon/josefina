@@ -1,4 +1,4 @@
-package jdb
+package catalog
 
 import (
 	"github.com/cgalvisleon/et/file"
