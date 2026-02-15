@@ -189,6 +189,16 @@ func (s *Lead) GetModel(from *From) (*Model, bool) {
 * @return error
 **/
 func (s *Lead) LoadModel(model *Model) (*Model, error) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.LoadModel", model)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		return nil, nil
+	}
+
 	model.IsInit = false
 	err := model.Init()
 	if err != nil {
@@ -199,14 +209,14 @@ func (s *Lead) LoadModel(model *Model) (*Model, error) {
 }
 
 /**
-* DropModel: Drops a model
+* RemoveModel: Drops a model
 * @param key string
 * @return error
 **/
-func (s *Lead) DropModel(key string) error {
+func (s *Lead) RemoveModel(key string) error {
 	leader, imLeader := node.GetLeader()
 	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.DropModel", key)
+		res := node.Request(leader, "Leader.RemoveModel", key)
 		if res.Error != nil {
 			return res.Error
 		}

@@ -1,12 +1,10 @@
 package catalog
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Node struct {
@@ -72,10 +70,10 @@ func (s *Node) toJson() et.Json {
 }
 
 /**
-* start
+* Start: Starts the node
 * @return error
 **/
-func (s *Node) start() error {
+func (s *Node) Start() error {
 	if s.started {
 		return nil
 	}
@@ -100,16 +98,18 @@ func (s *Node) start() error {
 }
 
 /**
-* getLeader
-* @return string, error
+* LoadModel: Loads a model
+* @param model *Model
+* @return error
 **/
-func getLeader() (string, bool, error) {
-	if node == nil {
-		return "", false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+func (s *Node) LoadModel(model *Model) error {
+	model.IsInit = false
+	err := model.Init()
+	if err != nil {
+		return err
 	}
 
-	leader, imLeader := node.LeaderID()
-	return leader, imLeader, nil
+	return nil
 }
 
 /**
