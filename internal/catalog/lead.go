@@ -159,15 +159,28 @@ func (s *Lead) CoreDb() (*DB, error) {
 * @return *Model, bool
 **/
 func (s *Lead) GetModel(from *From) (*Model, bool) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.GetModel", from)
+		if res.Error != nil {
+			return nil, false
+		}
+
+		var result *Model
+		var exists bool
+		err := res.Get(&result, &exists)
+		if err != nil {
+			return nil, false
+		}
+
+		return result, exists
+	}
+
 	key := from.Key()
 	node.muModel.RLock()
 	result, ok := node.models[key]
 	node.muModel.RUnlock()
-	if ok {
-		return result, true
-	}
-
-	return nil, false
+	return result, ok
 }
 
 /**
