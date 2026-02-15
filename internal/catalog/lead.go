@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
@@ -17,7 +18,7 @@ type Lead struct{}
 **/
 func (s *Lead) CreateDb(name string) (*DB, error) {
 	if node == nil {
-		return nil, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	leader, imLeader := node.GetLeader()
@@ -36,8 +37,14 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 		return result, nil
 	}
 
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
 	name = utility.Normalize(name)
+	node.muDB.Lock()
 	result, ok := node.dbs[name]
+	node.muDB.Unlock()
 	if ok {
 		return result, nil
 	}
@@ -49,7 +56,9 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
+	node.muDB.Lock()
 	node.dbs[name] = result
+	node.muDB.Unlock()
 
 	return result, nil
 }
@@ -57,41 +66,39 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 /**
 * GetDb: Returns a database by name
 * @param name string
-* @return *DB, bool, error
+* @return *DB, bool
 **/
-func (s *Lead) GetDb(name string) (*DB, bool, error) {
+func (s *Lead) GetDb(name string) (*DB, bool) {
 	if node == nil {
-		return nil, false, fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return nil, false
 	}
 
 	leader, imLeader := node.GetLeader()
 	if !imLeader && leader != nil {
 		res := node.Request(leader, "Leader.CreateDb", name)
 		if res.Error != nil {
-			return nil, false, res.Error
+			return nil, false
 		}
 
 		var result *DB
 		var exists bool
 		err := res.Get(&result, &exists)
 		if err != nil {
-			return nil, false, err
+			return nil, false
 		}
 
-		return result, exists, nil
-	}
-
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, false, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+		return result, exists
 	}
 
 	name = utility.Normalize(name)
+	node.muDB.RLock()
 	result, ok := node.dbs[name]
+	node.muDB.RUnlock()
 	if ok {
-		return result, true, nil
+		return result, true
 	}
 
-	return nil, false, nil
+	return nil, false
 }
 
 /**
@@ -100,7 +107,17 @@ func (s *Lead) GetDb(name string) (*DB, bool, error) {
 **/
 func (s *Lead) RemoveDb(name string) error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.RemoveDb", name)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		return nil
 	}
 
 	if !utility.ValidStr(name, 0, []string{""}) {
@@ -117,6 +134,16 @@ func (s *Lead) RemoveDb(name string) error {
 * @return *DB, error
 **/
 func (s *Lead) CoreDb() (*DB, error) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.CoreDb", "")
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		return nil, nil
+	}
+
 	name := "josefina"
 	result, ok := node.dbs[name]
 	if ok {
@@ -124,4 +151,52 @@ func (s *Lead) CoreDb() (*DB, error) {
 	}
 
 	return s.CreateDb(name)
+}
+
+/**
+* GetModel: Returns a model by name
+* @param from *From
+* @return *Model, bool
+**/
+func (s *Lead) GetModel(from *From) (*Model, bool) {
+	key := from.Key()
+	node.muModel.RLock()
+	result, ok := node.models[key]
+	node.muModel.RUnlock()
+	if ok {
+		return result, true
+	}
+
+	return nil, false
+}
+
+/**
+* LoadModel: Loads a model
+* @param model *Model
+* @return error
+**/
+func (s *Lead) LoadModel(model *Model) (*Model, error) {
+	model.IsInit = false
+	err := model.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
+}
+
+/**
+* DropModel: Drops a model
+* @param key string
+* @return error
+**/
+func (s *Lead) DropModel(key string) error {
+	node.muModel.Lock()
+	_, ok := node.models[key]
+	if ok {
+		delete(node.models, key)
+	}
+	node.muModel.Unlock()
+
+	return nil
 }
