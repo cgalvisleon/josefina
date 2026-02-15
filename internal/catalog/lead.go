@@ -93,3 +93,35 @@ func (s *Lead) GetDb(name string) (*DB, bool, error) {
 
 	return nil, false, nil
 }
+
+/**
+* RemoveDb: Removes a database from the global map
+* @param name string
+**/
+func (s *Lead) RemoveDb(name string) error {
+	if node == nil {
+		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	delete(node.dbs, name)
+	return nil
+}
+
+/**
+* CoreDb: Returns the core database
+* @return *DB, error
+**/
+func (s *Lead) CoreDb() (*DB, error) {
+	name := "josefina"
+	result, ok := node.dbs[name]
+	if ok {
+		return result, nil
+	}
+
+	return s.CreateDb(name)
+}

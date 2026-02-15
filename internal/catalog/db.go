@@ -2,12 +2,9 @@ package catalog
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type DB struct {
@@ -108,26 +105,4 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 	}
 
 	return model, nil
-}
-
-/**
-* RemoveDb: Removes a database from the global map
-* @param name string
-**/
-func RemoveDb(name string) {
-	delete(dbs, name)
-}
-
-/**
-* CoreDb: Returns the core database
-* @return *DB, error
-**/
-func CoreDb() (*DB, error) {
-	name := "josefina"
-	result, ok := dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	return createDb(name)
 }
