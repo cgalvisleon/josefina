@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -14,7 +15,7 @@ type Follow struct{}
 * @param model *Model
 * @return error
 **/
-func (s *Follow) LoadModel(model *Model) (*Model, error) {
+func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 	if node == nil {
 		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -37,7 +38,7 @@ func (s *Follow) LoadModel(model *Model) (*Model, error) {
 * @param from *From, field, idx string
 * @return bool, error
 **/
-func (s *Follow) IsExisted(from *From, field, idx string) (bool, error) {
+func (s *Follow) IsExisted(from *catalog.From, field, idx string) (bool, error) {
 	if node == nil {
 		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -62,7 +63,7 @@ func (s *Follow) IsExisted(from *From, field, idx string) (bool, error) {
 * @param from *From, idx string
 * @return error
 **/
-func (s *Follow) RemoveObject(from *From, idx string) error {
+func (s *Follow) RemoveObject(from *catalog.From, idx string) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -87,7 +88,7 @@ func (s *Follow) RemoveObject(from *From, idx string) error {
 * @param from *From, idx string, data et.Json
 * @return error
 **/
-func (s *Follow) PutObject(from *From, idx string, data et.Json) error {
+func (s *Follow) PutObject(from *catalog.From, idx string, data et.Json) error {
 	if node == nil {
 		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
