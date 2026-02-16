@@ -115,16 +115,12 @@ func (s *Node) GetNode(addr string) (*tcp.Client, error) {
 }
 
 /**
-* isExisted: Checks if the object exists
+* IsExisted: Checks if the object exists
 * @param from *From, field, idx string
 * @return bool, error
 **/
-func isExisted(from *From, field, idx string) (bool, error) {
-	if node == nil {
-		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	nd, err := node.GetNode(from.Address)
+func (s *Node) IsExisted(from *From, field, idx string) (bool, error) {
+	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return false, err
 	}
@@ -144,16 +140,12 @@ func isExisted(from *From, field, idx string) (bool, error) {
 }
 
 /**
-* removeObject
+* RemoveObject
 * @param from *From, idx string
 * @return error
 **/
-func removeObject(from *From, idx string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	nd, err := node.GetNode(from.Address)
+func (s *Node) RemoveObject(from *From, idx string) error {
+	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return err
 	}
@@ -167,16 +159,12 @@ func removeObject(from *From, idx string) error {
 }
 
 /**
-* putObject
+* PutObject
 * @param from *From, idx string, data et.Json
 * @return error
 **/
-func putObject(from *From, idx string, data et.Json) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	nd, err := node.GetNode(from.Address)
+func (s *Node) PutObject(from *From, idx string, data et.Json) error {
+	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return err
 	}
@@ -187,4 +175,30 @@ func putObject(from *From, idx string, data et.Json) error {
 	}
 
 	return nil
+}
+
+/**
+* GetModel
+* @param from *From
+* @return *Model, error
+**/
+func (s *Node) GetModel(from *From) (*Model, bool) {
+	leader, imLeader := s.GetLeader()
+	if !imLeader && leader != nil {
+		res := s.Request(leader, "Leader.GetModel", from)
+		if res.Error != nil {
+			return nil, false
+		}
+
+		var result *Model
+		var exists bool
+		err := res.Get(&result, &exists)
+		if err != nil {
+			return nil, false
+		}
+
+		return result, exists
+	}
+
+	return nil, false
 }

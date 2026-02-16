@@ -30,6 +30,7 @@ func NewVm() *Vm {
 	wrapperFetch(result)
 	wrapperToJson(result)
 	wrapperToString(result)
+	wrapperModel(result)
 	return result
 }
 
@@ -149,29 +150,24 @@ func wrapperToString(vm *Vm) {
 * wrapperModel: Wraps the model
 * @param vm *Vm
 **/
-// func wrapperModel(vm *mod.Vm) {
-// 	vm.Set("model", func(call goja.FunctionCall) goja.Value {
-// 		args := call.Arguments
-// 		if len(args) != 3 {
-// 			panic(vm.NewGoError(fmt.Errorf(msg.MSG_ARG_REQUIRED, "database, schema, model")))
-// 		}
-// 		database := args[0].String()
-// 		schema := args[1].String()
-// 		name := args[2].String()
-// 		var result *mod.Model
-// 		exists, err := core.GetModel(&mod.From{
-// 			Database: database,
-// 			Schema:   schema,
-// 			Name:     name,
-// 		}, result)
-// 		if err != nil {
-// 			panic(vm.NewGoError(err))
-// 		}
+func wrapperModel(vm *Vm) {
+	vm.Set("model", func(call goja.FunctionCall) goja.Value {
+		args := call.Arguments
+		if len(args) != 3 {
+			panic(vm.NewGoError(fmt.Errorf(msg.MSG_ARG_REQUIRED, "database, schema, model")))
+		}
+		database := args[0].String()
+		schema := args[1].String()
+		name := args[2].String()
+		result, exists := node.GetModel(&From{
+			Database: database,
+			Schema:   schema,
+			Name:     name,
+		})
+		if !exists {
+			panic(vm.NewGoError(errors.New(msg.MSG_MODEL_NOT_FOUND)))
+		}
 
-// 		if !exists {
-// 			panic(vm.NewGoError(errors.New(msg.MSG_MODEL_NOT_EXISTS)))
-// 		}
-
-// 		return vm.ToValue(result)
-// 	})
-// }
+		return vm.ToValue(result)
+	})
+}

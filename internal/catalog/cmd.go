@@ -151,12 +151,12 @@ func (s *Cmd) runTrigger(event EventTrigger, tx *Tx, old, new et.Json) error {
 			continue
 		}
 
-		vm := vm.New()
+		vm := NewVm()
 		vm.Set("self", model)
 		vm.Set("tx", tx)
 		vm.Set("old", old)
 		vm.Set("new", new)
-		script := string(trigger.Definition)
+		script := string(tg.Definition)
 		_, err := vm.Run(script)
 		if err != nil {
 			return err
@@ -218,7 +218,7 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 
 		key := fmt.Sprintf("%v", new[name])
-		exists, err := isExisted(detail.To, fk, key)
+		exists, err := node.IsExisted(detail.To, fk, key)
 		if err != nil {
 			return nil, err
 		}
