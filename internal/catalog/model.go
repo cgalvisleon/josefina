@@ -52,17 +52,6 @@ func ToFrom(def et.Json) *From {
 	}
 }
 
-type EventTrigger string
-
-const (
-	BeforeInsert EventTrigger = "before_insert"
-	AfterInsert  EventTrigger = "after_insert"
-	BeforeUpdate EventTrigger = "before_update"
-	AfterUpdate  EventTrigger = "after_update"
-	BeforeDelete EventTrigger = "before_delete"
-	AfterDelete  EventTrigger = "after_delete"
-)
-
 type Trigger struct {
 	Name       string `json:"name"`
 	Definition []byte `json:"definition"`
