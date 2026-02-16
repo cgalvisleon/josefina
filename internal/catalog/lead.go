@@ -180,6 +180,7 @@ func (s *Lead) GetModel(from *From) (*Model, bool) {
 	node.muModel.RLock()
 	result, ok := node.models[key]
 	node.muModel.RUnlock()
+
 	return result, ok
 }
 
