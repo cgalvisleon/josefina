@@ -250,7 +250,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	if len(s.conditions) == 0 {
 		// Items by data
 		next := true
-		asc := s.Order(INDEX)
+		asc := s.Order(catalog.INDEX)
 		err := model.For(func(idx string, item et.Json) (bool, error) {
 			next = addResult(item)
 			return next, nil
@@ -294,8 +294,8 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 		}
 
 		field := con.Field
-		index, ok := model.stores[field]
-		if !ok {
+		index, err := model.Store(field)
+		if err != nil {
 			onlyKeys = false
 			continue
 		}
@@ -312,7 +312,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	// Items by keys
 	items := []et.Json{}
 	addItem := func(item et.Json) {
-		index, ok := item[INDEX]
+		index, ok := item[catalog.INDEX]
 		if !ok {
 			return
 		}
@@ -321,7 +321,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 			return
 		}
 
-		idx := slices.IndexFunc(items, func(v et.Json) bool { return v[INDEX] == index })
+		idx := slices.IndexFunc(items, func(v et.Json) bool { return v[catalog.INDEX] == index })
 		if idx == -1 {
 			items = append(items, item)
 		}
@@ -375,7 +375,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by data
-	asc := s.Order(INDEX)
+	asc := s.Order(catalog.INDEX)
 	err := model.For(func(idx string, item et.Json) (bool, error) {
 		next = Validate(item, s.conditions)
 		return next, nil
