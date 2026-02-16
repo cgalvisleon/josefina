@@ -3,7 +3,7 @@ package catalog
 import "github.com/cgalvisleon/et/envar"
 
 var (
-	node *Node
+// node *Node
 )
 
 /**

@@ -160,10 +160,6 @@ func (s *Model) store(name string) (*store.FileStore, error) {
 * @return error
 **/
 func (s *Model) Init() error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	if s.IsInit {
 		return nil
 	}
@@ -179,11 +175,7 @@ func (s *Model) Init() error {
 		}
 	}
 
-	s.Address = node.Address()
 	s.IsInit = true
-	node.muModel.Lock()
-	node.models[s.Key()] = s
-	node.muModel.Unlock()
 	return nil
 }
 

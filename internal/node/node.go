@@ -1,4 +1,4 @@
-package catalog
+package node
 
 import (
 	"errors"
@@ -7,22 +7,23 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Node struct {
 	*tcp.Server
-	app       string              `json:"-"`
-	version   string              `json:"-"`
-	isStrict  bool                `json:"-"`
-	started   bool                `json:"-"`
-	dbs       map[string]*DB      `json:"-"`
-	models    map[string]*Model   `json:"-"`
-	sessions  map[string]*Session `json:"-"`
-	muDB      sync.RWMutex        `json:"-"`
-	muModel   sync.RWMutex        `json:"-"`
-	muSession sync.RWMutex        `json:"-"`
-	isDebug   bool                `json:"-"`
+	app       string                      `json:"-"`
+	version   string                      `json:"-"`
+	isStrict  bool                        `json:"-"`
+	started   bool                        `json:"-"`
+	dbs       map[string]*catalog.DB      `json:"-"`
+	models    map[string]*catalog.Model   `json:"-"`
+	sessions  map[string]*catalog.Session `json:"-"`
+	muDB      sync.RWMutex                `json:"-"`
+	muModel   sync.RWMutex                `json:"-"`
+	muSession sync.RWMutex                `json:"-"`
+	isDebug   bool                        `json:"-"`
 }
 
 /**
@@ -41,9 +42,9 @@ func newNode(port int) *Node {
 		app:       "josefina",
 		version:   "0.0.1",
 		isStrict:  config.IsStrict,
-		dbs:       make(map[string]*DB),
-		models:    make(map[string]*Model),
-		sessions:  make(map[string]*Session),
+		dbs:       make(map[string]*catalog.DB),
+		models:    make(map[string]*catalog.Model),
+		sessions:  make(map[string]*catalog.Session),
 		muDB:      sync.RWMutex{},
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
@@ -55,10 +56,10 @@ func newNode(port int) *Node {
 }
 
 /**
-* toJson: Converts the node to a json
+* ToJson: Converts the node to a json
 * @return et.Json
 **/
-func (s *Node) toJson() et.Json {
+func (s *Node) ToJson() et.Json {
 	leader, imLeader := s.LeaderID()
 	return et.Json{
 		"app":       s.app,
@@ -119,13 +120,13 @@ func (s *Node) GetNode(addr string) (*tcp.Client, error) {
 * @param from *From, field, idx string
 * @return bool, error
 **/
-func (s *Node) IsExisted(from *From, field, idx string) (bool, error) {
+func (s *Node) IsExisted(from *catalog.From, field, idx string) (bool, error) {
 	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return false, err
 	}
 
-	res := node.Request(nd, "Follow.IsExisted", from, field, idx)
+	res := s.Request(nd, "Follow.IsExisted", from, field, idx)
 	if res.Error != nil {
 		return false, res.Error
 	}
@@ -144,13 +145,13 @@ func (s *Node) IsExisted(from *From, field, idx string) (bool, error) {
 * @param from *From, idx string
 * @return error
 **/
-func (s *Node) RemoveObject(from *From, idx string) error {
+func (s *Node) RemoveObject(from *catalog.From, idx string) error {
 	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return err
 	}
 
-	res := node.Request(nd, "Follow.RemoveObject", from, idx)
+	res := s.Request(nd, "Follow.RemoveObject", from, idx)
 	if res.Error != nil {
 		return res.Error
 	}
@@ -163,13 +164,13 @@ func (s *Node) RemoveObject(from *From, idx string) error {
 * @param from *From, idx string, data et.Json
 * @return error
 **/
-func (s *Node) PutObject(from *From, idx string, data et.Json) error {
+func (s *Node) PutObject(from *catalog.From, idx string, data et.Json) error {
 	nd, err := s.GetNode(from.Address)
 	if err != nil {
 		return err
 	}
 
-	res := node.Request(nd, "Follow.PutObject", from, idx, data)
+	res := s.Request(nd, "Follow.PutObject", from, idx, data)
 	if res.Error != nil {
 		return res.Error
 	}
@@ -182,7 +183,13 @@ func (s *Node) PutObject(from *From, idx string, data et.Json) error {
 * @param from *From
 * @return *Model, error
 **/
-func (s *Node) GetModel(from *From) (*Model, bool) {
+func (s *Node) GetModel(from *catalog.From) (*catalog.Model, bool) {
+	key := from.Key()
+	result, ok := s.models[key]
+	if ok {
+		return result, true
+	}
+
 	leader, imLeader := s.GetLeader()
 	if !imLeader && leader != nil {
 		res := s.Request(leader, "Leader.GetModel", from)
@@ -190,7 +197,7 @@ func (s *Node) GetModel(from *From) (*Model, bool) {
 			return nil, false
 		}
 
-		var result *Model
+		var result *catalog.Model
 		var exists bool
 		err := res.Get(&result, &exists)
 		if err != nil {
@@ -201,4 +208,22 @@ func (s *Node) GetModel(from *From) (*Model, bool) {
 	}
 
 	return nil, false
+}
+
+/**
+* LoadModel
+* @param model *Model
+* @return error
+**/
+func (s *Node) LoadModel(model *catalog.Model) (*catalog.Model, error) {
+	err := model.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	model.Address = s.Address()
+	s.muModel.Lock()
+	s.models[model.Key()] = model
+	s.muModel.Unlock()
+	return nil, nil
 }

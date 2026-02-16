@@ -1,4 +1,4 @@
-package catalog
+package node
 
 import (
 	"github.com/cgalvisleon/et/file"
