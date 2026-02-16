@@ -1,4 +1,4 @@
-package vm
+package catalog
 
 import (
 	"errors"
@@ -10,6 +10,46 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/dop251/goja"
 )
+
+type Vm struct {
+	*goja.Runtime
+	ctx et.Json
+}
+
+/**
+* NewVm
+* Create a new vm
+**/
+func NewVm() *Vm {
+	result := &Vm{
+		Runtime: goja.New(),
+		ctx:     et.Json{},
+	}
+
+	wrapperConsole(result)
+	wrapperFetch(result)
+	wrapperToJson(result)
+	wrapperToString(result)
+	return result
+}
+
+/**
+* Run
+* @param script string
+* @return goja.Value, error
+**/
+func (s *Vm) Run(script string) (goja.Value, error) {
+	if script == "" {
+		return nil, nil
+	}
+
+	result, err := s.RunString(script)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
 
 /**
 * wrapperConsole: Wraps the console
