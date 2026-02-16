@@ -6,6 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -14,9 +15,9 @@ type Lead struct{}
 /**
 * CreateDb: Creates a new database
 * @param name string
-* @return *DB, error
+* @return *catalog.DB, error
 **/
-func (s *Lead) CreateDb(name string) (*DB, error) {
+func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 	if node == nil {
 		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
@@ -28,7 +29,7 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 			return nil, res.Error
 		}
 
-		var result *DB
+		var result *catalog.DB
 		err := res.Get(&result)
 		if err != nil {
 			return nil, err
@@ -50,11 +51,11 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 	}
 
 	path := envar.GetStr("DATA_PATH", "./data")
-	result = &DB{
+	result = &catalog.DB{
 		Name:    name,
 		Version: node.version,
 		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*Schema, 0),
+		Schemas: make(map[string]*catalog.Schema, 0),
 	}
 	node.muDB.Lock()
 	node.dbs[name] = result
@@ -66,9 +67,9 @@ func (s *Lead) CreateDb(name string) (*DB, error) {
 /**
 * GetDb: Returns a database by name
 * @param name string
-* @return *DB, bool
+* @return *catalog.DB, bool
 **/
-func (s *Lead) GetDb(name string) (*DB, bool) {
+func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 	if node == nil {
 		return nil, false
 	}
@@ -80,7 +81,7 @@ func (s *Lead) GetDb(name string) (*DB, bool) {
 			return nil, false
 		}
 
-		var result *DB
+		var result *catalog.DB
 		var exists bool
 		err := res.Get(&result, &exists)
 		if err != nil {
@@ -131,9 +132,9 @@ func (s *Lead) RemoveDb(name string) error {
 
 /**
 * CoreDb: Returns the core database
-* @return *DB, error
+* @return *catalog.DB, error
 **/
-func (s *Lead) CoreDb() (*DB, error) {
+func (s *Lead) CoreDb() (*catalog.DB, error) {
 	leader, imLeader := node.GetLeader()
 	if !imLeader && leader != nil {
 		res := node.Request(leader, "Leader.CoreDb", "")
@@ -155,10 +156,10 @@ func (s *Lead) CoreDb() (*DB, error) {
 
 /**
 * GetModel: Returns a model by name
-* @param from *From
-* @return *Model, bool
+* @param from *catalog.From
+* @return *catalog.Model, bool
 **/
-func (s *Lead) GetModel(from *From) (*Model, bool) {
+func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	leader, imLeader := node.GetLeader()
 	if !imLeader && leader != nil {
 		res := node.Request(leader, "Leader.GetModel", from)
@@ -166,7 +167,7 @@ func (s *Lead) GetModel(from *From) (*Model, bool) {
 			return nil, false
 		}
 
-		var result *Model
+		var result *catalog.Model
 		var exists bool
 		err := res.Get(&result, &exists)
 		if err != nil {
