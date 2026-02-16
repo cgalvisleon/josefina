@@ -23,6 +23,7 @@ type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
+	Address  string `json:"-"`
 	isDebug  bool   `json:"-"`
 }
 
@@ -75,7 +76,6 @@ type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 type Model struct {
 	*From         `json:"from"`
-	Address       string                      `json:"-"`
 	IsInit        bool                        `json:"-"`
 	Fields        map[string]*Field           `json:"fields"`
 	Path          string                      `json:"path"`

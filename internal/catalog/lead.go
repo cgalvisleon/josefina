@@ -184,31 +184,6 @@ func (s *Lead) GetModel(from *From) (*Model, bool) {
 }
 
 /**
-* LoadModel: Loads a model
-* @param model *Model
-* @return error
-**/
-func (s *Lead) LoadModel(model *Model) (*Model, error) {
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.LoadModel", model)
-		if res.Error != nil {
-			return nil, res.Error
-		}
-
-		return nil, nil
-	}
-
-	model.IsInit = false
-	err := model.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	return model, nil
-}
-
-/**
 * RemoveModel: Drops a model
 * @param key string
 * @return error

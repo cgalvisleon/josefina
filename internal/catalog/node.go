@@ -1,10 +1,13 @@
 package catalog
 
 import (
+	"errors"
+	"slices"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Node struct {
@@ -45,8 +48,8 @@ func newNode(port int) *Node {
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
 	}
-
 	result.Mount(new(Lead))
+	result.Mount(new(Follow))
 
 	return result
 }
@@ -98,18 +101,17 @@ func (s *Node) Start() error {
 }
 
 /**
-* LoadModel: Loads a model
-* @param model *Model
-* @return error
+* GetNode: Gets a node
+* @param addr string
+* @return *tcp.Client, error
 **/
-func (s *Node) LoadModel(model *Model) error {
-	model.IsInit = false
-	err := model.Init()
-	if err != nil {
-		return err
+func (s *Node) GetNode(addr string) (*tcp.Client, error) {
+	idx := slices.IndexFunc(s.Peers, func(item *tcp.Client) bool { return item.Addr == addr })
+	if idx == -1 {
+		return nil, errors.New(msg.MSG_NODE_NOT_FOUND)
 	}
 
-	return nil
+	return s.Peers[idx], nil
 }
 
 /**
@@ -118,6 +120,22 @@ func (s *Node) LoadModel(model *Model) error {
 * @return bool, error
 **/
 func isExisted(from *From, field, idx string) (bool, error) {
+	nd, err := node.GetNode(from.Address)
+	if err != nil {
+		return false, err
+	}
+
+	res := node.Request(nd, "Follow.IsExisted", from, field, idx)
+	if res.Error != nil {
+		return false, res.Error
+	}
+
+	var exists bool
+	err = res.Get(&exists)
+	if err != nil {
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -127,7 +145,23 @@ func isExisted(from *From, field, idx string) (bool, error) {
 * @return error
 **/
 func removeObject(from *From, idx string) error {
-	return nil
+	nd, err := node.GetNode(from.Address)
+	if err != nil {
+		return false, err
+	}
+
+	res := node.Request(nd, "Follow.IsExisted", from, field, idx)
+	if res.Error != nil {
+		return false, res.Error
+	}
+
+	var exists bool
+	err = res.Get(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return false, nil
 }
 
 /**
