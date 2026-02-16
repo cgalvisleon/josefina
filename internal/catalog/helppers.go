@@ -2,11 +2,8 @@ package catalog
 
 import (
 	"reflect"
-	"slices"
 	"strings"
 	"time"
-
-	"github.com/cgalvisleon/et/et"
 )
 
 /**
@@ -284,38 +281,4 @@ func getBetweenRange(v any) (min any, max any, ok bool) {
 	}
 
 	return nil, nil, false
-}
-
-/**
-* Select
-* @param keys []string, object et.Json
-* @return et.Json
-**/
-func Select(keys []string, object et.Json) et.Json {
-	result := et.Json{}
-	for _, key := range keys {
-		val, ok := object[key]
-		if ok {
-			result[key] = val
-		}
-	}
-
-	return result
-}
-
-/**
-* Hidden
-* @param keys []string, object et.Json
-* @return et.Json
-**/
-func Hidden(keys []string, object et.Json) et.Json {
-	result := et.Json{}
-	for key, value := range object {
-		if slices.Contains(keys, key) {
-			continue
-		}
-		result[key] = value
-	}
-
-	return result
 }

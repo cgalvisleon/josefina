@@ -9,15 +9,16 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Transaction struct {
-	From    *From   `json:"from"`
-	Command Command `json:"command"`
-	Idx     string  `json:"idx"`
-	Data    et.Json `json:"data"`
-	Status  Status  `json:"status"`
+	From    *catalog.From  `json:"from"`
+	Command Command        `json:"command"`
+	Idx     string         `json:"idx"`
+	Data    et.Json        `json:"data"`
+	Status  catalog.Status `json:"status"`
 }
 
 /**
@@ -25,7 +26,7 @@ type Transaction struct {
 * @param from *From, cmd Command, idx string, data et.Json, status Status
 * @return *Transaction
 **/
-func newTransaction(from *From, cmd Command, idx string, data et.Json, status Status) *Transaction {
+func newTransaction(from *catalog.From, cmd Command, idx string, data et.Json, status catalog.Status) *Transaction {
 	return &Transaction{
 		From:    from,
 		Command: cmd,
@@ -35,7 +36,7 @@ func newTransaction(from *From, cmd Command, idx string, data et.Json, status St
 	}
 }
 
-type Txs struct {
+type Tx struct {
 	StartedAt    time.Time           `json:"startedAt"`
 	EndedAt      time.Time           `json:"endedAt"`
 	ID           string              `json:"id"`
@@ -126,18 +127,18 @@ func (s *Tx) change() error {
 * AddTransaction: Adds data to the Transaction
 * @param from *From, cmd Command, idx string, data et.Json
 **/
-func (s *Tx) AddTransaction(from *From, cmd Command, idx string, data et.Json) error {
-	transaction := newTransaction(from, cmd, idx, data, Pending)
+func (s *Tx) AddTransaction(from *catalog.From, cmd Command, idx string, data et.Json) error {
+	transaction := newTransaction(from, cmd, idx, data, catalog.Pending)
 	s.Transactions = append(s.Transactions, transaction)
 	return s.change()
 }
 
 /**
 * SetStatus: Sets the status of a transaction
-* @param idx int, status Status
+* @param idx int, status catalog.Status
 * @return error
 **/
-func (s *Tx) SetStatus(idx int, status Status) error {
+func (s *Tx) SetStatus(idx int, status catalog.Status) error {
 	tr := s.Transactions[idx]
 	if tr == nil {
 		return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
@@ -150,10 +151,10 @@ func (s *Tx) SetStatus(idx int, status Status) error {
 
 /**
 * getRecors: Returns the records for the from
-* @param from *From
+* @param from *catalog.From
 * @return []et.Json
 **/
-func (s *Tx) getRecors(from *From) []et.Json {
+func (s *Tx) getRecors(from *catalog.From) []et.Json {
 	result := []et.Json{}
 	for _, transaction := range s.Transactions {
 		if transaction.From == from {

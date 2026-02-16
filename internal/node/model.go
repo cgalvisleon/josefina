@@ -1,8 +1,17 @@
 package node
 
 import (
+	"errors"
+
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/msg"
+)
+
+var (
+	ErrorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
+	ErrorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
+	ErrorModelNotFound       = errors.New(msg.MSG_MODEL_NOT_FOUND)
 )
 
 /**

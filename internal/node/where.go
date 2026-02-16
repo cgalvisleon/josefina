@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -12,7 +13,7 @@ import (
 * Wheres
 **/
 type Wheres struct {
-	owner      *Model              `json:"-"`
+	owner      *catalog.Model      `json:"-"`
 	selects    []string            `json:"-"`
 	hidden     []string            `json:"-"`
 	keys       map[string][]string `json:"-"`
@@ -72,7 +73,7 @@ func (s *Wheres) IsDebug() *Wheres {
 * @param owner *Model
 * @return *Wheres
 **/
-func (s *Wheres) SetOwner(owner *Model) *Wheres {
+func (s *Wheres) SetOwner(owner *catalog.Model) *Wheres {
 	if owner == nil {
 		return s
 	}
