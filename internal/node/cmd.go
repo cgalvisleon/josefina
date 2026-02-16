@@ -129,23 +129,17 @@ func (s *Cmd) AfterDeleteFn(fn TriggerFunction) *Cmd {
 * @param event catalog.EventTrigger, tx *Tx, old et.Json, new et.Json
 * @return error
 **/
-func (s *Cmd) runTrigger(event catalog.EventTrigger, tx *Tx, old, new et.Json) error {
+func (s *Cmd) runTrigger(event catalog.Trigger, tx *Tx, old, new et.Json) error {
 	model := s.model
-	for _, tg := range model.Triggers {
-		if tg.Event != event {
-			continue
-		}
-
-		vm := NewVm()
-		vm.Set("self", model)
-		vm.Set("tx", tx)
-		vm.Set("old", old)
-		vm.Set("new", new)
-		script := string(tg.Definition)
-		_, err := vm.Run(script)
-		if err != nil {
-			return err
-		}
+	vm := NewVm()
+	vm.Set("self", model)
+	vm.Set("tx", tx)
+	vm.Set("old", old)
+	vm.Set("new", new)
+	script := string(event.Definition)
+	_, err := vm.Run(script)
+	if err != nil {
+		return err
 	}
 
 	return nil

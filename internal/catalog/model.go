@@ -118,11 +118,11 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
-* store: Opens a store
+* Store: Opens a store
 * @param name string
 * @return *store.FileStore, error
 **/
-func (s *Model) store(name string) (*store.FileStore, error) {
+func (s *Model) Store(name string) (*store.FileStore, error) {
 	result, ok := s.stores[name]
 	if ok {
 		return result, nil
@@ -151,7 +151,7 @@ func (s *Model) Init() error {
 	}
 
 	for _, name := range s.Indexes {
-		_, err := s.store(name)
+		_, err := s.Store(name)
 		if err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func (s *Model) Stricted() {
 * @return *store.FileStore, error
 **/
 func (s *Model) Source() (*store.FileStore, error) {
-	result, err := s.store(INDEX)
+	result, err := s.Store(INDEX)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func (s *Model) RemoveObject(idx string) error {
 * @return bool, error
 **/
 func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) {
-	index, err := s.store(field)
+	index, err := s.Store(field)
 	if err != nil {
 		return false, err
 	}
@@ -417,7 +417,7 @@ func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) 
 * @return bool, error
 **/
 func (s *Model) IsExisted(field, idx string) (bool, error) {
-	source, err := s.store(field)
+	source, err := s.Store(field)
 	if err != nil {
 		return false, err
 	}
