@@ -7,6 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
 type Operator string
@@ -124,7 +125,7 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 
 		val, ok := data[field]
 		if !ok {
-			return nil, ErrorFieldNotFound
+			return nil, catalog.ErrorFieldNotFound
 		}
 
 		switch v := val.(type) {
@@ -143,7 +144,7 @@ func (s *Condition) fieldValue(data et.Json) (any, error) {
 		}
 	}
 
-	return nil, ErrorFieldNotFound
+	return nil, catalog.ErrorFieldNotFound
 }
 
 /**
