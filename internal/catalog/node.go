@@ -120,6 +120,10 @@ func (s *Node) GetNode(addr string) (*tcp.Client, error) {
 * @return bool, error
 **/
 func isExisted(from *From, field, idx string) (bool, error) {
+	if node == nil {
+		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	nd, err := node.GetNode(from.Address)
 	if err != nil {
 		return false, err
@@ -145,6 +149,10 @@ func isExisted(from *From, field, idx string) (bool, error) {
 * @return error
 **/
 func removeObject(from *From, idx string) error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	nd, err := node.GetNode(from.Address)
 	if err != nil {
 		return err
@@ -164,12 +172,16 @@ func removeObject(from *From, idx string) error {
 * @return error
 **/
 func putObject(from *From, idx string, data et.Json) error {
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
 	nd, err := node.GetNode(from.Address)
 	if err != nil {
 		return err
 	}
 
-	res := node.Request(nd, "Follow.PutObject", from, idx)
+	res := node.Request(nd, "Follow.PutObject", from, idx, data)
 	if res.Error != nil {
 		return res.Error
 	}
