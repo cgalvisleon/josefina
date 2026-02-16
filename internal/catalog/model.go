@@ -161,7 +161,7 @@ func (s *Model) store(name string) (*store.FileStore, error) {
 **/
 func (s *Model) Init() error {
 	if node == nil {
-		return fmt.Errorf(msg.MSG_NODE_NOT_INITIALIZED)
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	if s.IsInit {
