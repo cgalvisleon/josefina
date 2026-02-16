@@ -147,21 +147,15 @@ func isExisted(from *From, field, idx string) (bool, error) {
 func removeObject(from *From, idx string) error {
 	nd, err := node.GetNode(from.Address)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	res := node.Request(nd, "Follow.IsExisted", from, field, idx)
+	res := node.Request(nd, "Follow.RemoveObject", from, idx)
 	if res.Error != nil {
-		return false, res.Error
+		return res.Error
 	}
 
-	var exists bool
-	err = res.Get(&exists)
-	if err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return nil
 }
 
 /**
@@ -170,5 +164,15 @@ func removeObject(from *From, idx string) error {
 * @return error
 **/
 func putObject(from *From, idx string, data et.Json) error {
+	nd, err := node.GetNode(from.Address)
+	if err != nil {
+		return err
+	}
+
+	res := node.Request(nd, "Follow.PutObject", from, idx)
+	if res.Error != nil {
+		return res.Error
+	}
+
 	return nil
 }
