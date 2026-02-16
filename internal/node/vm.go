@@ -7,6 +7,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/request"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/dop251/goja"
 )
@@ -159,7 +160,7 @@ func wrapperModel(vm *Vm) {
 		database := args[0].String()
 		schema := args[1].String()
 		name := args[2].String()
-		result, exists := GetModel(&From{
+		result, exists := node.GetModel(&catalog.From{
 			Database: database,
 			Schema:   schema,
 			Name:     name,

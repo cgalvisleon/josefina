@@ -175,8 +175,8 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		if _, ok := new[name]; !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_REQUIRED, name)
 		}
-		source, ok := model.stores[name]
-		if !ok {
+		source, err := model.Store(name)
+		if err != nil {
 			return nil, fmt.Errorf(msg.MSG_STORE_NOT_FOUND, name)
 		}
 		key := fmt.Sprintf("%v", new[name])
@@ -207,10 +207,10 @@ func (s *Cmd) executeInsert(tx *Tx) (et.Json, error) {
 		}
 	}
 
-	idx := new.ValStr("", INDEX)
+	idx := new.ValStr("", catalog.INDEX)
 	if idx == "" {
 		idx = model.GenKey()
-		new[INDEX] = idx
+		new[catalog.INDEX] = idx
 	}
 
 	// Run before insert trigger function
@@ -265,7 +265,7 @@ func (s *Cmd) executeUpdate(tx *Tx) ([]et.Json, error) {
 
 	for _, old := range items {
 		// Get index
-		idx := old.ValStr("", INDEX)
+		idx := old.ValStr("", catalog.INDEX)
 		if idx == "" {
 			return nil, ErrorRecordNotFound
 		}
@@ -329,7 +329,7 @@ func (s *Cmd) executeDelete(tx *Tx) ([]et.Json, error) {
 
 	for _, old := range items {
 		// Get index
-		idx := old.ValStr("", INDEX)
+		idx := old.ValStr("", catalog.INDEX)
 		if idx == "" {
 			return nil, ErrorRecordNotFound
 		}
@@ -374,8 +374,8 @@ func (s *Cmd) executeUpsert(tx *Tx) ([]et.Json, error) {
 
 	exists := true
 	for _, name := range model.PrimaryKeys {
-		source, ok := model.stores[name]
-		if !ok {
+		source, err := model.Store(name)
+		if err != nil {
 			return nil, ErrorPrimaryKeysNotFound
 		}
 		key := fmt.Sprintf("%v", new[name])
@@ -441,7 +441,7 @@ func (s *Cmd) Execute(tx *Tx) ([]et.Json, error) {
 	}
 
 	if commit {
-		err := tx.commit()
+		err := Commit(tx)
 		if err != nil {
 			return nil, err
 		}

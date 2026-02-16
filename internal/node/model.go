@@ -75,18 +75,18 @@ func Selects(m *catalog.Model, fields ...string) *Wheres {
 * commit: Commits the Transaction
 * @return error
 **/
-func Commit(tx *catalog.Tx) error {
+func Commit(tx *Tx) error {
 	for i, tr := range tx.Transactions {
 		cmd := tr.Command
 		idx := tr.Idx
-		if cmd == catalog.DELETE {
-			err := RemoveObject(tr.From, idx)
+		if cmd == DELETE {
+			err := node.RemoveObject(tr.From, idx)
 			if err != nil {
 				return err
 			}
 		} else {
 			data := tr.Data
-			err := PutObject(tr.From, idx, data)
+			err := node.PutObject(tr.From, idx, data)
 			if err != nil {
 				return err
 			}

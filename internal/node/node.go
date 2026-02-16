@@ -26,12 +26,20 @@ type Node struct {
 	isDebug   bool                        `json:"-"`
 }
 
+var (
+	node *Node
+)
+
 /**
-* newNode
+* Load: Loads the node
 * @param port int
 * @return *Node
 **/
-func newNode(port int) *Node {
+func Load(port int) *Node {
+	if node != nil {
+		return node
+	}
+
 	config, err := getConfig()
 	if err != nil {
 		return nil
