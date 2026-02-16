@@ -1,4 +1,4 @@
-package catalog
+package node
 
 import (
 	"errors"
@@ -159,7 +159,7 @@ func wrapperModel(vm *Vm) {
 		database := args[0].String()
 		schema := args[1].String()
 		name := args[2].String()
-		result, exists := node.GetModel(&From{
+		result, exists := GetModel(&From{
 			Database: database,
 			Schema:   schema,
 			Name:     name,

@@ -1,4 +1,4 @@
-package catalog
+package node
 
 import (
 	"encoding/json"
@@ -35,7 +35,7 @@ func newTransaction(from *From, cmd Command, idx string, data et.Json, status St
 	}
 }
 
-type Tx struct {
+type Txs struct {
 	StartedAt    time.Time           `json:"startedAt"`
 	EndedAt      time.Time           `json:"endedAt"`
 	ID           string              `json:"id"`
@@ -133,11 +133,11 @@ func (s *Tx) AddTransaction(from *From, cmd Command, idx string, data et.Json) e
 }
 
 /**
-* setStatus: Sets the status of a transaction
+* SetStatus: Sets the status of a transaction
 * @param idx int, status Status
 * @return error
 **/
-func (s *Tx) setStatus(idx int, status Status) error {
+func (s *Tx) SetStatus(idx int, status Status) error {
 	tr := s.Transactions[idx]
 	if tr == nil {
 		return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)
@@ -161,33 +161,4 @@ func (s *Tx) getRecors(from *From) []et.Json {
 		}
 	}
 	return result
-}
-
-/**
-* commit: Commits the Transaction
-* @return error
-**/
-func (s *Tx) commit() error {
-	for i, tr := range s.Transactions {
-		cmd := tr.Command
-		idx := tr.Idx
-		if cmd == DELETE {
-			err := node.RemoveObject(tr.From, idx)
-			if err != nil {
-				return err
-			}
-		} else {
-			data := tr.Data
-			err := node.PutObject(tr.From, idx, data)
-			if err != nil {
-				return err
-			}
-		}
-		err := s.setStatus(i, Processed)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

@@ -1,12 +1,15 @@
-package catalog
+package node
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
+
+type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 type Command string
 
@@ -18,17 +21,17 @@ const (
 )
 
 type Cmd struct {
-	model         *Model            `json:"-"`
-	data          et.Json           `json:"-"`
-	command       Command           `json:"-"`
-	wheres        *Wheres           `json:"-"`
-	beforeInserts []TriggerFunction `json:"-"`
-	afterInserts  []TriggerFunction `json:"-"`
-	beforeUpdates []TriggerFunction `json:"-"`
-	afterUpdates  []TriggerFunction `json:"-"`
-	beforeDeletes []TriggerFunction `json:"-"`
-	afterDeletes  []TriggerFunction `json:"-"`
-	isDebug       bool              `json:"-"`
+	model         *catalog.Model            `json:"-"`
+	data          et.Json                   `json:"-"`
+	command       Command                   `json:"-"`
+	wheres        *Wheres                   `json:"-"`
+	beforeInserts []catalog.TriggerFunction `json:"-"`
+	afterInserts  []catalog.TriggerFunction `json:"-"`
+	beforeUpdates []catalog.TriggerFunction `json:"-"`
+	afterUpdates  []catalog.TriggerFunction `json:"-"`
+	beforeDeletes []catalog.TriggerFunction `json:"-"`
+	afterDeletes  []catalog.TriggerFunction `json:"-"`
+	isDebug       bool                      `json:"-"`
 }
 
 /**
@@ -36,34 +39,34 @@ type Cmd struct {
 * @param model *Model, command Command
 * @return *Cmd
 **/
-func newCmd(model *Model) *Cmd {
+func newCmd(model *catalog.Model) *Cmd {
 	result := &Cmd{
 		model:         model,
 		data:          et.Json{},
 		wheres:        newWhere(),
-		beforeInserts: make([]TriggerFunction, 0),
-		afterInserts:  make([]TriggerFunction, 0),
-		beforeUpdates: make([]TriggerFunction, 0),
-		afterUpdates:  make([]TriggerFunction, 0),
-		beforeDeletes: make([]TriggerFunction, 0),
-		afterDeletes:  make([]TriggerFunction, 0),
+		beforeInserts: make([]catalog.TriggerFunction, 0),
+		afterInserts:  make([]catalog.TriggerFunction, 0),
+		beforeUpdates: make([]catalog.TriggerFunction, 0),
+		afterUpdates:  make([]catalog.TriggerFunction, 0),
+		beforeDeletes: make([]catalog.TriggerFunction, 0),
+		afterDeletes:  make([]catalog.TriggerFunction, 0),
 	}
-	for _, trigger := range model.beforeInserts {
+	for _, trigger := range model.BeforeInserts {
 		result.beforeInserts = append(result.beforeInserts, trigger)
 	}
-	for _, trigger := range model.afterInserts {
+	for _, trigger := range model.AfterInserts {
 		result.afterInserts = append(result.afterInserts, trigger)
 	}
-	for _, trigger := range model.beforeUpdates {
+	for _, trigger := range model.BeforeUpdates {
 		result.beforeUpdates = append(result.beforeUpdates, trigger)
 	}
-	for _, trigger := range model.afterUpdates {
+	for _, trigger := range model.AfterUpdates {
 		result.afterUpdates = append(result.afterUpdates, trigger)
 	}
-	for _, trigger := range model.beforeDeletes {
+	for _, trigger := range model.BeforeDeletes {
 		result.beforeDeletes = append(result.beforeDeletes, trigger)
 	}
-	for _, trigger := range model.afterDeletes {
+	for _, trigger := range model.AfterDeletes {
 		result.afterDeletes = append(result.afterDeletes, trigger)
 	}
 
@@ -81,70 +84,70 @@ func (s *Cmd) IsDebug() *Cmd {
 
 /**
 * BeforeInsertFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeInsertFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeInsertFn(fn catalog.TriggerFunction) *Cmd {
 	s.beforeInserts = append(s.beforeInserts, fn)
 	return s
 }
 
 /**
 * AfterInsertFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterInsertFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterInsertFn(fn catalog.TriggerFunction) *Cmd {
 	s.afterInserts = append(s.afterInserts, fn)
 	return s
 }
 
 /**
 * BeforeUpdateFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeUpdateFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeUpdateFn(fn catalog.TriggerFunction) *Cmd {
 	s.beforeUpdates = append(s.beforeUpdates, fn)
 	return s
 }
 
 /**
 * AfterUpdateFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterUpdateFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterUpdateFn(fn catalog.TriggerFunction) *Cmd {
 	s.afterUpdates = append(s.afterUpdates, fn)
 	return s
 }
 
 /**
 * BeforeDeleteFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) BeforeDeleteFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) BeforeDeleteFn(fn catalog.TriggerFunction) *Cmd {
 	s.beforeDeletes = append(s.beforeDeletes, fn)
 	return s
 }
 
 /**
 * AfterDeleteFn
-* @param fn TriggerFunction
+* @param fn catalog.TriggerFunction
 * @return *Cmd
 **/
-func (s *Cmd) AfterDeleteFn(fn TriggerFunction) *Cmd {
+func (s *Cmd) AfterDeleteFn(fn catalog.TriggerFunction) *Cmd {
 	s.afterDeletes = append(s.afterDeletes, fn)
 	return s
 }
 
 /**
 * runTrigger
-* @param event *EventTrigger, tx *Tx, old et.Json, new et.Json
+* @param event catalog.EventTrigger, tx *Tx, old et.Json, new et.Json
 * @return error
 **/
-func (s *Cmd) runTrigger(event EventTrigger, tx *Tx, old, new et.Json) error {
+func (s *Cmd) runTrigger(event catalog.EventTrigger, tx *catalog.Tx, old, new et.Json) error {
 	model := s.model
 	for _, tg := range model.Triggers {
 		if tg.Event != event {

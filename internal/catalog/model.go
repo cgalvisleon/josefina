@@ -67,12 +67,9 @@ const (
 )
 
 type Trigger struct {
-	Event      EventTrigger `json:"event"`
-	Name       string       `json:"name"`
-	Definition []byte       `json:"definition"`
+	Name       string `json:"name"`
+	Definition []byte `json:"definition"`
 }
-
-type TriggerFunction func(tx *Tx, old, new et.Json) error
 
 type Model struct {
 	*From         `json:"from"`
@@ -89,13 +86,12 @@ type Model struct {
 	Rollups       map[string]*Detail          `json:"rollups"`
 	Relations     map[string]*Detail          `json:"relations"`
 	Calcs         map[string][]byte           `json:"calcs"`
-	Triggers      []*Trigger                  `json:"triggers"`
-	beforeInserts []TriggerFunction           `json:"-"`
-	afterInserts  []TriggerFunction           `json:"-"`
-	beforeUpdates []TriggerFunction           `json:"-"`
-	afterUpdates  []TriggerFunction           `json:"-"`
-	beforeDeletes []TriggerFunction           `json:"-"`
-	afterDeletes  []TriggerFunction           `json:"-"`
+	BeforeInserts []*Trigger                  `json:"-"`
+	AfterInserts  []*Trigger                  `json:"-"`
+	BeforeUpdates []*Trigger                  `json:"-"`
+	AfterUpdates  []*Trigger                  `json:"-"`
+	BeforeDeletes []*Trigger                  `json:"-"`
+	AfterDeletes  []*Trigger                  `json:"-"`
 	Version       int                         `json:"version"`
 	IsCore        bool                        `json:"is_core"`
 	IsStrict      bool                        `json:"is_strict"`
@@ -498,11 +494,11 @@ func (s *Model) For(next func(idx string, item et.Json) (bool, error), asc bool,
 * @return void
 **/
 func (s *Model) AddBeforeInsert(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeInsert })
+	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.BeforeInserts[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeInsert, Name: name, Definition: definition})
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: definition})
 	}
 }
 
@@ -512,11 +508,11 @@ func (s *Model) AddBeforeInsert(name string, definition []byte) {
 * @return void
 **/
 func (s *Model) AddAfterInsert(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterInsert })
+	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.BeforeInserts[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterInsert, Name: name, Definition: definition})
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: definition})
 	}
 }
 
@@ -526,11 +522,11 @@ func (s *Model) AddAfterInsert(name string, definition []byte) {
 * @return void
 **/
 func (s *Model) AddBeforeUpdate(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeUpdate })
+	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.BeforeUpdates[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeUpdate, Name: name, Definition: definition})
+		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: definition})
 	}
 }
 
@@ -540,11 +536,11 @@ func (s *Model) AddBeforeUpdate(name string, definition []byte) {
 * @return void
 **/
 func (s *Model) AddAfterUpdate(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterUpdate })
+	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.AfterUpdates[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterUpdate, Name: name, Definition: definition})
+		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: definition})
 	}
 }
 
@@ -554,11 +550,11 @@ func (s *Model) AddAfterUpdate(name string, definition []byte) {
 * @return void
 **/
 func (s *Model) AddBeforeDelete(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == BeforeDelete })
+	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.BeforeDeletes[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: BeforeDelete, Name: name, Definition: definition})
+		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: definition})
 	}
 }
 
@@ -568,67 +564,10 @@ func (s *Model) AddBeforeDelete(name string, definition []byte) {
 * @return void
 **/
 func (s *Model) AddAfterDelete(name string, definition []byte) {
-	idx := slices.IndexFunc(s.Triggers, func(t *Trigger) bool { return t.Name == name && t.Event == AfterDelete })
+	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.Triggers[idx].Definition = definition
+		s.AfterDeletes[idx].Definition = definition
 	} else {
-		s.Triggers = append(s.Triggers, &Trigger{Event: AfterDelete, Name: name, Definition: definition})
+		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: definition})
 	}
-}
-
-/**
-* Insert: Inserts the model
-* @param data et.Json
-* @return *Cmd
-**/
-func (s *Model) Insert(data et.Json) *Cmd {
-	result := newCmd(s)
-	result.Insert(data)
-	return result
-}
-
-/**
-* update: Updates the model
-* @param data et.Json
-* @return *Cmd
-**/
-func (s *Model) Update(data et.Json) *Cmd {
-	result := newCmd(s)
-	result.Update(data)
-	return result
-}
-
-/**
-* Delete: Deletes the model
-* @return *Cmd
-**/
-func (s *Model) Delete() *Cmd {
-	result := newCmd(s)
-	result.Delete()
-	return result
-}
-
-/**
-* Upsert: Upserts the model
-* @param data et.Json
-* @return *Cmd
-**/
-func (s *Model) Upsert(data et.Json) *Cmd {
-	result := newCmd(s)
-	result.Upsert(data)
-	return result
-}
-
-/**
-* selects: Returns the select
-* @param fields ...string
-* @return *Wheres
-**/
-func (s *Model) Selects(fields ...string) *Wheres {
-	result := newWhere()
-	result.SetOwner(s)
-	for _, field := range fields {
-		result.selects = append(result.selects, field)
-	}
-	return result
 }
