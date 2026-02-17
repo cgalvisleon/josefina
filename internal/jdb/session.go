@@ -137,11 +137,11 @@ func (s *Node) initSessions() error {
 }
 
 /**
-* createSession: Creates a new session
+* CreateSession: Creates a new session
 * @param device, username string
 * @return *Session, error
 **/
-func (s *Node) createSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
+func (s *Node) CreateSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -173,6 +173,10 @@ func (s *Node) createSession(username, device string, tpConn TpConnection, datab
 	if err != nil {
 		return nil, err
 	}
+
+	s.muSession.Lock()
+	s.sessions[result.ID] = result
+	s.muSession.Unlock()
 
 	return result, nil
 }
