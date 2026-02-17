@@ -23,7 +23,11 @@ func initUsers() error {
 		return nil
 	}
 
-	db, err := catalog.CoreDb()
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
 	if err != nil {
 		return err
 	}

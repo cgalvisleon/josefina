@@ -123,6 +123,14 @@ func initSessions() error {
 	}
 
 	sessions, err = db.NewModel("", "sessions", true, 1)
+	sessions.DefineAtrib("id", catalog.TpKey, "")
+	sessions.DefineAtrib("device", catalog.TpText, "")
+	sessions.DefineAtrib("username", catalog.TpText, "")
+	sessions.DefineAtrib("address", catalog.TpText, "")
+	sessions.DefineAtrib("status", catalog.TpText, "")
+	sessions.DefineAtrib("type", catalog.TpText, "")
+	sessions.DefinePrimaryKeys("id")
+	sessions.DefineIndexes("device", "username", "status")
 	if err != nil {
 		return err
 	}
@@ -163,8 +171,7 @@ func (s *Node) CreateSession(username, device string, tpConn TpConnection, datab
 		return nil, err
 	}
 
-	key := result.Token
-	err = sessions.PutObject(key, bt)
+	err = sessions.PutObject(result.ID, bt)
 	if err != nil {
 		return nil, err
 	}
