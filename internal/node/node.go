@@ -28,6 +28,11 @@ type Node struct {
 	isDebug   bool                      `json:"-"`
 }
 
+const (
+	appName = "josefina"
+	version = "0.0.1"
+)
+
 var (
 	node *Node
 )
@@ -49,8 +54,8 @@ func Load(port int) *Node {
 
 	result := &Node{
 		Server:    tcp.NewServer(port),
-		app:       "josefina",
-		version:   "0.0.1",
+		app:       appName,
+		version:   version,
 		isStrict:  config.IsStrict,
 		dbs:       make(map[string]*catalog.DB),
 		models:    make(map[string]*catalog.Model),

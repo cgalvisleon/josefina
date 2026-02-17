@@ -1,9 +1,17 @@
 package node
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Status string
@@ -38,15 +46,17 @@ type Session struct {
 	Address   string       `json:"address"`
 	Status    Status       `json:"status"`
 	Type      TpConnection `json:"type"`
+	Device    string       `json:"device"`
 	Database  string       `json:"database"`
+	Token     string       `json:"-"`
 }
 
 /**
-* NewSession
+* newSession
 * @param username, address string, tp TpConnection, database string
 * @return *Session
 **/
-func NewSession(username, address string, tp TpConnection, database string) *Session {
+func newSession(username, device, address string, tp TpConnection, database string) *Session {
 	return &Session{
 		CreatedAt: time.Now(),
 		ID:        reg.ULID(),
@@ -54,6 +64,110 @@ func NewSession(username, address string, tp TpConnection, database string) *Ses
 		Address:   address,
 		Status:    Connected,
 		Type:      tp,
+		Token:     "",
 		Database:  database,
 	}
+}
+
+/**
+* Serialize
+* @return []byte, error
+**/
+func (s *Session) Serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s *Session) ToJson() (et.Json, error) {
+	definition, err := s.Serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
+}
+
+var sessions *catalog.Model
+
+/**
+* initSessions: Initializes the sessions model
+* @param db *DB
+* @return error
+**/
+func initSessions() error {
+	if sessions != nil {
+		return nil
+	}
+
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
+	if err != nil {
+		return err
+	}
+
+	sessions, err = db.NewModel("", "sessions", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := sessions.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* CreateSession: Creates a new session
+* @param device, username string
+* @return *Session, error
+**/
+func (s *Node) CreateSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(device, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
+	}
+
+	token, err := claim.NewToken(appName, device, username, et.Json{}, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	result := newSession(username, device, s.Address(), tpConn, database)
+	result.Token = token
+	err = initSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	bt, err := result.ToJson()
+	if err != nil {
+		return nil, err
+	}
+
+	key := result.Token
+	err = sessions.PutObject(key, bt)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
