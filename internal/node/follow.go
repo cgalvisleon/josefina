@@ -26,6 +26,7 @@ func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 		return nil, err
 	}
 
+	model.Address = node.Address()
 	node.muModel.Lock()
 	node.models[model.Key()] = model
 	node.muModel.Unlock()
