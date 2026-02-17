@@ -55,3 +55,12 @@ func (s *Server) Start() error {
 func (s *Server) Authenticate(token string) (*claim.Claim, error) {
 	return s.node.Authenticate(token)
 }
+
+/**
+* SignIn
+* @param device, username, password string, tpConn jdb.TpConnection, database string
+* @return *Session, error
+**/
+func (s *Server) SignIn(device, username, password string, tpConn jdb.TpConnection, database string) (*jdb.Session, error) {
+	return s.node.SignIn(device, username, password, tpConn, database)
+}

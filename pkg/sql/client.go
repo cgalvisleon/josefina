@@ -1,34 +1,118 @@
 package sql
 
 import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	lg "github.com/cgalvisleon/et/stdrout"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/josefina/pkg/cli"
+	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
 type Client struct {
-	node     *tcp.Client
-	cli      *cli.Console
+	*tcp.Client
+	addr     string
+	session  *jdb.Session
 	user     string
-	password string
 	database string
 }
 
-func NewClient(host, user, password, database string) *Client {
+/**
+* NewClient
+* @param host, user, password, database string
+* @return *Client
+**/
+func NewClient(host, user, password, database string) (*Client, error) {
 	result := &Client{
-		node:     tcp.NewClient(host),
+		Client:   tcp.NewClient(host),
+		addr:     host,
 		user:     user,
-		password: password,
 		database: database,
 	}
-	// result.cli = cli.NewConsole(result.node)
-
-	return result
-}
-
-func (s *Client) Start() {
-	if s.node != nil {
-		s.node.Start()
+	res := result.Request("Lead.SignIn", user, password, jdb.TCP, database)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
-	go s.cli.Start()
+	var session *jdb.Session
+	err := res.Get(&session)
+	if err != nil {
+		return nil, err
+	}
+
+	result.session = session
+
+	return result, nil
+}
+
+/**
+* Start
+* @return
+**/
+func (s *Client) Start() {
+	reader := bufio.NewReader(os.Stdin)
+
+	w := lg.Color(nil, lg.Blue, "\n===================================")
+	lg.Color(w, lg.Blue, "\n  TCP Client Console")
+	lg.Color(w, lg.Blue, "\n  Escribe 'help' para comandos")
+	lg.Color(w, lg.Blue, "\n===================================")
+	println(*w)
+
+	for {
+		w := lg.Color(nil, lg.Reset, "> ")
+		fmt.Print(*w)
+
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error leyendo comando:", err)
+			continue
+		}
+
+		input = strings.TrimSpace(input)
+		s.handleCommand(input)
+	}
+}
+
+/**
+* handleCommand
+* @param cmd string
+**/
+func (s *Client) handleCommand(cmd string) {
+	args := strings.Split(cmd, " ")
+
+	switch args[0] {
+
+	case "help":
+		fmt.Println("Comandos disponibles:")
+		fmt.Println("  help        - mostrar comandos")
+		fmt.Println("  nodes       - listar nodos")
+		fmt.Println("  clients     - listar clientes")
+		fmt.Println("  leader      - mostrar líder")
+		fmt.Println("  stats       - estadísticas")
+		fmt.Println("  stop        - detener servidor")
+
+	case "nodes":
+		fmt.Println("Nodos:")
+
+	case "clients":
+		fmt.Println("Clientes:")
+		fmt.Println("  ", s.addr)
+	case "leader":
+		fmt.Println("Leader:", s.addr)
+
+	case "stats":
+		fmt.Println("Estadísticas:")
+		fmt.Println("  Nodos:", 0)
+		fmt.Println("  Clientes:", 1)
+		fmt.Println("  Líder:", s.addr)
+
+	case "stop":
+		fmt.Println("Deteniendo cliente...")
+		os.Exit(0)
+
+	default:
+		fmt.Println("Comando no reconocido:", cmd)
+	}
 }

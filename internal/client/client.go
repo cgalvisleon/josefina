@@ -14,16 +14,21 @@ type Service struct {
 	node *sql.Client
 }
 
-func New() *Service {
+func New() (*Service, error) {
 	user := envar.GetStr("USER", "admin")
 	password := envar.GetStr("PASSWORD", "admin")
 	host := envar.GetStr("HOST", "localhost:1377")
 	database := envar.GetStr("DATABASE", "josefina")
-	result := &Service{
-		node: sql.NewClient(host, user, password, database),
+	client, err := sql.NewClient(host, user, password, database)
+	if err != nil {
+		return nil, err
 	}
 
-	return result
+	result := &Service{
+		node: client,
+	}
+
+	return result, nil
 }
 
 /**
@@ -31,7 +36,7 @@ func New() *Service {
 * @return
 **/
 func (s *Service) Start() {
-	s.node.Start()
+	go s.node.Start()
 
 	utility.AppWait()
 
