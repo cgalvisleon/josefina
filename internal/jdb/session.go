@@ -137,11 +137,11 @@ func (s *Node) initSessions() error {
 }
 
 /**
-* CreateSession: Creates a new session
+* createSession: Creates a new session
 * @param device, username string
 * @return *Session, error
 **/
-func (s *Node) CreateSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
+func (s *Node) createSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}

@@ -1,4 +1,4 @@
-package jdb
+package server
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/core"
+	"github.com/cgalvisleon/josefina/internal/jdb"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -44,7 +44,7 @@ func Authenticate(next http.Handler) http.Handler {
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, username, password string) (*core.Session, error) {
+func SignIn(device, username, password string) (*jdb.Session, error) {
 	if !node.started {
 		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
 	}

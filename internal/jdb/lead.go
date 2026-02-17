@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -325,4 +326,59 @@ func (s *Lead) GetCache(key string, dest any) error {
 	}
 
 	return nil
+}
+
+/**
+* CreateSerie: Creates a new serie
+* @param tag, format string, value int
+* @return error
+**/
+func (s *Lead) CreateSerie(tag, format string, value int) error {
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	err := s.node.initSeries()
+	if err != nil {
+		return err
+	}
+
+	if format == "" {
+		format = `%d`
+	}
+
+	_, err = Insert(series,
+		et.Json{
+			"tag":    tag,
+			"value":  value,
+			"format": format,
+		}).
+		Execute(nil)
+
+	return err
+}
+
+/**
+* SetSerie: Sets a serie
+* @param tag string, value int
+* @return error
+**/
+func (s *Lead) SetSerie(tag string, value int) error {
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	err := s.node.initSeries()
+	if err != nil {
+		return err
+	}
+
+	_, err = Update(series,
+		et.Json{
+			"value": value,
+		}).
+		Where(Eq("tag", tag)).
+		Execute(nil)
+
+	return err
 }

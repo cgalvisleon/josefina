@@ -3,8 +3,8 @@ package client
 import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/jdb"
 	"github.com/cgalvisleon/josefina/pkg/cli"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
 var (

@@ -48,27 +48,20 @@ func (s *Node) initSeries() error {
 * @return error
 **/
 func (s *Node) CreateSerie(tag, format string, value int) error {
-	if !utility.ValidStr(tag, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.CreateSerie(tag, format, value)
 	}
 
-	err := s.initSeries()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.CreateSerie", tag, format, value)
+		if res.Error != nil {
+			return res.Error
+		}
+		return nil
 	}
 
-	if format == "" {
-		format = `%d`
-	}
-
-	_, err = Insert(series,
-		et.Json{
-			"tag":    tag,
-			"value":  value,
-			"format": format,
-		}).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	lg "github.com/cgalvisleon/et/stdrout"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
+	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
 type Console struct {

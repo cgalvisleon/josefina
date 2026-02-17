@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/claim"
+	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 /**
-* Authenticate: Authenticates a user
+* authenticate: Authenticates a user
 * @param token string
 * @return *claim.Token, error
 **/
-func (s *Node) Authenticate(token string) (*claim.Claim, error) {
+func (s *Node) authenticate(token string) (*claim.Claim, error) {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
@@ -49,25 +50,31 @@ func (s *Node) Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Node) SignIn(device, username, password string, tpConn TpConnection, database string) (*Session, error) {
-	item, err := s.GetUser(username, password)
+func SignIn(device, username, password string, tpConn TpConnection, database string) (*tcp.Client, error) {
+	if node == nil {
+		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
+	}
+
+	user, err := node.GetUser(username, password)
 	if err != nil {
 		return nil, err
 	}
-	if len(item) == 0 {
+
+	if !user.Ok {
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := s.CreateSession(device, username, tpConn, database)
+	session, err := node.CreateSession(device, username, tpConn, database)
 	if err != nil {
 		return nil, err
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	err = s.SetCache(key, result, 0)
+	err = node.SetCache(key, session, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	client := tcp.NewClient(session.Address)
+	return client, nil
 }

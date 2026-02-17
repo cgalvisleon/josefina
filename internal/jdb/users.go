@@ -116,19 +116,19 @@ func (s *Node) DropUser(username, password string) error {
 /**
 * GetUser: Gets a user
 * @param username, password string
-* @return et.Json, error
+* @return et.Item, error
 **/
-func (s *Node) GetUser(username, password string) (et.Json, error) {
+func (s *Node) GetUser(username, password string) (et.Item, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 	if !utility.ValidStr(password, 3, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
 	err := s.initUsers()
 	if err != nil {
-		return nil, err
+		return et.Item{}, err
 	}
 
 	item, err := Select(users).
@@ -136,13 +136,11 @@ func (s *Node) GetUser(username, password string) (et.Json, error) {
 		And(Eq("password", password)).
 		Run(nil)
 	if err != nil {
-		return nil, err
-	}
-	if len(item) == 0 {
-		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
+		return et.Item{}, err
 	}
 
-	return item[0], nil
+	result := et.NewItem(item[0])
+	return result, nil
 }
 
 /**

@@ -1,4 +1,4 @@
-package jdb
+package server
 
 import (
 	"sync"

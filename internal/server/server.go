@@ -8,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/ws"
 
 	api "github.com/cgalvisleon/josefina/pkg/http"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/cgalvisleon/josefina/pkg/websocket"
 )
 

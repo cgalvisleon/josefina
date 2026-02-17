@@ -1,4 +1,4 @@
-package jdb
+package server
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
