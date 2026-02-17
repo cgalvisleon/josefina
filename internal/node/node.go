@@ -2,13 +2,11 @@ package node
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -193,16 +191,11 @@ func (s *Node) PutObject(from *catalog.From, idx string, data et.Json) error {
 }
 
 /**
-* createDb: Creates a new database
-* @param name string
+* coreDb: Creates the core database
 * @return *catalog.DB, error
 **/
-func (s *Node) createDb(name string) (*catalog.DB, error) {
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
+func (s *Node) coreDb() (*catalog.DB, error) {
+	name := "josefina"
 	s.muDB.Lock()
 	result, ok := s.dbs[name]
 	s.muDB.Unlock()
@@ -219,14 +212,6 @@ func (s *Node) createDb(name string) (*catalog.DB, error) {
 	s.muDB.Unlock()
 
 	return result, nil
-}
-
-/**
-* coreDb: Creates the core database
-* @return *catalog.DB, error
-**/
-func (s *Node) coreDb() (*catalog.DB, error) {
-	return s.createDb("josefina")
 }
 
 /**

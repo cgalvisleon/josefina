@@ -55,9 +55,9 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	node.muDB.Lock()
+	node.muDB.RLock()
 	result, ok := node.dbs[name]
-	node.muDB.Unlock()
+	node.muDB.RUnlock()
 	if ok {
 		return result, nil
 	}
@@ -72,21 +72,16 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 		return nil, err
 	}
 
-	if exists {
-		node.muDB.Lock()
-		node.dbs[name] = result
-		node.muDB.Unlock()
-		return result, nil
-	}
+	if !exists {
+		result, err = catalog.NewDb(name)
+		if err != nil {
+			return nil, err
+		}
 
-	result, err = catalog.NewDb(name)
-	if err != nil {
-		return nil, err
-	}
-
-	err = dbs.Put(name, result)
-	if err != nil {
-		return nil, err
+		err = dbs.Put(name, result)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	node.muDB.Lock()
@@ -125,52 +120,54 @@ func (s *Lead) DropDb(name string) error {
 * @return *catalog.Model, bool
 **/
 func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.GetModel", from)
-		if res.Error != nil {
-			return nil, false
-		}
-
-		var result *catalog.Model
-		var exists bool
-		err := res.Get(&result, &exists)
-		if err != nil {
-			return nil, false
-		}
-
-		return result, exists
-	}
-
 	key := from.Key()
 	node.muModel.RLock()
 	result, ok := node.models[key]
 	node.muModel.RUnlock()
+	if ok {
+		return result, true
+	}
 
-	return result, ok
+	err := initModels()
+	if err != nil {
+		return nil, false
+	}
+
+	exists, err := models.Get(key, result)
+	if err != nil {
+		return nil, false
+	}
+
+	if exists {
+		node.muModel.Lock()
+		node.models[key] = result
+		node.muModel.Unlock()
+		return result, true
+	}
+
+	return nil, false
 }
 
 /**
-* RemoveModel: Drops a model
-* @param key string
+* DropModel: Drops a model
+* @param from *catalog.From
 * @return error
 **/
-func (s *Lead) RemoveModel(key string) error {
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.RemoveModel", key)
-		if res.Error != nil {
-			return res.Error
-		}
+func (s *Lead) DropModel(from *catalog.From) error {
+	key := from.Key()
+	err := initModels()
+	if err != nil {
+		return err
+	}
 
-		return nil
+	key = utility.Normalize(key)
+	err = models.Remove(key)
+	if err != nil {
+		return err
 	}
 
 	node.muModel.Lock()
-	_, ok := node.models[key]
-	if ok {
-		delete(node.models, key)
-	}
+	delete(node.models, key)
 	node.muModel.Unlock()
 
 	return nil

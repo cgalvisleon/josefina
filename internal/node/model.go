@@ -3,99 +3,64 @@ package node
 import (
 	"errors"
 
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (
-	ErrorRecordNotFound      = errors.New(msg.MSG_RECORD_NOT_FOUND)
-	ErrorPrimaryKeysNotFound = errors.New(msg.MSG_PRIMARY_KEYS_NOT_FOUND)
-	ErrorModelNotFound       = errors.New(msg.MSG_MODEL_NOT_FOUND)
+	models *catalog.Model
 )
 
 /**
-* Insert: Inserts the model
-* @param data et.Json
-* @return *Cmd
-**/
-func Insert(m *catalog.Model, data et.Json) *Cmd {
-	result := newCmd(m)
-	result.Insert(data)
-	return result
-}
-
-/**
-* update: Updates the model
-* @param data et.Json
-* @return *Cmd
-**/
-func Update(m *catalog.Model, data et.Json) *Cmd {
-	result := newCmd(m)
-	result.Update(data)
-	return result
-}
-
-/**
-* Delete: Deletes the model
-* @return *Cmd
-**/
-func Delete(m *catalog.Model) *Cmd {
-	result := newCmd(m)
-	result.Delete()
-	return result
-}
-
-/**
-* Upsert: Upserts the model
-* @param data et.Json
-* @return *Cmd
-**/
-func Upsert(m *catalog.Model, data et.Json) *Cmd {
-	result := newCmd(m)
-	result.Upsert(data)
-	return result
-}
-
-/**
-* Selects: Returns the select
-* @param fields ...string
-* @return *Wheres
-**/
-func Selects(m *catalog.Model, fields ...string) *Wheres {
-	result := newWhere()
-	result.SetOwner(m)
-	for _, field := range fields {
-		result.selects = append(result.selects, field)
-	}
-	return result
-}
-
-/**
-* commit: Commits the Transaction
+* initModels: Initializes the models model
 * @return error
 **/
-func Commit(tx *Tx) error {
-	for i, tr := range tx.Transactions {
-		cmd := tr.Command
-		idx := tr.Idx
-		if cmd == DELETE {
-			err := node.RemoveObject(tr.From, idx)
-			if err != nil {
-				return err
-			}
-		} else {
-			data := tr.Data
-			err := node.PutObject(tr.From, idx, data)
-			if err != nil {
-				return err
-			}
-		}
-		err := tx.SetStatus(i, catalog.Processed)
-		if err != nil {
-			return err
-		}
+func initModels() error {
+	if models != nil {
+		return nil
+	}
+
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
+	if err != nil {
+		return err
+	}
+
+	models, err = db.NewModel("", "models", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := models.Init(); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+/**
+* getModel: Gets a model
+* @param from *catalog.From
+* @return *catalog.Model, bool
+**/
+func (s *Node) GetModel(from *catalog.From) (*catalog.Model, bool) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.GetModel", from)
+		if res.Error != nil {
+			return nil, false
+		}
+
+		var result *catalog.Model
+		err := res.Get(&result)
+		if err != nil {
+			return nil, false
+		}
+
+		return result, true
+	}
+
+	return s.lead.GetModel(from)
 }

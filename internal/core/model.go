@@ -81,32 +81,6 @@ func CreateModel(database, schema, name string, version int) (*catalog.Model, er
 }
 
 /**
-* getModel: Gets a model
-* @param from *catalog.From, dest *catalog.Model
-* @return bool, error
-**/
-func GetModel(from *catalog.From, dest *catalog.Model) (bool, error) {
-	result, exists := catalog.GetModel(from)
-	if exists {
-		*dest = *result
-		return true, nil
-	}
-
-	err := initModels()
-	if err != nil {
-		return false, err
-	}
-
-	key := from.Key()
-	exists, err = models.Get(key, &dest)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
-}
-
-/**
 * DropModel: Removes a model
 * @param from *catalog.From
 * @return error
