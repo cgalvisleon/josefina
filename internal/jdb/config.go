@@ -1,4 +1,4 @@
-package core
+package jdb
 
 import (
 	"github.com/cgalvisleon/et/file"

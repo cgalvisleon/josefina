@@ -1,4 +1,4 @@
-package core
+package jdb
 
 import (
 	"encoding/json"
