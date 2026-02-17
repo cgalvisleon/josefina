@@ -157,12 +157,11 @@ func (s *Tx) ToJson() (et.Json, error) {
 **/
 func (s *Tx) change() error {
 	s.EndedAt = timezone.Now()
-	data, err := s.ToJson()
-	if err != nil {
-		return err
-	}
-
 	if s.isDebug {
+		data, err := s.ToJson()
+		if err != nil {
+			return err
+		}
 		logs.Debug(data.ToString())
 	}
 
