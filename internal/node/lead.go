@@ -28,7 +28,7 @@ func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 		return result, true
 	}
 
-	err := initDbs()
+	err := s.node.initDbs()
 	if err != nil {
 		return nil, false
 	}
@@ -66,7 +66,7 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 		return result, nil
 	}
 
-	err := initDbs()
+	err := s.node.initDbs()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 * @param name string
 **/
 func (s *Lead) DropDb(name string) error {
-	err := initDbs()
+	err := s.node.initDbs()
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 		return nil
 	}
 
-	err := initCache()
+	err := s.node.initCache()
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (s *Lead) DeleteCache(key string) error {
 	delete(s.node.cache, key)
 	s.node.muCache.Unlock()
 
-	err := initCache()
+	err := s.node.initCache()
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func (s *Lead) ExistsCache(key string) (bool, error) {
 		return true, nil
 	}
 
-	err := initCache()
+	err := s.node.initCache()
 	if err != nil {
 		return false, err
 	}
@@ -314,7 +314,7 @@ func (s *Lead) GetCache(key string, dest any) error {
 		return nil
 	}
 
-	err := initCache()
+	err := s.node.initCache()
 	if err != nil {
 		return err
 	}

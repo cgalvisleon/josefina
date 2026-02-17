@@ -13,12 +13,12 @@ var dbs *catalog.Model
 * initDbs: Initializes the dbs model
 * @return error
 **/
-func initDbs(node *Node) error {
+func (s *Node) initDbs() error {
 	if dbs != nil {
 		return nil
 	}
 
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}

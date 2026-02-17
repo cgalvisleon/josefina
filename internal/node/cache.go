@@ -13,12 +13,12 @@ var cache *catalog.Model
 * initCache: Initializes the cache model
 * @return error
 **/
-func initCache(node *Node) error {
+func (s *Node) initCache() error {
 	if cache != nil {
 		return nil
 	}
 
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}
