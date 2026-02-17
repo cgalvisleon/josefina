@@ -86,8 +86,8 @@ func CreateUser(username, password string) error {
 		return err
 	}
 
-	_, err = users.
-		Insert(et.Json{
+	_, err = Insert(users,
+		et.Json{
 			catalog.ID: users.GenKey(),
 			"username": username,
 			"password": password,
@@ -111,9 +111,8 @@ func DropUser(username, password string) error {
 		return err
 	}
 
-	_, err = users.
-		Delete().
-		Where(catalog.Eq("username", username)).
+	_, err = Delete(users).
+		Where(Eq("username", username)).
 		Execute(nil)
 	return err
 }
@@ -136,10 +135,9 @@ func GetUser(username, password string) (et.Json, error) {
 		return nil, err
 	}
 
-	item, err := users.
-		Selects().
-		Where(catalog.Eq("username", username)).
-		And(catalog.Eq("password", password)).
+	item, err := Select(users).
+		Where(Eq("username", username)).
+		And(Eq("password", password)).
 		Run(nil)
 	if err != nil {
 		return nil, err
@@ -181,12 +179,12 @@ func ChanguePassword(username, oldPassword, newPassword string) error {
 		return errors.New(msg.MSG_USER_NOT_FOUND)
 	}
 
-	_, err = users.
-		Update(et.Json{
+	_, err = Update(users,
+		et.Json{
 			"password": newPassword,
 		}).
-		Where(catalog.Eq("username", username)).
-		And(catalog.Eq("password", oldPassword)).
+		Where(Eq("username", username)).
+		And(Eq("password", oldPassword)).
 		Execute(nil)
 	return err
 }

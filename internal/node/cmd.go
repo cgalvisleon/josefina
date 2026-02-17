@@ -572,11 +572,11 @@ func Upsert(m *catalog.Model, data et.Json) *Cmd {
 }
 
 /**
-* Selects: Returns the select
+* Select: Selects the model
 * @param fields ...string
 * @return *Wheres
 **/
-func Selects(m *catalog.Model, fields ...string) *Wheres {
+func Select(m *catalog.Model, fields ...string) *Wheres {
 	result := newWhere()
 	result.SetOwner(m)
 	for _, field := range fields {

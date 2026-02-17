@@ -287,11 +287,11 @@ func getBetweenRange(v any) (min any, max any, ok bool) {
 }
 
 /**
-* Select
+* selects
 * @param keys []string, object et.Json
 * @return et.Json
 **/
-func Select(keys []string, object et.Json) et.Json {
+func selects(keys []string, object et.Json) et.Json {
 	result := et.Json{}
 	for _, key := range keys {
 		val, ok := object[key]
@@ -304,11 +304,11 @@ func Select(keys []string, object et.Json) et.Json {
 }
 
 /**
-* Hidden
+* hidden
 * @param keys []string, object et.Json
 * @return et.Json
 **/
-func Hidden(keys []string, object et.Json) et.Json {
+func hidden(keys []string, object et.Json) et.Json {
 	result := et.Json{}
 	for key, value := range object {
 		if slices.Contains(keys, key) {
