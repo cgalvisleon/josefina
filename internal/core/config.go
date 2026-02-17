@@ -1,4 +1,4 @@
-package node
+package core
 
 import (
 	"github.com/cgalvisleon/et/file"

@@ -14,7 +14,7 @@ import (
 var (
 	appName string = "josefina"
 	version string = "0.0.1"
-	node    *Node
+	node    *node.Node
 )
 
 /**
@@ -33,7 +33,7 @@ func Load() error {
 
 	port := envar.GetInt("TCP_PORT", 1377)
 	isStrict := config.IsStrict
-	node = newNode(port, isStrict)
+	node = node.NewNode(port, isStrict)
 
 	// err := catalog.Load(node.Address())
 	// if err != nil {
