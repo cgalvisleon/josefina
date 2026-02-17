@@ -2,11 +2,9 @@ package jdb
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -70,26 +68,20 @@ func (s *Node) initUsers() error {
 * @return error
 **/
 func (s *Node) CreateUser(username, password string) error {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(password, 3, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.CreateUser(username, password)
 	}
 
-	err := s.initUsers()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.CreateUser", username, password)
+		if res.Error != nil {
+			return res.Error
+		}
+		return nil
 	}
 
-	_, err = Insert(users,
-		et.Json{
-			catalog.ID: users.GenKey(),
-			"username": username,
-			"password": password,
-		}).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
@@ -98,19 +90,20 @@ func (s *Node) CreateUser(username, password string) error {
 * @return error
 **/
 func (s *Node) DropUser(username, password string) error {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.DropUser(username, password)
 	}
 
-	err := s.initUsers()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.DropUser", username, password)
+		if res.Error != nil {
+			return res.Error
+		}
+		return nil
 	}
 
-	_, err = Delete(users).
-		Where(Eq("username", username)).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
@@ -119,28 +112,26 @@ func (s *Node) DropUser(username, password string) error {
 * @return et.Item, error
 **/
 func (s *Node) GetUser(username, password string) (et.Item, error) {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(password, 3, []string{""}) {
-		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.GetUser(username, password)
 	}
 
-	err := s.initUsers()
-	if err != nil {
-		return et.Item{}, err
+	if leader != nil {
+		res := s.Request(leader, "Leader.GetUser", username, password)
+		if res.Error != nil {
+			return et.Item{}, res.Error
+		}
+
+		var result et.Item
+		err := res.Get(&result)
+		if err != nil {
+			return et.Item{}, err
+		}
+		return result, nil
 	}
 
-	item, err := Select(users).
-		Where(Eq("username", username)).
-		And(Eq("password", password)).
-		Run(nil)
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	result := et.NewItem(item[0])
-	return result, nil
+	return et.Item{}, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
@@ -149,36 +140,19 @@ func (s *Node) GetUser(username, password string) (et.Item, error) {
 * @return error
 **/
 func (s *Node) ChanguePassword(username, oldPassword, newPassword string) error {
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(oldPassword, 6, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "oldPassword")
-	}
-	if !utility.ValidStr(newPassword, 6, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "newPassword")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.ChanguePassword(username, oldPassword, newPassword)
 	}
 
-	err := s.initUsers()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.ChanguePassword", username, oldPassword, newPassword)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		return nil
 	}
 
-	ok, err := users.IsExisted("username", username)
-	if err != nil {
-		return err
-	}
-
-	if !ok {
-		return errors.New(msg.MSG_USER_NOT_FOUND)
-	}
-
-	_, err = Update(users,
-		et.Json{
-			"password": newPassword,
-		}).
-		Where(Eq("username", username)).
-		And(Eq("password", oldPassword)).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
