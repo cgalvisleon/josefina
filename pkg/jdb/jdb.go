@@ -8,13 +8,14 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/cache"
+	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 var (
 	appName string = "josefina"
 	version string = "0.0.1"
-	node    *node.Node
+	node    *core.Node
 )
 
 /**
@@ -26,14 +27,8 @@ func Load() error {
 		return nil
 	}
 
-	config, err := getConfig()
-	if err != nil {
-		return err
-	}
-
 	port := envar.GetInt("TCP_PORT", 1377)
-	isStrict := config.IsStrict
-	node = node.NewNode(port, isStrict)
+	node = core.Load(port)
 
 	// err := catalog.Load(node.Address())
 	// if err != nil {
@@ -50,7 +45,7 @@ func Load() error {
 	// 	return err
 	// }
 
-	go node.start()
+	go node.Start()
 
 	return nil
 }
