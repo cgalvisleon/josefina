@@ -91,3 +91,60 @@ func (s *Node) DropModel(from *catalog.From) error {
 
 	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
+
+/**
+* SaveModel
+* @param model *catalog.Model
+* @return error
+**/
+func (s *Node) SaveModel(model *catalog.Model) error {
+	leader, imLeader := node.GetLeader()
+	if imLeader {
+		return s.lead.SaveModel(model)
+	}
+
+	if leader != nil {
+		res := node.Request(leader, "Leader.SaveModel", model)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		return nil
+	}
+
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
+}
+
+/**
+* CreateModel: Creates a model
+* @param from *catalog.From
+* @return *catalog.Model, error
+**/
+func (s *Node) CreateModel(database, schema, name string, version int) (*catalog.Model, error) {
+	result, exists := s.GetModel(&catalog.From{
+		Database: database,
+		Schema:   schema,
+		Name:     name,
+	})
+
+	if exists {
+		return nil, errors.New(msg.MSG_MODEL_EXISTS)
+	}
+
+	db, exists := s.GetDb(database)
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	result, err := db.NewModel(schema, name, false, version)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.SaveModel(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

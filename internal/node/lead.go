@@ -183,3 +183,23 @@ func (s *Lead) DropModel(from *catalog.From) error {
 
 	return nil
 }
+
+/**
+* SaveModel: Saves a model
+* @param model *catalog.Model
+* @return error
+**/
+func (s *Lead) SaveModel(model *catalog.Model) error {
+	err := initModels()
+	if err != nil {
+		return err
+	}
+
+	key := model.Key()
+	err = models.Put(key, model)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
