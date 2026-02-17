@@ -14,7 +14,7 @@ import (
 * @param token string
 * @return *claim.Token, error
 **/
-func Authenticate(token string) (*claim.Claim, error) {
+func (s *Node) Authenticate(token string) (*claim.Claim, error) {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
@@ -26,15 +26,18 @@ func Authenticate(token string) (*claim.Claim, error) {
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-	session, exists, err := cache.GetStr(key)
+
+	var session *Session
+	err = s.GetCache(key, &session)
 	if err != nil {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
-	if !exists {
+
+	if session == nil {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
 
-	if session != token {
+	if session.Token != token {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
 
@@ -61,7 +64,7 @@ func (s *Node) SignIn(device, username, password string, tpConn TpConnection, da
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	err = s.SetCache(key, result.Token, 0)
+	err = s.SetCache(key, result, 0)
 	if err != nil {
 		return nil, err
 	}

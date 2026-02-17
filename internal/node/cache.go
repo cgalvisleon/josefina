@@ -159,35 +159,11 @@ func (s *Node) ExistsCache(key string) (bool, error) {
 * @param key string
 * @return *mem.Entry
 **/
-func (s *Node) GetCache(key string) (*mem.Entry, bool) {
-	value, exists := mem.GetEntry(key)
-	if exists {
-		return value, true
+func (s *Node) GetCache(key string, dest any) error {
+	_, imLeader := node.GetLeader()
+	if imLeader {
+		return s.lead.GetCache(key, dest)
 	}
 
-	set := func(result *mem.Entry, exists bool) (*mem.Entry, bool) {
-		expiration := result.Expiration
-		if expiration != 0 {
-			expiration = result.Expiration - time.Since(result.LastUpdate)
-		}
-		mem.Set(key, result.Value, expiration)
-		return result, exists
-	}
-
-	err := initCache()
-	if err != nil {
-		return nil, false
-	}
-
-	result := mem.Entry{}
-	exists, err = cache.Get(key, &result)
-	if err != nil {
-		return nil, false
-	}
-
-	if !exists {
-		return nil, false
-	}
-
-	return set(&result, exists)
+	return s.follow.GetCache(key, dest)
 }
