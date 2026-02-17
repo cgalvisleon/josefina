@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/mem"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
@@ -65,26 +66,37 @@ func setCache(key string, value interface{}, duration time.Duration) (*mem.Entry
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {	
+func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {
 	leader, imLeader := node.GetLeader()
 	if imLeader {
-		return s.lead.SetCache(key, value, duration)
+		return s.lead.SetCache(key, value, time.Time{}, duration)
 	}
 
-	if leader != nil {
-		res := node.Request(leader, "Leader.SetCache", from)
-		if res.Error != nil {
-			return nil, false
-		}
-
-		var result *catalog.Model
-		err := res.Get(&result)
-		if err != nil {
-			return nil, false
-		}
-
-		return nil
+	now := timezone.Now()
+	err := s.follow.SetCache(key, value, time.Time{}, duration)
+	if err != nil {
+		return err
 	}
+
+	go func() {
+		for _, peer := range node.Peers {
+			if peer.Addr == s.Address() {
+				continue
+			}
+
+			if peer.Addr == leader.Addr {
+				res := node.Request(leader, "Leader.SetCache", key, value, now, duration)
+				if res.Error != nil {
+					return
+				}
+			} else {
+				res := node.Request(peer, "Follow.SetCache", key, value, now, duration)
+				if res.Error != nil {
+					return
+				}
+			}
+		}
+	}()
 
 	return nil
 }

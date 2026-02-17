@@ -6,7 +6,6 @@ import (
 
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/cache"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -62,7 +61,7 @@ func (s *Node) SignIn(device, username, password string, tpConn TpConnection, da
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	_, err = cache.Set(key, result.Token, 0)
+	err = s.SetCache(key, result.Token, 0)
 	if err != nil {
 		return nil, err
 	}

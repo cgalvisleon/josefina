@@ -112,10 +112,18 @@ func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 
 /**
 * SetCache: Sets a cache value
-* @param key string, value interface{}, duration time.Duration
+* @param key string, value interface{}, now time.Time, duration time.Duration
 * @return error
 **/
-func (s *Follow) SetCache(key string, value interface{}, duration time.Duration) error {
+func (s *Follow) SetCache(key string, value interface{}, now time.Time, duration time.Duration) error {
+	if !now.IsZero() {
+		elapsed := time.Since(now)
+		duration -= elapsed
+		if duration == 0 {
+			return nil
+		}
+	}
+
 	node.muCache.Lock()
 	node.cache[key] = value
 	node.muCache.Unlock()
