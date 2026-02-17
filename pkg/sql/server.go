@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
@@ -9,17 +10,23 @@ type Server struct {
 	started bool
 }
 
+var srv *Server
+
 /**
 * NewServer
 * @param port int
 * @return *Server
 **/
 func NewServer(port int) *Server {
-	result := &Server{
+	if srv != nil {
+		return srv
+	}
+
+	srv = &Server{
 		node: jdb.Load(port),
 	}
 
-	return result
+	return srv
 }
 
 /**
@@ -38,4 +45,13 @@ func (s *Server) Start() error {
 
 	s.started = true
 	return nil
+}
+
+/**
+* Authenticate
+* @param token string
+* @return *claim.Claim, error
+**/
+func (s *Server) Authenticate(token string) (*claim.Claim, error) {
+	return s.node.Authenticate(token)
 }

@@ -18,13 +18,13 @@ import (
 **/
 func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !node.started {
+		if !srv.started {
 			response.HTTPError(w, r, http.StatusUnauthorized, msg.MSG_JOSEFINA_NOT_STARTED)
 			return
 		}
 
 		token := r.Header.Get("Authorization")
-		result, err := core.Authenticate(token)
+		result, err := srv.Authenticate(token)
 		if err != nil {
 			response.HTTPError(w, r, http.StatusUnauthorized, msg.MSG_CLIENT_NOT_AUTHENTICATION)
 			return
@@ -45,7 +45,7 @@ func Authenticate(next http.Handler) http.Handler {
 * @return *Session, error
 **/
 func SignIn(device, username, password string) (*jdb.Session, error) {
-	if !node.started {
+	if !srv.started {
 		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
 	}
 	if !utility.ValidStr(username, 0, []string{""}) {
@@ -55,5 +55,5 @@ func SignIn(device, username, password string) (*jdb.Session, error) {
 		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
 	}
 
-	return core.SignIn(device, username, password)
+	return srv.node.SignIn(device, username, password)
 }

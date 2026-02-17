@@ -15,7 +15,7 @@ import (
 * @param token string
 * @return *claim.Token, error
 **/
-func (s *Node) authenticate(token string) (*claim.Claim, error) {
+func (s *Node) Authenticate(token string) (*claim.Claim, error) {
 	if !utility.ValidStr(token, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}

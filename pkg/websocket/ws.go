@@ -5,7 +5,6 @@ import (
 
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/ws"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -18,7 +17,7 @@ func New() *ws.Hub {
 		hub = ws.New()
 	}
 
-	hub.OnListener(onListener)
+	// hub.OnListener(onListener)
 
 	return hub
 }
@@ -33,10 +32,10 @@ func Init() http.Handler {
 
 	r := chi.NewRouter()
 	r.Get("/", WsUpgrader)
-	r.With(jdb.Authenticate).Post("/topic", HttpTopic)
-	r.With(jdb.Authenticate).Post("/queue", HttpQueue)
-	r.With(jdb.Authenticate).Post("/stack", HttpStack)
-	r.With(jdb.Authenticate).Post("/remove", HttpRemove)
-	r.With(jdb.Authenticate).Post("/subscribe", HttpSubscribe)
+	// r.With(jdb.Authenticate).Post("/topic", HttpTopic)
+	// r.With(jdb.Authenticate).Post("/queue", HttpQueue)
+	// r.With(jdb.Authenticate).Post("/stack", HttpStack)
+	// r.With(jdb.Authenticate).Post("/remove", HttpRemove)
+	// r.With(jdb.Authenticate).Post("/subscribe", HttpSubscribe)
 	return r
 }
