@@ -9,7 +9,7 @@ import (
 	"github.com/cgalvisleon/et/middleware"
 	"github.com/cgalvisleon/et/router"
 	"github.com/cgalvisleon/et/strs"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
+	"github.com/cgalvisleon/josefina/pkg/sql"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -41,7 +41,7 @@ func (s *Router) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	router.SetAutentication(jdb.Authenticate)
+	router.SetAutentication(sql.Authenticate)
 	router.Public(r, router.Get, "/version", s.version, s.PackageName, s.PackagePath, host)
 	router.Public(r, router.Post, "/signin", s.signin, s.PackageName, s.PackagePath, host)
 	router.Private(r, router.Post, "/jquery", s.jQuery, s.PackageName, s.PackagePath, host)
