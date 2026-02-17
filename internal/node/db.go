@@ -63,7 +63,7 @@ func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 		return result, exists
 	}
 
-	return nil, false
+	return s.lead.GetDb(name)
 }
 
 /**
@@ -71,34 +71,24 @@ func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 * @param name string
 * @return *DB, error
 **/
-func CreateDb(name string) (*catalog.DB, error) {
-	err := initDbs()
-	if err != nil {
-		return nil, err
+func (s *Node) CreateDb(name string) (*catalog.DB, error) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.CreateDb", name)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		var result *catalog.DB
+		err := res.Get(&result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
-	var result *catalog.DB
-	exists, err := GetDb(name, result)
-	if err != nil {
-		return nil, err
-	}
-
-	if exists {
-		return nil, errors.New(msg.MSG_DB_NOT_EXISTS)
-	}
-
-	result, err = catalog.CreateDb(name)
-	if err != nil {
-		return nil, err
-	}
-
-	key := result.Name
-	err = dbs.Put(key, result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return s.lead.CreateDb(name)
 }
 
 /**
@@ -106,17 +96,16 @@ func CreateDb(name string) (*catalog.DB, error) {
 * @param name string
 * @return error
 **/
-func DropDb(name string) error {
-	err := initDbs()
-	if err != nil {
-		return err
+func (s *Node) DropDb(name string) error {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.DropDb", name)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		return nil
 	}
 
-	err = dbs.Remove(name)
-	if err != nil {
-		return err
-	}
-
-	catalog.RemoveDb(name)
-	return nil
+	return s.lead.DropDb(name)
 }

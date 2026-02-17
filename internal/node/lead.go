@@ -1,7 +1,7 @@
 package node
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
@@ -50,49 +50,68 @@ func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 * @return *catalog.DB, error
 **/
 func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
-	if node == nil {
-		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.CreateDb", name)
-		if res.Error != nil {
-			return nil, res.Error
-		}
-
-		var result *catalog.DB
-		err := res.Get(&result)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	return node.createDb(name)
-}
-
-/**
-* RemoveDb: Removes a database from the global map
-* @param name string
-**/
-func (s *Lead) RemoveDb(name string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.RemoveDb", name)
-		if res.Error != nil {
-			return res.Error
-		}
-
-		return nil
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
 	name = utility.Normalize(name)
+	node.muDB.Lock()
+	result, ok := node.dbs[name]
+	node.muDB.Unlock()
+	if ok {
+		return result, nil
+	}
+
+	err := initDbs()
+	if err != nil {
+		return nil, err
+	}
+
+	exists, err := dbs.Get(name, result)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		node.muDB.Lock()
+		node.dbs[name] = result
+		node.muDB.Unlock()
+		return result, nil
+	}
+
+	result, err = catalog.NewDb(name)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dbs.Put(name, result)
+	if err != nil {
+		return nil, err
+	}
+
+	node.muDB.Lock()
+	node.dbs[name] = result
+	node.muDB.Unlock()
+
+	return result, nil
+}
+
+/**
+* DropDb: Drops a database
+* @param name string
+**/
+func (s *Lead) DropDb(name string) error {
+	err := initDbs()
+	if err != nil {
+		return err
+	}
+
+	name = utility.Normalize(name)
+	err = dbs.Remove(name)
+	if err != nil {
+		return err
+	}
+
 	node.muDB.Lock()
 	delete(node.dbs, name)
 	node.muDB.Unlock()
