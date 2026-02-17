@@ -70,65 +70,45 @@ func (s *Node) CreateSerie(tag, format string, value int) error {
 * @return error
 **/
 func (s *Node) SetSerie(tag string, value int) error {
-	if !utility.ValidStr(tag, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.SetSerie(tag, value)
 	}
 
-	err := s.initSeries()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.SetSerie", tag, value)
+		if res.Error != nil {
+			return res.Error
+		}
+		return nil
 	}
 
-	_, err = Update(series,
-		et.Json{
-			"value": value,
-		}).
-		Where(Eq("tag", tag)).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
 * GetSerie: Gets a serie
 * @param tag string
-* @return et.Json, error
+* @return et.Item, error
 **/
-func (s *Node) GetSerie(tag string) (et.Json, error) {
-	if !utility.ValidStr(tag, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+func (s *Node) GetSerie(tag string) (et.Item, error) {
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.GetSerie(tag)
 	}
 
-	err := s.initSeries()
-	if err != nil {
-		return nil, err
+	if leader != nil {
+		res := s.Request(leader, "Leader.GetSerie", tag)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		var result
+
+		return res.Item, nil
 	}
 
-	items, err := Update(series,
-		et.Json{}).
-		BeforeUpdateFn(func(tx *Tx, old, new et.Json) error {
-			value := old.Int("value")
-			new["value"] = value + 1
-			return nil
-		}).
-		Where(Eq("tag", tag)).
-		Execute(nil)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	if len(items) != 1 {
-		return et.Json{}, errors.New(msg.MSG_INVALID_CONDITION_ONLY_ONE)
-	}
-
-	item := items[0]
-	format := item.String("format")
-	value := item.Int("value")
-	code := fmt.Sprintf(format, value)
-
-	return et.Json{
-		"value": value,
-		"code":  code,
-	}, nil
+	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**

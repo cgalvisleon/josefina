@@ -456,6 +456,19 @@ func (s *Cmd) Execute(tx *Tx) ([]et.Json, error) {
 	return result, nil
 }
 
+func (s *Cmd) One(tx *Tx) (et.Json, error) {
+	items, err := s.Execute(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(items) == 0 {
+		return et.Json{}, nil
+	}
+
+	return items[0], nil
+}
+
 /**
 * Insert: Inserts the model
 * @param new et.Json

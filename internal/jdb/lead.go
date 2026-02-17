@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -380,5 +381,70 @@ func (s *Lead) SetSerie(tag string, value int) error {
 		Where(Eq("tag", tag)).
 		Execute(nil)
 
+	return err
+}
+
+/**
+* GetSerie: Gets a serie
+* @param tag string
+* @return et.Item, error
+**/
+func (s *Lead) GetSerie(tag string) (et.Item, error) {
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	err := s.node.initSeries()
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	item, err := Update(series,
+		et.Json{}).
+		BeforeUpdateFn(func(tx *Tx, old, new et.Json) error {
+			value := old.Int("value")
+			new["value"] = value + 1
+			return nil
+		}).
+		Where(Eq("tag", tag)).
+		One(nil)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	if len(item) == 0 {
+		return et.Item{}, errors.New(msg.MSG_INVALID_CONDITION_ONLY_ONE)
+	}
+
+	format := item.String("format")
+	value := item.Int("value")
+	code := fmt.Sprintf(format, value)
+
+	return et.Item{
+		Ok: true,
+		Result: et.Json{
+			"value": value,
+			"code":  code,
+		}}, nil
+}
+
+/**
+* DropSerie: Drops a serie
+* @param tag string
+* @return error
+**/
+func (s *Lead) DropSerie(tag string) error {
+	if !utility.ValidStr(tag, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	}
+
+	err := s.node.initSeries()
+	if err != nil {
+		return err
+	}
+
+	_, err = Delete(series).
+		Where(Eq("tag", tag)).
+		Execute(nil)
 	return err
 }
