@@ -5,7 +5,6 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/response"
-	"github.com/cgalvisleon/josefina/pkg/jdb"
 )
 
 /**

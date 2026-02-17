@@ -1,11 +1,10 @@
-package server
+package sql
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/core"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -16,38 +15,6 @@ var (
 	version string = "0.0.1"
 	node    *core.Node
 )
-
-/**
-* Load: Initializes josefine
-* @return error
-**/
-func Load() error {
-	if node != nil {
-		return nil
-	}
-
-	port := envar.GetInt("TCP_PORT", 1377)
-	node = core.Load(port)
-
-	// err := catalog.Load(node.Address())
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = core.Load(node.getLeader)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = cache.Load(node.getLeader)
-	// if err != nil {
-	// 	return err
-	// }
-
-	go node.Start()
-
-	return nil
-}
 
 /**
 * HelpCheck: Returns the help check
