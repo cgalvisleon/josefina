@@ -448,3 +448,122 @@ func (s *Lead) DropSerie(tag string) error {
 		Execute(nil)
 	return err
 }
+
+/**
+* CreateUser: Creates a new user
+* @param username, password string
+* @return error
+**/
+func (s *Lead) CreateUser(username, password string) error {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(password, 3, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
+	err := s.node.initUsers()
+	if err != nil {
+		return err
+	}
+
+	_, err = Insert(users,
+		et.Json{
+			catalog.ID: users.GenKey(),
+			"username": username,
+			"password": password,
+		}).
+		Execute(nil)
+	return err
+}
+
+/**
+* DropUser: Drops a user
+* @param username, password string
+* @return error
+**/
+func (s *Lead) DropUser(username, password string) error {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+
+	err := s.node.initUsers()
+	if err != nil {
+		return err
+	}
+
+	_, err = Delete(users).
+		Where(Eq("username", username)).
+		Execute(nil)
+	return err
+}
+
+/**
+* GetUser: Gets a user
+* @param username, password string
+* @return et.Item, error
+**/
+func (s *Lead) GetUser(username, password string) (et.Item, error) {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(password, 3, []string{""}) {
+		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
+	err := s.node.initUsers()
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	item, err := Select(users).
+		Where(Eq("username", username)).
+		And(Eq("password", password)).
+		Run(nil)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	result := et.NewItem(item[0])
+	return result, nil
+}
+
+/**
+* ChanguePassword: Changues the password of a user
+* @param username, oldPassword, newPassword string
+* @return error
+**/
+func (s *Lead) ChanguePassword(username, oldPassword, newPassword string) error {
+	if !utility.ValidStr(username, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+	if !utility.ValidStr(oldPassword, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "oldPassword")
+	}
+	if !utility.ValidStr(newPassword, 6, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "newPassword")
+	}
+
+	err := s.node.initUsers()
+	if err != nil {
+		return err
+	}
+
+	ok, err := users.IsExisted("username", username)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return errors.New(msg.MSG_USER_NOT_FOUND)
+	}
+
+	_, err = Update(users,
+		et.Json{
+			"password": newPassword,
+		}).
+		Where(Eq("username", username)).
+		And(Eq("password", oldPassword)).
+		Execute(nil)
+	return err
+}
