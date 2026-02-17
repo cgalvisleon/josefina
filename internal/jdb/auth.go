@@ -2,47 +2,39 @@ package jdb
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 /**
-* authenticate: Authenticates a user
+* Authenticate: Authenticates a user
 * @param token string
 * @return *claim.Token, error
 **/
 func (s *Node) Authenticate(token string) (*claim.Claim, error) {
-	if !utility.ValidStr(token, 0, []string{""}) {
-		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.Authenticate(token)
 	}
 
-	token = utility.PrefixRemove("Bearer", token)
-	result, err := claim.ParceToken(token)
-	if err != nil {
-		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
+	if leader != nil {
+		res := s.Request(leader, "Leader.Authenticate", token)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		var result *claim.Claim
+		err := res.Get(&result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
-	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
-
-	var session *Session
-	err = s.GetCache(key, &session)
-	if err != nil {
-		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
-	}
-
-	if session == nil {
-		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
-	}
-
-	if session.Token != token {
-		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
-	}
-
-	return result, nil
+	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
@@ -50,31 +42,26 @@ func (s *Node) Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, username, password string, tpConn TpConnection, database string) (*tcp.Client, error) {
-	if node == nil {
-		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
+func (s *Node) SignIn(device, username, password string, tpConn TpConnection, database string) (*tcp.Client, error) {
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.SignIn(device, username, password, tpConn, database)
 	}
 
-	user, err := node.GetUser(username, password)
-	if err != nil {
-		return nil, err
+	if leader != nil {
+		res := s.Request(leader, "Leader.SignIn", device, username, password, tpConn, database)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+
+		var result *tcp.Client
+		err := res.Get(&result)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
 	}
 
-	if !user.Ok {
-		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
-	}
-
-	session, err := node.CreateSession(device, username, tpConn, database)
-	if err != nil {
-		return nil, err
-	}
-
-	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	err = node.SetCache(key, session, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	client := tcp.NewClient(session.Address)
-	return client, nil
+	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
