@@ -10,7 +10,9 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type Lead struct{}
+type Lead struct {
+	node *Node
+}
 
 /**
 * GetDb: Returns a database by name
@@ -19,9 +21,9 @@ type Lead struct{}
 **/
 func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 	name = utility.Normalize(name)
-	node.muDB.RLock()
-	result, ok := node.dbs[name]
-	node.muDB.RUnlock()
+	s.node.muDB.RLock()
+	result, ok := s.node.dbs[name]
+	s.node.muDB.RUnlock()
 	if ok {
 		return result, true
 	}
@@ -37,9 +39,9 @@ func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 	}
 
 	if exists {
-		node.muDB.Lock()
-		node.dbs[name] = result
-		node.muDB.Unlock()
+		s.node.muDB.Lock()
+		s.node.dbs[name] = result
+		s.node.muDB.Unlock()
 		return result, true
 	}
 
@@ -57,9 +59,9 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	node.muDB.RLock()
-	result, ok := node.dbs[name]
-	node.muDB.RUnlock()
+	s.node.muDB.RLock()
+	result, ok := s.node.dbs[name]
+	s.node.muDB.RUnlock()
 	if ok {
 		return result, nil
 	}
@@ -86,9 +88,9 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 		}
 	}
 
-	node.muDB.Lock()
-	node.dbs[name] = result
-	node.muDB.Unlock()
+	s.node.muDB.Lock()
+	s.node.dbs[name] = result
+	s.node.muDB.Unlock()
 
 	return result, nil
 }
@@ -109,9 +111,9 @@ func (s *Lead) DropDb(name string) error {
 		return err
 	}
 
-	node.muDB.Lock()
-	delete(node.dbs, name)
-	node.muDB.Unlock()
+	s.node.muDB.Lock()
+	delete(s.node.dbs, name)
+	s.node.muDB.Unlock()
 
 	return nil
 }
@@ -123,9 +125,9 @@ func (s *Lead) DropDb(name string) error {
 **/
 func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	key := from.Key()
-	node.muModel.RLock()
-	result, ok := node.models[key]
-	node.muModel.RUnlock()
+	s.node.muModel.RLock()
+	result, ok := s.node.models[key]
+	s.node.muModel.RUnlock()
 	if ok {
 		return result, true
 	}
@@ -141,8 +143,8 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	}
 
 	if exists {
-		next := node.NextTurn()
-		res := node.Request(next, "Follow.LoadModel", from)
+		next := s.node.NextTurn()
+		res := s.node.Request(next, "Follow.LoadModel", from)
 		if res.Error != nil {
 			return nil, false
 		}
@@ -152,9 +154,9 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 			return nil, false
 		}
 
-		node.muModel.Lock()
-		node.models[key] = result
-		node.muModel.Unlock()
+		s.node.muModel.Lock()
+		s.node.models[key] = result
+		s.node.muModel.Unlock()
 		return result, true
 	}
 
@@ -179,9 +181,9 @@ func (s *Lead) DropModel(from *catalog.From) error {
 		return err
 	}
 
-	node.muModel.Lock()
-	delete(node.models, key)
-	node.muModel.Unlock()
+	s.node.muModel.Lock()
+	delete(s.node.models, key)
+	s.node.muModel.Unlock()
 
 	return nil
 }
@@ -229,9 +231,9 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 		}
 	}
 
-	node.muCache.Lock()
-	node.cache[key] = bt
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	s.node.cache[key] = bt
+	s.node.muCache.Unlock()
 
 	if duration != 0 {
 		go func() {
@@ -255,9 +257,9 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 * @return error
 **/
 func (s *Lead) DeleteCache(key string) error {
-	node.muCache.Lock()
-	delete(node.cache, key)
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	delete(s.node.cache, key)
+	s.node.muCache.Unlock()
 
 	err := initCache()
 	if err != nil {
@@ -273,9 +275,9 @@ func (s *Lead) DeleteCache(key string) error {
 * @return error
 **/
 func (s *Lead) ExistsCache(key string) (bool, error) {
-	node.muCache.Lock()
-	_, ok := node.cache[key]
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	_, ok := s.node.cache[key]
+	s.node.muCache.Unlock()
 
 	if ok {
 		return true, nil
@@ -300,9 +302,9 @@ func (s *Lead) ExistsCache(key string) (bool, error) {
 * @return error
 **/
 func (s *Lead) GetCache(key string, dest any) error {
-	node.muCache.Lock()
-	bt, ok := node.cache[key]
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	bt, ok := s.node.cache[key]
+	s.node.muCache.Unlock()
 
 	if ok {
 		err := json.Unmarshal(bt, dest)

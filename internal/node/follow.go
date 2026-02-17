@@ -10,7 +10,9 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type Follow struct{}
+type Follow struct {
+	node *Node
+}
 
 /**
 * IsExisted: Checks if the object exists
@@ -18,14 +20,10 @@ type Follow struct{}
 * @return bool, error
 **/
 func (s *Follow) IsExisted(from *catalog.From, field, idx string) (bool, error) {
-	if node == nil {
-		return false, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	key := from.Key()
-	node.muModel.RLock()
-	model, ok := node.models[key]
-	node.muModel.RUnlock()
+	s.node.muModel.RLock()
+	model, ok := s.node.models[key]
+	s.node.muModel.RUnlock()
 	if !ok {
 		return false, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -43,14 +41,10 @@ func (s *Follow) IsExisted(from *catalog.From, field, idx string) (bool, error) 
 * @return error
 **/
 func (s *Follow) RemoveObject(from *catalog.From, idx string) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	key := from.Key()
-	node.muModel.RLock()
-	model, ok := node.models[key]
-	node.muModel.RUnlock()
+	s.node.muModel.RLock()
+	model, ok := s.node.models[key]
+	s.node.muModel.RUnlock()
 	if !ok {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -68,14 +62,10 @@ func (s *Follow) RemoveObject(from *catalog.From, idx string) error {
 * @return error
 **/
 func (s *Follow) PutObject(from *catalog.From, idx string, data et.Json) error {
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	key := from.Key()
-	node.muModel.RLock()
-	model, ok := node.models[key]
-	node.muModel.RUnlock()
+	s.node.muModel.RLock()
+	model, ok := s.node.models[key]
+	s.node.muModel.RUnlock()
 	if !ok {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -93,20 +83,16 @@ func (s *Follow) PutObject(from *catalog.From, idx string, data et.Json) error {
 * @return error
 **/
 func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
-	if node == nil {
-		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
 	model.IsInit = false
 	err := model.Init()
 	if err != nil {
 		return nil, err
 	}
 
-	model.Address = node.Address()
-	node.muModel.Lock()
-	node.models[model.Key()] = model
-	node.muModel.Unlock()
+	model.Address = s.node.Address()
+	s.node.muModel.Lock()
+	s.node.models[model.Key()] = model
+	s.node.muModel.Unlock()
 
 	return model, nil
 }
@@ -134,9 +120,9 @@ func (s *Follow) SetCache(key string, value any, now time.Time, duration time.Du
 		}
 	}
 
-	node.muCache.Lock()
-	node.cache[key] = bt
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	s.node.cache[key] = bt
+	s.node.muCache.Unlock()
 
 	if duration != 0 {
 		go func() {
@@ -155,9 +141,9 @@ func (s *Follow) SetCache(key string, value any, now time.Time, duration time.Du
 * @return error
 **/
 func (s *Follow) DeleteCache(key string) error {
-	node.muCache.Lock()
-	delete(node.cache, key)
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	delete(s.node.cache, key)
+	s.node.muCache.Unlock()
 
 	return nil
 }
@@ -168,9 +154,9 @@ func (s *Follow) DeleteCache(key string) error {
 * @return error
 **/
 func (s *Follow) ExistsCache(key string) (bool, error) {
-	node.muCache.Lock()
-	_, ok := node.cache[key]
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	_, ok := s.node.cache[key]
+	s.node.muCache.Unlock()
 
 	if ok {
 		return true, nil
@@ -185,9 +171,9 @@ func (s *Follow) ExistsCache(key string) (bool, error) {
 * @return error
 **/
 func (s *Follow) GetCache(key string, dest any) error {
-	node.muCache.Lock()
-	bt, ok := node.cache[key]
-	node.muCache.Unlock()
+	s.node.muCache.Lock()
+	bt, ok := s.node.cache[key]
+	s.node.muCache.Unlock()
 
 	if ok {
 		err := json.Unmarshal(bt, dest)

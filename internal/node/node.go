@@ -35,9 +35,7 @@ const (
 	version = "0.0.1"
 )
 
-var (
-	node *Node
-)
+var nodes *Node
 
 /**
 * Load: Loads the node
@@ -67,9 +65,9 @@ func Load(port int) *Node {
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
 		muCache:   sync.RWMutex{},
-		lead:      new(Lead),
-		follow:    new(Follow),
 	}
+	result.lead = &Lead{node: result}
+	result.follow = &Follow{node: result}
 	result.Mount(result.lead)
 	result.Mount(result.follow)
 
