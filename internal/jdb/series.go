@@ -100,15 +100,19 @@ func (s *Node) GetSerie(tag string) (et.Item, error) {
 	if leader != nil {
 		res := s.Request(leader, "Leader.GetSerie", tag)
 		if res.Error != nil {
-			return nil, res.Error
+			return et.Item{}, res.Error
 		}
 
-		var result
+		var result et.Item
+		err := res.Get(&result)
+		if err != nil {
+			return et.Item{}, err
+		}
 
-		return res.Item, nil
+		return result, nil
 	}
 
-	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
+	return et.Item{}, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
