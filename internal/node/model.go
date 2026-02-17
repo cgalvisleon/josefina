@@ -7,9 +7,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-var (
-	models *catalog.Model
-)
+var models *catalog.Model
 
 /**
 * initModels: Initializes the models model

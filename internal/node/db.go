@@ -7,9 +7,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-var (
-	dbs *catalog.Model
-)
+var dbs *catalog.Model
 
 /**
 * initDbs: Initializes the dbs model
