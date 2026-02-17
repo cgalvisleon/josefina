@@ -11,6 +11,10 @@ func main() {
 	envar.SetStrByArg("-password", "PASSWORD", "admin")
 	envar.SetStrByArg("-database", "DATABASE", "josefina")
 
-	srv := serv.New()
+	srv, err := serv.New()
+	if err != nil {
+		panic(err)
+	}
+
 	srv.Start()
 }

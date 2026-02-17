@@ -2,12 +2,9 @@ package sql
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/cgalvisleon/et/response"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/jdb"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -37,23 +34,4 @@ func Authenticate(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, "username", result.Username)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-/**
-* SignIn: Authenticate a user
-* @param device, username, password string
-* @return *Session, error
-**/
-func SignIn(device, username, password string) (*jdb.Session, error) {
-	if !srv.started {
-		return nil, errors.New(msg.MSG_JOSEFINA_NOT_STARTED)
-	}
-	if !utility.ValidStr(username, 0, []string{""}) {
-		return nil, errors.New(msg.MSG_USERNAME_REQUIRED)
-	}
-	if !utility.ValidStr(password, 0, []string{""}) {
-		return nil, errors.New(msg.MSG_PASSWORD_REQUIRED)
-	}
-
-	return srv.node.SignIn(device, username, password)
 }
