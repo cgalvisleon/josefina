@@ -295,8 +295,8 @@ func (s *Lead) ExistsCache(key string) (bool, error) {
 }
 
 /**
-* DeleteCache: Deletes a cache value
-* @param key string
+* GetCache: Gets a cache value
+* @param key string, dest any
 * @return error
 **/
 func (s *Lead) GetCache(key string, dest any) error {
@@ -305,6 +305,10 @@ func (s *Lead) GetCache(key string, dest any) error {
 	node.muCache.Unlock()
 
 	if ok {
+		err := json.Unmarshal(bt, dest)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -313,5 +317,10 @@ func (s *Lead) GetCache(key string, dest any) error {
 		return err
 	}
 
-	return cache.Remove(key)
+	_, err = cache.Get(key, dest)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

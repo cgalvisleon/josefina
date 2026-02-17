@@ -178,3 +178,23 @@ func (s *Follow) ExistsCache(key string) (bool, error) {
 
 	return false, nil
 }
+
+/**
+* GetCache: Gets a cache value
+* @param key string, dest any
+* @return error
+**/
+func (s *Follow) GetCache(key string, dest any) error {
+	node.muCache.Lock()
+	bt, ok := node.cache[key]
+	node.muCache.Unlock()
+
+	if ok {
+		err := json.Unmarshal(bt, dest)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
