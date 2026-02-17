@@ -132,7 +132,7 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 		return result, true
 	}
 
-	err := initModels()
+	err := s.node.initModels()
 	if err != nil {
 		return nil, false
 	}
@@ -170,7 +170,7 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 **/
 func (s *Lead) DropModel(from *catalog.From) error {
 	key := from.Key()
-	err := initModels()
+	err := s.node.initModels()
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (s *Lead) DropModel(from *catalog.From) error {
 * @return error
 **/
 func (s *Lead) SaveModel(model *catalog.Model) error {
-	err := initModels()
+	err := s.node.initModels()
 	if err != nil {
 		return err
 	}
