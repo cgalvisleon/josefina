@@ -145,23 +145,13 @@ func (s *Node) DeleteCache(key string) error {
 * @param key string
 * @return bool
 **/
-func (s *Node) ExistsCache(key string) bool {
-	exists := mem.Exists(key)
-	if exists {
-		return true
+func (s *Node) ExistsCache(key string) (bool, error) {
+	_, imLeader := node.GetLeader()
+	if imLeader {
+		return s.lead.ExistsCache(key)
 	}
 
-	err := initCache()
-	if err != nil {
-		return false, err
-	}
-
-	exists, err = cache.Exists(key)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
+	return s.follow.ExistsCache(key)
 }
 
 /**
