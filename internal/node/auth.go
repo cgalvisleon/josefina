@@ -47,7 +47,7 @@ func Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func SignIn(device, username, password string) (*Session, error) {
+func (n *Node) SignIn(device, username, password string) (*Session, error) {
 	item, err := GetUser(username, password)
 	if err != nil {
 		return nil, err

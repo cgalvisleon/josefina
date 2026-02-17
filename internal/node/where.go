@@ -237,10 +237,10 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 
 	addResult := func(item et.Json) bool {
 		if len(s.selects) == 0 {
-			item = Hidden(model.Hidden, item)
+			item = hidden(model.Hidden, item)
 		} else {
-			item = Select(s.selects, item)
-			item = Hidden(model.Hidden, item)
+			item = selects(s.selects, item)
+			item = hidden(model.Hidden, item)
 		}
 		result = append(result, item)
 		n := len(result)

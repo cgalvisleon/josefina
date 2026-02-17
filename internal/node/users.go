@@ -73,7 +73,7 @@ func initUsers() error {
 * @param username, password string
 * @return error
 **/
-func CreateUser(username, password string) error {
+func (n *Node) CreateUser(username, password string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -101,7 +101,7 @@ func CreateUser(username, password string) error {
 * @param username, password string
 * @return error
 **/
-func DropUser(username, password string) error {
+func (n *Node) DropUser(username, password string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -122,7 +122,7 @@ func DropUser(username, password string) error {
 * @param username, password string
 * @return et.Json, error
 **/
-func GetUser(username, password string) (et.Json, error) {
+func (n *Node) GetUser(username, password string) (et.Json, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -154,7 +154,7 @@ func GetUser(username, password string) (et.Json, error) {
 * @param username, oldPassword, newPassword string
 * @return error
 **/
-func ChanguePassword(username, oldPassword, newPassword string) error {
+func (n *Node) ChanguePassword(username, oldPassword, newPassword string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
