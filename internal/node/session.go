@@ -64,7 +64,7 @@ func newSession(username, device, address string, tp TpConnection, database stri
 		Address:   address,
 		Status:    Connected,
 		Type:      tp,
-		Token:     "",
+		Device:    device,
 		Database:  database,
 	}
 }
