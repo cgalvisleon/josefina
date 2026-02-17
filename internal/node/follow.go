@@ -11,30 +11,6 @@ import (
 type Follow struct{}
 
 /**
-* LoadModel: Loads a model
-* @param model *Model
-* @return error
-**/
-func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
-	if node == nil {
-		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	model.IsInit = false
-	err := model.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	model.Address = node.Address()
-	node.muModel.Lock()
-	node.models[model.Key()] = model
-	node.muModel.Unlock()
-
-	return model, nil
-}
-
-/**
 * IsExisted: Checks if the object exists
 * @param from *From, field, idx string
 * @return bool, error
@@ -107,4 +83,28 @@ func (s *Follow) PutObject(from *catalog.From, idx string, data et.Json) error {
 	}
 
 	return model.PutObject(idx, data)
+}
+
+/**
+* LoadModel: Loads a model
+* @param model *Model
+* @return error
+**/
+func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
+	if node == nil {
+		return nil, errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	model.IsInit = false
+	err := model.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	model.Address = node.Address()
+	node.muModel.Lock()
+	node.models[model.Key()] = model
+	node.muModel.Unlock()
+
+	return model, nil
 }
