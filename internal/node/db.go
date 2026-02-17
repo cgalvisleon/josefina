@@ -13,13 +13,9 @@ var dbs *catalog.Model
 * initDbs: Initializes the dbs model
 * @return error
 **/
-func initDbs() error {
+func initDbs(node *Node) error {
 	if dbs != nil {
 		return nil
-	}
-
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
 	}
 
 	db, err := node.coreDb()
@@ -68,13 +64,13 @@ func (s *Node) coreDb() (*catalog.DB, error) {
 * @return bool, error
 **/
 func (s *Node) GetDb(name string) (*catalog.DB, bool) {
-	leader, imLeader := node.GetLeader()
+	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.GetDb(name)
 	}
 
 	if leader != nil {
-		res := node.Request(leader, "Leader.GetDb", name)
+		res := s.Request(leader, "Leader.GetDb", name)
 		if res.Error != nil {
 			return nil, false
 		}
@@ -98,13 +94,13 @@ func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 * @return *DB, error
 **/
 func (s *Node) CreateDb(name string) (*catalog.DB, error) {
-	leader, imLeader := node.GetLeader()
+	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.CreateDb(name)
 	}
 
 	if leader != nil {
-		res := node.Request(leader, "Leader.CreateDb", name)
+		res := s.Request(leader, "Leader.CreateDb", name)
 		if res.Error != nil {
 			return nil, res.Error
 		}
@@ -127,13 +123,13 @@ func (s *Node) CreateDb(name string) (*catalog.DB, error) {
 * @return error
 **/
 func (s *Node) DropDb(name string) error {
-	leader, imLeader := node.GetLeader()
+	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.DropDb(name)
 	}
 
 	if leader != nil {
-		res := node.Request(leader, "Leader.DropDb", name)
+		res := s.Request(leader, "Leader.DropDb", name)
 		if res.Error != nil {
 			return res.Error
 		}

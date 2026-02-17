@@ -3,7 +3,6 @@ package node
 import (
 	"time"
 
-	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
@@ -14,7 +13,7 @@ var cache *catalog.Model
 * initCache: Initializes the cache model
 * @return error
 **/
-func initCache() error {
+func initCache(node *Node) error {
 	if cache != nil {
 		return nil
 	}
@@ -36,38 +35,12 @@ func initCache() error {
 }
 
 /**
-* setCache: Sets a cache value
-* @param key string, value interface{}, duration time.Duration
-* @return interface{}, error
-**/
-func setCache(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
-	result, err := mem.Set(key, value, duration)
-	if err != nil {
-		return nil, err
-	}
-
-	err = initCache()
-	if err != nil {
-		return nil, err
-	}
-
-	if duration == 0 {
-		err := cache.Put(key, result)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
-}
-
-/**
 * SetCache: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
 func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {
-	leader, imLeader := node.GetLeader()
+	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.SetCache(key, value, time.Time{}, duration)
 	}
@@ -79,18 +52,18 @@ func (s *Node) SetCache(key string, value interface{}, duration time.Duration) e
 	}
 
 	go func() {
-		for _, peer := range node.Peers {
+		for _, peer := range s.Peers {
 			if peer.Addr == s.Address() {
 				continue
 			}
 
 			if peer.Addr == leader.Addr {
-				res := node.Request(leader, "Leader.SetCache", key, value, now, duration)
+				res := s.Request(leader, "Leader.SetCache", key, value, now, duration)
 				if res.Error != nil {
 					return
 				}
 			} else {
-				res := node.Request(peer, "Follow.SetCache", key, value, now, duration)
+				res := s.Request(peer, "Follow.SetCache", key, value, now, duration)
 				if res.Error != nil {
 					return
 				}
@@ -107,7 +80,7 @@ func (s *Node) SetCache(key string, value interface{}, duration time.Duration) e
 * @return int, bool
 **/
 func (s *Node) DeleteCache(key string) error {
-	leader, imLeader := node.GetLeader()
+	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.DeleteCache(key)
 	}
@@ -118,18 +91,18 @@ func (s *Node) DeleteCache(key string) error {
 	}
 
 	go func() {
-		for _, peer := range node.Peers {
+		for _, peer := range s.Peers {
 			if peer.Addr == s.Address() {
 				continue
 			}
 
 			if peer.Addr == leader.Addr {
-				res := node.Request(leader, "Leader.DeleteCache", key)
+				res := s.Request(leader, "Leader.DeleteCache", key)
 				if res.Error != nil {
 					return
 				}
 			} else {
-				res := node.Request(peer, "Follow.DeleteCache", key)
+				res := s.Request(peer, "Follow.DeleteCache", key)
 				if res.Error != nil {
 					return
 				}
@@ -146,7 +119,7 @@ func (s *Node) DeleteCache(key string) error {
 * @return bool
 **/
 func (s *Node) ExistsCache(key string) (bool, error) {
-	_, imLeader := node.GetLeader()
+	_, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.ExistsCache(key)
 	}
@@ -160,7 +133,7 @@ func (s *Node) ExistsCache(key string) (bool, error) {
 * @return *mem.Entry
 **/
 func (s *Node) GetCache(key string, dest any) error {
-	_, imLeader := node.GetLeader()
+	_, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.GetCache(key, dest)
 	}
