@@ -58,7 +58,7 @@ func CreateDb(name string) (*catalog.DB, error) {
 		return nil, errors.New(msg.MSG_DB_NOT_EXISTS)
 	}
 
-	result, err = catalog.CreteDb(name)
+	result, err = catalog.CreateDb(name)
 	if err != nil {
 		return nil, err
 	}

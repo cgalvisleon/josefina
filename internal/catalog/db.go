@@ -2,9 +2,12 @@ package catalog
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type DB struct {
@@ -14,6 +17,27 @@ type DB struct {
 	Schemas  map[string]*Schema `json:"schemas"`
 	IsStrict bool               `json:"is_strict"`
 	isDebug  bool               `json:"-"`
+}
+
+/**
+* NewDb: Creates a new database
+* @param name string
+* @return *DB, error
+**/
+func NewDb(name string) (*DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	path := envar.GetStr("DATA_PATH", "./data")
+	result := &DB{
+		Name:    name,
+		Version: "1.0.0",
+		Path:    fmt.Sprintf("%s/%s", path, name),
+		Schemas: make(map[string]*Schema, 0),
+	}
+
+	return result, nil
 }
 
 /**
