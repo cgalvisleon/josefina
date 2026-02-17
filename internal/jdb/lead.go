@@ -8,7 +8,6 @@ import (
 
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -609,7 +608,7 @@ func (s *Lead) Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, database string) (*tcp.Client, error) {
+func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, database string) (*Session, error) {
 	user, err := s.node.GetUser(username, password)
 	if err != nil {
 		return nil, err
@@ -619,17 +618,16 @@ func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, da
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	session, err := node.CreateSession(device, username, tpConn, database)
+	result, err := node.CreateSession(device, username, tpConn, database)
 	if err != nil {
 		return nil, err
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", appName, device, username)
-	err = node.SetCache(key, session, 0)
+	err = node.SetCache(key, result, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	client := tcp.NewClient(session.Address)
-	return client, nil
+	return result, nil
 }

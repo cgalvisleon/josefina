@@ -7,22 +7,24 @@ import (
 	"strings"
 
 	lg "github.com/cgalvisleon/et/stdrout"
+	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
 type Console struct {
-	addr   string
-	client *jdb.Session
+	addr    string
+	session *jdb.Session
+	client  *tcp.Client
 }
 
 var console *Console
 
 /**
 * NewConsole
-* @param client *jdb.Session
+* @param client *tcp.Client
 * @return *Console
 **/
-func NewConsole(client *jdb.Session) *Console {
+func NewConsole(client *tcp.Client) *Console {
 	if console == nil {
 		console = &Console{
 			client: client,
