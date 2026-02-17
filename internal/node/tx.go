@@ -13,6 +13,61 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+var transactions *catalog.Model
+
+/**
+* initTransactions: Initializes the transactions model
+* @return error
+**/
+func initTransactions() error {
+	if transactions != nil {
+		return nil
+	}
+
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
+	if err != nil {
+		return err
+	}
+
+	transactions, err = db.NewModel("", "transactions", true, 1)
+	if err != nil {
+		return err
+	}
+	if err := transactions.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* SetTransaction: Sets a Transaction
+* @param tx *Tx
+* @return error
+**/
+func setTransaction(tx *Tx) error {
+	err := initTransactions()
+	if err != nil {
+		return err
+	}
+
+	data, err := tx.ToJson()
+	if err != nil {
+		return err
+	}
+
+	err = transactions.PutObject(tx.ID, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type Transaction struct {
 	From    *catalog.From  `json:"from"`
 	Command Command        `json:"command"`
@@ -37,12 +92,11 @@ func newTransaction(from *catalog.From, cmd Command, idx string, data et.Json, s
 }
 
 type Tx struct {
-	StartedAt    time.Time           `json:"startedAt"`
-	EndedAt      time.Time           `json:"endedAt"`
-	ID           string              `json:"id"`
-	Transactions []*Transaction      `json:"transactions"`
-	onChange     func(et.Json) error `json:"-"`
-	isDebug      bool                `json:"-"`
+	StartedAt    time.Time      `json:"startedAt"`
+	EndedAt      time.Time      `json:"endedAt"`
+	ID           string         `json:"id"`
+	Transactions []*Transaction `json:"transactions"`
+	isDebug      bool           `json:"-"`
 }
 
 /**
@@ -97,10 +151,6 @@ func (s *Tx) ToJson() (et.Json, error) {
 	return result, nil
 }
 
-func (s *Tx) SetOnChangeFn(fn func(et.Json) error) {
-	s.onChange = fn
-}
-
 /**
 * Save
 * @return error
@@ -116,11 +166,7 @@ func (s *Tx) change() error {
 		logs.Debug(data.ToString())
 	}
 
-	if s.onChange != nil {
-		return s.onChange(data)
-	}
-
-	return nil
+	return setTransaction(s)
 }
 
 /**
