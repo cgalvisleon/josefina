@@ -1,4 +1,4 @@
-package core
+package node
 
 import (
 	"errors"
@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	appName string = "josefina"
-	dbs     *catalog.Model
+	dbs *catalog.Model
 )
 
 /**
@@ -21,7 +20,11 @@ func initDbs() error {
 		return nil
 	}
 
-	db, err := catalog.CoreDb()
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
 	if err != nil {
 		return err
 	}
@@ -35,6 +38,32 @@ func initDbs() error {
 	}
 
 	return nil
+}
+
+/**
+* GetDb: Gets a model
+* @param name string, dest *jdb.Model
+* @return bool, error
+**/
+func (s *Node) GetDb(name string) (*catalog.DB, bool) {
+	leader, imLeader := node.GetLeader()
+	if !imLeader && leader != nil {
+		res := node.Request(leader, "Leader.GetDb", name)
+		if res.Error != nil {
+			return nil, false
+		}
+
+		var result *catalog.DB
+		var exists bool
+		err := res.Get(&result, &exists)
+		if err != nil {
+			return nil, false
+		}
+
+		return result, exists
+	}
+
+	return nil, false
 }
 
 /**
@@ -70,38 +99,6 @@ func CreateDb(name string) (*catalog.DB, error) {
 	}
 
 	return result, nil
-}
-
-/**
-* GetDb: Gets a model
-* @param name string, dest *jdb.Model
-* @return bool, error
-**/
-func GetDb(name string, dest *catalog.DB) (bool, error) {
-	exists, err := catalog.GetDb(name, dest)
-	if err != nil {
-		return false, err
-	}
-
-	if exists {
-		return true, nil
-	}
-
-	err = initDbs()
-	if err != nil {
-		return false, err
-	}
-
-	exists, err = dbs.Get(name, dest)
-	if err != nil {
-		return false, err
-	}
-
-	if exists {
-		catalog.AddDb(dest)
-	}
-
-	return exists, nil
 }
 
 /**

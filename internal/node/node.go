@@ -2,11 +2,13 @@ package node
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -23,6 +25,8 @@ type Node struct {
 	muDB      sync.RWMutex                `json:"-"`
 	muModel   sync.RWMutex                `json:"-"`
 	muSession sync.RWMutex                `json:"-"`
+	lead      *Lead                       `json:"-"`
+	follow    *Follow                     `json:"-"`
 	isDebug   bool                        `json:"-"`
 }
 
@@ -56,9 +60,11 @@ func Load(port int) *Node {
 		muDB:      sync.RWMutex{},
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
+		lead:      new(Lead),
+		follow:    new(Follow),
 	}
-	result.Mount(new(Lead))
-	result.Mount(new(Follow))
+	result.Mount(result.lead)
+	result.Mount(result.follow)
 
 	return result
 }
@@ -184,6 +190,43 @@ func (s *Node) PutObject(from *catalog.From, idx string, data et.Json) error {
 	}
 
 	return nil
+}
+
+/**
+* createDb: Creates a new database
+* @param name string
+* @return *catalog.DB, error
+**/
+func (s *Node) createDb(name string) (*catalog.DB, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	name = utility.Normalize(name)
+	s.muDB.Lock()
+	result, ok := s.dbs[name]
+	s.muDB.Unlock()
+	if ok {
+		return result, nil
+	}
+
+	result, err := catalog.NewDb(name)
+	if err != nil {
+		return nil, err
+	}
+	s.muDB.Lock()
+	s.dbs[name] = result
+	s.muDB.Unlock()
+
+	return result, nil
+}
+
+/**
+* coreDb: Creates the core database
+* @return *catalog.DB, error
+**/
+func (s *Node) coreDb() (*catalog.DB, error) {
+	return s.createDb("josefina")
 }
 
 /**

@@ -2,15 +2,47 @@ package node
 
 import (
 	"errors"
-	"fmt"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Lead struct{}
+
+/**
+* GetDb: Returns a database by name
+* @param name string
+* @return *catalog.DB, bool
+**/
+func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
+	name = utility.Normalize(name)
+	node.muDB.RLock()
+	result, ok := node.dbs[name]
+	node.muDB.RUnlock()
+	if ok {
+		return result, true
+	}
+
+	err := initDbs()
+	if err != nil {
+		return nil, false
+	}
+
+	exists, err := dbs.Get(name, result)
+	if err != nil {
+		return nil, false
+	}
+
+	if exists {
+		node.muDB.Lock()
+		node.dbs[name] = result
+		node.muDB.Unlock()
+		return result, true
+	}
+
+	return nil, false
+}
 
 /**
 * CreateDb: Creates a new database
@@ -38,68 +70,7 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 		return result, nil
 	}
 
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	name = utility.Normalize(name)
-	node.muDB.Lock()
-	result, ok := node.dbs[name]
-	node.muDB.Unlock()
-	if ok {
-		return result, nil
-	}
-
-	path := envar.GetStr("DATA_PATH", "./data")
-	result = &catalog.DB{
-		Name:    name,
-		Version: node.version,
-		Path:    fmt.Sprintf("%s/%s", path, name),
-		Schemas: make(map[string]*catalog.Schema, 0),
-	}
-	node.muDB.Lock()
-	node.dbs[name] = result
-	node.muDB.Unlock()
-
-	return result, nil
-}
-
-/**
-* GetDb: Returns a database by name
-* @param name string
-* @return *catalog.DB, bool
-**/
-func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
-	if node == nil {
-		return nil, false
-	}
-
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.CreateDb", name)
-		if res.Error != nil {
-			return nil, false
-		}
-
-		var result *catalog.DB
-		var exists bool
-		err := res.Get(&result, &exists)
-		if err != nil {
-			return nil, false
-		}
-
-		return result, exists
-	}
-
-	name = utility.Normalize(name)
-	node.muDB.RLock()
-	result, ok := node.dbs[name]
-	node.muDB.RUnlock()
-	if ok {
-		return result, true
-	}
-
-	return nil, false
+	return node.createDb(name)
 }
 
 /**
@@ -121,37 +92,12 @@ func (s *Lead) RemoveDb(name string) error {
 		return nil
 	}
 
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
 	name = utility.Normalize(name)
+	node.muDB.Lock()
 	delete(node.dbs, name)
+	node.muDB.Unlock()
+
 	return nil
-}
-
-/**
-* CoreDb: Returns the core database
-* @return *catalog.DB, error
-**/
-func (s *Lead) CoreDb() (*catalog.DB, error) {
-	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
-		res := node.Request(leader, "Leader.CoreDb", "")
-		if res.Error != nil {
-			return nil, res.Error
-		}
-
-		return nil, nil
-	}
-
-	name := "josefina"
-	result, ok := node.dbs[name]
-	if ok {
-		return result, nil
-	}
-
-	return s.CreateDb(name)
 }
 
 /**
