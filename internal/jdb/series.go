@@ -2,10 +2,8 @@ package jdb
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -121,17 +119,25 @@ func (s *Node) GetSerie(tag string) (et.Item, error) {
 * @return error
 **/
 func (s *Node) DropSerie(tag string) error {
-	if !utility.ValidStr(tag, 0, []string{""}) {
-		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
+	leader, imLeader := s.GetLeader()
+	if imLeader {
+		return s.lead.DropSerie(tag)
 	}
 
-	err := s.initSeries()
-	if err != nil {
-		return err
+	if leader != nil {
+		res := s.Request(leader, "Leader.DropSerie", tag)
+		if res.Error != nil {
+			return res.Error
+		}
+
+		var result et.Item
+		err := res.Get(&result)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	_, err = Delete(series).
-		Where(Eq("tag", tag)).
-		Execute(nil)
-	return err
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
