@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -207,10 +208,10 @@ func (s *Lead) SaveModel(model *catalog.Model) error {
 
 /**
 * SetCache: Sets a cache value
-* @param key string, value interface{}, duration time.Duration
+* @param key string, value any, duration time.Duration
 * @return error
 **/
-func (s *Lead) SetCache(key string, value interface{}, now time.Time, duration time.Duration) error {
+func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Duration) error {
 	if !now.IsZero() {
 		elapsed := time.Since(now)
 		duration -= elapsed
@@ -219,8 +220,17 @@ func (s *Lead) SetCache(key string, value interface{}, now time.Time, duration t
 		}
 	}
 
+	bt, ok := value.([]byte)
+	if !ok {
+		var err error
+		bt, err = json.Marshal(value)
+		if err != nil {
+			return err
+		}
+	}
+
 	node.muCache.Lock()
-	node.cache[key] = value
+	node.cache[key] = bt
 	node.muCache.Unlock()
 
 	if duration != 0 {
@@ -248,6 +258,55 @@ func (s *Lead) DeleteCache(key string) error {
 	node.muCache.Lock()
 	delete(node.cache, key)
 	node.muCache.Unlock()
+
+	err := initCache()
+	if err != nil {
+		return err
+	}
+
+	return cache.Remove(key)
+}
+
+/**
+* ExistsCache: Deletes a cache value
+* @param key string
+* @return error
+**/
+func (s *Lead) ExistsCache(key string) (bool, error) {
+	node.muCache.Lock()
+	_, ok := node.cache[key]
+	node.muCache.Unlock()
+
+	if ok {
+		return true, nil
+	}
+
+	err := initCache()
+	if err != nil {
+		return false, err
+	}
+
+	exists, err := cache.Exists(key)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+/**
+* DeleteCache: Deletes a cache value
+* @param key string
+* @return error
+**/
+func (s *Lead) GetCache(key string, dest any) error {
+	node.muCache.Lock()
+	bt, ok := node.cache[key]
+	node.muCache.Unlock()
+
+	if ok {
+		return nil
+	}
 
 	err := initCache()
 	if err != nil {

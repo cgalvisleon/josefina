@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -112,10 +113,10 @@ func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 
 /**
 * SetCache: Sets a cache value
-* @param key string, value interface{}, now time.Time, duration time.Duration
+* @param key string, value any, now time.Time, duration time.Duration
 * @return error
 **/
-func (s *Follow) SetCache(key string, value interface{}, now time.Time, duration time.Duration) error {
+func (s *Follow) SetCache(key string, value any, now time.Time, duration time.Duration) error {
 	if !now.IsZero() {
 		elapsed := time.Since(now)
 		duration -= elapsed
@@ -124,8 +125,17 @@ func (s *Follow) SetCache(key string, value interface{}, now time.Time, duration
 		}
 	}
 
+	bt, ok := value.([]byte)
+	if !ok {
+		var err error
+		bt, err = json.Marshal(value)
+		if err != nil {
+			return err
+		}
+	}
+
 	node.muCache.Lock()
-	node.cache[key] = value
+	node.cache[key] = bt
 	node.muCache.Unlock()
 
 	if duration != 0 {
@@ -150,4 +160,21 @@ func (s *Follow) DeleteCache(key string) error {
 	node.muCache.Unlock()
 
 	return nil
+}
+
+/**
+* ExistsCache: Deletes a cache value
+* @param key string
+* @return error
+**/
+func (s *Follow) ExistsCache(key string) (bool, error) {
+	node.muCache.Lock()
+	_, ok := node.cache[key]
+	node.muCache.Unlock()
+
+	if ok {
+		return true, nil
+	}
+
+	return false, nil
 }

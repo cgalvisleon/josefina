@@ -145,10 +145,10 @@ func (s *Node) DeleteCache(key string) error {
 * @param key string
 * @return bool
 **/
-func (s *Node) ExistsCache(key string) (bool, error) {
+func (s *Node) ExistsCache(key string) bool {
 	exists := mem.Exists(key)
 	if exists {
-		return true, nil
+		return true
 	}
 
 	err := initCache()
