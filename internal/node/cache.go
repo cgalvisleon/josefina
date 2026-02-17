@@ -106,20 +106,38 @@ func (s *Node) SetCache(key string, value interface{}, duration time.Duration) e
 * @param key string
 * @return int, bool
 **/
-func (s *Node) DeleteCache(key string) (bool, error) {
-	result := mem.Delete(key)
-
-	err := initCache()
-	if err != nil {
-		return false, err
+func (s *Node) DeleteCache(key string) error {
+	leader, imLeader := node.GetLeader()
+	if imLeader {
+		return s.lead.DeleteCache(key)
 	}
 
-	err = cache.Remove(key)
+	err := s.follow.DeleteCache(key)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return result, nil
+	go func() {
+		for _, peer := range node.Peers {
+			if peer.Addr == s.Address() {
+				continue
+			}
+
+			if peer.Addr == leader.Addr {
+				res := node.Request(leader, "Leader.DeleteCache", key)
+				if res.Error != nil {
+					return
+				}
+			} else {
+				res := node.Request(peer, "Follow.DeleteCache", key)
+				if res.Error != nil {
+					return
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 /**

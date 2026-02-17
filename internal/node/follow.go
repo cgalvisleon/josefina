@@ -131,10 +131,23 @@ func (s *Follow) SetCache(key string, value interface{}, now time.Time, duration
 	if duration != 0 {
 		go func() {
 			time.Sleep(duration)
-			node.DeleteCache(key)
+			s.DeleteCache(key)
 		}()
 		return nil
 	}
+
+	return nil
+}
+
+/**
+* DeleteCache: Deletes a cache value
+* @param key string
+* @return error
+**/
+func (s *Follow) DeleteCache(key string) error {
+	node.muCache.Lock()
+	delete(node.cache, key)
+	node.muCache.Unlock()
 
 	return nil
 }
