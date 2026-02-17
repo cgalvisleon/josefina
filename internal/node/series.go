@@ -17,16 +17,12 @@ var series *catalog.Model
 * @param db *DB
 * @return error
 **/
-func initSeries() error {
+func (s *Node) initSeries() error {
 	if series != nil {
 		return nil
 	}
 
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}
@@ -56,7 +52,7 @@ func (s *Node) CreateSerie(tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := initSeries()
+	err := s.initSeries()
 	if err != nil {
 		return err
 	}
@@ -85,7 +81,7 @@ func (s *Node) SetSerie(tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := initSeries()
+	err := s.initSeries()
 	if err != nil {
 		return err
 	}
@@ -109,7 +105,7 @@ func (s *Node) GetSerie(tag string) (et.Json, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := initSeries()
+	err := s.initSeries()
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +148,7 @@ func (s *Node) DropSerie(tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := initSeries()
+	err := s.initSeries()
 	if err != nil {
 		return err
 	}

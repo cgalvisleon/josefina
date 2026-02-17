@@ -43,10 +43,6 @@ var nodes *Node
 * @return *Node
 **/
 func Load(port int) *Node {
-	if node != nil {
-		return node
-	}
-
 	config, err := getConfig()
 	if err != nil {
 		return nil

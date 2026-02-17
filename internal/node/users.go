@@ -18,16 +18,12 @@ var users *catalog.Model
 * @param db *DB
 * @return error
 **/
-func initUsers() error {
+func (s *Node) initUsers() error {
 	if users != nil {
 		return nil
 	}
 
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}
@@ -73,7 +69,7 @@ func initUsers() error {
 * @param username, password string
 * @return error
 **/
-func (n *Node) CreateUser(username, password string) error {
+func (s *Node) CreateUser(username, password string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -81,7 +77,7 @@ func (n *Node) CreateUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	err := initUsers()
+	err := s.initUsers()
 	if err != nil {
 		return err
 	}
@@ -101,12 +97,12 @@ func (n *Node) CreateUser(username, password string) error {
 * @param username, password string
 * @return error
 **/
-func (n *Node) DropUser(username, password string) error {
+func (s *Node) DropUser(username, password string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	err := initUsers()
+	err := s.initUsers()
 	if err != nil {
 		return err
 	}
@@ -122,7 +118,7 @@ func (n *Node) DropUser(username, password string) error {
 * @param username, password string
 * @return et.Json, error
 **/
-func (n *Node) GetUser(username, password string) (et.Json, error) {
+func (s *Node) GetUser(username, password string) (et.Json, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -130,7 +126,7 @@ func (n *Node) GetUser(username, password string) (et.Json, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	err := initUsers()
+	err := s.initUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +150,7 @@ func (n *Node) GetUser(username, password string) (et.Json, error) {
 * @param username, oldPassword, newPassword string
 * @return error
 **/
-func (n *Node) ChanguePassword(username, oldPassword, newPassword string) error {
+func (s *Node) ChanguePassword(username, oldPassword, newPassword string) error {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
@@ -165,7 +161,7 @@ func (n *Node) ChanguePassword(username, oldPassword, newPassword string) error 
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "newPassword")
 	}
 
-	err := initUsers()
+	err := s.initUsers()
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package node
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -108,16 +107,12 @@ var sessions *catalog.Model
 * @param db *DB
 * @return error
 **/
-func initSessions() error {
+func (s *Node) initSessions() error {
 	if sessions != nil {
 		return nil
 	}
 
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}
@@ -164,7 +159,7 @@ func (s *Node) CreateSession(username, device string, tpConn TpConnection, datab
 
 	result := newSession(username, device, s.Address(), tpConn, database)
 	result.Token = token
-	err = initSessions()
+	err = s.initSessions()
 	if err != nil {
 		return nil, err
 	}

@@ -19,16 +19,12 @@ var transactions *catalog.Model
 * initTransactions: Initializes the transactions model
 * @return error
 **/
-func initTransactions() error {
+func (s *Node) initTransactions() error {
 	if transactions != nil {
 		return nil
 	}
 
-	if node == nil {
-		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
-	}
-
-	db, err := node.coreDb()
+	db, err := s.coreDb()
 	if err != nil {
 		return err
 	}
@@ -49,8 +45,8 @@ func initTransactions() error {
 * @param tx *Tx
 * @return error
 **/
-func setTransaction(tx *Tx) error {
-	err := initTransactions()
+func (s *Node) setTransaction(tx *Tx) error {
+	err := s.initTransactions()
 	if err != nil {
 		return err
 	}
