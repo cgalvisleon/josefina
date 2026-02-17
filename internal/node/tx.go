@@ -69,11 +69,11 @@ func setTransaction(tx *Tx) error {
 }
 
 type Transaction struct {
-	From    *catalog.From  `json:"from"`
-	Command Command        `json:"command"`
-	Idx     string         `json:"idx"`
-	Data    et.Json        `json:"data"`
-	Status  catalog.Status `json:"status"`
+	From    *catalog.From `json:"from"`
+	Command Command       `json:"command"`
+	Idx     string        `json:"idx"`
+	Data    et.Json       `json:"data"`
+	Status  Status        `json:"status"`
 }
 
 /**
@@ -81,7 +81,7 @@ type Transaction struct {
 * @param from *From, cmd Command, idx string, data et.Json, status Status
 * @return *Transaction
 **/
-func newTransaction(from *catalog.From, cmd Command, idx string, data et.Json, status catalog.Status) *Transaction {
+func newTransaction(from *catalog.From, cmd Command, idx string, data et.Json, status Status) *Transaction {
 	return &Transaction{
 		From:    from,
 		Command: cmd,
@@ -173,17 +173,17 @@ func (s *Tx) change() error {
 * @param from *From, cmd Command, idx string, data et.Json
 **/
 func (s *Tx) AddTransaction(from *catalog.From, cmd Command, idx string, data et.Json) error {
-	transaction := newTransaction(from, cmd, idx, data, catalog.Pending)
+	transaction := newTransaction(from, cmd, idx, data, Pending)
 	s.Transactions = append(s.Transactions, transaction)
 	return s.change()
 }
 
 /**
 * SetStatus: Sets the status of a transaction
-* @param idx int, status catalog.Status
+* @param idx int, status Status
 * @return error
 **/
-func (s *Tx) SetStatus(idx int, status catalog.Status) error {
+func (s *Tx) SetStatus(idx int, status Status) error {
 	tr := s.Transactions[idx]
 	if tr == nil {
 		return errors.New(msg.MSG_TRANSACTION_NOT_FOUND)

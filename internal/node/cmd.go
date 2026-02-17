@@ -605,7 +605,7 @@ func Commit(tx *Tx) error {
 				return err
 			}
 		}
-		err := tx.SetStatus(i, catalog.Processed)
+		err := tx.SetStatus(i, Processed)
 		if err != nil {
 			return err
 		}

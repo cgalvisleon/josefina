@@ -13,19 +13,19 @@ import (
 
 type Node struct {
 	*tcp.Server
-	app       string                      `json:"-"`
-	version   string                      `json:"-"`
-	isStrict  bool                        `json:"-"`
-	started   bool                        `json:"-"`
-	dbs       map[string]*catalog.DB      `json:"-"`
-	models    map[string]*catalog.Model   `json:"-"`
-	sessions  map[string]*catalog.Session `json:"-"`
-	muDB      sync.RWMutex                `json:"-"`
-	muModel   sync.RWMutex                `json:"-"`
-	muSession sync.RWMutex                `json:"-"`
-	lead      *Lead                       `json:"-"`
-	follow    *Follow                     `json:"-"`
-	isDebug   bool                        `json:"-"`
+	app       string                    `json:"-"`
+	version   string                    `json:"-"`
+	isStrict  bool                      `json:"-"`
+	started   bool                      `json:"-"`
+	dbs       map[string]*catalog.DB    `json:"-"`
+	models    map[string]*catalog.Model `json:"-"`
+	sessions  map[string]*Session       `json:"-"`
+	muDB      sync.RWMutex              `json:"-"`
+	muModel   sync.RWMutex              `json:"-"`
+	muSession sync.RWMutex              `json:"-"`
+	lead      *Lead                     `json:"-"`
+	follow    *Follow                   `json:"-"`
+	isDebug   bool                      `json:"-"`
 }
 
 var (
@@ -54,7 +54,7 @@ func Load(port int) *Node {
 		isStrict:  config.IsStrict,
 		dbs:       make(map[string]*catalog.DB),
 		models:    make(map[string]*catalog.Model),
-		sessions:  make(map[string]*catalog.Session),
+		sessions:  make(map[string]*Session),
 		muDB:      sync.RWMutex{},
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
