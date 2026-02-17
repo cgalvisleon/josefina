@@ -3,7 +3,6 @@ package node
 import (
 	"time"
 
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
@@ -66,17 +65,28 @@ func setCache(key string, value interface{}, duration time.Duration) (*mem.Entry
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {
-	_, err := setCache(key, value, duration)
-	if err != nil {
-		return err
+func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {	
+	leader, imLeader := node.GetLeader()
+	if imLeader {
+		return s.lead.SetCache(key, value, duration)
 	}
 
-	go func() {
+	if leader != nil {
+		res := node.Request(leader, "Leader.SetCache", from)
+		if res.Error != nil {
+			return nil, false
+		}
 
-	}()
+		var result *catalog.Model
+		err := res.Get(&result)
+		if err != nil {
+			return nil, false
+		}
 
-	return result, nil
+		return nil
+	}
+
+	return nil
 }
 
 /**
@@ -160,139 +170,4 @@ func (s *Node) GetCache(key string) (*mem.Entry, bool) {
 	}
 
 	return set(&result, exists)
-}
-
-/**
-* GetStr: Gets a cache value as a string
-* @param key string
-* @return string, bool, error
-**/
-func GetStr(key string) (string, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Str()
-		return result, true, err
-	}
-
-	return "", false, nil
-}
-
-/**
-* GetInt: Gets a cache value as an int
-* @param key string
-* @return int, bool
-**/
-func GetInt(key string) (int, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Int()
-		return result, true, err
-	}
-
-	return 0, false, nil
-}
-
-/**
-* GetInt64: Gets a cache value as an int64
-* @param key string
-* @return int64, bool
-**/
-func GetInt64(key string) (int64, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Int64()
-		return result, true, err
-	}
-
-	return 0, false, nil
-}
-
-/**
-* GetFloat: Gets a cache value as a float64
-* @param key string
-* @return float64, bool
-**/
-func GetFloat64(key string) (float64, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Float()
-		return result, true, err
-	}
-
-	return 0, false, nil
-}
-
-/**
-* GetBool: Gets a cache value as an int
-* @param key string
-* @return int, bool
-**/
-func GetBool(key string) (bool, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Bool()
-		return result, true, err
-	}
-
-	return false, false, nil
-}
-
-/**
-* GetTime: Gets a cache value as an int
-* @param key string
-* @return int, bool
-**/
-func GetTime(key string) (time.Time, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Time()
-		return result, true, err
-	}
-
-	return time.Time{}, false, nil
-}
-
-/**
-* GetDuration: Gets a cache value as an int
-* @param key string
-* @return int, bool
-**/
-func GetDuration(key string) (time.Duration, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Duration()
-		return result, true, err
-	}
-
-	return 0, false, nil
-}
-
-/**
-* GetJson: Gets a cache value as a json
-* @param key string
-* @return et.Json, bool
-**/
-func GetJson(key string) (et.Json, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.Json()
-		return result, true, err
-	}
-
-	return nil, false, nil
-}
-
-/**
-* GetArrayJson: Gets a cache value as an int
-* @param key string
-* @return int, bool
-**/
-func GetArrayJson(key string) ([]et.Json, bool, error) {
-	item, exists := Get(key)
-	if exists {
-		result, err := item.ArrayJson()
-		return result, true, err
-	}
-
-	return []et.Json{}, false, nil
 }

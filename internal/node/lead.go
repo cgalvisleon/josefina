@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -212,16 +211,19 @@ func (s *Lead) SaveModel(model *catalog.Model) error {
 * @return error
 **/
 func (s *Lead) SetCache(key string, value interface{}, duration time.Duration) error {
-	_, err := mem.Set(key, value, duration)
-	if err != nil {
-		return err
-	}
+	node.muCache.Lock()
+	node.cache[key] = value
+	node.muCache.Unlock()
 
 	if duration != 0 {
+		go func() {
+			time.Sleep(duration)
+			node.DeleteCache(key)
+		}()
 		return nil
 	}
 
-	err = initCache()
+	err := initCache()
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -117,9 +116,16 @@ func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 * @return error
 **/
 func (s *Follow) SetCache(key string, value interface{}, duration time.Duration) error {
-	_, err := mem.Set(key, value, duration)
-	if err != nil {
-		return err
+	node.muCache.Lock()
+	node.cache[key] = value
+	node.muCache.Unlock()
+
+	if duration != 0 {
+		go func() {
+			time.Sleep(duration)
+			node.DeleteCache(key)
+		}()
+		return nil
 	}
 
 	return nil
