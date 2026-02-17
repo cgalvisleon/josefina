@@ -35,7 +35,7 @@ const (
 	version = "0.0.1"
 )
 
-var nodes *Node
+var node *Node
 
 /**
 * Load: Loads the node
@@ -43,12 +43,16 @@ var nodes *Node
 * @return *Node
 **/
 func Load(port int) *Node {
+	if node != nil {
+		return node
+	}
+
 	config, err := getConfig()
 	if err != nil {
 		return nil
 	}
 
-	result := &Node{
+	node = &Node{
 		Server:    tcp.NewServer(port),
 		app:       appName,
 		version:   version,
@@ -62,12 +66,12 @@ func Load(port int) *Node {
 		muSession: sync.RWMutex{},
 		muCache:   sync.RWMutex{},
 	}
-	result.lead = &Lead{node: result}
-	result.follow = &Follow{node: result}
-	result.Mount(result.lead)
-	result.Mount(result.follow)
+	node.lead = &Lead{node: node}
+	node.follow = &Follow{node: node}
+	node.Mount(node.lead)
+	node.Mount(node.follow)
 
-	return result
+	return node
 }
 
 /**

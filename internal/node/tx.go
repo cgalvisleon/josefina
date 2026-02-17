@@ -161,7 +161,7 @@ func (s *Tx) change() error {
 		logs.Debug(data.ToString())
 	}
 
-	return setTransaction(s)
+	return node.setTransaction(s)
 }
 
 /**
