@@ -2,7 +2,9 @@ package node
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -202,4 +204,27 @@ func (s *Lead) SaveModel(model *catalog.Model) error {
 	}
 
 	return nil
+}
+
+/**
+* SetCache: Sets a cache value
+* @param key string, value interface{}, duration time.Duration
+* @return error
+**/
+func (s *Lead) SetCache(key string, value interface{}, duration time.Duration) error {
+	_, err := mem.Set(key, value, duration)
+	if err != nil {
+		return err
+	}
+
+	if duration != 0 {
+		return nil
+	}
+
+	err = initCache()
+	if err != nil {
+		return err
+	}
+
+	return cache.Put(key, value)
 }

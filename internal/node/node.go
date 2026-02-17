@@ -20,9 +20,11 @@ type Node struct {
 	dbs       map[string]*catalog.DB    `json:"-"`
 	models    map[string]*catalog.Model `json:"-"`
 	sessions  map[string]*Session       `json:"-"`
+	cache     map[string]interface{}    `json:"-"`
 	muDB      sync.RWMutex              `json:"-"`
 	muModel   sync.RWMutex              `json:"-"`
 	muSession sync.RWMutex              `json:"-"`
+	muCache   sync.RWMutex              `json:"-"`
 	lead      *Lead                     `json:"-"`
 	follow    *Follow                   `json:"-"`
 	isDebug   bool                      `json:"-"`
@@ -60,9 +62,11 @@ func Load(port int) *Node {
 		dbs:       make(map[string]*catalog.DB),
 		models:    make(map[string]*catalog.Model),
 		sessions:  make(map[string]*Session),
+		cache:     make(map[string]interface{}),
 		muDB:      sync.RWMutex{},
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
+		muCache:   sync.RWMutex{},
 		lead:      new(Lead),
 		follow:    new(Follow),
 	}

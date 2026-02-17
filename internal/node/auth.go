@@ -47,8 +47,8 @@ func Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func (n *Node) SignIn(device, username, password string) (*Session, error) {
-	item, err := GetUser(username, password)
+func (s *Node) SignIn(device, username, password string, tpConn TpConnection, database string) (*Session, error) {
+	item, err := s.GetUser(username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (n *Node) SignIn(device, username, password string) (*Session, error) {
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := CreateSession(device, username)
+	result, err := s.CreateSession(device, username, tpConn, database)
 	if err != nil {
 		return nil, err
 	}

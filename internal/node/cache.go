@@ -1,4 +1,4 @@
-package cache
+package node
 
 import (
 	"time"
@@ -8,31 +8,18 @@ import (
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
 
-var (
-	cache   *catalog.Model
-	address string
-)
+var cache *catalog.Model
 
 /**
-* Load: Loads the cache
-* @param string
+* initCache: Initializes the cache model
 * @return error
 **/
-func Load(addr string) error {
-	address = addr
-	return nil
-}
-
-/**
-* initModel: Initializes the cache model
-* @return error
-**/
-func initModel() error {
+func initCache() error {
 	if cache != nil {
 		return nil
 	}
 
-	db, err := catalog.CoreDb()
+	db, err := node.coreDb()
 	if err != nil {
 		return err
 	}
@@ -49,17 +36,17 @@ func initModel() error {
 }
 
 /**
-* Set: Sets a cache value
+* setCache: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
+func setCache(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
 	result, err := mem.Set(key, value, duration)
 	if err != nil {
 		return nil, err
 	}
 
-	err = initModel()
+	err = initCache()
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +62,14 @@ func set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 }
 
 /**
-* Set: Sets a cache value
+* SetCache: Sets a cache value
 * @param key string, value interface{}, duration time.Duration
 * @return interface{}, error
 **/
-func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, error) {
-	result, err := set(key, value, duration)
+func (s *Node) SetCache(key string, value interface{}, duration time.Duration) error {
+	_, err := setCache(key, value, duration)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	go func() {
@@ -93,14 +80,14 @@ func Set(key string, value interface{}, duration time.Duration) (*mem.Entry, err
 }
 
 /**
-* delete: Gets a cache value as an int
+* DeleteCache: Gets a cache value as an int
 * @param key string
 * @return int, bool
 **/
-func delete(key, origin string) (bool, error) {
+func (s *Node) DeleteCache(key string) (bool, error) {
 	result := mem.Delete(key)
 
-	err := initModel()
+	err := initCache()
 	if err != nil {
 		return false, err
 	}
@@ -114,30 +101,17 @@ func delete(key, origin string) (bool, error) {
 }
 
 /**
-* Delete: Deletes a cache value
-* @param key string
-* @return bool, error
-**/
-func Delete(key string) (bool, error) {
-	go func() {
-
-	}()
-
-	return true, nil
-}
-
-/**
-* Exists: Checks if a cache value exists
+* ExistsCache: Checks if a cache value exists
 * @param key string
 * @return bool
 **/
-func Exists(key string) (bool, error) {
+func (s *Node) ExistsCache(key string) (bool, error) {
 	exists := mem.Exists(key)
 	if exists {
 		return true, nil
 	}
 
-	err := initModel()
+	err := initCache()
 	if err != nil {
 		return false, err
 	}
@@ -151,11 +125,11 @@ func Exists(key string) (bool, error) {
 }
 
 /**
-* Get: Gets a cache value
+* GetCache: Gets a cache value
 * @param key string
 * @return *mem.Entry
 **/
-func Get(key string) (*mem.Entry, bool) {
+func (s *Node) GetCache(key string) (*mem.Entry, bool) {
 	value, exists := mem.GetEntry(key)
 	if exists {
 		return value, true
@@ -170,7 +144,7 @@ func Get(key string) (*mem.Entry, bool) {
 		return result, exists
 	}
 
-	err := initModel()
+	err := initCache()
 	if err != nil {
 		return nil, false
 	}

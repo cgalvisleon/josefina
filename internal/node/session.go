@@ -153,6 +153,9 @@ func (s *Node) CreateSession(username, device string, tpConn TpConnection, datab
 	if !utility.ValidStr(device, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
 	}
+	if !utility.ValidStr(database, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
+	}
 
 	token, err := claim.NewToken(appName, device, username, et.Json{}, 0)
 	if err != nil {

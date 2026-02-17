@@ -2,8 +2,10 @@ package node
 
 import (
 	"errors"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/mem"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -107,4 +109,18 @@ func (s *Follow) LoadModel(model *catalog.Model) (*catalog.Model, error) {
 	node.muModel.Unlock()
 
 	return model, nil
+}
+
+/**
+* SetCache: Sets a cache value
+* @param key string, value interface{}, duration time.Duration
+* @return error
+**/
+func (s *Follow) SetCache(key string, value interface{}, duration time.Duration) error {
+	_, err := mem.Set(key, value, duration)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
