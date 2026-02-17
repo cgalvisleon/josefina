@@ -1,4 +1,4 @@
-package core
+package node
 
 import (
 	"errors"
@@ -22,7 +22,11 @@ func initSeries() error {
 		return nil
 	}
 
-	db, err := catalog.CoreDb()
+	if node == nil {
+		return errors.New(msg.MSG_NODE_NOT_INITIALIZED)
+	}
+
+	db, err := node.coreDb()
 	if err != nil {
 		return err
 	}
@@ -47,7 +51,7 @@ func initSeries() error {
 * @param tag, format string, value int
 * @return error
 **/
-func CreateSerie(tag, format string, value int) error {
+func (s *Node) CreateSerie(tag, format string, value int) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -61,8 +65,8 @@ func CreateSerie(tag, format string, value int) error {
 		format = `%d`
 	}
 
-	_, err = series.
-		Insert(et.Json{
+	_, err = Insert(series,
+		et.Json{
 			"tag":    tag,
 			"value":  value,
 			"format": format,
@@ -76,7 +80,7 @@ func CreateSerie(tag, format string, value int) error {
 * @param tag string, value int
 * @return error
 **/
-func SetSerie(tag string, value int) error {
+func (s *Node) SetSerie(tag string, value int) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -86,11 +90,11 @@ func SetSerie(tag string, value int) error {
 		return err
 	}
 
-	_, err = series.
-		Update(et.Json{
+	_, err = Update(series,
+		et.Json{
 			"value": value,
 		}).
-		Where(catalog.Eq("tag", tag)).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
@@ -100,7 +104,7 @@ func SetSerie(tag string, value int) error {
 * @param tag string
 * @return et.Json, error
 **/
-func GetSerie(tag string) (et.Json, error) {
+func (s *Node) GetSerie(tag string) (et.Json, error) {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -110,14 +114,14 @@ func GetSerie(tag string) (et.Json, error) {
 		return nil, err
 	}
 
-	items, err := series.
-		Update(et.Json{}).
-		BeforeUpdateFn(func(tx *catalog.Tx, old, new et.Json) error {
+	items, err := Update(series,
+		et.Json{}).
+		BeforeUpdateFn(func(tx *Tx, old, new et.Json) error {
 			value := old.Int("value")
 			new["value"] = value + 1
 			return nil
 		}).
-		Where(catalog.Eq("tag", tag)).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	if err != nil {
 		return et.Json{}, err
@@ -143,7 +147,7 @@ func GetSerie(tag string) (et.Json, error) {
 * @param tag string
 * @return error
 **/
-func DropSerie(tag string) error {
+func (s *Node) DropSerie(tag string) error {
 	if !utility.ValidStr(tag, 0, []string{""}) {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
@@ -153,9 +157,8 @@ func DropSerie(tag string) error {
 		return err
 	}
 
-	_, err = series.
-		Delete().
-		Where(catalog.Eq("tag", tag)).
+	_, err = Delete(series).
+		Where(Eq("tag", tag)).
 		Execute(nil)
 	return err
 }
