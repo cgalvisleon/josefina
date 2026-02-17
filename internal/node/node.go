@@ -213,21 +213,3 @@ func (s *Node) coreDb() (*catalog.DB, error) {
 
 	return result, nil
 }
-
-/**
-* LoadModel
-* @param model *Model
-* @return error
-**/
-func (s *Node) LoadModel(model *catalog.Model) (*catalog.Model, error) {
-	err := model.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	model.Address = s.Address()
-	s.muModel.Lock()
-	s.models[model.Key()] = model
-	s.muModel.Unlock()
-	return nil, nil
-}

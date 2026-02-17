@@ -139,6 +139,17 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	}
 
 	if exists {
+		next := node.NextTurn()
+		res := node.Request(next, "Follow.LoadModel", from)
+		if res.Error != nil {
+			return nil, false
+		}
+
+		err := res.Get(&result)
+		if err != nil {
+			return nil, false
+		}
+
 		node.muModel.Lock()
 		node.models[key] = result
 		node.muModel.Unlock()
