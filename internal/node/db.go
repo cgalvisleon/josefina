@@ -41,6 +41,30 @@ func initDbs() error {
 }
 
 /**
+* coreDb: Creates the core database
+* @return *catalog.DB, error
+**/
+func (s *Node) coreDb() (*catalog.DB, error) {
+	name := "josefina"
+	s.muDB.RLock()
+	result, ok := s.dbs[name]
+	s.muDB.RUnlock()
+	if ok {
+		return result, nil
+	}
+
+	result, err := catalog.NewDb(name)
+	if err != nil {
+		return nil, err
+	}
+	s.muDB.Lock()
+	s.dbs[name] = result
+	s.muDB.Unlock()
+
+	return result, nil
+}
+
+/**
 * GetDb: Gets a model
 * @param name string, dest *jdb.Model
 * @return bool, error
