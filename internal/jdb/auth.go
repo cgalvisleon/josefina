@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/cgalvisleon/et/claim"
-	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -42,7 +41,7 @@ func (s *Node) Authenticate(token string) (*claim.Claim, error) {
 * @param device, username, password string
 * @return *Session, error
 **/
-func (s *Node) SignIn(device, username, password string, tpConn TpConnection, database string) (*tcp.Client, error) {
+func (s *Node) SignIn(device, username, password string, tpConn TpConnection, database string) (*Session, error) {
 	leader, imLeader := s.GetLeader()
 	if imLeader {
 		return s.lead.SignIn(device, username, password, tpConn, database)
@@ -54,7 +53,7 @@ func (s *Node) SignIn(device, username, password string, tpConn TpConnection, da
 			return nil, res.Error
 		}
 
-		var result *tcp.Client
+		var result *Session
 		err := res.Get(&result)
 		if err != nil {
 			return nil, err
