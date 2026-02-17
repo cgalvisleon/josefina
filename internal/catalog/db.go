@@ -12,7 +12,6 @@ import (
 
 type DB struct {
 	Name     string             `json:"name"`
-	Version  string             `json:"version"`
 	Path     string             `json:"path"`
 	Schemas  map[string]*Schema `json:"schemas"`
 	IsStrict bool               `json:"is_strict"`
@@ -32,7 +31,6 @@ func NewDb(name string) (*DB, error) {
 	path := envar.GetStr("DATA_PATH", "./data")
 	result := &DB{
 		Name:    name,
-		Version: "1.0.0",
 		Path:    fmt.Sprintf("%s/%s", path, name),
 		Schemas: make(map[string]*Schema, 0),
 	}
