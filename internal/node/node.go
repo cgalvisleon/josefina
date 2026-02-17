@@ -215,38 +215,6 @@ func (s *Node) coreDb() (*catalog.DB, error) {
 }
 
 /**
-* GetModel
-* @param from *From
-* @return *Model, error
-**/
-func (s *Node) GetModel(from *catalog.From) (*catalog.Model, bool) {
-	key := from.Key()
-	result, ok := s.models[key]
-	if ok {
-		return result, true
-	}
-
-	leader, imLeader := s.GetLeader()
-	if !imLeader && leader != nil {
-		res := s.Request(leader, "Leader.GetModel", from)
-		if res.Error != nil {
-			return nil, false
-		}
-
-		var result *catalog.Model
-		var exists bool
-		err := res.Get(&result, &exists)
-		if err != nil {
-			return nil, false
-		}
-
-		return result, exists
-	}
-
-	return nil, false
-}
-
-/**
 * LoadModel
 * @param model *Model
 * @return error

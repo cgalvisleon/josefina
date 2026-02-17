@@ -47,7 +47,11 @@ func initDbs() error {
 **/
 func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
+	if imLeader {
+		return s.lead.GetDb(name)
+	}
+
+	if leader != nil {
 		res := node.Request(leader, "Leader.GetDb", name)
 		if res.Error != nil {
 			return nil, false
@@ -63,7 +67,7 @@ func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 		return result, exists
 	}
 
-	return s.lead.GetDb(name)
+	return nil, false
 }
 
 /**
@@ -73,7 +77,11 @@ func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 **/
 func (s *Node) CreateDb(name string) (*catalog.DB, error) {
 	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
+	if imLeader {
+		return s.lead.CreateDb(name)
+	}
+
+	if leader != nil {
 		res := node.Request(leader, "Leader.CreateDb", name)
 		if res.Error != nil {
 			return nil, res.Error
@@ -88,7 +96,7 @@ func (s *Node) CreateDb(name string) (*catalog.DB, error) {
 		return result, nil
 	}
 
-	return s.lead.CreateDb(name)
+	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
 
 /**
@@ -98,7 +106,11 @@ func (s *Node) CreateDb(name string) (*catalog.DB, error) {
 **/
 func (s *Node) DropDb(name string) error {
 	leader, imLeader := node.GetLeader()
-	if !imLeader && leader != nil {
+	if imLeader {
+		return s.lead.DropDb(name)
+	}
+
+	if leader != nil {
 		res := node.Request(leader, "Leader.DropDb", name)
 		if res.Error != nil {
 			return res.Error
@@ -107,5 +119,5 @@ func (s *Node) DropDb(name string) error {
 		return nil
 	}
 
-	return s.lead.DropDb(name)
+	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }
