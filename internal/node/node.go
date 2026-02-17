@@ -196,9 +196,9 @@ func (s *Node) PutObject(from *catalog.From, idx string, data et.Json) error {
 **/
 func (s *Node) coreDb() (*catalog.DB, error) {
 	name := "josefina"
-	s.muDB.Lock()
+	s.muDB.RLock()
 	result, ok := s.dbs[name]
-	s.muDB.Unlock()
+	s.muDB.RUnlock()
 	if ok {
 		return result, nil
 	}
