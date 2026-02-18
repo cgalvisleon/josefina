@@ -6,10 +6,6 @@ import (
 	"github.com/cgalvisleon/josefina/pkg/sql"
 )
 
-var (
-	app = "josefina"
-)
-
 type Service struct {
 	node *sql.Client
 }
