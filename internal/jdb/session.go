@@ -30,12 +30,12 @@ const (
 	Disconnected Status = "disconnected"
 )
 
-type TpConnection int
+type TpConnection string
 
 const (
-	HTTP TpConnection = iota
-	WebSocket
-	TCP
+	HTTP      TpConnection = "http"
+	WebSocket TpConnection = "websocket"
+	TCP       TpConnection = "tcp"
 )
 
 type Session struct {

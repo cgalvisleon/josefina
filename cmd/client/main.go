@@ -8,7 +8,6 @@ import (
 func main() {
 	envar.SetStrByArg("-host", "HOST", "localhost:1377")
 	envar.SetStrByArg("-user", "USER", "admin")
-	envar.SetStrByArg("-password", "PASSWORD", "admin")
 	envar.SetStrByArg("-database", "DATABASE", "josefina")
 
 	srv, err := cli.New()

@@ -13,9 +13,7 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type Lead struct {
-	node *Node
-}
+type Lead struct{}
 
 /**
 * GetDb: Returns a database by name
@@ -24,14 +22,14 @@ type Lead struct {
 **/
 func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 	name = utility.Normalize(name)
-	s.node.muDB.RLock()
-	result, ok := s.node.dbs[name]
-	s.node.muDB.RUnlock()
+	node.muDB.RLock()
+	result, ok := node.dbs[name]
+	node.muDB.RUnlock()
 	if ok {
 		return result, true
 	}
 
-	err := s.node.initDbs()
+	err := node.initDbs()
 	if err != nil {
 		return nil, false
 	}
@@ -42,9 +40,9 @@ func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 	}
 
 	if exists {
-		s.node.muDB.Lock()
-		s.node.dbs[name] = result
-		s.node.muDB.Unlock()
+		node.muDB.Lock()
+		node.dbs[name] = result
+		node.muDB.Unlock()
 		return result, true
 	}
 
@@ -62,14 +60,14 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 	}
 
 	name = utility.Normalize(name)
-	s.node.muDB.RLock()
-	result, ok := s.node.dbs[name]
-	s.node.muDB.RUnlock()
+	node.muDB.RLock()
+	result, ok := node.dbs[name]
+	node.muDB.RUnlock()
 	if ok {
 		return result, nil
 	}
 
-	err := s.node.initDbs()
+	err := node.initDbs()
 	if err != nil {
 		return nil, err
 	}
@@ -91,9 +89,9 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 		}
 	}
 
-	s.node.muDB.Lock()
-	s.node.dbs[name] = result
-	s.node.muDB.Unlock()
+	node.muDB.Lock()
+	node.dbs[name] = result
+	node.muDB.Unlock()
 
 	return result, nil
 }
@@ -103,7 +101,7 @@ func (s *Lead) CreateDb(name string) (*catalog.DB, error) {
 * @param name string
 **/
 func (s *Lead) DropDb(name string) error {
-	err := s.node.initDbs()
+	err := node.initDbs()
 	if err != nil {
 		return err
 	}
@@ -114,9 +112,9 @@ func (s *Lead) DropDb(name string) error {
 		return err
 	}
 
-	s.node.muDB.Lock()
-	delete(s.node.dbs, name)
-	s.node.muDB.Unlock()
+	node.muDB.Lock()
+	delete(node.dbs, name)
+	node.muDB.Unlock()
 
 	return nil
 }
@@ -128,14 +126,14 @@ func (s *Lead) DropDb(name string) error {
 **/
 func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	key := from.Key()
-	s.node.muModel.RLock()
-	result, ok := s.node.models[key]
-	s.node.muModel.RUnlock()
+	node.muModel.RLock()
+	result, ok := node.models[key]
+	node.muModel.RUnlock()
 	if ok {
 		return result, true
 	}
 
-	err := s.node.initModels()
+	err := node.initModels()
 	if err != nil {
 		return nil, false
 	}
@@ -146,8 +144,8 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 	}
 
 	if exists {
-		next := s.node.NextTurn()
-		res := s.node.Request(next, "Follow.LoadModel", from)
+		next := node.NextTurn()
+		res := node.Request(next, "Follow.LoadModel", from)
 		if res.Error != nil {
 			return nil, false
 		}
@@ -157,9 +155,9 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 			return nil, false
 		}
 
-		s.node.muModel.Lock()
-		s.node.models[key] = result
-		s.node.muModel.Unlock()
+		node.muModel.Lock()
+		node.models[key] = result
+		node.muModel.Unlock()
 		return result, true
 	}
 
@@ -173,7 +171,7 @@ func (s *Lead) GetModel(from *catalog.From) (*catalog.Model, bool) {
 **/
 func (s *Lead) DropModel(from *catalog.From) error {
 	key := from.Key()
-	err := s.node.initModels()
+	err := node.initModels()
 	if err != nil {
 		return err
 	}
@@ -184,9 +182,9 @@ func (s *Lead) DropModel(from *catalog.From) error {
 		return err
 	}
 
-	s.node.muModel.Lock()
-	delete(s.node.models, key)
-	s.node.muModel.Unlock()
+	node.muModel.Lock()
+	delete(node.models, key)
+	node.muModel.Unlock()
 
 	return nil
 }
@@ -197,7 +195,7 @@ func (s *Lead) DropModel(from *catalog.From) error {
 * @return error
 **/
 func (s *Lead) SaveModel(model *catalog.Model) error {
-	err := s.node.initModels()
+	err := node.initModels()
 	if err != nil {
 		return err
 	}
@@ -234,9 +232,9 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 		}
 	}
 
-	s.node.muCache.Lock()
-	s.node.cache[key] = bt
-	s.node.muCache.Unlock()
+	node.muCache.Lock()
+	node.cache[key] = bt
+	node.muCache.Unlock()
 
 	if duration != 0 {
 		go func() {
@@ -246,7 +244,7 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 		return nil
 	}
 
-	err := s.node.initCache()
+	err := node.initCache()
 	if err != nil {
 		return err
 	}
@@ -260,11 +258,11 @@ func (s *Lead) SetCache(key string, value any, now time.Time, duration time.Dura
 * @return error
 **/
 func (s *Lead) DeleteCache(key string) error {
-	s.node.muCache.Lock()
-	delete(s.node.cache, key)
-	s.node.muCache.Unlock()
+	node.muCache.Lock()
+	delete(node.cache, key)
+	node.muCache.Unlock()
 
-	err := s.node.initCache()
+	err := node.initCache()
 	if err != nil {
 		return err
 	}
@@ -278,15 +276,15 @@ func (s *Lead) DeleteCache(key string) error {
 * @return error
 **/
 func (s *Lead) ExistsCache(key string) (bool, error) {
-	s.node.muCache.Lock()
-	_, ok := s.node.cache[key]
-	s.node.muCache.Unlock()
+	node.muCache.Lock()
+	_, ok := node.cache[key]
+	node.muCache.Unlock()
 
 	if ok {
 		return true, nil
 	}
 
-	err := s.node.initCache()
+	err := node.initCache()
 	if err != nil {
 		return false, err
 	}
@@ -305,9 +303,9 @@ func (s *Lead) ExistsCache(key string) (bool, error) {
 * @return error
 **/
 func (s *Lead) GetCache(key string, dest any) error {
-	s.node.muCache.Lock()
-	bt, ok := s.node.cache[key]
-	s.node.muCache.Unlock()
+	node.muCache.Lock()
+	bt, ok := node.cache[key]
+	node.muCache.Unlock()
 
 	if ok {
 		err := json.Unmarshal(bt, dest)
@@ -317,7 +315,7 @@ func (s *Lead) GetCache(key string, dest any) error {
 		return nil
 	}
 
-	err := s.node.initCache()
+	err := node.initCache()
 	if err != nil {
 		return err
 	}
@@ -340,7 +338,7 @@ func (s *Lead) CreateSerie(tag, format string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := s.node.initSeries()
+	err := node.initSeries()
 	if err != nil {
 		return err
 	}
@@ -370,7 +368,7 @@ func (s *Lead) SetSerie(tag string, value int) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := s.node.initSeries()
+	err := node.initSeries()
 	if err != nil {
 		return err
 	}
@@ -395,7 +393,7 @@ func (s *Lead) GetSerie(tag string) (et.Item, error) {
 		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := s.node.initSeries()
+	err := node.initSeries()
 	if err != nil {
 		return et.Item{}, err
 	}
@@ -439,7 +437,7 @@ func (s *Lead) DropSerie(tag string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "tag")
 	}
 
-	err := s.node.initSeries()
+	err := node.initSeries()
 	if err != nil {
 		return err
 	}
@@ -463,7 +461,7 @@ func (s *Lead) CreateUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	err := s.node.initUsers()
+	err := node.initUsers()
 	if err != nil {
 		return err
 	}
@@ -488,7 +486,7 @@ func (s *Lead) DropUser(username, password string) error {
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
 	}
 
-	err := s.node.initUsers()
+	err := node.initUsers()
 	if err != nil {
 		return err
 	}
@@ -512,7 +510,7 @@ func (s *Lead) GetUser(username, password string) (et.Item, error) {
 		return et.Item{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
 	}
 
-	err := s.node.initUsers()
+	err := node.initUsers()
 	if err != nil {
 		return et.Item{}, err
 	}
@@ -545,7 +543,7 @@ func (s *Lead) ChanguePassword(username, oldPassword, newPassword string) error 
 		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "newPassword")
 	}
 
-	err := s.node.initUsers()
+	err := node.initUsers()
 	if err != nil {
 		return err
 	}
@@ -587,7 +585,7 @@ func (s *Lead) Authenticate(token string) (*claim.Claim, error) {
 
 	key := fmt.Sprintf("%s:%s:%s", result.App, result.Device, result.Username)
 	var session *Session
-	err = s.node.GetCache(key, &session)
+	err = node.GetCache(key, &session)
 	if err != nil {
 		return nil, errors.New(msg.MSG_CLIENT_NOT_AUTHENTICATION)
 	}
@@ -609,7 +607,7 @@ func (s *Lead) Authenticate(token string) (*claim.Claim, error) {
 * @return *Session, error
 **/
 func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, database string) (*Session, error) {
-	user, err := s.node.GetUser(username, password)
+	user, err := node.GetUser(username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -618,7 +616,7 @@ func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, da
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := s.node.CreateSession(device, username, tpConn, database)
+	result, err := node.CreateSession(device, username, tpConn, database)
 	if err != nil {
 		return nil, err
 	}
