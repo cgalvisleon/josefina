@@ -476,84 +476,90 @@ func (s *Model) For(next func(idx string, item et.Json) (bool, error), asc bool,
 
 /**
 * AddBeforeInsert
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddBeforeInsert(name string, definition []byte) {
+func (s *Model) AddBeforeInsert(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeInserts[idx].Definition = definition
+		s.BeforeInserts[idx].Definition = bt
 	} else {
-		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: definition})
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
 	}
 }
 
 /**
 * AddAfterInsert
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddAfterInsert(name string, definition []byte) {
+func (s *Model) AddAfterInsert(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeInserts[idx].Definition = definition
+		s.BeforeInserts[idx].Definition = bt
 	} else {
-		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: definition})
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
 	}
 }
 
 /**
 * AddBeforeUpdate
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddBeforeUpdate(name string, definition []byte) {
+func (s *Model) AddBeforeUpdate(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeUpdates[idx].Definition = definition
+		s.BeforeUpdates[idx].Definition = bt
 	} else {
-		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: definition})
+		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: bt})
 	}
 }
 
 /**
 * AddAfterUpdate
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddAfterUpdate(name string, definition []byte) {
+func (s *Model) AddAfterUpdate(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.AfterUpdates[idx].Definition = definition
+		s.AfterUpdates[idx].Definition = bt
 	} else {
-		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: definition})
+		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: bt})
 	}
 }
 
 /**
 * AddBeforeDelete
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddBeforeDelete(name string, definition []byte) {
+func (s *Model) AddBeforeDelete(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeDeletes[idx].Definition = definition
+		s.BeforeDeletes[idx].Definition = bt
 	} else {
-		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: definition})
+		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: bt})
 	}
 }
 
 /**
 * AddAfterDelete
-* @param name string, definition []byte
+* @param name string, definition string
 * @return void
 **/
-func (s *Model) AddAfterDelete(name string, definition []byte) {
+func (s *Model) AddAfterDelete(name string, definition string) {
+	bt := []byte(definition)
 	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.AfterDeletes[idx].Definition = definition
+		s.AfterDeletes[idx].Definition = bt
 	} else {
-		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: definition})
+		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: bt})
 	}
 }
