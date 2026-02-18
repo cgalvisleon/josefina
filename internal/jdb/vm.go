@@ -152,7 +152,7 @@ func wrapperToString(vm *Vm) {
 * @param vm *Vm
 **/
 func wrapperModel(vm *Vm) {
-	vm.Set("model", func(call goja.FunctionCall) goja.Value {
+	vm.Set("getModel", func(call goja.FunctionCall) goja.Value {
 		args := call.Arguments
 		if len(args) != 3 {
 			panic(vm.NewGoError(fmt.Errorf(msg.MSG_ARG_REQUIRED, "database, schema, model")))
