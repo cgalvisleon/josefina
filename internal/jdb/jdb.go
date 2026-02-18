@@ -42,8 +42,6 @@ func Load(port int) *Node {
 		lead:      new(Lead),
 		follow:    new(Follow),
 	}
-	node.Mount(node.lead)
-	node.Mount(node.follow)
 	node.OnInbound(func(c *tcp.Client, m *tcp.Message) {
 		logs.Debug(et.Json{
 			"client":  c,
