@@ -71,7 +71,7 @@ func (s *Node) Start() error {
 		s.AddNode(node)
 	}
 
-	err = s.Start()
+	err = s.Server.Start()
 	if err != nil {
 		return err
 	}

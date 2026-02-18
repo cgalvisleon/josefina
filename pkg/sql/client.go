@@ -15,7 +15,7 @@ type Client struct {
 	*tcp.Client
 	addr     string
 	session  *jdb.Session
-	user     string
+	username string
 	database string
 }
 
@@ -24,20 +24,26 @@ type Client struct {
 * @param host, user, password, database string
 * @return *Client
 **/
-func NewClient(host, user, password, database string) (*Client, error) {
+func NewClient(host, username, password, database string) (*Client, error) {
+	client := tcp.NewClient(host)
+	err := client.Connect()
+	if err != nil {
+		return nil, err
+	}
+
 	result := &Client{
-		Client:   tcp.NewClient(host),
+		Client:   client,
 		addr:     host,
-		user:     user,
+		username: username,
 		database: database,
 	}
-	res := result.Request("Lead.SignIn", user, password, jdb.TCP, database)
+	res := result.Request("Lead.SignIn", "sql", username, password, jdb.TCP, database)
 	if res.Error != nil {
 		return nil, res.Error
 	}
 
 	var session *jdb.Session
-	err := res.Get(&session)
+	err = res.Get(&session)
 	if err != nil {
 		return nil, err
 	}

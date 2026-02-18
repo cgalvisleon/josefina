@@ -618,7 +618,7 @@ func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, da
 		return nil, errors.New(msg.MSG_AUTHENTICATION_FAILED)
 	}
 
-	result, err := node.CreateSession(device, username, tpConn, database)
+	result, err := s.node.CreateSession(device, username, tpConn, database)
 	if err != nil {
 		return nil, err
 	}

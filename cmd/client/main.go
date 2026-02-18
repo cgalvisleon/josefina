@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/cgalvisleon/et/envar"
-	serv "github.com/cgalvisleon/josefina/internal/client"
+	cli "github.com/cgalvisleon/josefina/internal/client"
 )
 
 func main() {
@@ -11,7 +11,7 @@ func main() {
 	envar.SetStrByArg("-password", "PASSWORD", "admin")
 	envar.SetStrByArg("-database", "DATABASE", "josefina")
 
-	srv, err := serv.New()
+	srv, err := cli.New()
 	if err != nil {
 		panic(err)
 	}

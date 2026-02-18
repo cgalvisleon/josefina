@@ -141,12 +141,9 @@ func (s *Node) initSessions() error {
 * @param device, username string
 * @return *Session, error
 **/
-func (s *Node) CreateSession(username, device string, tpConn TpConnection, database string) (*Session, error) {
+func (s *Node) CreateSession(device, username string, tpConn TpConnection, database string) (*Session, error) {
 	if !utility.ValidStr(username, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
-	}
-	if !utility.ValidStr(device, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "device")
 	}
 	if !utility.ValidStr(database, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "database")
