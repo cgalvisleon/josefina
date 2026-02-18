@@ -58,6 +58,66 @@ func newCmd(model *catalog.Model) *Cmd {
 		afterDeletes:  make([]TriggerFunction, 0),
 	}
 
+	result.BeforeInsertFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.BeforeInserts {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	result.BeforeUpdateFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.BeforeUpdates {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	result.BeforeDeleteFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.BeforeDeletes {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	result.AfterInsertFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.AfterInserts {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	result.AfterUpdateFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.AfterUpdates {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	result.AfterDeleteFn(func(tx *Tx, old, new et.Json) error {
+		for _, tg := range result.model.AfterDeletes {
+			err := result.runTrigger(tg, tx, old, new)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	return result
 }
 
@@ -68,6 +128,27 @@ func newCmd(model *catalog.Model) *Cmd {
 func (s *Cmd) IsDebug() *Cmd {
 	s.isDebug = true
 	return s
+}
+
+/**
+* runTrigger
+* @param event catalog.EventTrigger, tx *Tx, old et.Json, new et.Json
+* @return error
+**/
+func (s *Cmd) runTrigger(event *catalog.Trigger, tx *Tx, old, new et.Json) error {
+	model := s.model
+	vm := NewVm()
+	vm.Set("self", model)
+	vm.Set("tx", tx)
+	vm.Set("old", old)
+	vm.Set("new", new)
+	script := string(event.Definition)
+	_, err := vm.Run(script)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -128,27 +209,6 @@ func (s *Cmd) BeforeDeleteFn(fn TriggerFunction) *Cmd {
 func (s *Cmd) AfterDeleteFn(fn TriggerFunction) *Cmd {
 	s.afterDeletes = append(s.afterDeletes, fn)
 	return s
-}
-
-/**
-* runTrigger
-* @param event catalog.EventTrigger, tx *Tx, old et.Json, new et.Json
-* @return error
-**/
-func (s *Cmd) runTrigger(event catalog.Trigger, tx *Tx, old, new et.Json) error {
-	model := s.model
-	vm := NewVm()
-	vm.Set("self", model)
-	vm.Set("tx", tx)
-	vm.Set("old", old)
-	vm.Set("new", new)
-	script := string(event.Definition)
-	_, err := vm.Run(script)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 /**
