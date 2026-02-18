@@ -40,6 +40,8 @@ func Load(port int) *Node {
 		lead:      new(Lead),
 		follow:    new(Follow),
 	}
+	node.Mount(node.lead)
+	node.Mount(node.follow)
 
 	return node
 }
