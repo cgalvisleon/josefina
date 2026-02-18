@@ -38,7 +38,7 @@ func Load(port int) *Node {
 		muModel:   sync.RWMutex{},
 		muSession: sync.RWMutex{},
 		muCache:   sync.RWMutex{},
-		lead:      new(Lead),
+		lead:      NewLeadService(),
 		follow:    new(Follow),
 	}
 	node.Mount(node.lead)

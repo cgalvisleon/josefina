@@ -21,12 +21,18 @@ type Lead struct {
 
 func NewLeadService() *Lead {
 	this := &Lead{}
-	this.GetDb = func(request ...any) *tcp.Response {
-		name := request[0].(string)
+	this.GetDb = func(request []any) *tcp.Response {
+		var name string
+		err := AnyGet(request, &name)
+		if err != nil {
+			return tcp.NewResponse(nil, err)
+		}
+
 		result, ok := this.getDb(name)
 		if !ok {
 			return tcp.NewResponse(nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name))
 		}
+
 		return tcp.NewResponse([]any{result}, nil)
 	}
 
@@ -47,10 +53,10 @@ func (s *Lead) build() map[string]tcp.HandlerFunc {
 
 /**
 * Execute: Executes a method
-* @param name string, request ...any
+* @param name string, request []any
 * @return *tcp.Response
 **/
-func (s *Lead) Execute(name string, request ...any) *tcp.Response {
+func (s *Lead) Execute(name string, request []any) *tcp.Response {
 	handler, ok := s.registry[name]
 	if !ok {
 		return tcp.NewResponse(nil, fmt.Errorf(msg.MSG_METHOD_NOT_FOUND, name))

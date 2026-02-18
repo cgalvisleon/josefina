@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	lg "github.com/cgalvisleon/et/stdrout"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
@@ -48,22 +48,16 @@ func NewClient(host, username, database string) (*Client, error) {
 * @return
 **/
 func (s *Client) Start() {
-	res := s.Request("SignIn", et.Json{
-		"device":   "cli",
-		"username": s.username,
-		"password": "test",
-		"database": s.database,
-	})
-
+	res := s.Request("Lead.GetDb", "test")
 	if res.Error != nil {
 		logs.Error(res.Error)
 	}
 
-	jRes, err := res.ToJson()
+	var db *catalog.DB
+	err := res.Get(&db)
 	if err != nil {
 		logs.Error(err)
 	}
-	logs.Debug(jRes)
 
 	reader := bufio.NewReader(os.Stdin)
 

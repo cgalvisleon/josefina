@@ -1,12 +1,15 @@
 package jdb
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 /**
@@ -284,6 +287,31 @@ func getBetweenRange(v any) (min any, max any, ok bool) {
 	}
 
 	return nil, nil, false
+}
+
+/**
+* AnyGet: Gets a value from an array
+* @param args []any, dest ...any
+* @return error
+**/
+func AnyGet(args []any, dest ...any) error {
+	l := len(dest)
+	if len(args) < l {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "args")
+	}
+
+	for i, d := range dest {
+		bt, err := json.Marshal(args[i])
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(bt, d)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /**
