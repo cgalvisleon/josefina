@@ -3,6 +3,7 @@ package jdb
 import (
 	"sync"
 
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
@@ -41,7 +42,7 @@ func Load(port int) *Node {
 		follow:    new(Follow),
 	}
 	node.Mount(node.lead)
-	node.Mount(node.follow)
 
+	logs.Debug(node.GetMethod().ToString())
 	return node
 }

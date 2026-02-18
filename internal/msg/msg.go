@@ -84,6 +84,7 @@ var (
 	MSG_MODEL_NOT_EXISTS           = "model not exists"
 	MSG_UNSUPPORTED_STATEMENT_TYPE = "unsupported statement type: %T"
 	MSG_QUERY_NOT_FOUND            = "query not found"
+	MSG_METHOD_NOT_FOUND           = "method not found"
 )
 
 func init() {
@@ -152,5 +153,6 @@ func init() {
 		MSG_MODEL_NOT_EXISTS = "model no existe"
 		MSG_UNSUPPORTED_STATEMENT_TYPE = "tipo de statement no soportado: %T"
 		MSG_QUERY_NOT_FOUND = "query no encontrada"
+		MSG_METHOD_NOT_FOUND = "method not found"
 	}
 }

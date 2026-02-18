@@ -66,7 +66,7 @@ func (s *Node) coreDb() (*catalog.DB, error) {
 func (s *Node) GetDb(name string) (*catalog.DB, bool) {
 	leader, imLeader := s.GetLeader()
 	if imLeader {
-		return s.lead.GetDb(name)
+		return s.lead.getDb(name)
 	}
 
 	if leader != nil {

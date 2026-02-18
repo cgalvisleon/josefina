@@ -8,19 +8,63 @@ import (
 
 	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-type Lead struct{}
+type Lead struct {
+	registry map[string]tcp.HandlerFunc
+	GetDb    tcp.HandlerFunc
+}
+
+func NewLeadService() *Lead {
+	this := &Lead{}
+	this.GetDb = func(request ...any) *tcp.Response {
+		name := request[0].(string)
+		result, ok := this.getDb(name)
+		if !ok {
+			return tcp.NewResponse(nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name))
+		}
+		return tcp.NewResponse([]any{result}, nil)
+	}
+
+	this.build()
+	return this
+}
 
 /**
-* GetDb: Returns a database by name
+* build: Builds the registry
+* @return map[string]tcp.HandlerFunc
+**/
+func (s *Lead) build() map[string]tcp.HandlerFunc {
+	s.registry = map[string]tcp.HandlerFunc{
+		"GetDb": s.GetDb,
+	}
+	return s.registry
+}
+
+/**
+* Execute: Executes a method
+* @param name string, request ...any
+* @return *tcp.Response
+**/
+func (s *Lead) Execute(name string, request ...any) *tcp.Response {
+	handler, ok := s.registry[name]
+	if !ok {
+		return tcp.NewResponse(nil, fmt.Errorf(msg.MSG_METHOD_NOT_FOUND, name))
+	}
+
+	return handler(request)
+}
+
+/**
+* getDb: Returns a database by name
 * @param name string
 * @return *catalog.DB, bool
 **/
-func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
+func (s *Lead) getDb(name string) (*catalog.DB, bool) {
 	name = utility.Normalize(name)
 	node.muDB.RLock()
 	result, ok := node.dbs[name]
@@ -50,7 +94,7 @@ func (s *Lead) GetDb(name string) (*catalog.DB, bool) {
 }
 
 /**
-* CreateDb: Creates a new database
+* createDb: Creates a new database
 * @param name string
 * @return *catalog.DB, error
 **/
