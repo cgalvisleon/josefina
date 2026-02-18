@@ -3,8 +3,6 @@ package jdb
 import (
 	"sync"
 
-	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 )
@@ -42,12 +40,6 @@ func Load(port int) *Node {
 		lead:      new(Lead),
 		follow:    new(Follow),
 	}
-	node.OnInbound(func(c *tcp.Client, m *tcp.Message) {
-		logs.Debug(et.Json{
-			"client":  c,
-			"message": m,
-		}.ToString())
-	})
 
 	return node
 }
