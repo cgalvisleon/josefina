@@ -3,6 +3,7 @@ package jdb
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
@@ -65,11 +66,14 @@ func (s *Node) setTransaction(tx *Tx) error {
 }
 
 type Transaction struct {
-	From    *catalog.From `json:"from"`
-	Command Command       `json:"command"`
-	Idx     string        `json:"idx"`
-	Data    et.Json       `json:"data"`
-	Status  Status        `json:"status"`
+	From    *catalog.From      `json:"from"`
+	Command Command            `json:"command"`
+	Data    map[string]et.Json `json:"data"`
+	Status  Status             `json:"status"`
+}
+
+func (s *Transaction) addData(idx string, data et.Json) {
+	s.Data[idx] = data
 }
 
 /**
@@ -78,13 +82,14 @@ type Transaction struct {
 * @return *Transaction
 **/
 func newTransaction(from *catalog.From, cmd Command, idx string, data et.Json, status Status) *Transaction {
-	return &Transaction{
+	result := &Transaction{
 		From:    from,
 		Command: cmd,
-		Idx:     idx,
-		Data:    data,
+		Data:    make(map[string]et.Json),
 		Status:  status,
 	}
+	result.addData(idx, data)
+	return result
 }
 
 type Tx struct {
@@ -169,8 +174,13 @@ func (s *Tx) change() error {
 * @param from *From, cmd Command, idx string, data et.Json
 **/
 func (s *Tx) AddTransaction(from *catalog.From, cmd Command, idx string, data et.Json) error {
-	transaction := newTransaction(from, cmd, idx, data, Pending)
-	s.Transactions = append(s.Transactions, transaction)
+	id := slices.IndexFunc(s.Transactions, func(t *Transaction) bool { return t.From.Key() == from.Key() && t.Command == cmd })
+	if id == -1 {
+		transaction := newTransaction(from, cmd, idx, data, Pending)
+		s.Transactions = append(s.Transactions, transaction)
+	} else {
+		s.Transactions[id].addData(idx, data)
+	}
 	return s.change()
 }
 
@@ -191,15 +201,17 @@ func (s *Tx) SetStatus(idx int, status Status) error {
 }
 
 /**
-* getRecors: Returns the records for the from
+* getCache: Returns the data for the from
 * @param from *catalog.From
 * @return []et.Json
 **/
-func (s *Tx) getRecors(from *catalog.From) []et.Json {
+func (s *Tx) getCache(from *catalog.From) []et.Json {
 	result := []et.Json{}
 	for _, transaction := range s.Transactions {
-		if transaction.From == from {
-			result = append(result, transaction.Data)
+		if transaction.From.Key() == from.Key() && transaction.Command != DELETE {
+			for _, data := range transaction.Data {
+				result = append(result, data)
+			}
 		}
 	}
 	return result

@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"encoding/json"
 	"errors"
 	"slices"
 
@@ -9,11 +10,16 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type Froms struct {
+	model *catalog.Model
+	as    string
+}
+
 /**
-* Wheres
+* Where
 **/
-type Wheres struct {
-	owner      *catalog.Model      `json:"-"`
+type Where struct {
+	from       *catalog.Model      `json:"-"`
 	selects    []string            `json:"-"`
 	hidden     []string            `json:"-"`
 	keys       map[string][]string `json:"-"`
@@ -28,10 +34,11 @@ type Wheres struct {
 /**
 * newWhere
 * @param owner *Model
-* @return *Wheres
+* @return *Where
 **/
-func newWhere() *Wheres {
-	return &Wheres{
+func newWhere(model *catalog.Model) *Where {
+	result := &Where{
+		from:       model,
 		selects:    make([]string, 0),
 		hidden:     make([]string, 0),
 		keys:       make(map[string][]string, 0),
@@ -41,70 +48,58 @@ func newWhere() *Wheres {
 		conditions: make([]*Condition, 0),
 		workers:    1,
 	}
-}
 
-/**
-* ByJson
-* @param jsons []et.Json
-* @return *Wheres
-**/
-func ByJson(jsons []et.Json) *Wheres {
-	result := newWhere()
-	for _, where := range jsons {
-		condition := ToCondition(where)
-		if condition != nil {
-			result.Add(condition)
-		}
-	}
 	return result
 }
 
 /**
 * IsDebug: Returns the debug mode
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) IsDebug() *Wheres {
+func (s *Where) IsDebug() *Where {
 	s.isDebug = true
 	return s
 }
 
 /**
-* SetOwner
-* @param owner *Model
-* @return *Wheres
+* From
+* @param model *Model
+* @return *Where
 **/
-func (s *Wheres) SetOwner(owner *catalog.Model) *Wheres {
-	if owner == nil {
+func (s *Where) From(model *catalog.Model) *Where {
+	if model == nil {
 		return s
 	}
 
-	s.owner = owner
-	s.hidden = owner.Hidden
-	if len(owner.Indexes) > s.workers {
-		s.workers = len(owner.Indexes)
-	}
+	s.from = model
 	return s
 }
 
 /**
 * ToJson
-* @return []et.Json
+* @return et.Json
 **/
-func (s *Wheres) ToJson() []et.Json {
-	result := []et.Json{}
-	for _, condition := range s.conditions {
-		result = append(result, condition.ToJson())
+func (s *Where) ToJson() (et.Json, error) {
+	bt, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
 	}
 
-	return result
+	var result et.Json
+	err = json.Unmarshal(bt, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
 * Add
 * @param condition *Condition
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Add(condition *Condition) *Wheres {
+func (s *Where) Add(condition *Condition) *Where {
 	if len(s.conditions) > 0 && condition.Connector == NaC {
 		condition.Connector = And
 	}
@@ -116,18 +111,18 @@ func (s *Wheres) Add(condition *Condition) *Wheres {
 /**
 * Where
 * @param condition *Condition
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Where(condition *Condition) *Wheres {
+func (s *Where) Where(condition *Condition) *Where {
 	return s.Add(condition)
 }
 
 /**
 * And
 * @param condition *Condition
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) And(condition *Condition) *Wheres {
+func (s *Where) And(condition *Condition) *Where {
 	condition.Connector = And
 	return s.Add(condition)
 }
@@ -135,9 +130,9 @@ func (s *Wheres) And(condition *Condition) *Wheres {
 /**
 * Or
 * @param condition *Condition
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Or(condition *Condition) *Wheres {
+func (s *Where) Or(condition *Condition) *Where {
 	condition.Connector = Or
 	return s.Add(condition)
 }
@@ -145,9 +140,9 @@ func (s *Wheres) Or(condition *Condition) *Wheres {
 /**
 * Selects
 * @param fields ...string
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Selects(fields ...string) *Wheres {
+func (s *Where) Selects(fields ...string) *Where {
 	if len(fields) == 0 {
 		return s
 	}
@@ -162,9 +157,9 @@ func (s *Wheres) Selects(fields ...string) *Wheres {
 /**
 * Hidden
 * @param fields ...string
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Hidden(fields ...string) *Wheres {
+func (s *Where) Hidden(fields ...string) *Where {
 	if len(fields) == 0 {
 		return s
 	}
@@ -179,9 +174,9 @@ func (s *Wheres) Hidden(fields ...string) *Wheres {
 /**
 * Asc
 * @param field string
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Asc(field string) *Wheres {
+func (s *Where) Asc(field string) *Where {
 	s.asc[field] = true
 	return s
 }
@@ -189,9 +184,9 @@ func (s *Wheres) Asc(field string) *Wheres {
 /**
 * Desc
 * @param field string
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Desc(field string) *Wheres {
+func (s *Where) Desc(field string) *Where {
 	s.asc[field] = false
 	return s
 }
@@ -201,7 +196,7 @@ func (s *Wheres) Desc(field string) *Wheres {
 * @param field string
 * @return bool
 **/
-func (s *Wheres) Order(field string) bool {
+func (s *Where) Order(field string) bool {
 	result, exists := s.asc[field]
 	if !exists {
 		result = true
@@ -213,9 +208,9 @@ func (s *Wheres) Order(field string) bool {
 /**
 * Limit
 * @param page int, rows int
-* @return *Wheres
+* @return *Where
 **/
-func (s *Wheres) Limit(page int, rows int) *Wheres {
+func (s *Where) Limit(page int, rows int) *Where {
 	offset := (page - 1) * rows
 	s.limit = rows
 	s.offset = offset
@@ -227,13 +222,14 @@ func (s *Wheres) Limit(page int, rows int) *Wheres {
 * @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
-	tx, _ = GetTx(tx)
-	result := []et.Json{}
-	model := s.owner
-	if model == nil {
+func (s *Where) Run(tx *Tx) ([]et.Json, error) {
+	if s.from == nil {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
+
+	tx, _ = GetTx(tx)
+	result := []et.Json{}
+	model := s.from
 
 	addResult := func(item et.Json) bool {
 		if len(s.selects) == 0 {
@@ -248,7 +244,6 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	}
 
 	if len(s.conditions) == 0 {
-		// Items by data
 		next := true
 		asc := s.Order(catalog.INDEX)
 		err := model.For(func(idx string, item et.Json) (bool, error) {
@@ -263,8 +258,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 			return result, nil
 		}
 
-		// Items by cache
-		cache := tx.getRecors(model.From)
+		cache := tx.getCache(model.From)
 		for _, item := range cache {
 			next = addResult(item)
 			if !next {
@@ -279,13 +273,13 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	for _, con := range s.conditions {
 		value := con.Value
 		switch v := value.(type) {
-		case *Wheres:
+		case *Where:
 			var err error
 			con.Value, err = v.Run(tx)
 			if err != nil {
 				return nil, err
 			}
-		case Wheres:
+		case Where:
 			var err error
 			con.Value, err = v.Run(tx)
 			if err != nil {
@@ -353,7 +347,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 	}
 
 	// Items by cache
-	cache := tx.getRecors(model.From)
+	cache := tx.getCache(model.From)
 	for _, item := range cache {
 		addItem(item)
 	}
@@ -396,7 +390,7 @@ func (s *Wheres) Run(tx *Tx) ([]et.Json, error) {
 * @param tx *Tx
 * @return et.Json, error
 **/
-func (s *Wheres) One(tx *Tx) (et.Json, error) {
+func (s *Where) One(tx *Tx) (et.Json, error) {
 	rows, err := s.Run(tx)
 	if err != nil {
 		return et.Json{}, err

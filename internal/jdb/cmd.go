@@ -649,12 +649,9 @@ func Upsert(m *catalog.Model, data et.Json) *Cmd {
 * @param fields ...string
 * @return *Wheres
 **/
-func Select(m *catalog.Model, fields ...string) *Wheres {
+func From(m *catalog.Model) *Wheres {
 	result := newWhere()
 	result.SetOwner(m)
-	for _, field := range fields {
-		result.selects = append(result.selects, field)
-	}
 	return result
 }
 
