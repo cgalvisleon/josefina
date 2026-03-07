@@ -9,7 +9,10 @@
       "program": "${workspaceFolder}/cmd/server",
       "args": ["-tcp-port", "1377", "-http-port", "3500"],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     },
     {
       "name": "node2",
@@ -19,7 +22,10 @@
       "program": "${workspaceFolder}/cmd/server",
       "args": ["-tcp-port", "1378", "-http-port", "3501"],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     },
     {
       "name": "node3",
@@ -29,7 +35,10 @@
       "program": "${workspaceFolder}/cmd/server",
       "args": ["-tcp-port", "1379", "-http-port", "3502"],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     },
     {
       "name": "client",
@@ -39,7 +48,10 @@
       "program": "${workspaceFolder}/cmd/client",
       "args": ["-port", "1377"],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     }
   ],
   "compounds": [
