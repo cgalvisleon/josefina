@@ -8,7 +8,7 @@ import (
 
 type Jql struct {
 	query   *catalog.Model
-	command *jdb.Wheres
+	command *jdb.Where
 }
 
 func ParseJson(input et.Json) ([]Stmt, error) {
