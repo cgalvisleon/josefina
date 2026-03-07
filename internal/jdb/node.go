@@ -12,7 +12,7 @@ import (
 )
 
 type Node struct {
-	*tcp.Server
+	*tcp.Node
 	app       string                    `json:"-"`
 	version   string                    `json:"-"`
 	isStrict  bool                      `json:"-"`
