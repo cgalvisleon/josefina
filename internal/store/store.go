@@ -141,7 +141,10 @@ func (s *FileStore) ToString() string {
 * @return int
 **/
 func (s *FileStore) Count() int {
-	return len(s.index)
+	s.indexMu.RLock()
+	n := len(s.index)
+	s.indexMu.RUnlock()
+	return n
 }
 
 /**
@@ -245,9 +248,7 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 	if err != nil {
 		return nil, err
 	}
-
 	ref.segment = len(s.segments) - 1
-
 	if s.SyncOnWrite {
 		if err := s.active.Sync(); err != nil {
 			return nil, err
@@ -266,17 +267,17 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 /**
 * setIndex
 * @param id string, segIndex int, offset int64, dataLen uint32
-* @return error
 **/
-func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint32) error {
+func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint32) {
 	ref := &RecordRef{
 		segment: segIndex,
 		offset:  offset,
 		length:  dataLen,
 	}
+	if _, exists := s.index[id]; !exists {
+		s.keys = append(s.keys, id)
+	}
 	s.index[id] = ref
-	s.keys = append(s.keys, id)
-	return nil
 }
 
 /**
@@ -388,33 +389,35 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 	}
 
 	s.indexMu.RLock()
-	nKeys := len(s.keys)
-	if n != nKeys {
-		s.keys = make([]string, 0)
-		for k := range s.index {
-			s.keys = append(s.keys, k)
-		}
-		sort.Strings(keys)
-	}
+	keysCopy := make([]string, len(s.keys))
+	copy(keysCopy, s.keys)
+	s.indexMu.RUnlock()
 
 	if asc {
-		sort.Strings(s.keys)
+		sort.Strings(keysCopy)
 	} else {
-		sort.Sort(sort.Reverse(sort.StringSlice(s.keys)))
+		sort.Sort(sort.Reverse(sort.StringSlice(keysCopy)))
 	}
+
 	i := 0
+	s.indexMu.RLock()
+	defer s.indexMu.RUnlock()
 	for {
-		k := s.keys[offset]
-		v := s.index[k]
-		indexResult[k] = v
-		keys = append(keys, k)
+		if offset >= len(keysCopy) {
+			break
+		}
+		k := keysCopy[offset]
+		v, ok := s.index[k]
+		if ok {
+			indexResult[k] = v
+			keys = append(keys, k)
+		}
 		offset++
 		i++
 		if i >= limit {
 			break
 		}
 	}
-	s.indexMu.RUnlock()
 
 	return indexResult, keys
 }
@@ -459,6 +462,9 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 	}
 	i := 0
 	for {
+		if offset >= len(s.keys) {
+			break
+		}
 		k := s.keys[offset]
 		result = append(result, k)
 		offset++
@@ -559,9 +565,6 @@ func (s *FileStore) Put(id string, value any) error {
 func (s *FileStore) Delete(id string) (bool, error) {
 	s.indexMu.RLock()
 	_, exists := s.index[id]
-	if exists {
-		s.TombStones++
-	}
 	s.indexMu.RUnlock()
 
 	if !exists {
@@ -573,6 +576,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	}
 
 	s.indexMu.Lock()
+	s.TombStones++
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
 
@@ -625,11 +629,11 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 }
 
 /**
-* For
+* Iterate
 * @param fn func(id string, data []byte) bool, asc bool, offset, limit, workers int
 * @return error
 **/
-func (s *FileStore) For(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
 	// 1. Seleccionar IDs
 	index, keys := s.getRecords(asc, offset, limit)
 

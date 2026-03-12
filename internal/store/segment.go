@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 
@@ -63,11 +64,13 @@ func (s *RecordRef) ToString() string {
 }
 
 type segment struct {
-	file *os.File
-	size int64
-	name string
-	ch   chan []byte
-	wg   sync.WaitGroup
+	file     *os.File
+	size     int64
+	name     string
+	ch       chan []byte
+	wg       sync.WaitGroup
+	writeErr error
+	errMu    sync.Mutex
 }
 
 /**
@@ -77,10 +80,12 @@ type segment struct {
 **/
 func newSegment(file *os.File, size int64, name string) *segment {
 	result := &segment{
-		file: file,
-		size: size,
-		name: name,
-		ch:   make(chan []byte),
+		file:     file,
+		size:     size,
+		name:     name,
+		ch:       make(chan []byte),
+		writeErr: nil,
+		errMu:    sync.Mutex{},
 	}
 
 	result.wg.Add(1)
@@ -92,11 +97,21 @@ func newSegment(file *os.File, size int64, name string) *segment {
 * loop
 * @return void
 **/
-func (s *segment) loop() {
+func (s *segment) loop() error {
 	defer s.wg.Done()
 	for data := range s.ch {
-		s.file.Write(data)
+		_, err := s.file.Write(data)
+		if err != nil {
+			s.errMu.Lock()
+			s.writeErr = err
+			s.errMu.Unlock()
+			for range s.ch {
+			}
+			return err
+		}
 	}
+
+	return nil
 }
 
 /**
@@ -190,6 +205,16 @@ func (s *segment) WriteHeader(id string, data []byte, status byte) (*RecordRef, 
 }
 
 /**
+* WriteError
+* @return error
+**/
+func (s *segment) WriteError() error {
+	s.errMu.Lock()
+	defer s.errMu.Unlock()
+	return s.writeErr
+}
+
+/**
 * WriteRecord
 * @param seg *segment, id string, data []byte, status byte
 * @return *RecordRef, error
@@ -201,13 +226,15 @@ func (s *segment) WriteRecord(id string, data []byte, status byte) (*RecordRef, 
 	}
 
 	offset := s.size
-
 	s.Write(header)
 	if len(data) > 0 {
 		s.Write(data)
 	}
-	s.size += h.RecordSize()
+	if err := s.WriteError(); err != nil {
+		return nil, err
+	}
 
+	s.size += h.RecordSize()
 	return &RecordRef{
 		offset: offset,
 		length: h.DataLen,
@@ -228,9 +255,15 @@ func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	}
 
 	reader := bytes.NewReader(buf)
-	binary.Read(reader, binary.BigEndian, &header.DataLen)
-	binary.Read(reader, binary.BigEndian, &header.CRC)
-	binary.Read(reader, binary.BigEndian, &header.IDLen)
+	if err := binary.Read(reader, binary.BigEndian, &header.DataLen); err != nil {
+		return header, fmt.Errorf("read DataLen: %w", err)
+	}
+	if err := binary.Read(reader, binary.BigEndian, &header.CRC); err != nil {
+		return header, fmt.Errorf("read CRC: %w", err)
+	}
+	if err := binary.Read(reader, binary.BigEndian, &header.IDLen); err != nil {
+		return header, fmt.Errorf("read IDLen: %w", err)
+	}
 
 	idBytes := make([]byte, header.IDLen)
 	if _, err := s.ReadAt(idBytes, ref.offset+10); err != nil {
