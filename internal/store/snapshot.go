@@ -105,10 +105,14 @@ func (s *FileStore) tryLoadSnapshot() error {
 	}
 
 	var version uint16
-	binary.Read(buf, binary.BigEndian, &version)
+	if err := binary.Read(buf, binary.BigEndian, &version); err != nil {
+		return err
+	}
 
 	var count uint64
-	binary.Read(buf, binary.BigEndian, &count)
+	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
+		return err
+	}
 
 	// ---- Entries ----
 	s.index = make(map[string]*RecordRef, count)
@@ -122,10 +126,15 @@ func (s *FileStore) tryLoadSnapshot() error {
 		var segIndex uint32
 		var offset int64
 		var dataLen uint32
-
-		binary.Read(buf, binary.BigEndian, &segIndex)
-		binary.Read(buf, binary.BigEndian, &offset)
-		binary.Read(buf, binary.BigEndian, &dataLen)
+		if err := binary.Read(buf, binary.BigEndian, &segIndex); err != nil {
+			return err
+		}
+		if err := binary.Read(buf, binary.BigEndian, &offset); err != nil {
+			return err
+		}
+		if err := binary.Read(buf, binary.BigEndian, &dataLen); err != nil {
+			return err
+		}
 
 		id := string(idBytes)
 		s.setIndex(id, int(segIndex), offset, dataLen)
