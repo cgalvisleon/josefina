@@ -106,7 +106,7 @@ func (s *FileStore) Compact() error {
 	defer s.writeMu.Unlock()
 
 	for _, seg := range s.segments {
-		seg.file.Close()
+		seg.Close()
 	}
 
 	oldDir := filepath.Join(s.Path, "segments.old")

@@ -94,6 +94,7 @@ type FileStore struct {
 	mode         mode                  `json:"-"` // modo de operación
 	onPut        []Putfn               `json:"-"` // función de escritura
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
+	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
 }
 
 /**
@@ -258,7 +259,14 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 	n := len(s.index)
 	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
 	if s.TombStones > threshold {
-		go s.Compact()
+		if atomic.CompareAndSwapInt32(&s.compacting, 0, 1) {
+			go func() {
+				defer atomic.StoreInt32(&s.compacting, 0)
+				if err := s.Compact(); err != nil && s.isDebug {
+					logs.Debug("compact error:", err)
+				}
+			}()
+		}
 	}
 
 	return ref, nil
@@ -486,6 +494,7 @@ func (s *FileStore) rebuildIndexes() error {
 	defer s.indexMu.Unlock()
 
 	s.index = make(map[string]*RecordRef)
+	s.keys = make([]string, 0)
 	for i := range s.segments {
 		if err := s.rebuildIndex(i); err != nil {
 			return err
@@ -517,6 +526,10 @@ func (s *FileStore) OnDelete(fn func(string)) {
 * @return error
 **/
 func (s *FileStore) Put(id string, value any) error {
+	if s.mode == modeRead {
+		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	}
+
 	if id == "" {
 		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
@@ -563,6 +576,10 @@ func (s *FileStore) Put(id string, value any) error {
 * @return bool, error
 **/
 func (s *FileStore) Delete(id string) (bool, error) {
+	if s.mode == modeRead {
+		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	}
+
 	s.indexMu.RLock()
 	_, exists := s.index[id]
 	s.indexMu.RUnlock()
