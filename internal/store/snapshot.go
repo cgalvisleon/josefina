@@ -56,7 +56,9 @@ func (s *FileStore) CreateSnapshot() error {
 
 	// ---- CRC ----
 	crc := checksum(buf.Bytes())
-	binary.Write(buf, binary.BigEndian, crc)
+	if err := binary.Write(buf, binary.BigEndian, crc); err != nil {
+		return err
+	}
 
 	if _, err := f.Write(buf.Bytes()); err != nil {
 		return err
