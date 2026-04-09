@@ -6,8 +6,8 @@ import (
 )
 
 func main() {
-	envar.SetIntByArg("-tcp-port", "TCP_PORT", 1377)
-	envar.SetIntByArg("-http-port", "HTTP_PORT", 3500)
+	envar.SetIntByArg("-port", "PORT", 1377)
+	envar.SetIntByArg("-http", "HTTP", 3500)
 	envar.SetBoolByArg("-strict", "IS_STRICT", false)
 
 	srv := serv.New()

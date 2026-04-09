@@ -7,7 +7,7 @@ import (
 	"github.com/cgalvisleon/et/ws"
 
 	api "github.com/cgalvisleon/josefina/pkg/http"
-	"github.com/cgalvisleon/josefina/pkg/sql"
+	"github.com/cgalvisleon/josefina/pkg/jsql"
 	"github.com/cgalvisleon/josefina/pkg/websocket"
 )
 
@@ -16,17 +16,17 @@ var (
 )
 
 type Service struct {
-	sql  *sql.Server
+	srv  *jsql.Server
 	ettp *server.Ettp
 	ws   *ws.Hub
 }
 
 func New() *Service {
-	tcpPort := envar.GetInt("TCP_PORT", 1377)
-	httpPort := envar.GetInt("HTTP_PORT", 3500)
+	port := envar.GetInt("PORT", 1377)
+	http := envar.GetInt("HTTP", 3500)
 	result := &Service{
-		sql:  sql.NewServer(tcpPort),
-		ettp: server.New(app, httpPort),
+		srv:  jsql.NewServer(port),
+		ettp: server.New(app, http),
 		ws:   websocket.New(),
 	}
 
@@ -45,8 +45,8 @@ func New() *Service {
 * @return
 **/
 func (s *Service) Start() {
-	if s.sql != nil {
-		s.sql.Start()
+	if s.srv != nil {
+		s.srv.Start()
 	}
 
 	if s.ettp != nil {

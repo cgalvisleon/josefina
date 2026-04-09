@@ -1,4 +1,4 @@
-package sql
+package jsql
 
 import (
 	"github.com/cgalvisleon/et/claim"
