@@ -65,14 +65,15 @@ func (s *RecordRef) ToString() string {
 }
 
 type segment struct {
-	file     *os.File
-	size     int64
-	name     string
-	readOnly bool
-	ch       chan []byte
-	wg       sync.WaitGroup
-	writeErr error
-	errMu    sync.Mutex
+	file      *os.File
+	size      int64
+	name      string
+	readOnly  bool
+	ch        chan []byte
+	wg        sync.WaitGroup
+	writeErr  error
+	errMu     sync.Mutex
+	closeOnce sync.Once
 }
 
 /**
@@ -151,18 +152,23 @@ func (s *segment) Sync() error {
 * @return error
 **/
 func (s *segment) Close() error {
-	if s.readOnly {
-		if s.file != nil {
-			return s.file.Close()
+	var closeErr error
+	s.closeOnce.Do(func() {
+		if s.readOnly {
+			if s.file != nil {
+				closeErr = s.file.Close()
+			}
+			return
 		}
-		return nil
-	}
-	close(s.ch)
-	s.wg.Wait()
-	if err := s.Sync(); err != nil {
-		return err
-	}
-	return s.file.Close()
+		close(s.ch)
+		s.wg.Wait()
+		if err := s.Sync(); err != nil {
+			closeErr = err
+			return
+		}
+		closeErr = s.file.Close()
+	})
+	return closeErr
 }
 
 /**

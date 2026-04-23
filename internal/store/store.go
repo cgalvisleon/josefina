@@ -99,6 +99,7 @@ type FileStore struct {
 	onPut        []Putfn               `json:"-"` // función de escritura
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
 	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
+	compactWg    sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
 }
 
 /**
@@ -334,7 +335,9 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
 	if s.TombStones > threshold {
 		if atomic.CompareAndSwapInt32(&s.compacting, 0, 1) {
+			s.compactWg.Add(1)
 			go func() {
+				defer s.compactWg.Done()
 				defer atomic.StoreInt32(&s.compacting, 0)
 				if err := s.Compact(); err != nil && s.isDebug {
 					logs.Debug("compact error:", err)
@@ -513,16 +516,16 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 * @return error
 **/
 func (s *FileStore) Close() error {
-	if s.active == nil {
+	s.compactWg.Wait()
+
+	s.indexMu.RLock()
+	active := s.active
+	s.indexMu.RUnlock()
+
+	if active == nil {
 		return nil
 	}
-
-	err := s.active.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return active.Close()
 }
 
 /**
@@ -629,6 +632,29 @@ func (s *FileStore) Put(id string, value any) error {
 }
 
 /**
+* Get
+* @param id string, dest any
+* @return bool, error
+**/
+func (s *FileStore) Get(id string, dest any) (bool, error) {
+	s.indexMu.RLock()
+	ref, existed := s.index[id]
+	s.indexMu.RUnlock()
+
+	if !existed {
+		return false, nil
+	}
+
+	seg := s.segments[ref.segment]
+	err := seg.Read(ref, dest)
+	if err != nil {
+		return existed, err
+	}
+
+	return existed, nil
+}
+
+/**
 * Delete
 * @param id string
 * @return bool, error
@@ -678,29 +704,6 @@ func (s *FileStore) IsExist(id string) bool {
 	s.indexMu.RUnlock()
 
 	return existed
-}
-
-/**
-* Get
-* @param id string, dest any
-* @return bool, error
-**/
-func (s *FileStore) Get(id string, dest any) (bool, error) {
-	s.indexMu.RLock()
-	ref, existed := s.index[id]
-	s.indexMu.RUnlock()
-
-	if !existed {
-		return false, nil
-	}
-
-	seg := s.segments[ref.segment]
-	err := seg.Read(ref, dest)
-	if err != nil {
-		return existed, err
-	}
-
-	return existed, nil
 }
 
 /**

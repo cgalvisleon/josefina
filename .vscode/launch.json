@@ -52,6 +52,18 @@
       "env": {
         "GOTOOLCHAIN": "auto"
       }
+    },
+    {
+      "name": "test",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/test",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     }
   ],
   "compounds": [

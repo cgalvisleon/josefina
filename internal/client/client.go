@@ -3,11 +3,11 @@ package client
 import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/sql"
+	"github.com/cgalvisleon/josefina/pkg/jsql"
 )
 
 type Service struct {
-	node *sql.Client
+	node *jsql.Client
 }
 
 func New() (*Service, error) {
