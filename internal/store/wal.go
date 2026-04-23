@@ -1,0 +1,114 @@
+package store
+
+import (
+	"encoding/binary"
+	"errors"
+	"io"
+
+	"github.com/cgalvisleon/et/et"
+)
+
+type WalEntry struct {
+	LSN    uint64 `json:"lsn"`
+	ID     string `json:"id"`
+	Data   []byte `json:"data"`
+	Status byte   `json:"status"`
+}
+
+func (e *WalEntry) ToJson() et.Json {
+	return et.Json{
+		"lsn":    e.LSN,
+		"id":     e.ID,
+		"data":   string(e.Data),
+		"status": e.Status,
+	}
+}
+
+// ApplyWalEntry writes a WAL entry received from the leader into this store.
+// It bypasses the modeRead check — only the replication mechanism may call this.
+// The original LSN is preserved so both nodes share the same sequence.
+func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
+	ref, err := s.appendRecordAt(entry.LSN, entry.ID, entry.Data, entry.Status)
+	if err != nil {
+		return err
+	}
+
+	s.indexMu.Lock()
+	if entry.Status == Active {
+		if _, exists := s.index[entry.ID]; exists {
+			s.TombStones++
+		}
+		s.index[entry.ID] = ref
+	} else {
+		s.TombStones++
+		s.deleteIndex(entry.ID)
+	}
+	s.indexMu.Unlock()
+
+	return nil
+}
+
+// WalSince returns all WAL entries with LSN strictly greater than since,
+// in the order they were written. Followers call this with their last
+// acknowledged LSN to receive only the entries they are missing.
+func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
+	s.indexMu.RLock()
+	segs := s.segments
+	s.indexMu.RUnlock()
+
+	var entries []WalEntry
+
+	for _, seg := range segs {
+		offset := int64(0)
+		for {
+			// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
+			fixed := make([]byte, fixedHeaderSize)
+			n, err := seg.ReadAt(fixed, offset)
+			if err != nil {
+				if errors.Is(err, io.EOF) || n < len(fixed) {
+					break
+				}
+				return nil, err
+			}
+
+			lsn := binary.BigEndian.Uint64(fixed[0:8])
+			dataLen := getUint32(fixed[8:12])
+			idLen := getUint16(fixed[16:18])
+
+			if idLen == 0 || idLen > maxIdLen {
+				break // corrupción → parar seguro
+			}
+
+			idBytes := make([]byte, idLen)
+			if _, err := seg.ReadAt(idBytes, offset+18); err != nil {
+				break
+			}
+
+			statusByte := make([]byte, 1)
+			if _, err := seg.ReadAt(statusByte, offset+18+int64(idLen)); err != nil {
+				break
+			}
+
+			var data []byte
+			if dataLen > 0 {
+				data = make([]byte, dataLen)
+				if _, err := seg.ReadAt(data, offset+18+int64(idLen)+1); err != nil {
+					break
+				}
+			}
+
+			if lsn > since {
+				entries = append(entries, WalEntry{
+					LSN:    lsn,
+					ID:     string(idBytes),
+					Data:   data,
+					Status: statusByte[0],
+				})
+			}
+
+			offset += int64(fixedHeaderSize) + int64(idLen) + int64(dataLen)
+		}
+	}
+
+	return entries, nil
+}

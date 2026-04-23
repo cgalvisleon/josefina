@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"math"
 	"os"
@@ -22,56 +21,6 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
-
-const (
-	Active  byte = 1
-	Deleted byte = 2
-)
-
-var crcTable = crc32.MakeTable(crc32.Castagnoli)
-
-/**
-* checksum
-* @param b []byte
-* @return uint32
-**/
-func checksum(b []byte) uint32 {
-	return crc32.Checksum(b, crcTable)
-}
-
-/**
-* putUint32
-* @param b []byte, v uint32
-* @return void
-**/
-func putUint32(b []byte, v uint32) {
-	binary.BigEndian.PutUint32(b, v)
-}
-
-/**
-* putUint16
-* @param b []byte, v uint16
-* @return void
-**/
-func putUint16(b []byte, v uint16) {
-	binary.BigEndian.PutUint16(b, v)
-}
-
-/**
-* @param b []byte
-* @return uint32
-**/
-func getUint32(b []byte) uint32 {
-	return binary.BigEndian.Uint32(b)
-}
-
-/**
-* @param b []byte
-* @return uint16
-**/
-func getUint16(b []byte) uint16 {
-	return binary.BigEndian.Uint16(b)
-}
 
 const (
 	packageName     = "store"
@@ -300,6 +249,48 @@ func (s *FileStore) newSegment() error {
 	}
 
 	return nil
+}
+
+/**
+* appendRecordAt writes a record with a caller-supplied LSN (replication path).
+* It does not check modeRead and does not auto-increment s.WAL.
+* If lsn > s.WAL the local counter is advanced to stay in sync with the leader.
+* @param lsn uint64, id string, data []byte, status byte
+* @return *RecordRef, error
+**/
+func (s *FileStore) appendRecordAt(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
+	currentSize := s.active.size
+	totalSize := currentSize + recordSize
+	s.Size += recordSize
+	if totalSize > s.MaxSegment {
+		if err := s.newSegment(); err != nil {
+			return nil, err
+		}
+		if err := s.CreateSnapshot(); err != nil {
+			return nil, err
+		}
+	}
+
+	ref, err := s.active.WriteRecord(lsn, id, data, status)
+	if err != nil {
+		return nil, err
+	}
+	ref.segment = len(s.segments) - 1
+	if s.SyncOnWrite {
+		if err := s.active.Sync(); err != nil {
+			return nil, err
+		}
+	}
+
+	if lsn > s.WAL {
+		s.WAL = lsn
+	}
+
+	return ref, nil
 }
 
 /**
@@ -622,12 +613,10 @@ func (s *FileStore) Put(id string, value any) error {
 	_, exists := s.index[id]
 	if exists {
 		s.TombStones++
-	} else {
-		s.WAL++
 	}
 	s.index[id] = ref
 	if s.isDebug {
-		logs.Debug("put:", s.Path, ":", s.Name, ":total:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
+		logs.Debug("put:", s.Path, ":", s.Name, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
 	}
 	s.indexMu.Unlock()
 
@@ -868,14 +857,20 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	fs.keys = make([]string, 0)
 	fs.SyncOnWrite = syncOnWrite
 
-	if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(fs.PathSnapshot, 0755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(fs.PathCompact, 0755); err != nil {
-		return nil, err
+	if mode == modeRead {
+		if _, err := os.Stat(fs.PathSegments); os.IsNotExist(err) {
+			return nil, fmt.Errorf("%w: store not found at %s", errors.New(msg.MSG_STORE_NOT_FOUND), fs.PathSegments)
+		}
+	} else {
+		if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(fs.PathSnapshot, 0755); err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(fs.PathCompact, 0755); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := fs.loadSegments(); err != nil {

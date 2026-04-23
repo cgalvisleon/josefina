@@ -12,6 +12,7 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 type Lead struct {
@@ -678,4 +679,26 @@ func (s *Lead) SignIn(device, username, password string, tpConn TpConnection, da
 	}
 
 	return result, nil
+}
+
+/**
+* GetWalSince returns all WAL entries for a model's store with LSN > since.
+* Followers call this (via TCP RPC in a later phase) to fetch what they are missing.
+* @param modelKey string, storeName string, since uint64
+* @return []store.WalEntry, error
+**/
+func (s *Lead) GetWalSince(modelKey, storeName string, since uint64) ([]store.WalEntry, error) {
+	node.muModel.RLock()
+	model, ok := node.models[modelKey]
+	node.muModel.RUnlock()
+	if !ok {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	fs, err := model.Store(storeName)
+	if err != nil {
+		return nil, err
+	}
+
+	return fs.WalSince(since)
 }

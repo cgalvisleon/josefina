@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 type Follow struct{}
@@ -176,6 +177,34 @@ func (s *Follow) GetCache(key string, dest any) error {
 	if ok {
 		err := json.Unmarshal(bt, dest)
 		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/**
+* ApplyWal applies WAL entries received from the leader into a model's store.
+* It is the only write path allowed on a follower node for replicated data.
+* @param modelKey string, storeName string, entries []store.WalEntry
+* @return error
+**/
+func (s *Follow) ApplyWal(modelKey, storeName string, entries []store.WalEntry) error {
+	node.muModel.RLock()
+	model, ok := node.models[modelKey]
+	node.muModel.RUnlock()
+	if !ok {
+		return errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	fs, err := model.Store(storeName)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if err := fs.ApplyWalEntry(entry); err != nil {
 			return err
 		}
 	}
