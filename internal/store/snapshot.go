@@ -73,26 +73,27 @@ func (s *FileStore) CreateSnapshot() error {
 }
 
 /**
-* tryLoadSnapshot
-* @return error
+* tryLoadSnapshot loads the snapshot index if it exists and is valid.
+* Returns (true, nil) when loaded, (false, nil) when absent, (false, err) when corrupt.
+* @return bool, error
 **/
-func (s *FileStore) tryLoadSnapshot() error {
+func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	name := fmt.Sprintf("state-%s.snap", s.Name)
 	path := filepath.Join(s.PathSnapshot, name)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil // snapshot opcional
+		return false, nil // snapshot opcional
 	}
 
 	if len(data) < 10 {
-		return errors.New(msg.MSG_INVALID_SNAPSHOT)
+		return false, errors.New(msg.MSG_INVALID_SNAPSHOT)
 	}
 
 	// CRC check
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
-		return errors.New(msg.MSG_SNAPSHOT_CORRUPTED)
+		return false, errors.New(msg.MSG_SNAPSHOT_CORRUPTED)
 	}
 
 	buf := bytes.NewReader(payload)
@@ -101,17 +102,17 @@ func (s *FileStore) tryLoadSnapshot() error {
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
-		return errors.New(msg.MSG_INVALID_SNAPSHOT_MAGIC)
+		return false, errors.New(msg.MSG_INVALID_SNAPSHOT_MAGIC)
 	}
 
 	var version uint16
 	if err := binary.Read(buf, binary.BigEndian, &version); err != nil {
-		return err
+		return false, err
 	}
 
 	var count uint64
 	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
-		return err
+		return false, err
 	}
 
 	// ---- Entries ----
@@ -127,18 +128,18 @@ func (s *FileStore) tryLoadSnapshot() error {
 		var offset int64
 		var dataLen uint32
 		if err := binary.Read(buf, binary.BigEndian, &segIndex); err != nil {
-			return err
+			return false, err
 		}
 		if err := binary.Read(buf, binary.BigEndian, &offset); err != nil {
-			return err
+			return false, err
 		}
 		if err := binary.Read(buf, binary.BigEndian, &dataLen); err != nil {
-			return err
+			return false, err
 		}
 
 		id := string(idBytes)
 		s.setIndex(id, int(segIndex), offset, dataLen)
 	}
 
-	return nil
+	return true, nil
 }

@@ -197,13 +197,15 @@ func (s *FileStore) loadSegments() error {
 		}
 
 		size := st.Size()
-		if s.mode != modeRead {
+		var seg *segment
+		if s.mode == modeRead {
+			seg = newReadOnlySegment(fd, size, name)
+		} else {
 			if _, err := fd.Seek(size, io.SeekStart); err != nil {
 				return err
 			}
+			seg = newSegment(fd, size, name)
 		}
-
-		seg := newSegment(fd, size, name)
 		s.segments = append(s.segments, seg)
 		s.Size += size
 		if s.isDebug {
@@ -462,6 +464,9 @@ func (s *FileStore) buildIndex() error {
 * @return map[string]*RecordRef, []string
 **/
 func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string) {
+	s.indexMu.RLock()
+	defer s.indexMu.RUnlock()
+
 	n := len(s.index)
 	keys := make([]string, 0)
 	indexResult := make(map[string]*RecordRef, 0)
@@ -473,10 +478,8 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 		limit = n
 	}
 
-	s.indexMu.RLock()
 	keysCopy := make([]string, len(s.keys))
 	copy(keysCopy, s.keys)
-	s.indexMu.RUnlock()
 
 	if asc {
 		sort.Strings(keysCopy)
@@ -485,8 +488,6 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 	}
 
 	i := 0
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
 	for {
 		if offset >= len(keysCopy) {
 			break
@@ -708,8 +709,11 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 * @return error
 **/
 func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
-	// 1. Seleccionar IDs
+	// 1. Snapshot consistente: índice + segmentos bajo el mismo lock
 	index, keys := s.getRecords(asc, offset, limit)
+	s.indexMu.RLock()
+	segs := s.segments
+	s.indexMu.RUnlock()
 
 	if workers <= 0 {
 		workers = 1
@@ -725,7 +729,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 		wg      sync.WaitGroup
 		errOnce sync.Once
 		mErr    error
-		total   int64
 	)
 
 	setErr := func(err error) {
@@ -734,7 +737,7 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 		}
 		errOnce.Do(func() {
 			mErr = err
-			cancel() // cortar todos
+			cancel()
 		})
 	}
 
@@ -743,40 +746,30 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 	for w := 0; w < workers; w++ {
 		go func() {
 			defer wg.Done()
-
 			for {
 				select {
 				case <-ctx.Done():
 					return
-
 				case id, ok := <-jobs:
 					if !ok {
 						return
 					}
-
 					ref, ok := index[id]
 					if !ok {
 						continue
 					}
-
-					seg := s.segments[ref.segment]
-
+					seg := segs[ref.segment]
 					data, err := seg.read(ref)
 					if err != nil {
 						setErr(err)
 						return
 					}
-
 					cont, err := fn(id, data)
 					if err != nil {
 						setErr(err)
 						return
 					}
-
-					atomic.AddInt64(&total, 1)
-
 					if !cont {
-						// detener todo si el callback pide parar
 						cancel()
 						return
 					}
@@ -785,11 +778,12 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 		}()
 	}
 
-	// 4) Enviar jobs (producer)
+	// 4) Enviar jobs — break etiquetado para salir del for cuando ctx se cancela
+producerLoop:
 	for _, id := range keys {
 		select {
 		case <-ctx.Done():
-			break
+			break producerLoop
 		case jobs <- id:
 		}
 	}
@@ -876,11 +870,21 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	if err := fs.loadSegments(); err != nil {
 		return nil, fmt.Errorf("loadSegments: %w", err)
 	}
-	if err := fs.tryLoadSnapshot(); err != nil {
-		return nil, fmt.Errorf("tryLoadSnapshot: %w", err)
+
+	// If snapshot loaded: buildIndex covers only the last segment (snapshot has the rest).
+	// If snapshot absent or corrupt: rebuildIndexes scans all segments from scratch.
+	snapshotLoaded, snapErr := fs.tryLoadSnapshot()
+	if snapErr != nil && fs.isDebug {
+		logs.Debug("snapshot unavailable, full rebuild:", snapErr)
 	}
-	if err := fs.buildIndex(); err != nil {
-		return nil, fmt.Errorf("buildIndex: %w", err)
+	if snapshotLoaded {
+		if err := fs.buildIndex(); err != nil {
+			return nil, fmt.Errorf("buildIndex: %w", err)
+		}
+	} else {
+		if err := fs.rebuildIndexes(); err != nil {
+			return nil, fmt.Errorf("rebuildIndexes: %w", err)
+		}
 	}
 
 	return fs, nil

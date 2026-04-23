@@ -40,8 +40,10 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 		}
 		s.index[entry.ID] = ref
 	} else {
-		s.TombStones++
-		s.deleteIndex(entry.ID)
+		if _, exists := s.index[entry.ID]; exists {
+			s.TombStones++
+			s.deleteIndex(entry.ID)
+		}
 	}
 	s.indexMu.Unlock()
 
@@ -73,6 +75,7 @@ func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
 
 			lsn := binary.BigEndian.Uint64(fixed[0:8])
 			dataLen := getUint32(fixed[8:12])
+			crcStored := getUint32(fixed[12:16])
 			idLen := getUint16(fixed[16:18])
 
 			if idLen == 0 || idLen > maxIdLen {
@@ -94,6 +97,9 @@ func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
 				data = make([]byte, dataLen)
 				if _, err := seg.ReadAt(data, offset+18+int64(idLen)+1); err != nil {
 					break
+				}
+				if checksum(data) != crcStored {
+					break // registro corrupto → detener el escaneo
 				}
 			}
 

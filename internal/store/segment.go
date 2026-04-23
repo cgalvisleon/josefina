@@ -68,6 +68,7 @@ type segment struct {
 	file     *os.File
 	size     int64
 	name     string
+	readOnly bool
 	ch       chan []byte
 	wg       sync.WaitGroup
 	writeErr error
@@ -84,6 +85,7 @@ func newSegment(file *os.File, size int64, name string) *segment {
 		file:     file,
 		size:     size,
 		name:     name,
+		readOnly: false,
 		ch:       make(chan []byte),
 		writeErr: nil,
 		errMu:    sync.Mutex{},
@@ -92,6 +94,21 @@ func newSegment(file *os.File, size int64, name string) *segment {
 	result.wg.Add(1)
 	go result.loop()
 	return result
+}
+
+/**
+* newReadOnlySegment creates a segment without a write goroutine.
+* Safe to use when the underlying file is opened O_RDONLY.
+* @param file *os.File, size int64, name string
+* @return *segment
+**/
+func newReadOnlySegment(file *os.File, size int64, name string) *segment {
+	return &segment{
+		file:     file,
+		size:     size,
+		name:     name,
+		readOnly: true,
+	}
 }
 
 /**
@@ -120,6 +137,9 @@ func (s *segment) loop() error {
 * @return error
 **/
 func (s *segment) Sync() error {
+	if s.readOnly {
+		return nil
+	}
 	if s.file == nil {
 		return errors.New(msg.MSG_FILE_IS_NIL)
 	}
@@ -131,10 +151,15 @@ func (s *segment) Sync() error {
 * @return error
 **/
 func (s *segment) Close() error {
+	if s.readOnly {
+		if s.file != nil {
+			return s.file.Close()
+		}
+		return nil
+	}
 	close(s.ch)
 	s.wg.Wait()
-	err := s.Sync()
-	if err != nil {
+	if err := s.Sync(); err != nil {
 		return err
 	}
 	return s.file.Close()
@@ -177,7 +202,7 @@ func (s *segment) ReadAt(b []byte, off int64) (int, error) {
 * @param b []byte
 **/
 func (s *segment) Write(b []byte) {
-	if s.file == nil {
+	if s.file == nil || s.readOnly {
 		return
 	}
 	s.ch <- b
