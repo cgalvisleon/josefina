@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"math"
 	"os"
@@ -20,6 +22,56 @@ import (
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
+
+const (
+	Active  byte = 1
+	Deleted byte = 2
+)
+
+var crcTable = crc32.MakeTable(crc32.Castagnoli)
+
+/**
+* checksum
+* @param b []byte
+* @return uint32
+**/
+func checksum(b []byte) uint32 {
+	return crc32.Checksum(b, crcTable)
+}
+
+/**
+* putUint32
+* @param b []byte, v uint32
+* @return void
+**/
+func putUint32(b []byte, v uint32) {
+	binary.BigEndian.PutUint32(b, v)
+}
+
+/**
+* putUint16
+* @param b []byte, v uint16
+* @return void
+**/
+func putUint16(b []byte, v uint16) {
+	binary.BigEndian.PutUint16(b, v)
+}
+
+/**
+* @param b []byte
+* @return uint32
+**/
+func getUint32(b []byte) uint32 {
+	return binary.BigEndian.Uint32(b)
+}
+
+/**
+* @param b []byte
+* @return uint16
+**/
+func getUint16(b []byte) uint16 {
+	return binary.BigEndian.Uint16(b)
+}
 
 const (
 	packageName     = "store"
@@ -67,7 +119,7 @@ type mode int
 
 const (
 	modeRead mode = iota
-	modeWrite
+	modeRw
 )
 
 type Putfn func(string, []byte)
@@ -167,14 +219,20 @@ func (s *FileStore) loadSegments() error {
 		path := filepath.Join(s.PathSegments, name)
 		st, _ := os.Stat(path)
 
-		fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+		flag := os.O_CREATE | os.O_RDWR
+		if s.mode == modeRead {
+			flag = os.O_RDONLY
+		}
+		fd, err := os.OpenFile(path, flag, 0644)
 		if err != nil {
 			return err
 		}
 
 		size := st.Size()
-		if _, err := fd.Seek(size, io.SeekStart); err != nil {
-			return err
+		if s.mode != modeRead {
+			if _, err := fd.Seek(size, io.SeekStart); err != nil {
+				return err
+			}
 		}
 
 		seg := newSegment(fd, size, name)
@@ -186,6 +244,9 @@ func (s *FileStore) loadSegments() error {
 	}
 
 	if len(s.segments) == 0 {
+		if s.mode == modeRead {
+			return nil
+		}
 		return s.newSegment()
 	}
 
@@ -699,8 +760,6 @@ func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc b
 
 					ref, ok := index[id]
 					if !ok {
-						// si esto puede pasar, es inconsistencia del índice
-						// define si debe ser error o skip
 						continue
 					}
 
@@ -831,7 +890,7 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 * @return *FileStore, error
 **/
 func Open(path, name string, isDebug bool) (*FileStore, error) {
-	return open(path, name, isDebug, modeWrite)
+	return open(path, name, isDebug, modeRw)
 }
 
 /**
