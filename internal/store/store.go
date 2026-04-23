@@ -76,7 +76,7 @@ func getUint16(b []byte) uint16 {
 const (
 	packageName     = "store"
 	maxIdLen        = 65535
-	fixedHeaderSize = 11
+	fixedHeaderSize = 19 // LSN(8) + DataLen(4) + CRC(4) + IDLen(2) + Status(1)
 )
 
 /**
@@ -84,7 +84,7 @@ const (
 * @param id string, data []byte, status byte
 * @return recordHeader, []byte, error
 **/
-func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byte, error) {
+func newRecordHeaderAt(lsn uint64, id string, data []byte, status byte) (recordHeader, []byte, error) {
 	idBytes := []byte(id)
 	idLen := len(idBytes)
 
@@ -99,18 +99,21 @@ func newRecordHeaderAt(id string, data []byte, status byte) (recordHeader, []byt
 
 	headerLen := fixedHeaderSize + idLen
 	result := recordHeader{
+		LSN:     lsn,
 		DataLen: uint32(dataLen),
 		CRC:     checksum(data),
 		IDLen:   uint16(idLen),
 		Status:  status,
 	}
 
+	// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
 	header := make([]byte, headerLen)
-	putUint32(header[0:4], result.DataLen)
-	putUint32(header[4:8], result.CRC)
-	putUint16(header[8:10], result.IDLen)
-	copy(header[10:10+idLen], idBytes)
-	header[10+idLen] = status
+	binary.BigEndian.PutUint64(header[0:8], result.LSN)
+	putUint32(header[8:12], result.DataLen)
+	putUint32(header[12:16], result.CRC)
+	putUint16(header[16:18], result.IDLen)
+	copy(header[18:18+idLen], idBytes)
+	header[18+idLen] = status
 
 	return result, header, nil
 }
@@ -198,6 +201,22 @@ func (s *FileStore) Count() int {
 	n := len(s.index)
 	s.indexMu.RUnlock()
 	return n
+}
+
+/**
+* OnPut
+* @param fn func(string, []byte)
+**/
+func (s *FileStore) OnPut(fn func(string, []byte)) {
+	s.onPut = append(s.onPut, fn)
+}
+
+/**
+* OnDelete
+* @param fn func(string)
+**/
+func (s *FileStore) OnDelete(fn func(string)) {
+	s.onDelete = append(s.onDelete, fn)
 }
 
 /**
@@ -292,7 +311,7 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
-	recordSize := int64(len(id)) + int64(len(data)) + 11
+	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	currentSize := s.active.size
 	totalSize := currentSize + recordSize
 	s.Size += recordSize
@@ -306,7 +325,8 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 		}
 	}
 
-	ref, err := s.active.WriteRecord(id, data, status)
+	s.WAL++
+	ref, err := s.active.WriteRecord(s.WAL, id, data, status)
 	if err != nil {
 		return nil, err
 	}
@@ -375,8 +395,8 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 	seg := s.segments[segIndex]
 	offset := int64(0)
 	for {
-		// Leer header mínimo
-		fixed := make([]byte, 11)
+		// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
+		fixed := make([]byte, fixedHeaderSize)
 		n, err := seg.ReadAt(fixed, offset)
 		if err != nil {
 			if errors.Is(err, io.EOF) || n < len(fixed) {
@@ -385,9 +405,10 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 			return err
 		}
 
-		dataLen := getUint32(fixed[0:4])
-		crcStored := getUint32(fixed[4:8])
-		idLen := getUint16(fixed[8:10])
+		lsn := binary.BigEndian.Uint64(fixed[0:8])
+		dataLen := getUint32(fixed[8:12])
+		crcStored := getUint32(fixed[12:16])
+		idLen := getUint16(fixed[16:18])
 
 		if idLen == 0 || idLen > maxIdLen {
 			break // corrupción → paro seguro
@@ -395,15 +416,14 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 
 		// Leer ID
 		idBytes := make([]byte, idLen)
-		if _, err := seg.ReadAt(idBytes, offset+10); err != nil {
+		if _, err := seg.ReadAt(idBytes, offset+18); err != nil {
 			break
 		}
 		id := string(idBytes)
 
 		// Leer status
-		statusLen := int64(1)
-		statusByte := make([]byte, statusLen)
-		if _, err := seg.ReadAt(statusByte, offset+10+int64(idLen)); err != nil {
+		statusByte := make([]byte, 1)
+		if _, err := seg.ReadAt(statusByte, offset+18+int64(idLen)); err != nil {
 			break
 		}
 		status := statusByte[0]
@@ -411,7 +431,7 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 		// Leer payload
 		data := make([]byte, dataLen)
 		if dataLen > 0 {
-			if _, err := seg.ReadAt(data, offset+10+int64(idLen)+statusLen); err != nil {
+			if _, err := seg.ReadAt(data, offset+18+int64(idLen)+1); err != nil {
 				break
 			}
 			if checksum(data) != crcStored {
@@ -425,7 +445,12 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 			s.deleteIndex(id)
 		}
 
-		offset += int64(11) + int64(idLen) + int64(dataLen)
+		// Restaurar WAL al LSN más alto visto en disco
+		if lsn > s.WAL {
+			s.WAL = lsn
+		}
+
+		offset += int64(fixedHeaderSize) + int64(idLen) + int64(dataLen)
 	}
 
 	return nil
@@ -566,22 +591,6 @@ func (s *FileStore) rebuildIndexes() error {
 }
 
 /**
-* OnPut
-* @param fn func(string, []byte)
-**/
-func (s *FileStore) OnPut(fn func(string, []byte)) {
-	s.onPut = append(s.onPut, fn)
-}
-
-/**
-* OnDelete
-* @param fn func(string)
-**/
-func (s *FileStore) OnDelete(fn func(string)) {
-	s.onDelete = append(s.onDelete, fn)
-}
-
-/**
 * Put
 * @param id string, value any
 * @return error
@@ -617,15 +626,13 @@ func (s *FileStore) Put(id string, value any) error {
 		s.WAL++
 	}
 	s.index[id] = ref
+	if s.isDebug {
+		logs.Debug("put:", s.Path, ":", s.Name, ":total:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
+	}
 	s.indexMu.Unlock()
 
 	for _, fn := range s.onPut {
 		fn(id, bt)
-	}
-
-	if s.isDebug {
-		i := len(s.index)
-		logs.Debug("put:", s.Path, ":", s.Name, ":total:", i, ":ID:", id, ":ref:", ref.ToString())
 	}
 
 	return nil

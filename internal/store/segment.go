@@ -14,6 +14,7 @@ import (
 )
 
 type recordHeader struct {
+	LSN     uint64 `json:"lsn"`
 	DataLen uint32 `json:"data_len"`
 	CRC     uint32 `json:"crc"`
 	IDLen   uint16 `json:"id_len"`
@@ -187,8 +188,8 @@ func (s *segment) Write(b []byte) {
 * @param id string, data []byte, status byte
 * @return *RecordRef, error
 **/
-func (s *segment) WriteHeader(id string, data []byte, status byte) (*RecordRef, error) {
-	h, header, err := newRecordHeaderAt(id, data, status)
+func (s *segment) WriteHeader(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
+	h, header, err := newRecordHeaderAt(lsn, id, data, status)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +220,8 @@ func (s *segment) WriteError() error {
 * @param seg *segment, id string, data []byte, status byte
 * @return *RecordRef, error
 **/
-func (s *segment) WriteRecord(id string, data []byte, status byte) (*RecordRef, error) {
-	h, header, err := newRecordHeaderAt(id, data, status)
+func (s *segment) WriteRecord(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
+	h, header, err := newRecordHeaderAt(lsn, id, data, status)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +255,11 @@ func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
 		return header, err
 	}
 
+	// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
 	reader := bytes.NewReader(buf)
+	if err := binary.Read(reader, binary.BigEndian, &header.LSN); err != nil {
+		return header, fmt.Errorf("read LSN: %w", err)
+	}
 	if err := binary.Read(reader, binary.BigEndian, &header.DataLen); err != nil {
 		return header, fmt.Errorf("read DataLen: %w", err)
 	}
@@ -266,14 +271,13 @@ func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	}
 
 	idBytes := make([]byte, header.IDLen)
-	if _, err := s.ReadAt(idBytes, ref.offset+10); err != nil {
+	if _, err := s.ReadAt(idBytes, ref.offset+18); err != nil {
 		return header, err
 	}
 	header.ID = string(idBytes)
 
-	statusLen := int64(1)
-	statusByte := make([]byte, statusLen)
-	if _, err := s.ReadAt(statusByte, ref.offset+10+int64(header.IDLen)); err != nil {
+	statusByte := make([]byte, 1)
+	if _, err := s.ReadAt(statusByte, ref.offset+18+int64(header.IDLen)); err != nil {
 		return header, err
 	}
 	header.Status = statusByte[0]

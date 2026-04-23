@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,13 +65,14 @@ func (s *FileStore) Compact() error {
 		ref := indexCopy[id]
 		oldSeg := s.segments[ref.segment]
 
-		// Leer header real
+		// Leer header real: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
 		fixed := make([]byte, fixedHeaderSize)
 		if _, err := oldSeg.ReadAt(fixed, ref.offset); err != nil {
 			return err
 		}
 
-		idLen := getUint16(fixed[8:10])
+		lsn := binary.BigEndian.Uint64(fixed[0:8])
+		idLen := getUint16(fixed[16:18])
 		payloadOffset := ref.offset + int64(fixedHeaderSize+idLen)
 
 		data := make([]byte, ref.length)
@@ -88,7 +90,7 @@ func (s *FileStore) Compact() error {
 			}
 		}
 
-		newRef, err := current.WriteRecord(id, data, Active)
+		newRef, err := current.WriteRecord(lsn, id, data, Active)
 		if err != nil {
 			return err
 		}
