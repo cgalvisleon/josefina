@@ -12,7 +12,7 @@ import (
 
 func main() {
 	path := filepath.Join("./", "data")
-	// defer os.RemoveAll(path)
+	defer os.RemoveAll(path)
 
 	fs, err := store.Open(path, "demo", true)
 	if err != nil {

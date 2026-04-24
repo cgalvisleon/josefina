@@ -344,6 +344,10 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 
 	n := len(s.index)
 	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
+	minThreshold := envar.GetInt("MIN_COMPACT_THRESHOLD", 1000)
+	if threshold < minThreshold {
+		threshold = minThreshold
+	}
 	if s.TombStones > threshold {
 		if atomic.CompareAndSwapInt32(&s.compacting, 0, 1) {
 			s.compactWg.Add(1)
