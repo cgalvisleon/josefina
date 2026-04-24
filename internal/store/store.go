@@ -76,11 +76,13 @@ const (
 
 type Putfn func(string, []byte)
 type Deletefn func(string)
+type Syncfn func(string, *RecordRef, string)
 
 type FileStore struct {
+	ID           string                `json:"id"`
 	Name         string                `json:"name"`
 	Path         string                `json:"path"`
-	WAL          uint64                `json:"wal"` // Write-ahead log counter
+	WAL          uint64                `json:"wal"`
 	TombStones   int                   `json:"tomb_stones"`
 	PathSegments string                `json:"path_segments"`
 	PathSnapshot string                `json:"path_snapshot"`
@@ -97,6 +99,7 @@ type FileStore struct {
 	keys         []string              `json:"-"` // claves en memoria
 	mode         mode                  `json:"-"` // modo de operación
 	onPut        []Putfn               `json:"-"` // función de escritura
+	onSync       []Syncfn              `json:"-"` // función de sincronización
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
 	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg    sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
@@ -167,6 +170,14 @@ func (s *FileStore) OnPut(fn func(string, []byte)) {
 **/
 func (s *FileStore) OnDelete(fn func(string)) {
 	s.onDelete = append(s.onDelete, fn)
+}
+
+/**
+* OnSync
+* @param fn func(string, *RecordRef, string)
+**/
+func (s *FileStore) OnSync(fn func(string, *RecordRef, string)) {
+	s.onSync = append(s.onSync, fn)
 }
 
 /**
@@ -366,6 +377,17 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 }
 
 /**
+* putIndex
+* @param id string, ref *RecordRef
+**/
+func (s *FileStore) putIndex(id string, ref *RecordRef) {
+	s.index[id] = ref
+	if s.isDebug {
+		logs.Debug("put:", s.Path, ":", s.Name, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
+	}
+}
+
+/**
 * deleteIndex
 * @param id string
 **/
@@ -512,6 +534,25 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 }
 
 /**
+* RebuildIndexes
+* @return error
+**/
+func (s *FileStore) rebuildIndexes() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+
+	s.index = make(map[string]*RecordRef)
+	s.keys = make([]string, 0)
+	for i := range s.segments {
+		if err := s.rebuildIndex(i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/**
 * Close
 * @return error
 **/
@@ -549,6 +590,7 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 	} else {
 		sort.Sort(sort.Reverse(sort.StringSlice(s.keys)))
 	}
+
 	i := 0
 	for {
 		if offset >= len(s.keys) {
@@ -567,22 +609,16 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 }
 
 /**
-* RebuildIndexes
-* @return error
+* SyncIndex
+* @param id string, ref *RecordRef, ownerId string
 **/
-func (s *FileStore) rebuildIndexes() error {
-	s.indexMu.Lock()
-	defer s.indexMu.Unlock()
-
-	s.index = make(map[string]*RecordRef)
-	s.keys = make([]string, 0)
-	for i := range s.segments {
-		if err := s.rebuildIndex(i); err != nil {
-			return err
-		}
+func (s *FileStore) SyncIndex(id string, ref *RecordRef, ownerId string) {
+	if s.ID == ownerId {
+		return
 	}
-
-	return nil
+	s.indexMu.Lock()
+	s.putIndex(id, ref)
+	s.indexMu.Unlock()
 }
 
 /**
@@ -591,10 +627,6 @@ func (s *FileStore) rebuildIndexes() error {
 * @return error
 **/
 func (s *FileStore) Put(id string, value any) error {
-	if s.mode == modeRead {
-		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
-	}
-
 	if id == "" {
 		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
@@ -618,11 +650,12 @@ func (s *FileStore) Put(id string, value any) error {
 	if exists {
 		s.TombStones++
 	}
-	s.index[id] = ref
-	if s.isDebug {
-		logs.Debug("put:", s.Path, ":", s.Name, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
-	}
+	s.putIndex(id, ref)
 	s.indexMu.Unlock()
+
+	for _, fn := range s.onSync {
+		fn(id, ref, s.ID)
+	}
 
 	for _, fn := range s.onPut {
 		fn(id, bt)
