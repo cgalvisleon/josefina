@@ -12,7 +12,7 @@ import (
 
 func main() {
 	path := filepath.Join("./", "data")
-	defer os.RemoveAll(path)
+	// defer os.RemoveAll(path)
 
 	fs, err := store.Open(path, "demo", true)
 	if err != nil {
@@ -111,5 +111,6 @@ func main() {
 	}
 	logs.Info("done")
 
-	logs.Infof("=== done  lsn=%d  count=%d  tombstones=%d ===", fs.WAL, fs.Count(), fs.TombStones)
+	count := fs.Count()
+	logs.Infof("=== done  lsn=%d  count=%d  tombstones=%d ===", fs.WAL, count, fs.TombStones)
 }

@@ -70,8 +70,8 @@ func newRecordHeaderAt(lsn uint64, id string, data []byte, status byte) (recordH
 type mode int
 
 const (
-	modeRead mode = iota
-	modeRw
+	ReadOnly mode = iota
+	ReadWrite
 )
 
 type Putfn func(string, []byte)
@@ -200,7 +200,7 @@ func (s *FileStore) loadSegments() error {
 		st, _ := os.Stat(path)
 
 		flag := os.O_CREATE | os.O_RDWR
-		if s.mode == modeRead {
+		if s.mode == ReadOnly {
 			flag = os.O_RDONLY
 		}
 		fd, err := os.OpenFile(path, flag, 0644)
@@ -210,7 +210,7 @@ func (s *FileStore) loadSegments() error {
 
 		size := st.Size()
 		var seg *segment
-		if s.mode == modeRead {
+		if s.mode == ReadOnly {
 			seg = newReadOnlySegment(fd, size, name)
 		} else {
 			if _, err := fd.Seek(size, io.SeekStart); err != nil {
@@ -226,7 +226,7 @@ func (s *FileStore) loadSegments() error {
 	}
 
 	if len(s.segments) == 0 {
-		if s.mode == modeRead {
+		if s.mode == ReadOnly {
 			return nil
 		}
 		return s.newSegment()
@@ -267,7 +267,7 @@ func (s *FileStore) newSegment() error {
 
 /**
 * appendRecordAt writes a record with a caller-supplied LSN (replication path).
-* It does not check modeRead and does not auto-increment s.WAL.
+* It does not check ReadOnly and does not auto-increment s.WAL.
 * If lsn > s.WAL the local counter is advanced to stay in sync with the leader.
 * @param lsn uint64, id string, data []byte, status byte
 * @return *RecordRef, error
@@ -609,10 +609,10 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 }
 
 /**
-* SyncIndex
+* Sync
 * @param id string, ref *RecordRef, ownerId string
 **/
-func (s *FileStore) SyncIndex(id string, ref *RecordRef, ownerId string) {
+func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 	if s.ID == ownerId {
 		return
 	}
@@ -627,6 +627,10 @@ func (s *FileStore) SyncIndex(id string, ref *RecordRef, ownerId string) {
 * @return error
 **/
 func (s *FileStore) Put(id string, value any) error {
+	if s.mode == ReadOnly {
+		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	}
+
 	if id == "" {
 		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
@@ -693,7 +697,7 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 * @return bool, error
 **/
 func (s *FileStore) Delete(id string) (bool, error) {
-	if s.mode == modeRead {
+	if s.mode == ReadOnly {
 		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
@@ -871,7 +875,7 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	name = utility.Normalize(name)
 	fs := &FileStore{
 		Name:         name,
-		Path:         filepath.Join(path),
+		Path:         filepath.Join(path, name),
 		PathSegments: filepath.Join(path, name, "segments"),
 		PathSnapshot: filepath.Join(path, name, "snapshot"),
 		PathCompact:  filepath.Join(path, name, "compact"),
@@ -887,7 +891,7 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	fs.keys = make([]string, 0)
 	fs.SyncOnWrite = syncOnWrite
 
-	if mode == modeRead {
+	if mode == ReadOnly {
 		if _, err := os.Stat(fs.PathSegments); os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: store not found at %s", errors.New(msg.MSG_STORE_NOT_FOUND), fs.PathSegments)
 		}
@@ -932,14 +936,14 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 * @return *FileStore, error
 **/
 func Open(path, name string, isDebug bool) (*FileStore, error) {
-	return open(path, name, isDebug, modeRw)
+	return open(path, name, isDebug, ReadWrite)
 }
 
 /**
-* ReadOnly
+* OpenReadOnly
 * @param path, name string,
 * @return *FileStore, error
 **/
-func ReadOnly(path, name string, isDebug bool) (*FileStore, error) {
-	return open(path, name, isDebug, modeRead)
+func OpenReadOnly(path, name string, isDebug bool) (*FileStore, error) {
+	return open(path, name, isDebug, ReadOnly)
 }

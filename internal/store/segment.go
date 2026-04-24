@@ -168,6 +168,7 @@ func (s *segment) Close() error {
 		}
 		closeErr = s.file.Close()
 	})
+
 	return closeErr
 }
 
