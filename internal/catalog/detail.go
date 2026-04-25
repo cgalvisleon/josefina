@@ -1,11 +1,14 @@
 package catalog
 
+/**
+* Detail: Represents a detail in the database
+**/
 type Detail struct {
-	to              *Model            `json:"-"`
-	Keys            map[string]string `json:"key"`
-	Selects         []string          `json:"select"`
-	OnDeleteCascade bool              `json:"on_delete_cascade"`
-	OnUpdateCascade bool              `json:"on_update_cascade"`
+	to              *Model            `json:"-"`                 // Target model
+	Keys            map[string]string `json:"key"`               // Keys
+	Selects         []string          `json:"select"`            // Selects
+	OnDeleteCascade bool              `json:"on_delete_cascade"` // On delete cascade
+	OnUpdateCascade bool              `json:"on_update_cascade"` // On update cascade
 }
 
 /**

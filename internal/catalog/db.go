@@ -12,12 +12,15 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* DB: Represents a database
+**/
 type DB struct {
-	Name     string             `json:"name"`
-	Path     string             `json:"path"`
-	Schemas  map[string]*Schema `json:"schemas"`
-	IsStrict bool               `json:"is_strict"`
-	mu       sync.RWMutex       `json:"-"`
+	Name     string             `json:"name"`      // Database name
+	Path     string             `json:"path"`      // Path to the database
+	Schemas  map[string]*Schema `json:"schemas"`   // Schemas
+	IsStrict bool               `json:"is_strict"` // Is strict mode
+	mu       sync.RWMutex       `json:"-"`         // Mutex
 }
 
 /**

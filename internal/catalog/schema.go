@@ -11,12 +11,15 @@ import (
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
+/**
+* Schema: Represents a schema in the database
+**/
 type Schema struct {
-	Database string            `json:"database"`
-	Name     string            `json:"name"`
-	Models   map[string]*Model `json:"models"`
-	db       *DB               `json:"-"`
-	mu       sync.RWMutex      `json:"-"`
+	Database string            `json:"database"` // Database name
+	Name     string            `json:"name"`     // Schema name
+	Models   map[string]*Model `json:"models"`   // Models
+	db       *DB               `json:"-"`        // Database
+	mu       sync.RWMutex      `json:"-"`        // Mutex
 }
 
 /**

@@ -17,6 +17,10 @@ var (
 	ErrorFieldNotFound = errors.New(msg.MSG_FIELD_NOT_FOUND)
 )
 
+/**
+* From struct
+* Define the source of the data, atrib address is the path to the data (host:port)
+**/
 type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
@@ -59,36 +63,36 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                      `json:"database"`
-	Schema        string                      `json:"schema"`
-	Name          string                      `json:"name"`
-	IsInit        bool                        `json:"-"`
-	Path          string                      `json:"path"`
-	Fields        map[string]*Field           `json:"fields"`
-	Indexes       []string                    `json:"indexes"`
-	PrimaryKeys   []string                    `json:"primary_keys"`
-	ForeignKeys   map[string]*Detail          `json:"foreign_keys"`
-	Unique        []string                    `json:"unique"`
-	Required      []string                    `json:"required"`
-	Hidden        []string                    `json:"hidden"`
-	Details       map[string]*Detail          `json:"details"`
-	Rollups       map[string]*Detail          `json:"rollups"`
-	Relations     map[string]*Detail          `json:"relations"`
-	Calcs         map[string][]byte           `json:"calcs"`
-	BeforeInserts []*Trigger                  `json:"-"`
-	AfterInserts  []*Trigger                  `json:"-"`
-	BeforeUpdates []*Trigger                  `json:"-"`
-	AfterUpdates  []*Trigger                  `json:"-"`
-	BeforeDeletes []*Trigger                  `json:"-"`
-	AfterDeletes  []*Trigger                  `json:"-"`
-	Version       int                         `json:"version"`
-	IsCore        bool                        `json:"is_core"`
-	IsStrict      bool                        `json:"is_strict"`
-	stores        map[string]*store.FileStore `json:"-"`
-	schema        *Schema                     `json:"-"`
-	mode          store.Mode                  `json:"-"`
-	mu            sync.RWMutex                `json:"-"`
-	isDebug       bool                        `json:"-"`
+	Database      string                      `json:"database"`     // Database name
+	Schema        string                      `json:"schema"`       // Schema name
+	Name          string                      `json:"name"`         // Model name
+	IsInit        bool                        `json:"-"`            // Is initialized
+	Path          string                      `json:"path"`         // Path to the model
+	Fields        map[string]*Field           `json:"fields"`       // Fields
+	Indexes       []string                    `json:"indexes"`      // Indexes
+	PrimaryKeys   []string                    `json:"primary_keys"` // Primary keys
+	ForeignKeys   map[string]*Detail          `json:"foreign_keys"` // Foreign keys
+	Unique        []string                    `json:"unique"`       // Unique
+	Required      []string                    `json:"required"`     // Required
+	Hidden        []string                    `json:"hidden"`       // Hidden
+	Details       map[string]*Detail          `json:"details"`      // Details
+	Rollups       map[string]*Detail          `json:"rollups"`      // Rollups
+	Relations     map[string]*Detail          `json:"relations"`    // Relations
+	Calcs         map[string][]byte           `json:"calcs"`        // Calculated fields
+	BeforeInserts []*Trigger                  `json:"-"`            // Before insert triggers
+	AfterInserts  []*Trigger                  `json:"-"`            // After insert triggers
+	BeforeUpdates []*Trigger                  `json:"-"`            // Before update triggers
+	AfterUpdates  []*Trigger                  `json:"-"`            // After update triggers
+	BeforeDeletes []*Trigger                  `json:"-"`            // Before delete triggers
+	AfterDeletes  []*Trigger                  `json:"-"`            // After delete triggers
+	Version       int                         `json:"version"`      // Version
+	IsCore        bool                        `json:"is_core"`      // Is core model
+	IsStrict      bool                        `json:"is_strict"`    // Is strict model
+	stores        map[string]*store.FileStore `json:"-"`            // Stores
+	schema        *Schema                     `json:"-"`            // Schema
+	mode          store.Mode                  `json:"-"`            // Mode
+	mu            sync.RWMutex                `json:"-"`            // Mutex
+	isDebug       bool                        `json:"-"`            // Is debug
 }
 
 /**

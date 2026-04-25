@@ -162,19 +162,30 @@ func NewBTree() *BTree {
 	}
 }
 
-// Len retorna el número de keys distintas almacenadas.
+/**
+* Len retorna el número de keys distintas almacenadas.
+* @return int
+**/
 func (bt *BTree) Len() int {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.size
 }
 
-// childIdx retorna el índice del hijo a seguir en un nodo interno (upper bound).
+/**
+* childIdx retorna el índice del hijo a seguir en un nodo interno (upper bound).
+* @param keys []IndexKey, key IndexKey
+* @return int
+**/
 func childIdx(keys []IndexKey, key IndexKey) int {
 	return sort.Search(len(keys), func(i int) bool { return key.Compare(keys[i]) < 0 })
 }
 
-// leafSearch retorna el lower bound de key en las keys ordenadas de una hoja.
+/**
+* leafSearch retorna el lower bound de key en las keys ordenadas de una hoja.
+* @param keys []IndexKey, key IndexKey
+* @return int
+**/
 func leafSearch(keys []IndexKey, key IndexKey) int {
 	lo, hi := 0, len(keys)
 	for lo < hi {
@@ -188,7 +199,11 @@ func leafSearch(keys []IndexKey, key IndexKey) int {
 	return lo
 }
 
-// findLeaf navega desde la raíz hasta la hoja que debe contener key.
+/**
+* findLeaf navega desde la raíz hasta la hoja que debe contener key.
+* @param key IndexKey
+* @return *bpNode
+**/
 func (bt *BTree) findLeaf(key IndexKey) *bpNode {
 	n := bt.root
 	for !n.leaf {
@@ -197,7 +212,11 @@ func (bt *BTree) findLeaf(key IndexKey) *bpNode {
 	return n
 }
 
-// Get retorna los values asociados a key. ok=false si key no existe.
+/**
+* Get retorna los values asociados a key. ok=false si key no existe.
+* @param key IndexKey
+* @return ([]string, bool)
+**/
 func (bt *BTree) Get(key IndexKey) ([]string, bool) {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
@@ -212,7 +231,10 @@ func (bt *BTree) Get(key IndexKey) ([]string, bool) {
 	return nil, false
 }
 
-// Insert agrega value al conjunto almacenado en key. No inserta duplicados.
+/**
+* Insert agrega value al conjunto almacenado en key. No inserta duplicados.
+* @param key IndexKey, value string
+**/
 func (bt *BTree) Insert(key IndexKey, value string) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
@@ -301,8 +323,12 @@ func bpInsertChild(n *bpNode, i int, child *bpNode) {
 	n.children[i] = child
 }
 
-// Delete elimina value del conjunto en key.
-// Si el conjunto queda vacío la key se elimina de la hoja.
+/**
+* Delete elimina value del conjunto en key.
+* Si el conjunto queda vacío la key se elimina de la hoja.
+* @param key IndexKey, value string
+* @return bool
+**/
 func (bt *BTree) Delete(key IndexKey, value string) bool {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
@@ -337,7 +363,11 @@ func (bt *BTree) Delete(key IndexKey, value string) bool {
 	return true
 }
 
-// DeleteKey elimina una key completa con todos sus values.
+/**
+* DeleteKey elimina una key completa con todos sus values.
+* @param key IndexKey
+* @return bool
+**/
 func (bt *BTree) DeleteKey(key IndexKey) bool {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
@@ -354,8 +384,12 @@ func (bt *BTree) DeleteKey(key IndexKey) bool {
 	return true
 }
 
-// Range retorna todos los values de keys en [from, to] inclusive.
-// Pasar zero (IndexKey{}) en from o to indica rango abierto.
+/**
+* Range retorna todos los values de keys en [from, to] inclusive.
+* Pasar zero (IndexKey{}) en from o to indica rango abierto.
+* @param from IndexKey, to IndexKey, asc bool
+* @return []string
+**/
 func (bt *BTree) Range(from, to IndexKey, asc bool) []string {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
@@ -394,7 +428,11 @@ func (bt *BTree) Range(from, to IndexKey, asc bool) []string {
 	return result
 }
 
-// Keys retorna las keys distintas con paginación. limit=0 retorna todo.
+/**
+* Keys retorna las keys distintas con paginación. limit=0 retorna todo.
+* @param asc bool, offset int, limit int
+* @return []IndexKey
+**/
 func (bt *BTree) Keys(asc bool, offset, limit int) []IndexKey {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
