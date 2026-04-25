@@ -124,28 +124,28 @@ func (s *Model) ToJson() (et.Json, error) {
 }
 
 /**
-* Store: Opens a store
-* @param name string
-* @return *store.FileStore, error
+* IsDebug: Returns the debug mode
+* @return *Model
 **/
-func (s *Model) Store(name string) (*store.FileStore, error) {
-	result, ok := s.stores[name]
-	if ok {
-		return result, nil
-	}
+func (s *Model) IsDebug() *Model {
+	s.isDebug = true
+	return s
+}
 
-	result, err := store.Open(s.Path, name, s.mode)
-	if err != nil {
-		return nil, err
-	}
+/**
+* Stricted: Sets the model to strict
+* @return void
+**/
+func (s *Model) Stricted() {
+	s.IsStrict = true
+}
 
-	if s.isDebug {
-		result = result.IsDebug()
-	}
-
-	s.stores[name] = result
-
-	return result, nil
+/**
+* GenKey: Returns a new key for the model
+* @return string
+**/
+func (s *Model) GenKey() string {
+	return reg.GenUUId(s.Name)
 }
 
 /**
@@ -173,36 +173,31 @@ func (s *Model) Init() error {
 }
 
 /**
-* GenKey: Returns a new key for the model
-* @return string
+* Store: Opens a store
+* @param name string
+* @return *store.FileStore, error
 **/
-func (s *Model) GenKey() string {
-	return reg.GenUUId(s.Name)
-}
+func (s *Model) Store(name string) (*store.FileStore, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-/**
-* SetDebug
-* @param debug bool
-**/
-func (s *Model) SetDebug(debug bool) {
-	s.isDebug = debug
-}
+	result, exists := s.stores[name]
+	if exists {
+		return result, nil
+	}
 
-/**
-* IsDebug: Returns the debug mode
-* @return *Model
-**/
-func (s *Model) IsDebug() *Model {
-	s.isDebug = true
-	return s
-}
+	result, err := store.Open(s.Path, name, s.mode)
+	if err != nil {
+		return nil, err
+	}
 
-/**
-* Stricted: Sets the model to strict
-* @return void
-**/
-func (s *Model) Stricted() {
-	s.IsStrict = true
+	if s.isDebug {
+		result = result.IsDebug()
+	}
+
+	s.stores[name] = result
+
+	return result, nil
 }
 
 /**
@@ -232,6 +227,59 @@ func (s *Model) Put(idx string, value any) error {
 	err = source.Put(idx, value)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+/**
+* PutObject: Puts the model
+* @param idx string, object et.Json
+* @return error
+**/
+func (s *Model) PutObject(idx string, object et.Json) error {
+	object[INDEX] = idx
+	for _, name := range s.Indexes {
+		key := fmt.Sprintf("%v", object[name])
+		if key == "" {
+			continue
+		}
+
+		store, err := s.Store(name)
+		if err != nil {
+			return err
+		}
+
+		if name == INDEX {
+			err := store.Put(key, object)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		index := map[string]bool{}
+		exists, err := store.Get(key, &index)
+		if err != nil {
+			return err
+		}
+
+		if !exists {
+			index = map[string]bool{}
+		}
+
+		_, ok := index[idx]
+		if ok {
+			return nil
+		}
+
+		index[idx] = true
+		err = store.Put(key, index)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	return nil
@@ -280,53 +328,6 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 }
 
 /**
-* PutObject: Puts the model
-* @param idx string, object et.Json
-* @return error
-**/
-func (s *Model) PutObject(idx string, object et.Json) error {
-	object[INDEX] = idx
-	for _, name := range s.Indexes {
-		key := fmt.Sprintf("%v", object[name])
-		if key == "" {
-			continue
-		}
-
-		store := s.stores[name]
-		if name == INDEX {
-			err := store.Put(key, object)
-			if err != nil {
-				return err
-			}
-		} else {
-			index := map[string]bool{}
-			exists, err := store.Get(key, &index)
-			if err != nil {
-				return err
-			}
-
-			if !exists {
-				index = map[string]bool{}
-			}
-
-			_, ok := index[idx]
-			if ok {
-				return nil
-			}
-
-			index[idx] = true
-			err = store.Put(key, index)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}
-	}
-	return nil
-}
-
-/**
 * GetObjet: Gets the model as object
 * @param idx string
 * @return et.Json, error
@@ -357,7 +358,11 @@ func (s *Model) RemoveObject(idx string) error {
 			continue
 		}
 
-		store := s.stores[name]
+		store, err := s.Store(name)
+		if err != nil {
+			return err
+		}
+
 		if name == INDEX {
 			_, err := store.Delete(key)
 			if err != nil {
