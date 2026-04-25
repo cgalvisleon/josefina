@@ -31,9 +31,9 @@ type IndexKey struct {
 	num float64 // KtInt (bits de int64), KtFloat, KtBool (0/1), KtDateTime (UnixNano)
 }
 
-func KeyString(v string) IndexKey   { return IndexKey{tp: KtString, str: v} }
-func KeyInt(v int64) IndexKey       { return IndexKey{tp: KtInt, num: float64(v)} }
-func KeyFloat(v float64) IndexKey   { return IndexKey{tp: KtFloat, num: v} }
+func KeyString(v string) IndexKey { return IndexKey{tp: KtString, str: v} }
+func KeyInt(v int64) IndexKey     { return IndexKey{tp: KtInt, num: float64(v)} }
+func KeyFloat(v float64) IndexKey { return IndexKey{tp: KtFloat, num: v} }
 func KeyDateTime(v time.Time) IndexKey {
 	return IndexKey{tp: KtDateTime, num: float64(v.UnixNano())}
 }
@@ -44,7 +44,11 @@ func KeyBool(v bool) IndexKey {
 	return IndexKey{tp: KtBool, num: 0}
 }
 
-// KeyFromAny construye un IndexKey a partir de cualquier valor JSON.
+/**
+* KeyFromAny construye un IndexKey a partir de cualquier valor JSON.
+* @param v any
+* @return IndexKey
+**/
 func KeyFromAny(v any) IndexKey {
 	switch val := v.(type) {
 	case string:
@@ -72,8 +76,12 @@ func KeyFromAny(v any) IndexKey {
 	}
 }
 
-// Compare retorna -1, 0 o 1.
-// Tipos distintos se comparan por su representación string (fallback seguro).
+/**
+* Compare retorna -1, 0 o 1.
+* @param b IndexKey
+* @return int
+* Tipos distintos se comparan por su representación string (fallback seguro).
+**/
 func (a IndexKey) Compare(b IndexKey) int {
 	if a.tp != b.tp {
 		as, bs := a.String(), b.String()
