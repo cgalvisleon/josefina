@@ -1,7 +1,7 @@
 package catalog
 
 type Detail struct {
-	to              *Model            `json:"_"`
+	to              *Model            `json:"-"`
 	Keys            map[string]string `json:"key"`
 	Selects         []string          `json:"select"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
@@ -10,7 +10,7 @@ type Detail struct {
 
 /**
 * newDetail
-* @param to *From, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
+* @param to *Model, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
 func newDetail(to *Model, keys map[string]string, selects []string, onDeleteCascade, onUpdateCascade bool) *Detail {
