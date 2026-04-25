@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/js"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
@@ -66,7 +67,6 @@ type Model struct {
 	Database      string                      `json:"database"`     // Database name
 	Schema        string                      `json:"schema"`       // Schema name
 	Name          string                      `json:"name"`         // Model name
-	Address       string                      `json:"-"`            // Address of the model
 	IsInit        bool                        `json:"-"`            // Is initialized
 	Path          string                      `json:"path"`         // Path to the model
 	Fields        map[string]*Field           `json:"fields"`       // Fields
@@ -92,6 +92,8 @@ type Model struct {
 	stores        map[string]*store.FileStore `json:"-"`            // Stores
 	btrees        map[string]*BTree           `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                     `json:"-"`            // Schema
+	vm            *js.VM                      `json:"-"`            // Virtual machine
+	storeVm       js.Store                    `json:"-"`            // Virtual machine
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
 	isDebug       bool                        `json:"-"`            // Is debug
@@ -159,8 +161,7 @@ func (s *Model) GenKey() string {
 * Each BTree loads its own persisted data on open.
 * @return error
 **/
-func (s *Model) Init(address string) error {
-	s.Address = address
+func (s *Model) Init() error {
 	if s.IsInit {
 		return nil
 	}
@@ -303,11 +304,11 @@ func (s *Model) Remove(idx string) error {
 }
 
 /**
-* Insert: Inserts or updates a document and keeps secondary indexes in sync.
+* putObject: Inserts or updates a document and keeps secondary indexes in sync.
 * @param idx string, object et.Json
 * @return error
 **/
-func (s *Model) Insert(idx string, object et.Json) error {
+func (s *Model) putObject(idx string, object et.Json) error {
 	object[INDEX] = idx
 
 	// Save document to primary store.
@@ -341,11 +342,12 @@ func (s *Model) Insert(idx string, object et.Json) error {
 }
 
 /**
-* Update: Updates a document and keeps secondary indexes in sync.
-* @param idx string, object et.Json
+* deleteObject: Removes a document and cleans up all secondary indexes.
+* @param idx string, current et.Json
 * @return error
 **/
-func (s *Model) Update(idx string, object et.Json) error {
+func (s *Model) deleteObject(idx string, current et.Json) error {
+	// Remove from primary store.
 	source, err := s.Source()
 	if err != nil {
 		return err
@@ -356,29 +358,6 @@ func (s *Model) Update(idx string, object et.Json) error {
 		return nil
 	}
 
-	return s.Insert(idx, object)
-}
-
-/**
-* Delete: Removes a document and cleans up all secondary indexes.
-* @param idx string
-* @return error
-**/
-func (s *Model) Delete(idx string) error {
-	data := et.Json{}
-	exists, err := s.Get(idx, &data)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return nil
-	}
-
-	// Remove from primary store.
-	source, err := s.Source()
-	if err != nil {
-		return err
-	}
 	if _, err := source.Delete(idx); err != nil {
 		return err
 	}
@@ -388,7 +367,7 @@ func (s *Model) Delete(idx string) error {
 		if name == INDEX {
 			continue
 		}
-		v := data[name]
+		v := current[name]
 		if v == nil {
 			continue
 		}
@@ -402,6 +381,127 @@ func (s *Model) Delete(idx string) error {
 	}
 
 	return nil
+}
+
+/**
+* fireTriggers: Fires the triggers
+* @param triggers []*Trigger, old, new et.Json
+* @return error
+**/
+func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, error) {
+	var err error
+	s.vm, err = js.New(fmt.Sprintf("trigger_%s", trigger.Name))
+	if err != nil {
+		return tx, err
+	}
+
+	s.vm.Set("Old", old)
+	s.vm.Set("New", new)
+	s.vm.Set("Tx", tx)
+	_, err = s.vm.Run(string(trigger.Definition))
+	if err != nil {
+		return tx, err
+	}
+
+	return tx, nil
+}
+
+/**
+* Insert: Inserts or updates a document and keeps secondary indexes in sync.
+* @param idx string, new et.Json
+* @return (*Transaction, error)
+**/
+func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+	tx = GetTx(tx)
+	var old = et.Json{}
+	for _, trigger := range s.BeforeInserts {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	tx.Add(s, INSERT, idx, old, new)
+
+	for _, trigger := range s.AfterInserts {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	return tx, nil
+}
+
+/**
+* Update: Updates a document and keeps secondary indexes in sync.
+* @param idx string, new et.Json
+* @return (et.Json, error)
+**/
+func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
+	tx = GetTx(tx)
+	old := et.Json{}
+	exists, err := s.Get(idx, &old)
+	if err != nil {
+		return tx, err
+	}
+	if !exists {
+		return tx, fmt.Errorf("document not found")
+	}
+
+	for _, trigger := range s.BeforeUpdates {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	tx.Add(s, UPDATE, idx, old, new)
+
+	for _, trigger := range s.AfterUpdates {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	return tx, nil
+}
+
+/**
+* Delete: Removes a document and cleans up all secondary indexes.
+* @param idx string
+* @return error
+**/
+func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
+	tx = GetTx(tx)
+	old := et.Json{}
+	exists, err := s.Get(idx, &old)
+	if err != nil {
+		return tx, err
+	}
+	if !exists {
+		return tx, nil
+	}
+
+	new := et.Json{}
+	for _, trigger := range s.BeforeDeletes {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	tx.Add(s, DELETE, idx, old, new)
+
+	for _, trigger := range s.AfterDeletes {
+		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return tx, err
+		}
+	}
+
+	return tx, nil
 }
 
 /**
