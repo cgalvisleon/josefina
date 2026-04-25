@@ -1,7 +1,7 @@
 package catalog
 
 type Detail struct {
-	To              *From             `json:"to"`
+	to              *Model            `json:"_"`
 	Keys            map[string]string `json:"key"`
 	Selects         []string          `json:"select"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
@@ -13,9 +13,9 @@ type Detail struct {
 * @param to *From, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
 * @return *Detail
 **/
-func newDetail(to *From, keys map[string]string, selects []string, onDeleteCascade, onUpdateCascade bool) *Detail {
+func newDetail(to *Model, keys map[string]string, selects []string, onDeleteCascade, onUpdateCascade bool) *Detail {
 	return &Detail{
-		To:              to,
+		to:              to,
 		Keys:            keys,
 		Selects:         selects,
 		OnDeleteCascade: onDeleteCascade,

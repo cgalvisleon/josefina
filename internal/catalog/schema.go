@@ -41,11 +41,9 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 	path := strs.Append(s.db.Path, s.Name, "/")
 	path = fmt.Sprintf("%s/%s", path, name)
 	result = &Model{
-		From: &From{
-			Database: s.Database,
-			Schema:   s.Name,
-			Name:     name,
-		},
+		Database:      s.Database,
+		Schema:        s.Name,
+		Name:          name,
 		Path:          path,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]string, 0),

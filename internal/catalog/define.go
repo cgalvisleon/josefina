@@ -27,7 +27,7 @@ func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, def
 		return result, nil
 	}
 
-	result, err := newField(s.From, name, tpField, tpData, defaultValue)
+	result, err := newField(s, name, tpField, tpData, defaultValue)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 	}
 
 	name := fmt.Sprintf("%s_%s_fk", s.Name, to.Name)
-	result := newDetail(to.From, keys, []string{}, onDeleteCascade, onUpdateCascade)
+	result := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.ForeignKeys[name] = result
 	return result, nil
 }
@@ -224,16 +224,16 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 	}
 
 	to.DefineForeignKeys(s, forKeys, true, true)
-	s.Details[name] = newDetail(to.From, keys, []string{}, false, false)
+	s.Details[name] = newDetail(to, keys, []string{}, false, false)
 	return to, nil
 }
 
 /**
 * DefineRollup: Defines the rollup
-* @param name string, to string, keys map[string]string, selects []string
+* @param name string, to *Model, keys map[string]string, selects []string
 * @return error
 **/
-func (s *Model) DefineRollup(name string, to *From, keys map[string]string, selects []string) error {
+func (s *Model) DefineRollup(name string, to *Model, keys map[string]string, selects []string) error {
 	_, err := s.defineField(name, TpRollup, TpJson, []et.Json{})
 	if err != nil {
 		return err
@@ -245,10 +245,10 @@ func (s *Model) DefineRollup(name string, to *From, keys map[string]string, sele
 
 /**
 * DefineRelation: Defines the relation
-* @param to *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool
+* @param to *Model, keys map[string]string, onDeleteCascade, onUpdateCascade bool
 * @return error
 **/
-func (s *Model) DefineRelation(to *From, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
+func (s *Model) DefineRelation(to *Model, keys map[string]string, onDeleteCascade, onUpdateCascade bool) error {
 	detail := newDetail(to, keys, []string{}, onDeleteCascade, onUpdateCascade)
 	s.Relations[to.Name] = detail
 	return nil

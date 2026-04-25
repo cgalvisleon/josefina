@@ -91,7 +91,7 @@ const (
 )
 
 type Field struct {
-	from         *From       `json:"-"`
+	from         *Model      `json:"-"`
 	Name         string      `json:"name"`
 	TypeField    TypeField   `json:"type_field"`
 	TypeData     TypeData    `json:"type_data"`
@@ -100,10 +100,10 @@ type Field struct {
 
 /**
 * newField: Creates a new field
-* @param from *From, name string, tpField TypeField, tpData TypeData, defaultValue interface{}
+* @param from *Model, name string, tpField TypeField, tpData TypeData, defaultValue interface{}
 * @return *Field, error
 **/
-func newField(from *From, name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
+func newField(from *Model, name string, tpField TypeField, tpData TypeData, defaultValue interface{}) (*Field, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, name)
 	}

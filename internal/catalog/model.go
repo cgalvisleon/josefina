@@ -59,7 +59,9 @@ type Trigger struct {
 }
 
 type Model struct {
-	*From         `json:"from"`
+	Database      string                      `json:"database"`
+	Schema        string                      `json:"schema"`
+	Name          string                      `json:"name"`
 	IsInit        bool                        `json:"-"`
 	Path          string                      `json:"path"`
 	Fields        map[string]*Field           `json:"fields"`
@@ -86,6 +88,7 @@ type Model struct {
 	schema        *Schema                     `json:"-"`
 	mode          store.Mode                  `json:"-"`
 	mu            sync.RWMutex                `json:"-"`
+	isDebug       bool                        `json:"-"`
 }
 
 /**
