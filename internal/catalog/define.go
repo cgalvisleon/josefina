@@ -202,7 +202,7 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		return nil, err
 	}
 
-	to, err := s.schema.newModel(fmt.Sprintf("%s_%s", s.Name, name), false, version)
+	to, err := s.schema.NewModel(fmt.Sprintf("%s_%s", s.Name, name), false, version)
 	if err != nil {
 		return nil, err
 	}

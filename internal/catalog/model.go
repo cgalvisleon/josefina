@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
@@ -60,8 +61,8 @@ type Trigger struct {
 type Model struct {
 	*From         `json:"from"`
 	IsInit        bool                        `json:"-"`
-	Fields        map[string]*Field           `json:"fields"`
 	Path          string                      `json:"path"`
+	Fields        map[string]*Field           `json:"fields"`
 	Indexes       []string                    `json:"indexes"`
 	PrimaryKeys   []string                    `json:"primary_keys"`
 	ForeignKeys   map[string]*Detail          `json:"foreign_keys"`
@@ -83,6 +84,7 @@ type Model struct {
 	IsStrict      bool                        `json:"is_strict"`
 	stores        map[string]*store.FileStore `json:"-"`
 	schema        *Schema                     `json:"-"`
+	mu            sync.RWMutex                `json:"-"`
 }
 
 /**
@@ -562,4 +564,40 @@ func (s *Model) AddAfterDelete(name string, definition string) {
 	} else {
 		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: bt})
 	}
+}
+
+/**
+* Empty: Empties the model
+* @return error
+**/
+func (s *Model) Empty() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, store := range s.stores {
+		err := store.Empty()
+		if err != nil {
+			return err
+		}
+	}
+
+	s.Fields = make(map[string]*Field, 0)
+	s.Indexes = make([]string, 0)
+	s.PrimaryKeys = make([]string, 0)
+	s.ForeignKeys = make(map[string]*Detail, 0)
+	s.Unique = make([]string, 0)
+	s.Required = make([]string, 0)
+	s.Hidden = make([]string, 0)
+	s.Details = make(map[string]*Detail, 0)
+	s.Rollups = make(map[string]*Detail, 0)
+	s.Relations = make(map[string]*Detail, 0)
+	s.Calcs = make(map[string][]byte, 0)
+	s.BeforeInserts = make([]*Trigger, 0)
+	s.AfterInserts = make([]*Trigger, 0)
+	s.BeforeUpdates = make([]*Trigger, 0)
+	s.AfterUpdates = make([]*Trigger, 0)
+	s.BeforeDeletes = make([]*Trigger, 0)
+	s.AfterDeletes = make([]*Trigger, 0)
+
+	return nil
 }

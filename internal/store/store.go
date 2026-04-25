@@ -574,6 +574,20 @@ func (s *FileStore) Close() error {
 }
 
 /**
+* Empty
+* @return error
+**/
+func (s *FileStore) Empty() error {
+	err := s.Close()
+	if err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(s.Path)
+	return nil
+}
+
+/**
 * Keys
 * @param asc bool, offset int, limit int
 * @return []string
