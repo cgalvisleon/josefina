@@ -2,10 +2,9 @@ package catalog
 
 import (
 	"errors"
-	"fmt"
+	"path/filepath"
 	"sync"
 
-	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
@@ -41,8 +40,8 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 		return result, nil
 	}
 
-	path := strs.Append(s.db.Path, s.Name, "/")
-	path = fmt.Sprintf("%s/%s", path, name)
+	path := filepath.Join(s.db.Path, s.Name)
+	path = filepath.Join(path, name)
 	result = &Model{
 		Database:      s.Database,
 		Schema:        s.Name,
@@ -69,6 +68,7 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 		IsCore:        isCore,
 		stores:        make(map[string]*store.FileStore, 0),
 		btrees:        make(map[string]*BTree, 0),
+		mode:          store.ReadWrite,
 		schema:        s,
 	}
 	_, err := result.defineIndexField()

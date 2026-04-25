@@ -182,33 +182,34 @@ func (s *Model) Init() error {
 	return nil
 }
 
-/**
-* rebuildBTrees scans the primary store and populates all secondary BTrees.
-* Called on Init so indexes survive restarts without a separate persist layer.
-* @return error
-**/
+// rebuildBTrees loads each secondary BTree from its persisted FileStore.
+// Each secondary FileStore entry is: fieldValue → map[string]bool{pk: true}.
+// This is O(distinct values) per index, much faster than scanning all documents.
 func (s *Model) rebuildBTrees() error {
-	source, err := s.Source()
-	if err != nil {
-		return err
-	}
-	return source.Iterate(func(id string, data []byte) (bool, error) {
-		var doc et.Json
-		if err := json.Unmarshal(data, &doc); err != nil {
+	for _, name := range s.Indexes {
+		if name == INDEX {
+			continue
+		}
+		st, err := s.Store(name)
+		if err != nil {
+			return err
+		}
+		bt := s.indexTree(name)
+		if err := st.Iterate(func(fieldVal string, data []byte) (bool, error) {
+			var pks map[string]bool
+			if err := json.Unmarshal(data, &pks); err != nil {
+				return true, nil
+			}
+			key := s.keyFromField(name, fieldVal)
+			for pk := range pks {
+				bt.Insert(key, pk)
+			}
 			return true, nil
+		}, true, 0, 0, 1); err != nil {
+			return err
 		}
-		for _, name := range s.Indexes {
-			if name == INDEX {
-				continue
-			}
-			v, ok := doc[name]
-			if !ok {
-				continue
-			}
-			s.indexTree(name).Insert(KeyFromAny(v), id)
-		}
-		return true, nil
-	}, true, 0, 0, 1)
+	}
+	return nil
 }
 
 /**
@@ -218,9 +219,9 @@ func (s *Model) rebuildBTrees() error {
 **/
 func (s *Model) indexTree(field string) *BTree {
 	s.mu.RLock()
-	bt, ok := s.btrees[field]
+	bt, exists := s.btrees[field]
 	s.mu.RUnlock()
-	if ok {
+	if exists {
 		return bt
 	}
 	s.mu.Lock()
@@ -236,8 +237,8 @@ func (s *Model) indexTree(field string) *BTree {
 * @return IndexKey
 **/
 func (s *Model) keyFromField(field, strVal string) IndexKey {
-	f, ok := s.Fields[field]
-	if !ok {
+	f, exists := s.Fields[field]
+	if !exists {
 		return KeyString(strVal)
 	}
 	switch f.TypeData {
@@ -491,8 +492,8 @@ func (s *Model) RemoveObject(idx string) error {
 * @return bool, error
 **/
 func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) {
-	pks, ok := s.indexTree(field).Get(s.keyFromField(field, key))
-	if !ok {
+	pks, exists := s.indexTree(field).Get(s.keyFromField(field, key))
+	if !exists {
 		return false, nil
 	}
 	for _, pk := range pks {
@@ -501,15 +502,63 @@ func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) 
 	return true, nil
 }
 
-// GetByIndex returns all primary keys where field equals key.
-func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
+/**
+* BetweenIndex returns all primary keys where field is in [from, to] (inclusive).
+* Pass IndexKey{} for open bounds.
+* @param field string, from, to IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) BetweenIndex(field string, from, to IndexKey, asc bool) []string {
+	return s.indexTree(field).Between(from, to, asc)
+}
+
+/**
+* EqualIndex returns all primary keys where field equals key.
+* @param field string, key IndexKey
+* @return []string, bool
+**/
+func (s *Model) EqualIndex(field string, key IndexKey) ([]string, bool) {
 	return s.indexTree(field).Get(key)
 }
 
-// RangeIndex returns all primary keys where field is in [from, to].
-// Pass IndexKey{} for open bounds.
-func (s *Model) RangeIndex(field string, from, to IndexKey, asc bool) []string {
-	return s.indexTree(field).Range(from, to, asc)
+func (s *Model) MoreIndex(field string, key IndexKey, asc bool) []string {
+	return s.indexTree(field).More(key, asc)
+}
+
+/**
+* MoreEq returns all primary keys where field >= key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) MoreEqIndex(field string, key IndexKey, asc bool) []string {
+	return s.indexTree(field).MoreEq(key, asc)
+}
+
+/**
+* LessIndex returns all primary keys where field < key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) LessIndex(field string, key IndexKey, asc bool) []string {
+	return s.indexTree(field).Less(key, asc)
+}
+
+/**
+* LessEqIndex returns all primary keys where field <= key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) LessEqIndex(field string, key IndexKey, asc bool) []string {
+	return s.indexTree(field).LessEq(key, asc)
+}
+
+/**
+* NotEqualIndex returns all primary keys where field != key.
+* @param field string, key IndexKey
+* @return []string
+**/
+func (s *Model) NotEqualIndex(field string, key IndexKey) []string {
+	return s.indexTree(field).NotEqual(key)
 }
 
 /**

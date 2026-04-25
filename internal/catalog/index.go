@@ -239,7 +239,8 @@ func (bt *BTree) Insert(key IndexKey, value string) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 
-	if len(bt.root.keys) == 2*bt.t-1 {
+	limit := 2*bt.t - 1
+	if len(bt.root.keys) == limit {
 		newRoot := &bpNode{children: []*bpNode{bt.root}}
 		bt.splitChild(newRoot, 0)
 		bt.root = newRoot
@@ -247,6 +248,10 @@ func (bt *BTree) Insert(key IndexKey, value string) {
 	bt.insertNonFull(bt.root, key, value)
 }
 
+/**
+* insertNonFull inserta key/value en el subárbol n, que no está lleno.
+* @param n *bpNode, key IndexKey, value string
+**/
 func (bt *BTree) insertNonFull(n *bpNode, key IndexKey, value string) {
 	if n.leaf {
 		i := leafSearch(n.keys, key)
@@ -276,7 +281,10 @@ func (bt *BTree) insertNonFull(n *bpNode, key IndexKey, value string) {
 	bt.insertNonFull(n.children[i], key, value)
 }
 
-// splitChild divide n.children[ci] (que debe estar lleno) y sube el separador a parent.
+/**
+* splitChild divide n.children[ci] (que debe estar lleno) y sube el separador a parent.
+* @param parent *bpNode, ci int
+**/
 func (bt *BTree) splitChild(parent *bpNode, ci int) {
 	t := bt.t
 	child := parent.children[ci]
@@ -311,12 +319,20 @@ func (bt *BTree) splitChild(parent *bpNode, ci int) {
 	}
 }
 
+/**
+* bpInsertKey inserta key en la posición i del nodo n.
+* @param n *bpNode, i int, key IndexKey
+**/
 func bpInsertKey(n *bpNode, i int, key IndexKey) {
 	n.keys = append(n.keys, IndexKey{})
 	copy(n.keys[i+1:], n.keys[i:])
 	n.keys[i] = key
 }
 
+/**
+* bpInsertChild inserta child en la posición i del nodo n.
+* @param n *bpNode, i int, child *bpNode
+**/
 func bpInsertChild(n *bpNode, i int, child *bpNode) {
 	n.children = append(n.children, nil)
 	copy(n.children[i+1:], n.children[i:])
@@ -385,12 +401,12 @@ func (bt *BTree) DeleteKey(key IndexKey) bool {
 }
 
 /**
-* Range retorna todos los values de keys en [from, to] inclusive.
+* Between retorna todos los values de keys en [from, to] inclusive.
 * Pasar zero (IndexKey{}) en from o to indica rango abierto.
 * @param from IndexKey, to IndexKey, asc bool
 * @return []string
 **/
-func (bt *BTree) Range(from, to IndexKey, asc bool) []string {
+func (bt *BTree) Between(from, to IndexKey, asc bool) []string {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 
@@ -453,6 +469,110 @@ func (bt *BTree) Keys(asc bool, offset, limit int) []IndexKey {
 		all = all[:limit]
 	}
 	return all
+}
+
+/**
+* Equal retorna todos los values de keys que son iguales a key.
+* @param key IndexKey
+* @return ([]string, bool)
+**/
+func (bt *BTree) Equal(key IndexKey) ([]string, bool) {
+	return bt.Get(key)
+}
+
+/**
+* More retorna todos los values de keys estrictamente > key.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) More(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	start := bt.findLeaf(key)
+	startIdx := leafSearch(start.keys, key)
+	// Si hay coincidencia exacta, saltarla.
+	if startIdx < len(start.keys) && start.keys[startIdx].Compare(key) == 0 {
+		startIdx++
+	}
+
+	var result []string
+	for leaf := start; leaf != nil; leaf = leaf.next {
+		begin := 0
+		if leaf == start {
+			begin = startIdx
+		}
+		for j := begin; j < len(leaf.keys); j++ {
+			result = append(result, leaf.vals[j]...)
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* MoreEq retorna todos los values de keys >= key.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) MoreEq(key IndexKey, asc bool) []string {
+	return bt.Between(key, zero, asc)
+}
+
+/**
+* Less retorna todos los values de keys estrictamente < key.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) Less(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].Compare(key) >= 0 {
+				goto done
+			}
+			result = append(result, leaf.vals[j]...)
+		}
+	}
+done:
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* LessEq retorna todos los values de keys <= key.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) LessEq(key IndexKey, asc bool) []string {
+	return bt.Between(zero, key, asc)
+}
+
+/**
+* NotEqual retorna todos los values de keys != key.
+* @param key IndexKey
+* @return []string
+**/
+func (bt *BTree) NotEqual(key IndexKey) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].Compare(key) != 0 {
+				result = append(result, leaf.vals[j]...)
+			}
+		}
+	}
+	return result
 }
 
 func (bt *BTree) leftmostLeaf() *bpNode {

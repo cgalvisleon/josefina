@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 
 	"github.com/cgalvisleon/et/envar"
@@ -34,9 +35,10 @@ func NewDb(name string) (*DB, error) {
 	}
 
 	path := envar.GetStr("DATA_PATH", "./data")
+	path = filepath.Join(path, name)
 	result := &DB{
 		Name:    name,
-		Path:    fmt.Sprintf("%s/%s", path, name),
+		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
 		mu:      sync.RWMutex{},
 	}

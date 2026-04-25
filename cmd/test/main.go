@@ -7,10 +7,16 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 func main() {
+	// testStore()
+	testCatalog()
+}
+
+func testStore() {
 	path := filepath.Join("./", "data")
 	defer os.RemoveAll(path)
 
@@ -114,4 +120,117 @@ func main() {
 
 	count := fs.Count()
 	logs.Infof("=== done  lsn=%d  count=%d  tombstones=%d ===", fs.WAL, count, fs.TombStones)
+}
+
+func testCatalog() {
+	// ── Setup ─────────────────────────────────────────────────────────────────
+	db, err := catalog.NewDb("test")
+	if err != nil {
+		logs.Fatal(err)
+	}
+
+	model, err := db.NewModel("", "user", false, 1)
+	if err != nil {
+		logs.Fatal(err)
+	}
+
+	model.DefineAtrib("name", catalog.TpText, "")
+	model.DefineAtrib("age", catalog.TpInt, 0)
+	model.DefineAtrib("id", catalog.TpKey, "")
+	model.DefinePrimaryKeys("id")
+	model.DefineIndexes("name", "age")
+
+	if err := model.Init(); err != nil {
+		logs.Fatal(err)
+	}
+	logs.Info("=== model init ok ===")
+
+	// ── Insert 5 registros ────────────────────────────────────────────────────
+	users := []et.Json{
+		{"id": "pk1", "name": "Alice", "age": int64(30)},
+		{"id": "pk2", "name": "Bob", "age": int64(25)},
+		{"id": "pk3", "name": "Carol", "age": int64(35)},
+		{"id": "pk4", "name": "Dave", "age": int64(28)},
+		{"id": "pk5", "name": "Eve", "age": int64(22)},
+	}
+	for _, u := range users {
+		if err := model.PutObject(u.Str("id"), u); err != nil {
+			logs.Errorf("insert %s: %v", u.Str("id"), err)
+			continue
+		}
+	}
+	count, _ := model.Count()
+	logs.Infof("inserted: count=%d", count)
+
+	// ── Get por primary key ───────────────────────────────────────────────────
+	logs.Info("--- Get by primary key ---")
+	for _, id := range []string{"pk1", "pk3", "pk99"} {
+		dest := et.Json{}
+		exists, err := model.Get(id, &dest)
+		if err != nil {
+			logs.Errorf("get %s: %v", id, err)
+			continue
+		}
+		if !exists {
+			logs.Infof("get %s: not found", id)
+			continue
+		}
+		logs.Infof("get %s: %v", id, dest)
+	}
+
+	// ── GetByIndex por nombre exacto ──────────────────────────────────────────
+	logs.Info("--- GetByIndex name=Alice ---")
+	pks, ok := model.GetByIndex("name", catalog.KeyString("Alice"))
+	if !ok {
+		logs.Info("name=Alice: not found")
+	} else {
+		logs.Infof("name=Alice: pks=%v", pks)
+	}
+
+	logs.Info("--- GetByIndex name=Zzz (no existe) ---")
+	pks, ok = model.GetByIndex("name", catalog.KeyString("Zzz"))
+	if !ok {
+		logs.Info("name=Zzz: not found (expected)")
+	} else {
+		logs.Infof("name=Zzz: pks=%v", pks)
+	}
+
+	// ── RangeIndex por edad ───────────────────────────────────────────────────
+	logs.Info("--- RangeIndex age [25, 30] asc ---")
+	pks = model.RangeIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
+	logs.Infof("age [25,30]: pks=%v", pks)
+
+	logs.Info("--- RangeIndex age [0, 99] desc ---")
+	pks = model.RangeIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
+	logs.Infof("age [0,99] desc: pks=%v", pks)
+
+	// ── Simular restart: re-init reconstruye BTrees desde FileStore ───────────
+	logs.Info("--- Simulating restart ---")
+	model.IsInit = false
+	if err := model.Init(); err != nil {
+		logs.Errorf("re-init: %v", err)
+	}
+	pks, ok = model.GetByIndex("name", catalog.KeyString("Bob"))
+	if !ok {
+		logs.Debug("restart: name=Bob not found (BTree rebuild failed)")
+	} else {
+		logs.Infof("restart: name=Bob pks=%v (BTree rebuilt ok)", pks)
+	}
+
+	// ── Delete ────────────────────────────────────────────────────────────────
+	logs.Info("--- RemoveObject pk2 ---")
+	if err := model.RemoveObject("pk2"); err != nil {
+		logs.Errorf("remove pk2: %v", err)
+	}
+	count, _ = model.Count()
+	logs.Infof("after delete: count=%d", count)
+
+	pks, ok = model.GetByIndex("name", catalog.KeyString("Bob"))
+	if !ok {
+		logs.Info("name=Bob after delete: not found (expected)")
+	} else {
+		logs.Infof("name=Bob after delete: pks=%v (unexpected)", pks)
+	}
+
+	logs.Info("=== catalog test done ===")
 }
