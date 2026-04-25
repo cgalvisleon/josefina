@@ -583,6 +583,10 @@ func (s *FileStore) Empty() error {
 		return err
 	}
 
+	s.index = make(map[string]*RecordRef)
+	s.WAL = 0
+	s.TombStones = 0
+
 	defer os.RemoveAll(s.Path)
 	return nil
 }
@@ -866,18 +870,6 @@ func (s *FileStore) Prune() error {
 	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-/**
-* Empty
-* @return error
-**/
-func (s *FileStore) Empty() error {
-	s.index = make(map[string]*RecordRef)
-	s.WAL = 0
-	s.TombStones = 0
 
 	return nil
 }
