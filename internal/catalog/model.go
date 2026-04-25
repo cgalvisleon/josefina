@@ -66,6 +66,7 @@ type Model struct {
 	Database      string                      `json:"database"`     // Database name
 	Schema        string                      `json:"schema"`       // Schema name
 	Name          string                      `json:"name"`         // Model name
+	Address       string                      `json:"-"`            // Address of the model
 	IsInit        bool                        `json:"-"`            // Is initialized
 	Path          string                      `json:"path"`         // Path to the model
 	Fields        map[string]*Field           `json:"fields"`       // Fields
@@ -158,7 +159,8 @@ func (s *Model) GenKey() string {
 * Each BTree loads its own persisted data on open.
 * @return error
 **/
-func (s *Model) Init() error {
+func (s *Model) Init(address string) error {
+	s.Address = address
 	if s.IsInit {
 		return nil
 	}
@@ -167,17 +169,15 @@ func (s *Model) Init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	// Open primary store.
-	if _, err := s.Store(INDEX); err != nil {
-		return err
-	}
-
 	// Open each secondary BTree (Init loads persisted data from its own store).
 	for _, name := range s.Indexes {
 		if name == INDEX {
+			if _, err := s.Store(INDEX); err != nil {
+				return err
+			}
 			continue
 		}
-		if _, err := s.indexTree(name); err != nil {
+		if _, err := s.indexBTree(name); err != nil {
 			return err
 		}
 	}
@@ -187,11 +187,11 @@ func (s *Model) Init() error {
 }
 
 /**
-* indexTree returns the BTree for field, opening and loading it on first access.
+* indexBTree returns the BTree for field, opening and loading it on first access.
 * @param field string
 * @return *BTree, error
 **/
-func (s *Model) indexTree(field string) (*BTree, error) {
+func (s *Model) indexBTree(field string) (*BTree, error) {
 	s.mu.RLock()
 	bt, exists := s.btrees[field]
 	s.mu.RUnlock()
@@ -204,9 +204,6 @@ func (s *Model) indexTree(field string) (*BTree, error) {
 
 	bt, err := OpenBTree(s.Path, field)
 	if err != nil {
-		return nil, err
-	}
-	if err := bt.Init(); err != nil {
 		return nil, err
 	}
 
@@ -297,7 +294,7 @@ func (s *Model) PutObject(idx string, object et.Json) error {
 		if v == nil {
 			continue
 		}
-		bt, err := s.indexTree(name)
+		bt, err := s.indexBTree(name)
 		if err != nil {
 			return err
 		}
@@ -357,7 +354,7 @@ func (s *Model) RemoveObject(idx string) error {
 		if v == nil {
 			continue
 		}
-		bt, err := s.indexTree(name)
+		bt, err := s.indexBTree(name)
 		if err != nil {
 			return err
 		}
@@ -403,7 +400,7 @@ func (s *Model) GetObjet(idx string, dest et.Json) (bool, error) {
 * @return []string, bool
 **/
 func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
-	bt, err := s.indexTree(field)
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil, false
 	}
@@ -411,13 +408,13 @@ func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
 }
 
 /**
-* RangeIndex: Returns all primary keys where field is in [from, to] inclusive.
+* BetweenIndex: Returns all primary keys where field is in [from, to] inclusive.
 * Pass IndexKey{} for open bounds.
 * @param field string, from, to IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) RangeIndex(field string, from, to IndexKey, asc bool) []string {
-	bt, err := s.indexTree(field)
+func (s *Model) BetweenIndex(field string, from, to IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
@@ -425,12 +422,12 @@ func (s *Model) RangeIndex(field string, from, to IndexKey, asc bool) []string {
 }
 
 /**
-* GTIndex: Returns all primary keys where field > key.
+* MoreIndex: Returns all primary keys where field > key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) GTIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexTree(field)
+func (s *Model) MoreIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
@@ -438,12 +435,12 @@ func (s *Model) GTIndex(field string, key IndexKey, asc bool) []string {
 }
 
 /**
-* GTEIndex: Returns all primary keys where field >= key.
+* MoreEqIndex: Returns all primary keys where field >= key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) GTEIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexTree(field)
+func (s *Model) MoreEqIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
@@ -451,12 +448,12 @@ func (s *Model) GTEIndex(field string, key IndexKey, asc bool) []string {
 }
 
 /**
-* LTIndex: Returns all primary keys where field < key.
+* LessIndex: Returns all primary keys where field < key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) LTIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexTree(field)
+func (s *Model) LessIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
@@ -464,16 +461,29 @@ func (s *Model) LTIndex(field string, key IndexKey, asc bool) []string {
 }
 
 /**
-* LTEIndex: Returns all primary keys where field <= key.
+* LessEqIndex: Returns all primary keys where field <= key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) LTEIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexTree(field)
+func (s *Model) LessEqIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
 	return bt.LessEq(key, asc)
+}
+
+/**
+* EqualIndex: Returns all primary keys where field == key.
+* @param field string, key IndexKey
+* @return []string, bool
+**/
+func (s *Model) EqualIndex(field string, key IndexKey) ([]string, bool) {
+	bt, err := s.indexBTree(field)
+	if err != nil {
+		return nil, false
+	}
+	return bt.Equal(key)
 }
 
 /**
@@ -482,7 +492,7 @@ func (s *Model) LTEIndex(field string, key IndexKey, asc bool) []string {
 * @return []string
 **/
 func (s *Model) NotEqualIndex(field string, key IndexKey) []string {
-	bt, err := s.indexTree(field)
+	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
 	}
@@ -526,11 +536,11 @@ func (s *Model) Count() (int, error) {
 }
 
 /**
-* Iterate: Iterates over all documents in the primary store
-* @param fn func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
+* ForEach: Iterates over all documents in the primary store
+* @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
 * @return error
 **/
-func (s *Model) Iterate(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	st, err := s.Source()
 	if err != nil {
 		return err

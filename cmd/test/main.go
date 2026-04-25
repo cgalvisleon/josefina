@@ -140,7 +140,7 @@ func testCatalog() {
 	model.DefinePrimaryKeys("id")
 	model.DefineIndexes("name", "age")
 
-	if err := model.Init(); err != nil {
+	if err := model.Init(""); err != nil {
 		logs.Fatal(err)
 	}
 	logs.Info("=== model init ok ===")
@@ -197,17 +197,17 @@ func testCatalog() {
 
 	// ── RangeIndex por edad ───────────────────────────────────────────────────
 	logs.Info("--- RangeIndex age [25, 30] asc ---")
-	pks = model.RangeIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
+	pks = model.BetweenIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
 	logs.Infof("age [25,30]: pks=%v", pks)
 
 	logs.Info("--- RangeIndex age [0, 99] desc ---")
-	pks = model.RangeIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
+	pks = model.BetweenIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
 	logs.Infof("age [0,99] desc: pks=%v", pks)
 
 	// ── Simular restart: re-init reconstruye BTrees desde FileStore ───────────
 	logs.Info("--- Simulating restart ---")
 	model.IsInit = false
-	if err := model.Init(); err != nil {
+	if err := model.Init(""); err != nil {
 		logs.Errorf("re-init: %v", err)
 	}
 	pks, ok = model.GetByIndex("name", catalog.KeyString("Bob"))

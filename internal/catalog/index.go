@@ -285,19 +285,26 @@ func OpenBTree(path, name string) (*BTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BTree{
+	result := &BTree{
 		root: &bpNode{leaf: true},
 		t:    bpDegree,
 		st:   st,
-	}, nil
+	}
+
+	err = result.initFromStore()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
-* Init: Loads all records from the FileStore into the in-memory tree.
+* initFromStore: Loads all records from the FileStore into the in-memory tree.
 * Only has effect if the BTree was opened with OpenBTree.
 * @return error
 **/
-func (bt *BTree) Init() error {
+func (bt *BTree) initFromStore() error {
 	if bt.st == nil {
 		return nil
 	}

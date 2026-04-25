@@ -246,7 +246,7 @@ func (s *Where) Run(tx *Tx) ([]et.Json, error) {
 	if len(s.conditions) == 0 {
 		next := true
 		asc := s.Order(catalog.INDEX)
-		err := model.For(func(idx string, item et.Json) (bool, error) {
+		err := model.ForEach(func(idx string, item et.Json) (bool, error) {
 			next = addResult(item)
 			return next, nil
 		}, asc, s.offset, s.limit, s.workers)
