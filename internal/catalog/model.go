@@ -779,6 +779,37 @@ func (s *Model) OnDelete(name string, fn store.Deletefn) error {
 }
 
 /**
+* CreateIndex: Creates an index for the specified field
+* @param name string
+* @return error
+**/
+func (s *Model) CreateIndex(name string) error {
+	exists, err := s.DefineIndex(name)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	return s.ForEach(func(idx string, item et.Json) (bool, error) {
+		v := item[name]
+		if v == nil {
+			return true, nil
+		}
+		bt, err := s.indexBTree(name)
+		if err != nil {
+			return true, err
+		}
+		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
+			return true, err
+		}
+		return true, nil
+	}, true, 0, 0, 1)
+}
+
+/**
 * AddBeforeInsert
 * @param name string, definition string
 **/

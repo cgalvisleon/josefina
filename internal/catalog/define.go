@@ -37,13 +37,33 @@ func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, def
 }
 
 /**
+* DefineIndex: Defines the index
+* @param name string
+* @return bool, error
+**/
+func (s *Model) DefineIndex(field string) (bool, error) {
+	_, exists := s.Fields[field]
+	if !exists {
+		return false, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+	}
+
+	idx := slices.Index(s.Indexes, field)
+	if idx == -1 {
+		s.Indexes = append(s.Indexes, field)
+	}
+
+	return idx != -1, nil
+}
+
+/**
 * DefineIndexes: Defines the index
 * @param name string
+* @return error
 **/
 func (s *Model) DefineIndexes(fields ...string) error {
 	for _, field := range fields {
-		_, ok := s.Fields[field]
-		if !ok {
+		_, exists := s.Fields[field]
+		if !exists {
 			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
 		}
 
