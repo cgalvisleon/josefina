@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
@@ -89,6 +90,7 @@ type Model struct {
 	IsCore        bool                        `json:"is_core"`      // Is core model
 	IsStrict      bool                        `json:"is_strict"`    // Is strict model
 	stores        map[string]*store.FileStore `json:"-"`            // Stores
+	btrees        map[string]*BTree           `json:"-"`            // In-memory secondary indexes (B+ tree)
 	schema        *Schema                     `json:"-"`            // Schema
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
@@ -172,8 +174,96 @@ func (s *Model) Init() error {
 		}
 	}
 
+	if err := s.rebuildBTrees(); err != nil {
+		return err
+	}
+
 	s.IsInit = true
 	return nil
+}
+
+/**
+* rebuildBTrees scans the primary store and populates all secondary BTrees.
+* Called on Init so indexes survive restarts without a separate persist layer.
+* @return error
+**/
+func (s *Model) rebuildBTrees() error {
+	source, err := s.Source()
+	if err != nil {
+		return err
+	}
+	return source.Iterate(func(id string, data []byte) (bool, error) {
+		var doc et.Json
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return true, nil
+		}
+		for _, name := range s.Indexes {
+			if name == INDEX {
+				continue
+			}
+			v, ok := doc[name]
+			if !ok {
+				continue
+			}
+			s.indexTree(name).Insert(KeyFromAny(v), id)
+		}
+		return true, nil
+	}, true, 0, 0, 1)
+}
+
+/**
+* indexTree returns the BTree for field, creating it on first access.
+* @param field string
+* @return *BTree
+**/
+func (s *Model) indexTree(field string) *BTree {
+	s.mu.RLock()
+	bt, ok := s.btrees[field]
+	s.mu.RUnlock()
+	if ok {
+		return bt
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	bt = NewBTree()
+	s.btrees[field] = bt
+	return bt
+}
+
+/**
+* keyFromField converts a string value to the right IndexKey type using the field schema.
+* @param field string, strVal string
+* @return IndexKey
+**/
+func (s *Model) keyFromField(field, strVal string) IndexKey {
+	f, ok := s.Fields[field]
+	if !ok {
+		return KeyString(strVal)
+	}
+	switch f.TypeData {
+	case TpInt, TpAutoIncrement:
+		var n int64
+		if _, err := fmt.Sscanf(strVal, "%d", &n); err == nil {
+			return KeyInt(n)
+		}
+	case TpFloat:
+		var f float64
+		if _, err := fmt.Sscanf(strVal, "%g", &f); err == nil {
+			return KeyFloat(f)
+		}
+	case TpBoolean:
+		switch strVal {
+		case "true", "1":
+			return KeyBool(true)
+		case "false", "0":
+			return KeyBool(false)
+		}
+	case TpDateTime:
+		if t, err := time.Parse(time.RFC3339, strVal); err == nil {
+			return KeyDateTime(t)
+		}
+	}
+	return KeyString(strVal)
 }
 
 /**
@@ -183,10 +273,17 @@ func (s *Model) Init() error {
 **/
 func (s *Model) Store(name string) (*store.FileStore, error) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	result, exists := s.stores[name]
+	s.mu.RUnlock()
 	if exists {
+		return result, nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Re-check after acquiring write lock to avoid duplicate opens.
+	if result, exists = s.stores[name]; exists {
 		return result, nil
 	}
 
@@ -244,46 +341,37 @@ func (s *Model) Put(idx string, value any) error {
 func (s *Model) PutObject(idx string, object et.Json) error {
 	object[INDEX] = idx
 	for _, name := range s.Indexes {
-		key := fmt.Sprintf("%v", object[name])
+		v := object[name]
+		key := fmt.Sprintf("%v", v)
 		if key == "" {
 			continue
 		}
 
-		store, err := s.Store(name)
+		st, err := s.Store(name)
 		if err != nil {
 			return err
 		}
 
+		// Persist primary key in FileStore
 		if name == INDEX {
-			err := store.Put(key, object)
-			if err != nil {
+			if err := st.Put(key, object); err != nil {
 				return err
 			}
 			continue
 		}
 
+		// Persist inverted index in FileStore
 		index := map[string]bool{}
-		exists, err := store.Get(key, &index)
-		if err != nil {
+		if _, err := st.Get(key, &index); err != nil {
 			return err
 		}
-
-		if !exists {
-			index = map[string]bool{}
-		}
-
-		_, ok := index[idx]
-		if ok {
-			return nil
-		}
-
 		index[idx] = true
-		err = store.Put(key, index)
-		if err != nil {
+		if err := st.Put(key, index); err != nil {
 			return err
 		}
 
-		return nil
+		// Update in-memory BTree
+		s.indexTree(name).Insert(KeyFromAny(v), idx)
 	}
 
 	return nil
@@ -351,59 +439,48 @@ func (s *Model) RemoveObject(idx string) error {
 	if err != nil {
 		return err
 	}
-
 	if !exists {
 		return nil
 	}
 
 	for _, name := range s.Indexes {
-		key := fmt.Sprintf("%v", data[name])
+		v := data[name]
+		key := fmt.Sprintf("%v", v)
 		if key == "" {
 			continue
 		}
 
-		store, err := s.Store(name)
+		st, err := s.Store(name)
 		if err != nil {
 			return err
 		}
 
 		if name == INDEX {
-			_, err := store.Delete(key)
-			if err != nil {
+			if _, err := st.Delete(key); err != nil {
 				return err
 			}
-		} else {
-			index := map[string]bool{}
-			exists, err := store.Get(key, &index)
-			if err != nil {
-				return err
-			}
+			continue
+		}
 
-			if !exists {
-				return nil
-			}
-
-			_, ok := index[idx]
-			if !ok {
-				return nil
-			}
-
-			delete(index, key)
+		// Update persisted inverted index
+		index := map[string]bool{}
+		if found, err := st.Get(key, &index); err != nil {
+			return err
+		} else if found {
+			delete(index, idx)
 			if len(index) == 0 {
-				_, err = store.Delete(key)
-				if err != nil {
+				if _, err := st.Delete(key); err != nil {
 					return err
 				}
-				return nil
+			} else {
+				if err := st.Put(key, index); err != nil {
+					return err
+				}
 			}
-
-			err = store.Put(key, index)
-			if err != nil {
-				return err
-			}
-
-			return nil
 		}
+
+		// Update in-memory BTree
+		s.indexTree(name).Delete(KeyFromAny(v), idx)
 	}
 	return nil
 }
@@ -414,21 +491,25 @@ func (s *Model) RemoveObject(idx string) error {
 * @return bool, error
 **/
 func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) {
-	index, err := s.Store(field)
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := index.Get(key, &dest)
-	if err != nil {
-		return false, err
-	}
-
-	if !exists {
+	pks, ok := s.indexTree(field).Get(s.keyFromField(field, key))
+	if !ok {
 		return false, nil
 	}
-
+	for _, pk := range pks {
+		dest[pk] = true
+	}
 	return true, nil
+}
+
+// GetByIndex returns all primary keys where field equals key.
+func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
+	return s.indexTree(field).Get(key)
+}
+
+// RangeIndex returns all primary keys where field is in [from, to].
+// Pass IndexKey{} for open bounds.
+func (s *Model) RangeIndex(field string, from, to IndexKey, asc bool) []string {
+	return s.indexTree(field).Range(from, to, asc)
 }
 
 /**
@@ -516,11 +597,11 @@ func (s *Model) AddBeforeInsert(name string, definition string) {
 **/
 func (s *Model) AddAfterInsert(name string, definition string) {
 	bt := []byte(definition)
-	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
+	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeInserts[idx].Definition = bt
+		s.AfterInserts[idx].Definition = bt
 	} else {
-		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
+		s.AfterInserts = append(s.AfterInserts, &Trigger{Name: name, Definition: bt})
 	}
 }
 
@@ -616,6 +697,7 @@ func (s *Model) Empty() error {
 	s.AfterUpdates = make([]*Trigger, 0)
 	s.BeforeDeletes = make([]*Trigger, 0)
 	s.AfterDeletes = make([]*Trigger, 0)
+	s.btrees = make(map[string]*BTree, 0)
 
 	return nil
 }

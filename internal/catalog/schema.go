@@ -68,6 +68,7 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 		Version:       version,
 		IsCore:        isCore,
 		stores:        make(map[string]*store.FileStore, 0),
+		btrees:        make(map[string]*BTree, 0),
 		schema:        s,
 	}
 	_, err := result.defineIndexField()
@@ -90,18 +91,16 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 func (s *Schema) DeleteModel(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	model, exists := s.Models[name]
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	err := model.Empty()
-	if err != nil {
+	if err := model.Empty(); err != nil {
 		return err
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	delete(s.Models, name)
 
 	return nil
