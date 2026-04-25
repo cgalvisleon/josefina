@@ -269,6 +269,25 @@ func (s *Model) Put(idx string, value any) error {
 }
 
 /**
+* Get: Gets a document by primary key
+* @param idx string, dest any
+* @return bool, error
+**/
+func (s *Model) Get(idx string, dest any) (bool, error) {
+	source, err := s.Source()
+	if err != nil {
+		return false, err
+	}
+
+	exists, err := source.Get(idx, &dest)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+/**
 * Remove: Removes a document by primary key (no index cleanup)
 * @param idx string
 * @return error
@@ -334,7 +353,7 @@ func (s *Model) Update(idx string, object et.Json) error {
 
 	exists := source.IsExist(idx)
 	if !exists {
-		return errors.New(msg.MSG_RECORD_NOT_FOUND)
+		return nil
 	}
 
 	return s.Insert(idx, object)
@@ -386,118 +405,28 @@ func (s *Model) Delete(idx string) error {
 }
 
 /**
-* Get: Gets a document by primary key
-* @param idx string, dest any
-* @return bool, error
+* Equal: Gets the model as object
+* @param idx string
+* @return et.Json, error
 **/
-func (s *Model) Get(idx string, dest any) (bool, error) {
-	source, err := s.Source()
+func (s *Model) Equal(idx string) (et.Json, error) {
+	var dest et.Json
+	exists, err := s.Get(idx, &dest)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-
-	exists, err := source.Get(idx, &dest)
-	if err != nil {
-		return false, err
+	if !exists {
+		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
-
-	return exists, nil
+	return dest, nil
 }
 
 /**
-* GetObjet: Gets the model as object
-* @param idx string, dest et.Json
-* @return bool, error
-**/
-func (s *Model) GetObjet(idx string, dest et.Json) (bool, error) {
-	return s.Get(idx, &dest)
-}
-
-/**
-* GetByIndex: Returns all primary keys where field equals key.
+* EqualByIndex: Returns all primary keys where field == key.
 * @param field string, key IndexKey
 * @return []string, bool
 **/
-func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil, false
-	}
-	return bt.Get(key)
-}
-
-/**
-* BetweenIndex: Returns all primary keys where field is in [from, to] inclusive.
-* Pass IndexKey{} for open bounds.
-* @param field string, from, to IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) BetweenIndex(field string, from, to IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.Between(from, to, asc)
-}
-
-/**
-* MoreIndex: Returns all primary keys where field > key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) MoreIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.More(key, asc)
-}
-
-/**
-* MoreEqIndex: Returns all primary keys where field >= key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) MoreEqIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.MoreEq(key, asc)
-}
-
-/**
-* LessIndex: Returns all primary keys where field < key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) LessIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.Less(key, asc)
-}
-
-/**
-* LessEqIndex: Returns all primary keys where field <= key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) LessEqIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.LessEq(key, asc)
-}
-
-/**
-* EqualIndex: Returns all primary keys where field == key.
-* @param field string, key IndexKey
-* @return []string, bool
-**/
-func (s *Model) EqualIndex(field string, key IndexKey) ([]string, bool) {
+func (s *Model) EqualByIndex(field string, key IndexKey) ([]string, bool) {
 	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil, false
@@ -506,11 +435,11 @@ func (s *Model) EqualIndex(field string, key IndexKey) ([]string, bool) {
 }
 
 /**
-* NotEqualIndex: Returns all primary keys where field != key.
+* NotEqualByIndex: Returns all primary keys where field != key.
 * @param field string, key IndexKey
 * @return []string
 **/
-func (s *Model) NotEqualIndex(field string, key IndexKey) []string {
+func (s *Model) NotEqualByIndex(field string, key IndexKey) []string {
 	bt, err := s.indexBTree(field)
 	if err != nil {
 		return nil
@@ -519,17 +448,69 @@ func (s *Model) NotEqualIndex(field string, key IndexKey) []string {
 }
 
 /**
-* IsExisted: Check if a key exists in a named store
-* @param field, idx string
-* @return bool, error
+* BetweenByIndex: Returns all primary keys where field is in [from, to] inclusive.
+* Pass IndexKey{} for open bounds.
+* @param field string, from, to IndexKey, asc bool
+* @return []string
 **/
-func (s *Model) IsExisted(field, idx string) (bool, error) {
-	source, err := s.Store(field)
+func (s *Model) BetweenByIndex(field string, from, to IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
 	if err != nil {
-		return false, err
+		return nil
 	}
+	return bt.Between(from, to, asc)
+}
 
-	return source.IsExist(idx), nil
+/**
+* MoreByIndex: Returns all primary keys where field > key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) MoreByIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.More(key, asc)
+}
+
+/**
+* MoreEqByIndex: Returns all primary keys where field >= key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) MoreEqByIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.MoreEq(key, asc)
+}
+
+/**
+* LessByIndex: Returns all primary keys where field < key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) LessByIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.Less(key, asc)
+}
+
+/**
+* LessEqByIndex: Returns all primary keys where field <= key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) LessEqByIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexBTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.LessEq(key, asc)
 }
 
 /**
@@ -538,7 +519,12 @@ func (s *Model) IsExisted(field, idx string) (bool, error) {
 * @return bool, error
 **/
 func (s *Model) Exists(idx string) (bool, error) {
-	return s.IsExisted(INDEX, idx)
+	source, err := s.Store(INDEX)
+	if err != nil {
+		return false, err
+	}
+
+	return source.IsExist(idx), nil
 }
 
 /**
