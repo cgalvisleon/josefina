@@ -22,6 +22,7 @@ const (
 
 type Transaction struct {
 	model     *Model    `json:"-"`
+	From      *From     `json:"from"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Command   string    `json:"command"`
@@ -35,11 +36,13 @@ type Transaction struct {
 /**
 * SetStatus: Sets the status of the transaction
 * @param status string
+* @return error
 **/
-func (s *Transaction) SetStatus(status string) {
+func (s *Transaction) SetStatus(status string) error {
 	now := timezone.Now()
 	s.UpdatedAt = now
 	s.Status = status
+	return s.tx.save()
 }
 
 type Tx struct {
@@ -72,24 +75,34 @@ func GetTx(tx *Tx) *Tx {
 }
 
 /**
+* save: Saves the transaction
+* @return error
+**/
+func (s *Tx) save() error {
+	return nil
+}
+
+/**
 * SetStatus: Sets the status of the transaction
 * @param status string
 **/
-func (s *Tx) SetStatus(status string) {
+func (s *Tx) SetStatus(status string) error {
 	now := timezone.Now()
 	s.UpdatedAt = now
 	s.Status = status
+	return s.save()
 }
 
 /**
 * Add: Adds a new transaction
 * @param model *Model, command string, id string, old, new et.Json
-* @return *Tx
+* @return (*Tx, error)
 **/
-func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) *Tx {
+func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) (*Tx, error) {
 	now := timezone.Now()
 	s.Transactions = append(s.Transactions, &Transaction{
 		model:     model,
+		From:      model.From(),
 		CreatedAt: now,
 		UpdatedAt: now,
 		Command:   command,
@@ -99,7 +112,11 @@ func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) *Tx {
 		Status:    PENDING,
 		tx:        s,
 	})
-	return s
+	err := s.save()
+	if err != nil {
+		return s, err
+	}
+	return s, nil
 }
 
 /**

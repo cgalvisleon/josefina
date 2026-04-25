@@ -26,8 +26,6 @@ type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
-	Address  string `json:"-"`
-	isDebug  bool   `json:"-"`
 }
 
 /**
@@ -154,6 +152,18 @@ func (s *Model) Stricted() {
 **/
 func (s *Model) GenKey() string {
 	return reg.GenUUId(s.Name)
+}
+
+/**
+* From: Returns a new From instance
+* @return *From
+**/
+func (s *Model) From() *From {
+	return &From{
+		Database: s.Database,
+		Schema:   s.Schema,
+		Name:     s.Name,
+	}
 }
 
 /**
