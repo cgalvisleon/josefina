@@ -67,10 +67,10 @@ func newRecordHeaderAt(lsn uint64, id string, data []byte, status byte) (recordH
 	return result, header, nil
 }
 
-type mode int
+type Mode int
 
 const (
-	ReadOnly mode = iota
+	ReadOnly Mode = iota
 	ReadWrite
 )
 
@@ -90,19 +90,19 @@ type FileStore struct {
 	MaxSegment   int64                 `json:"max_segment"`
 	SyncOnWrite  bool                  `json:"sync_on_write"`
 	Size         int64                 `json:"size"`
-	isDebug      bool                  `json:"-"`
 	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
 	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
 	segments     []*segment            `json:"-"` // segmentos de datos
 	active       *segment              `json:"-"` // segmento activo para escritura
 	index        map[string]*RecordRef `json:"-"` // índice en memoria
 	keys         []string              `json:"-"` // claves en memoria
-	mode         mode                  `json:"-"` // modo de operación
+	mode         Mode                  `json:"-"` // modo de operación
 	onPut        []Putfn               `json:"-"` // función de escritura
 	onSync       []Syncfn              `json:"-"` // función de sincronización
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
 	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg    sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
+	isDebug      bool                  `json:"-"`
 }
 
 /**
@@ -143,6 +143,15 @@ func (s *FileStore) ToJson() et.Json {
  */
 func (s *FileStore) ToString() string {
 	return s.ToJson().ToString()
+}
+
+/**
+* IsDebug
+* @return *FileStore
+**/
+func (s *FileStore) IsDebug() *FileStore {
+	s.isDebug = true
+	return s
 }
 
 /**
@@ -875,11 +884,11 @@ func (s *FileStore) Prune() error {
 }
 
 /**
-* open
-* @param path, name string,
+* Open
+* @param path, name string, isDebug bool, mode Mode
 * @return *FileStore, error
 **/
-func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
+func Open(path, name string, mode Mode) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
 	name = utility.Normalize(name)
@@ -890,7 +899,6 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 		PathSnapshot: filepath.Join(path, name, "snapshot"),
 		PathCompact:  filepath.Join(path, name, "compact"),
 		MaxSegment:   maxSegmentMG,
-		isDebug:      isDebug,
 		mode:         mode,
 		onPut:        make([]Putfn, 0),
 		onDelete:     make([]Deletefn, 0),
@@ -938,22 +946,4 @@ func open(path, name string, isDebug bool, mode mode) (*FileStore, error) {
 	}
 
 	return fs, nil
-}
-
-/**
-* Open
-* @param path, name string,
-* @return *FileStore, error
-**/
-func Open(path, name string, isDebug bool) (*FileStore, error) {
-	return open(path, name, isDebug, ReadWrite)
-}
-
-/**
-* OpenReadOnly
-* @param path, name string,
-* @return *FileStore, error
-**/
-func OpenReadOnly(path, name string, isDebug bool) (*FileStore, error) {
-	return open(path, name, isDebug, ReadOnly)
 }

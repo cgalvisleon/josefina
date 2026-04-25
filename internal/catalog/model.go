@@ -84,6 +84,7 @@ type Model struct {
 	IsStrict      bool                        `json:"is_strict"`
 	stores        map[string]*store.FileStore `json:"-"`
 	schema        *Schema                     `json:"-"`
+	mode          store.Mode                  `json:"-"`
 	mu            sync.RWMutex                `json:"-"`
 }
 
@@ -130,10 +131,15 @@ func (s *Model) Store(name string) (*store.FileStore, error) {
 		return result, nil
 	}
 
-	result, err := store.Open(s.Path, name, s.isDebug)
+	result, err := store.Open(s.Path, name, s.mode)
 	if err != nil {
 		return nil, err
 	}
+
+	if s.isDebug {
+		result = result.IsDebug()
+	}
+
 	s.stores[name] = result
 
 	return result, nil

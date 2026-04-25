@@ -14,13 +14,14 @@ func main() {
 	path := filepath.Join("./", "data")
 	defer os.RemoveAll(path)
 
-	fs, err := store.Open(path, "demo", true)
+	fs, err := store.Open(path, "demo", store.ReadWrite)
 	if err != nil {
 		fmt.Println("open:", err)
 		os.Exit(1)
 	}
 	defer fs.Close()
 
+	fs.IsDebug()
 	// ── Put ────────────────────────────────────────────────────────────────
 	records := []et.Json{
 		{"id": "1", "name": "Alice", "age": 30},
