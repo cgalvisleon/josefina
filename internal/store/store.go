@@ -74,6 +74,7 @@ const (
 	ReadWrite
 )
 
+type SetIndexFn func(string, *RecordRef)
 type Putfn func(string, []byte)
 type Deletefn func(string)
 
@@ -96,6 +97,7 @@ type FileStore struct {
 	index        map[string]*RecordRef `json:"-"` // índice en memoria
 	keys         []string              `json:"-"` // claves en memoria
 	mode         Mode                  `json:"-"` // modo de operación
+	onSetIndex   []SetIndexFn          `json:"-"` // función de actualización de índice
 	onPut        []Putfn               `json:"-"` // función de escritura
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
 	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
@@ -377,6 +379,9 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 		s.keys = append(s.keys, id)
 	}
 	s.index[id] = ref
+	for _, fn := range s.onSetIndex {
+		fn(id, ref)
+	}
 }
 
 /**
@@ -647,6 +652,20 @@ func (s *FileStore) Put(id string, value any) error {
 }
 
 /**
+* Read
+* @param ref *RecordRef, dest any
+* @return bool, error
+**/
+func (s *FileStore) Read(ref *RecordRef, dest any) (bool, error) {
+	seg := s.segments[ref.segment]
+	err := seg.Read(ref, dest)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+/**
 * Get
 * @param id string, dest any
 * @return bool, error
@@ -660,13 +679,7 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 		return false, nil
 	}
 
-	seg := s.segments[ref.segment]
-	err := seg.Read(ref, dest)
-	if err != nil {
-		return existed, err
-	}
-
-	return existed, nil
+	return s.Read(ref, dest)
 }
 
 /**
@@ -847,6 +860,7 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 		PathCompact:  filepath.Join(path, name, "compact"),
 		MaxSegment:   maxSegmentMG,
 		mode:         mode,
+		onSetIndex:   make([]SetIndexFn, 0),
 		onPut:        make([]Putfn, 0),
 		onDelete:     make([]Deletefn, 0),
 	}
