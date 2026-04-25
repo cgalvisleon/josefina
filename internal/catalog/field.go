@@ -39,18 +39,16 @@ func (s TypeData) Str() string {
 }
 
 const (
-	TpAny           TypeData = "any"
-	TpBytes         TypeData = "bytes"
-	TpInt           TypeData = "int"
-	TpFloat         TypeData = "float"
-	TpKey           TypeData = "key"
-	TpText          TypeData = "text"
-	TpMemo          TypeData = "memo"
-	TpAutoIncrement TypeData = "auto_increment"
-	TpJson          TypeData = "json"
-	TpDateTime      TypeData = "datetime"
-	TpBoolean       TypeData = "boolean"
-	TpGeometry      TypeData = "geometry"
+	TpBytes    TypeData = "bytes"
+	TpInt      TypeData = "int"
+	TpFloat    TypeData = "float"
+	TpKey      TypeData = "key"
+	TpText     TypeData = "text"
+	TpMemo     TypeData = "memo"
+	TpDateTime TypeData = "datetime"
+	TpBoolean  TypeData = "boolean"
+	TpJson     TypeData = "json"
+	TpModel    TypeData = "model"
 )
 
 type TypeAggregation string
