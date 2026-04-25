@@ -124,7 +124,7 @@ func testStore() {
 
 func testCatalog() {
 	// ── Setup ─────────────────────────────────────────────────────────────────
-	db, err := catalog.NewDb("test")
+	db, err := catalog.NewDb("./data", "test")
 	if err != nil {
 		logs.Fatal(err)
 	}

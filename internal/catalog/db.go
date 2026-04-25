@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -20,27 +19,37 @@ type DB struct {
 	Name     string             `json:"name"`      // Database name
 	Path     string             `json:"path"`      // Path to the database
 	Schemas  map[string]*Schema `json:"schemas"`   // Schemas
+	Tx       *Model             `json:"tx"`        // Transaction
 	IsStrict bool               `json:"is_strict"` // Is strict mode
 	mu       sync.RWMutex       `json:"-"`         // Mutex
 }
 
 /**
 * NewDb: Creates a new database
-* @param name string
+* @param path, name string
 * @return *DB, error
 **/
-func NewDb(name string) (*DB, error) {
+func NewDb(path, name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
 	path = filepath.Join(path, name)
 	result := &DB{
 		Name:    name,
 		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
 		mu:      sync.RWMutex{},
+	}
+	var err error
+	result.Tx, err = result.NewModel("", "tx", true, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	err = result.Tx.Init()
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil

@@ -422,7 +422,7 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 * @return (*Transaction, error)
 **/
 func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
-	tx = GetTx(tx)
+	tx = GetTx(s.schema.db, tx)
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -449,7 +449,7 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 * @return (et.Json, error)
 **/
 func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
-	tx = GetTx(tx)
+	tx = GetTx(s.schema.db, tx)
 	old := et.Json{}
 	exists, err := s.Get(idx, &old)
 	if err != nil {
@@ -484,7 +484,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 * @return error
 **/
 func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
-	tx = GetTx(tx)
+	tx = GetTx(s.schema.db, tx)
 	old := et.Json{}
 	exists, err := s.Get(idx, &old)
 	if err != nil {

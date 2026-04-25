@@ -1,11 +1,13 @@
 package catalog
 
 import (
+	"errors"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 const (
@@ -52,6 +54,7 @@ type Tx struct {
 	Transactions []*Transaction `json:"transactions"`
 	Executions   []*Transaction `json:"executions"`
 	Status       string         `json:"status"`
+	db           *DB            `json:"-"`
 }
 
 /**
@@ -59,7 +62,7 @@ type Tx struct {
 * @param tx *Tx
 * @return *Tx
 **/
-func GetTx(tx *Tx) *Tx {
+func GetTx(db *DB, tx *Tx) *Tx {
 	if tx == nil {
 		now := timezone.Now()
 		return &Tx{
@@ -69,8 +72,10 @@ func GetTx(tx *Tx) *Tx {
 			Transactions: []*Transaction{},
 			Executions:   []*Transaction{},
 			Status:       PENDING,
+			db:           db,
 		}
 	}
+	tx.db = db
 	return tx
 }
 
@@ -79,6 +84,15 @@ func GetTx(tx *Tx) *Tx {
 * @return error
 **/
 func (s *Tx) save() error {
+	if s.db == nil {
+		return errors.New(msg.MSG_DB_IS_NIL)
+	}
+
+	err := s.db.Tx.Put(s.ID, s)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
