@@ -417,11 +417,25 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 }
 
 /**
-* Insert: Inserts or updates a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json
+* IsExists: Checks if a document exists by primary key
+* @param idx string
+* @return bool, error
+**/
+func (s *Model) IsExists(idx string) (bool, error) {
+	source, err := s.Source()
+	if err != nil {
+		return false, err
+	}
+
+	return source.IsExist(idx), nil
+}
+
+/**
+* insert: Inserts a document and keeps secondary indexes in sync.
+* @param idx string, new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
@@ -444,6 +458,23 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 }
 
 /**
+* Insert: Inserts a document and keeps secondary indexes in sync.
+* @param idx string, new et.Json
+* @return (*Transaction, error)
+**/
+func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+	exists, err := s.IsExists(idx)
+	if err != nil {
+		return tx, err
+	}
+	if exists {
+		return tx, errors.New(msg.MSG_RECORD_EXISTS)
+	}
+
+	return s.insert(idx, new, tx)
+}
+
+/**
 * Update: Updates a document and keeps secondary indexes in sync.
 * @param idx string, new et.Json
 * @return (et.Json, error)
@@ -456,7 +487,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		return tx, err
 	}
 	if !exists {
-		return tx, fmt.Errorf("document not found")
+		return tx, fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
 	}
 
 	for _, trigger := range s.BeforeUpdates {
@@ -476,6 +507,23 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	}
 
 	return tx, nil
+}
+
+/**
+* Upsert: Inserts or updates a document and keeps secondary indexes in sync.
+* @param idx string, new et.Json
+* @return (*Transaction, error)
+**/
+func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+	exists, err := s.IsExists(idx)
+	if err != nil {
+		return tx, err
+	}
+	if exists {
+		return s.Update(idx, new, tx)
+	}
+
+	return s.insert(idx, new, tx)
 }
 
 /**
@@ -651,6 +699,26 @@ func (s *Model) Count() (int, error) {
 }
 
 /**
+* ForEachTx: Iterates over all transactions
+* @param next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int
+* @return error
+**/
+func (s *Model) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int) error {
+	st, err := s.Source()
+	if err != nil {
+		return err
+	}
+
+	return st.Iterate(func(idx string, src []byte) (bool, error) {
+		var tx Tx
+		if err := json.Unmarshal(src, &tx); err != nil {
+			return false, err
+		}
+		return next(idx, tx)
+	}, asc, offset, limit, workers)
+}
+
+/**
 * ForEach: Iterates over all documents in the primary store
 * @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
 * @return error
@@ -668,6 +736,46 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 		}
 		return next(idx, item)
 	}, asc, offset, limit, workers)
+}
+
+/**
+* OnIndex
+* @param fn store.SetIndexFn
+**/
+func (s *Model) OnIndex(name string, fn store.SetIndexFn) {
+	source, err := s.Store(name)
+	if err != nil {
+		return
+	}
+	source.OnIndex(fn)
+}
+
+/**
+* OnPut
+* @param name string, fn store.Putfn
+* @return error
+**/
+func (s *Model) OnPut(name string, fn store.Putfn) error {
+	source, err := s.Store(name)
+	if err != nil {
+		return err
+	}
+	source.OnPut(fn)
+	return nil
+}
+
+/**
+* OnDelete
+* @param name string, fn store.Deletefn
+* @return error
+**/
+func (s *Model) OnDelete(name string, fn store.Deletefn) error {
+	source, err := s.Store(name)
+	if err != nil {
+		return err
+	}
+	source.OnDelete(fn)
+	return nil
 }
 
 /**

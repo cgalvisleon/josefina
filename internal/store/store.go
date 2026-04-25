@@ -74,9 +74,9 @@ const (
 	ReadWrite
 )
 
-type SetIndexFn func(string, *RecordRef)
-type Putfn func(string, []byte)
-type Deletefn func(string)
+type SetIndexFn func(*FileStore, string, *RecordRef)
+type Putfn func(*FileStore, string, []byte)
+type Deletefn func(*FileStore, string)
 
 type FileStore struct {
 	ID           string                `json:"id"`
@@ -166,18 +166,26 @@ func (s *FileStore) Count() int {
 }
 
 /**
-* OnPut
-* @param fn func(string, []byte)
+* OnIndex
+* @param fn SetIndexFn
 **/
-func (s *FileStore) OnPut(fn func(string, []byte)) {
+func (s *FileStore) OnIndex(fn SetIndexFn) {
+	s.onSetIndex = append(s.onSetIndex, fn)
+}
+
+/**
+* OnPut
+* @param fn Putfn
+**/
+func (s *FileStore) OnPut(fn Putfn) {
 	s.onPut = append(s.onPut, fn)
 }
 
 /**
 * OnDelete
-* @param fn func(string)
+* @param fn Deletefn
 **/
-func (s *FileStore) OnDelete(fn func(string)) {
+func (s *FileStore) OnDelete(fn Deletefn) {
 	s.onDelete = append(s.onDelete, fn)
 }
 
@@ -380,7 +388,7 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 	}
 	s.index[id] = ref
 	for _, fn := range s.onSetIndex {
-		fn(id, ref)
+		fn(s, id, ref)
 	}
 }
 
@@ -645,7 +653,7 @@ func (s *FileStore) Put(id string, value any) error {
 	s.indexMu.Unlock()
 
 	for _, fn := range s.onPut {
-		fn(id, bt)
+		fn(s, id, bt)
 	}
 
 	return nil
@@ -663,6 +671,16 @@ func (s *FileStore) Read(ref *RecordRef, dest any) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+/**
+* ReadHeader
+* @param ref *RecordRef
+* @return recordHeader, error
+**/
+func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
+	seg := s.segments[ref.segment]
+	return seg.ReadHeader(ref)
 }
 
 /**
@@ -710,7 +728,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.indexMu.Unlock()
 
 	for _, fn := range s.onDelete {
-		fn(id)
+		fn(s, id)
 	}
 
 	if s.isDebug {

@@ -97,6 +97,20 @@ func (s *Tx) save() error {
 }
 
 /**
+* SetDb: Sets the database
+* @param db *DB
+**/
+func (s *Tx) SetDb(db *DB) {
+	s.db = db
+	for _, tx := range s.Transactions {
+		tx.tx = s
+	}
+	for _, tx := range s.Executions {
+		tx.tx = s
+	}
+}
+
+/**
 * SetStatus: Sets the status of the transaction
 * @param status string
 **/
