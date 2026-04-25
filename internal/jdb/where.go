@@ -323,18 +323,14 @@ func (s *Where) Run(tx *Tx) ([]et.Json, error) {
 
 	for field, keys := range s.keys {
 		for _, key := range keys {
-			indexes := map[string]bool{}
-			exists, err := model.GetIndex(field, key, indexes)
-			if err != nil {
-				return nil, err
-			}
+			pks, exists := model.GetByIndex(field, catalog.KeyString(key))
 			if !exists {
 				continue
 			}
 
-			for idx := range indexes {
+			for _, idx := range pks {
 				item := et.Json{}
-				exists, err = model.GetObjet(idx, item)
+				exists, err := model.GetObjet(idx, item)
 				if err != nil {
 					return nil, err
 				}

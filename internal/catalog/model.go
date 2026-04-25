@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
@@ -90,7 +89,7 @@ type Model struct {
 	IsCore        bool                        `json:"is_core"`      // Is core model
 	IsStrict      bool                        `json:"is_strict"`    // Is strict model
 	stores        map[string]*store.FileStore `json:"-"`            // Stores
-	btrees        map[string]*BTree           `json:"-"`            // In-memory secondary indexes (B+ tree)
+	btrees        map[string]*BTree           `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                     `json:"-"`            // Schema
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
@@ -155,7 +154,8 @@ func (s *Model) GenKey() string {
 }
 
 /**
-* Init: Initializes the model
+* Init: Opens the primary store and all secondary BTree indexes.
+* Each BTree loads its own persisted data on open.
 * @return error
 **/
 func (s *Model) Init() error {
@@ -167,104 +167,51 @@ func (s *Model) Init() error {
 		return errors.New(msg.MSG_INDEX_NOT_DEFINED)
 	}
 
-	for _, name := range s.Indexes {
-		_, err := s.Store(name)
-		if err != nil {
-			return err
-		}
+	// Open primary store.
+	if _, err := s.Store(INDEX); err != nil {
+		return err
 	}
 
-	if err := s.rebuildBTrees(); err != nil {
-		return err
+	// Open each secondary BTree (Init loads persisted data from its own store).
+	for _, name := range s.Indexes {
+		if name == INDEX {
+			continue
+		}
+		if _, err := s.indexTree(name); err != nil {
+			return err
+		}
 	}
 
 	s.IsInit = true
 	return nil
 }
 
-// rebuildBTrees loads each secondary BTree from its persisted FileStore.
-// Each secondary FileStore entry is: fieldValue → map[string]bool{pk: true}.
-// This is O(distinct values) per index, much faster than scanning all documents.
-func (s *Model) rebuildBTrees() error {
-	for _, name := range s.Indexes {
-		if name == INDEX {
-			continue
-		}
-		st, err := s.Store(name)
-		if err != nil {
-			return err
-		}
-		bt := s.indexTree(name)
-		if err := st.Iterate(func(fieldVal string, data []byte) (bool, error) {
-			var pks map[string]bool
-			if err := json.Unmarshal(data, &pks); err != nil {
-				return true, nil
-			}
-			key := s.keyFromField(name, fieldVal)
-			for pk := range pks {
-				bt.Insert(key, pk)
-			}
-			return true, nil
-		}, true, 0, 0, 1); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 /**
-* indexTree returns the BTree for field, creating it on first access.
+* indexTree returns the BTree for field, opening and loading it on first access.
 * @param field string
-* @return *BTree
+* @return *BTree, error
 **/
-func (s *Model) indexTree(field string) *BTree {
+func (s *Model) indexTree(field string) (*BTree, error) {
 	s.mu.RLock()
 	bt, exists := s.btrees[field]
 	s.mu.RUnlock()
 	if exists {
-		return bt
+		return bt, nil
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	bt = NewBTree()
-	s.btrees[field] = bt
-	return bt
-}
 
-/**
-* keyFromField converts a string value to the right IndexKey type using the field schema.
-* @param field string, strVal string
-* @return IndexKey
-**/
-func (s *Model) keyFromField(field, strVal string) IndexKey {
-	f, exists := s.Fields[field]
-	if !exists {
-		return KeyString(strVal)
+	bt, err := OpenBTree(s.Path, field)
+	if err != nil {
+		return nil, err
 	}
-	switch f.TypeData {
-	case TpInt, TpAutoIncrement:
-		var n int64
-		if _, err := fmt.Sscanf(strVal, "%d", &n); err == nil {
-			return KeyInt(n)
-		}
-	case TpFloat:
-		var f float64
-		if _, err := fmt.Sscanf(strVal, "%g", &f); err == nil {
-			return KeyFloat(f)
-		}
-	case TpBoolean:
-		switch strVal {
-		case "true", "1":
-			return KeyBool(true)
-		case "false", "0":
-			return KeyBool(false)
-		}
-	case TpDateTime:
-		if t, err := time.Parse(time.RFC3339, strVal); err == nil {
-			return KeyDateTime(t)
-		}
+	if err := bt.Init(); err != nil {
+		return nil, err
 	}
-	return KeyString(strVal)
+
+	s.btrees[field] = bt
+	return bt, nil
 }
 
 /**
@@ -303,20 +250,15 @@ func (s *Model) Store(name string) (*store.FileStore, error) {
 }
 
 /**
-* Source: Returns the source
+* Source: Returns the primary store
 * @return *store.FileStore, error
 **/
 func (s *Model) Source() (*store.FileStore, error) {
-	result, err := s.Store(INDEX)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return s.Store(INDEX)
 }
 
 /**
-* Put: Puts the model
+* Put: Puts a raw value by primary key
 * @param idx string, value any
 * @return error
 **/
@@ -326,60 +268,49 @@ func (s *Model) Put(idx string, value any) error {
 		return err
 	}
 
-	err = source.Put(idx, value)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return source.Put(idx, value)
 }
 
 /**
-* PutObject: Puts the model
+* PutObject: Inserts or updates a document and keeps secondary indexes in sync.
 * @param idx string, object et.Json
 * @return error
 **/
 func (s *Model) PutObject(idx string, object et.Json) error {
 	object[INDEX] = idx
+
+	// Save document to primary store.
+	source, err := s.Source()
+	if err != nil {
+		return err
+	}
+	if err := source.Put(idx, object); err != nil {
+		return err
+	}
+
+	// Update each secondary BTree index.
 	for _, name := range s.Indexes {
-		v := object[name]
-		key := fmt.Sprintf("%v", v)
-		if key == "" {
+		if name == INDEX {
 			continue
 		}
-
-		st, err := s.Store(name)
+		v := object[name]
+		if v == nil {
+			continue
+		}
+		bt, err := s.indexTree(name)
 		if err != nil {
 			return err
 		}
-
-		// Persist primary key in FileStore
-		if name == INDEX {
-			if err := st.Put(key, object); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// Persist inverted index in FileStore
-		index := map[string]bool{}
-		if _, err := st.Get(key, &index); err != nil {
+		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
 			return err
 		}
-		index[idx] = true
-		if err := st.Put(key, index); err != nil {
-			return err
-		}
-
-		// Update in-memory BTree
-		s.indexTree(name).Insert(KeyFromAny(v), idx)
 	}
 
 	return nil
 }
 
 /**
-* Remove: Removes the model
+* Remove: Removes a document by primary key (no index cleanup)
 * @param idx string
 * @return error
 **/
@@ -390,15 +321,56 @@ func (s *Model) Remove(idx string) error {
 	}
 
 	_, err = source.Delete(idx)
+	return err
+}
+
+/**
+* RemoveObject: Removes a document and cleans up all secondary indexes.
+* @param idx string
+* @return error
+**/
+func (s *Model) RemoveObject(idx string) error {
+	data := et.Json{}
+	exists, err := s.Get(idx, &data)
 	if err != nil {
 		return err
+	}
+	if !exists {
+		return nil
+	}
+
+	// Remove from primary store.
+	source, err := s.Source()
+	if err != nil {
+		return err
+	}
+	if _, err := source.Delete(idx); err != nil {
+		return err
+	}
+
+	// Remove from each secondary BTree index.
+	for _, name := range s.Indexes {
+		if name == INDEX {
+			continue
+		}
+		v := data[name]
+		if v == nil {
+			continue
+		}
+		bt, err := s.indexTree(name)
+		if err != nil {
+			return err
+		}
+		if _, err := bt.Delete(KeyFromAny(v), idx); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 /**
-* Get: Gets the model
+* Get: Gets a document by primary key
 * @param idx string, dest any
 * @return bool, error
 **/
@@ -413,157 +385,113 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 		return false, err
 	}
 
-	if !exists {
-		return false, nil
-	}
-
-	return true, nil
+	return exists, nil
 }
 
 /**
 * GetObjet: Gets the model as object
-* @param idx string
-* @return et.Json, error
+* @param idx string, dest et.Json
+* @return bool, error
 **/
 func (s *Model) GetObjet(idx string, dest et.Json) (bool, error) {
 	return s.Get(idx, &dest)
 }
 
 /**
-* RemoveObject: Removes the model
-* @param idx string
-* @return error
+* GetByIndex: Returns all primary keys where field equals key.
+* @param field string, key IndexKey
+* @return []string, bool
 **/
-func (s *Model) RemoveObject(idx string) error {
-	data := et.Json{}
-	exists, err := s.Get(idx, &data)
+func (s *Model) GetByIndex(field string, key IndexKey) ([]string, bool) {
+	bt, err := s.indexTree(field)
 	if err != nil {
-		return err
+		return nil, false
 	}
-	if !exists {
-		return nil
-	}
-
-	for _, name := range s.Indexes {
-		v := data[name]
-		key := fmt.Sprintf("%v", v)
-		if key == "" {
-			continue
-		}
-
-		st, err := s.Store(name)
-		if err != nil {
-			return err
-		}
-
-		if name == INDEX {
-			if _, err := st.Delete(key); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// Update persisted inverted index
-		index := map[string]bool{}
-		if found, err := st.Get(key, &index); err != nil {
-			return err
-		} else if found {
-			delete(index, idx)
-			if len(index) == 0 {
-				if _, err := st.Delete(key); err != nil {
-					return err
-				}
-			} else {
-				if err := st.Put(key, index); err != nil {
-					return err
-				}
-			}
-		}
-
-		// Update in-memory BTree
-		s.indexTree(name).Delete(KeyFromAny(v), idx)
-	}
-	return nil
+	return bt.Get(key)
 }
 
 /**
-* GetIndex: Gets the index
-* @param field, key string, dest map[string]bool
-* @return bool, error
-**/
-func (s *Model) GetIndex(field, key string, dest map[string]bool) (bool, error) {
-	pks, exists := s.indexTree(field).Get(s.keyFromField(field, key))
-	if !exists {
-		return false, nil
-	}
-	for _, pk := range pks {
-		dest[pk] = true
-	}
-	return true, nil
-}
-
-/**
-* BetweenIndex returns all primary keys where field is in [from, to] (inclusive).
+* RangeIndex: Returns all primary keys where field is in [from, to] inclusive.
 * Pass IndexKey{} for open bounds.
 * @param field string, from, to IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) BetweenIndex(field string, from, to IndexKey, asc bool) []string {
-	return s.indexTree(field).Between(from, to, asc)
+func (s *Model) RangeIndex(field string, from, to IndexKey, asc bool) []string {
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.Between(from, to, asc)
 }
 
 /**
-* EqualIndex returns all primary keys where field equals key.
-* @param field string, key IndexKey
-* @return []string, bool
-**/
-func (s *Model) EqualIndex(field string, key IndexKey) ([]string, bool) {
-	return s.indexTree(field).Get(key)
-}
-
-func (s *Model) MoreIndex(field string, key IndexKey, asc bool) []string {
-	return s.indexTree(field).More(key, asc)
-}
-
-/**
-* MoreEq returns all primary keys where field >= key.
+* GTIndex: Returns all primary keys where field > key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) MoreEqIndex(field string, key IndexKey, asc bool) []string {
-	return s.indexTree(field).MoreEq(key, asc)
+func (s *Model) GTIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.More(key, asc)
 }
 
 /**
-* LessIndex returns all primary keys where field < key.
+* GTEIndex: Returns all primary keys where field >= key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) LessIndex(field string, key IndexKey, asc bool) []string {
-	return s.indexTree(field).Less(key, asc)
+func (s *Model) GTEIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.MoreEq(key, asc)
 }
 
 /**
-* LessEqIndex returns all primary keys where field <= key.
+* LTIndex: Returns all primary keys where field < key.
 * @param field string, key IndexKey, asc bool
 * @return []string
 **/
-func (s *Model) LessEqIndex(field string, key IndexKey, asc bool) []string {
-	return s.indexTree(field).LessEq(key, asc)
+func (s *Model) LTIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.Less(key, asc)
 }
 
 /**
-* NotEqualIndex returns all primary keys where field != key.
+* LTEIndex: Returns all primary keys where field <= key.
+* @param field string, key IndexKey, asc bool
+* @return []string
+**/
+func (s *Model) LTEIndex(field string, key IndexKey, asc bool) []string {
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.LessEq(key, asc)
+}
+
+/**
+* NotEqualIndex: Returns all primary keys where field != key.
 * @param field string, key IndexKey
 * @return []string
 **/
 func (s *Model) NotEqualIndex(field string, key IndexKey) []string {
-	return s.indexTree(field).NotEqual(key)
+	bt, err := s.indexTree(field)
+	if err != nil {
+		return nil
+	}
+	return bt.NotEqual(key)
 }
 
 /**
-* IsExisted: Check if index exists in model
-* @param name string, key string
+* IsExisted: Check if a key exists in a named store
+* @param field, idx string
 * @return bool, error
 **/
 func (s *Model) IsExisted(field, idx string) (bool, error) {
@@ -576,7 +504,7 @@ func (s *Model) IsExisted(field, idx string) (bool, error) {
 }
 
 /**
-* Exists: Checks if index exists in model
+* Exists: Checks if a primary key exists
 * @param idx string
 * @return bool, error
 **/
@@ -585,7 +513,7 @@ func (s *Model) Exists(idx string) (bool, error) {
 }
 
 /**
-* Count: Counts the model
+* Count: Counts documents in the primary store
 * @return int, error
 **/
 func (s *Model) Count() (int, error) {
@@ -598,9 +526,9 @@ func (s *Model) Count() (int, error) {
 }
 
 /**
-* Iterate: Iterates over the model
+* Iterate: Iterates over all documents in the primary store
 * @param fn func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
-* @return bool, error
+* @return error
 **/
 func (s *Model) Iterate(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	st, err := s.Source()
@@ -608,26 +536,18 @@ func (s *Model) Iterate(next func(idx string, item et.Json) (bool, error), asc b
 		return err
 	}
 
-	err = st.Iterate(func(idx string, src []byte) (bool, error) {
+	return st.Iterate(func(idx string, src []byte) (bool, error) {
 		item := et.Json{}
-		err := json.Unmarshal(src, &item)
-		if err != nil {
+		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err
 		}
-
 		return next(idx, item)
 	}, asc, offset, limit, workers)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 /**
 * AddBeforeInsert
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddBeforeInsert(name string, definition string) {
 	bt := []byte(definition)
@@ -642,7 +562,6 @@ func (s *Model) AddBeforeInsert(name string, definition string) {
 /**
 * AddAfterInsert
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddAfterInsert(name string, definition string) {
 	bt := []byte(definition)
@@ -657,7 +576,6 @@ func (s *Model) AddAfterInsert(name string, definition string) {
 /**
 * AddBeforeUpdate
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddBeforeUpdate(name string, definition string) {
 	bt := []byte(definition)
@@ -672,7 +590,6 @@ func (s *Model) AddBeforeUpdate(name string, definition string) {
 /**
 * AddAfterUpdate
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddAfterUpdate(name string, definition string) {
 	bt := []byte(definition)
@@ -687,7 +604,6 @@ func (s *Model) AddAfterUpdate(name string, definition string) {
 /**
 * AddBeforeDelete
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddBeforeDelete(name string, definition string) {
 	bt := []byte(definition)
@@ -702,7 +618,6 @@ func (s *Model) AddBeforeDelete(name string, definition string) {
 /**
 * AddAfterDelete
 * @param name string, definition string
-* @return void
 **/
 func (s *Model) AddAfterDelete(name string, definition string) {
 	bt := []byte(definition)
@@ -723,8 +638,7 @@ func (s *Model) Empty() error {
 	defer s.mu.Unlock()
 
 	for _, store := range s.stores {
-		err := store.Empty()
-		if err != nil {
+		if err := store.Empty(); err != nil {
 			return err
 		}
 	}

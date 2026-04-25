@@ -37,6 +37,23 @@ gofmt -w .
 goenv local 1.23.0   # project uses Go 1.23.0
 ```
 
+## Code style
+
+### Comments
+All doc comments for functions, methods, and types must use this block style:
+
+```go
+/**
+* FunctionName: Brief description.
+* @param paramName type
+* @return type
+**/
+```
+
+- Use `@param` for each parameter and `@return` for the return value(s).
+- Inline comments inside function bodies stay as `//`.
+- Never use single-line `//` doc comments above a function or type declaration.
+
 ## Architecture
 
 Josefina is a custom distributed document database engine written in Go with SQL-like query syntax. It has no external database dependency — all data is stored locally in its own file-based storage engine.

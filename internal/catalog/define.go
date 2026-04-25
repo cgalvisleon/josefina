@@ -56,13 +56,11 @@ func (s *Model) DefineIndexes(fields ...string) error {
 	return nil
 }
 
-/*
-*
+/**
 * DefineUnique: Defines the unique
 * @param name string
 * @return bool
-*
- */
+**/
 func (s *Model) DefineUnique(fields ...string) error {
 	for _, field := range fields {
 		_, ok := s.Fields[field]
