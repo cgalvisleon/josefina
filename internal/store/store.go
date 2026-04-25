@@ -601,45 +601,6 @@ func (s *FileStore) Empty() error {
 }
 
 /**
-* Keys
-* @param asc bool, offset int, limit int
-* @return []string
-**/
-func (s *FileStore) Keys(asc bool, offset, limit int) []string {
-	n := len(s.keys)
-	result := make([]string, 0)
-	if offset >= n {
-		return result
-	}
-
-	if limit <= 0 {
-		limit = n
-	}
-
-	if asc {
-		sort.Strings(s.keys)
-	} else {
-		sort.Sort(sort.Reverse(sort.StringSlice(s.keys)))
-	}
-
-	i := 0
-	for {
-		if offset >= len(s.keys) {
-			break
-		}
-		k := s.keys[offset]
-		result = append(result, k)
-		offset++
-		i++
-		if i >= limit {
-			break
-		}
-	}
-
-	return result
-}
-
-/**
 * Sync
 * @param id string, ref *RecordRef, ownerId string
 **/

@@ -269,11 +269,26 @@ func (s *Model) Put(idx string, value any) error {
 }
 
 /**
-* PutObject: Inserts or updates a document and keeps secondary indexes in sync.
+* Remove: Removes a document by primary key (no index cleanup)
+* @param idx string
+* @return error
+**/
+func (s *Model) Remove(idx string) error {
+	source, err := s.Source()
+	if err != nil {
+		return err
+	}
+
+	_, err = source.Delete(idx)
+	return err
+}
+
+/**
+* Insert: Inserts or updates a document and keeps secondary indexes in sync.
 * @param idx string, object et.Json
 * @return error
 **/
-func (s *Model) PutObject(idx string, object et.Json) error {
+func (s *Model) Insert(idx string, object et.Json) error {
 	object[INDEX] = idx
 
 	// Save document to primary store.
@@ -307,26 +322,30 @@ func (s *Model) PutObject(idx string, object et.Json) error {
 }
 
 /**
-* Remove: Removes a document by primary key (no index cleanup)
-* @param idx string
+* Update: Updates a document and keeps secondary indexes in sync.
+* @param idx string, object et.Json
 * @return error
 **/
-func (s *Model) Remove(idx string) error {
+func (s *Model) Update(idx string, object et.Json) error {
 	source, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	_, err = source.Delete(idx)
-	return err
+	exists := source.IsExist(idx)
+	if !exists {
+		return errors.New(msg.MSG_RECORD_NOT_FOUND)
+	}
+
+	return s.Insert(idx, object)
 }
 
 /**
-* RemoveObject: Removes a document and cleans up all secondary indexes.
+* Delete: Removes a document and cleans up all secondary indexes.
 * @param idx string
 * @return error
 **/
-func (s *Model) RemoveObject(idx string) error {
+func (s *Model) Delete(idx string) error {
 	data := et.Json{}
 	exists, err := s.Get(idx, &data)
 	if err != nil {
