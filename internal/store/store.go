@@ -76,7 +76,6 @@ const (
 
 type Putfn func(string, []byte)
 type Deletefn func(string)
-type Syncfn func(string, *RecordRef, string)
 
 type FileStore struct {
 	ID           string                `json:"id"`
@@ -98,7 +97,6 @@ type FileStore struct {
 	keys         []string              `json:"-"` // claves en memoria
 	mode         Mode                  `json:"-"` // modo de operación
 	onPut        []Putfn               `json:"-"` // función de escritura
-	onSync       []Syncfn              `json:"-"` // función de sincronización
 	onDelete     []Deletefn            `json:"-"` // función de eliminación
 	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg    sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
@@ -179,14 +177,6 @@ func (s *FileStore) OnPut(fn func(string, []byte)) {
 **/
 func (s *FileStore) OnDelete(fn func(string)) {
 	s.onDelete = append(s.onDelete, fn)
-}
-
-/**
-* OnSync
-* @param fn func(string, *RecordRef, string)
-**/
-func (s *FileStore) OnSync(fn func(string, *RecordRef, string)) {
-	s.onSync = append(s.onSync, fn)
 }
 
 /**
@@ -648,10 +638,6 @@ func (s *FileStore) Put(id string, value any) error {
 	}
 	s.putIndex(id, ref)
 	s.indexMu.Unlock()
-
-	for _, fn := range s.onSync {
-		fn(id, ref, s.ID)
-	}
 
 	for _, fn := range s.onPut {
 		fn(id, bt)

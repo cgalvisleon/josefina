@@ -96,12 +96,6 @@ func testStore() {
 		logs.Errorf("iterate: %v", err)
 	}
 
-	// ── Keys ───────────────────────────────────────────────────────────────
-	logs.Info("Keys (desc, offset=0, limit=3)")
-	for _, k := range fs.Keys(false, 0, 3) {
-		logs.Infof("  %s", k)
-	}
-
 	// ── WalSince ───────────────────────────────────────────────────────────
 	logs.Info("WalSince(3)")
 	entries, err := fs.WalSince(3)
@@ -140,7 +134,7 @@ func testCatalog() {
 	model.DefinePrimaryKeys("id")
 	model.DefineIndexes("name", "age")
 
-	if err := model.Init(""); err != nil {
+	if err := model.Init(); err != nil {
 		logs.Fatal(err)
 	}
 	logs.Info("=== model init ok ===")
@@ -153,8 +147,10 @@ func testCatalog() {
 		{"id": "pk4", "name": "Dave", "age": int64(28)},
 		{"id": "pk5", "name": "Eve", "age": int64(22)},
 	}
+	var tx *catalog.Tx
 	for _, u := range users {
-		if err := model.PutObject(u.Str("id"), u); err != nil {
+		tx, err = model.Insert(u.Str("id"), u, tx)
+		if err != nil {
 			logs.Errorf("insert %s: %v", u.Str("id"), err)
 			continue
 		}
@@ -180,7 +176,7 @@ func testCatalog() {
 
 	// ── GetByIndex por nombre exacto ──────────────────────────────────────────
 	logs.Info("--- GetByIndex name=Alice ---")
-	pks, ok := model.GetByIndex("name", catalog.KeyString("Alice"))
+	pks, ok := model.EqualByIndex("name", catalog.KeyString("Alice"))
 	if !ok {
 		logs.Info("name=Alice: not found")
 	} else {
@@ -188,7 +184,7 @@ func testCatalog() {
 	}
 
 	logs.Info("--- GetByIndex name=Zzz (no existe) ---")
-	pks, ok = model.GetByIndex("name", catalog.KeyString("Zzz"))
+	pks, ok = model.EqualByIndex("name", catalog.KeyString("Zzz"))
 	if !ok {
 		logs.Info("name=Zzz: not found (expected)")
 	} else {
@@ -197,20 +193,20 @@ func testCatalog() {
 
 	// ── RangeIndex por edad ───────────────────────────────────────────────────
 	logs.Info("--- RangeIndex age [25, 30] asc ---")
-	pks = model.BetweenIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
+	pks = model.BetweenByIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
 	logs.Infof("age [25,30]: pks=%v", pks)
 
 	logs.Info("--- RangeIndex age [0, 99] desc ---")
-	pks = model.BetweenIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
+	pks = model.BetweenByIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
 	logs.Infof("age [0,99] desc: pks=%v", pks)
 
 	// ── Simular restart: re-init reconstruye BTrees desde FileStore ───────────
 	logs.Info("--- Simulating restart ---")
 	model.IsInit = false
-	if err := model.Init(""); err != nil {
+	if err := model.Init(); err != nil {
 		logs.Errorf("re-init: %v", err)
 	}
-	pks, ok = model.GetByIndex("name", catalog.KeyString("Bob"))
+	pks, ok = model.EqualByIndex("name", catalog.KeyString("Bob"))
 	if !ok {
 		logs.Debug("restart: name=Bob not found (BTree rebuild failed)")
 	} else {
@@ -219,13 +215,14 @@ func testCatalog() {
 
 	// ── Delete ────────────────────────────────────────────────────────────────
 	logs.Info("--- RemoveObject pk2 ---")
-	if err := model.RemoveObject("pk2"); err != nil {
+	tx, err = model.Delete("pk2", nil)
+	if err != nil {
 		logs.Errorf("remove pk2: %v", err)
 	}
 	count, _ = model.Count()
 	logs.Infof("after delete: count=%d", count)
 
-	pks, ok = model.GetByIndex("name", catalog.KeyString("Bob"))
+	pks, ok = model.EqualByIndex("name", catalog.KeyString("Bob"))
 	if !ok {
 		logs.Info("name=Bob after delete: not found (expected)")
 	} else {
