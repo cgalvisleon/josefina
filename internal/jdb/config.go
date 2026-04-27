@@ -1,50 +1,39 @@
 package jdb
 
 import (
-	"github.com/cgalvisleon/et/file"
+	"fmt"
+	"time"
+
+	"github.com/cgalvisleon/et/envar"
 )
 
-type Config struct {
-	Nodes    []string `json:"nodes"`
-	IsStrict bool     `json:"is_strict"`
-	filePath string   `json:"-"`
-}
-
-/**
-* getConfig: Returns the config
-* @return *Config, error
-**/
-func getConfig() (*Config, error) {
-	filePath := "./config.json"
-	var result *Config
-	err := file.Read(filePath, &result)
+func loadConfig(db *DB) error {
+	model, err := db.NewModel("", "conf", true, 1)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if result == nil {
-		result = &Config{
-			Nodes:    []string{},
-			IsStrict: false,
+	err = model.Init()
+	if err != nil {
+		return err
+	}
+
+	var config *Config
+	var ttl Ttl
+	idx := fmt.Sprintf("config:%s", db.Name)
+	exists, err := model.Get(idx, &config, &ttl)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		ttl := time.Duration(envar.GetInt("TTL_TRANSACCION", 300)) * time.Second
+		config = &Config{
+			TransactionTTL: ttl,
+			model:          model,
 		}
-
-		file.Write(filePath, result)
 	}
 
-	result.filePath = filePath
-
-	return result, nil
-}
-
-/**
-* getNodes: Returns the nodes
-* @return []string, error
-**/
-func getNodes() ([]string, error) {
-	config, err := getConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config.Nodes, nil
+	db.config = config
+	return nil
 }

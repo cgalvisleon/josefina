@@ -4,37 +4,60 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"sync"
+	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type Config struct {
+	TransactionTTL time.Duration `json:"transaction_ttl"`
+	model          *Model        `json:"-"`
+}
+
+/**
+* DB: Represents a database
+**/
 type DB struct {
-	Name     string             `json:"name"`
-	Path     string             `json:"path"`
-	Schemas  map[string]*Schema `json:"schemas"`
-	IsStrict bool               `json:"is_strict"`
-	isDebug  bool               `json:"-"`
+	Name        string             `json:"name"`      // Database name
+	Path        string             `json:"path"`      // Path to the database
+	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
+	IsStrict    bool               `json:"is_strict"` // Is strict mode
+	mu          sync.RWMutex       `json:"-"`         // Mutex
+	config      *Config            `json:"-"`         // Configuration
+	transaction *Model             `json:"-"`         // Transaction
+	schemas     *Model             `json:"-"`         // Schemas
 }
 
 /**
 * NewDb: Creates a new database
-* @param name string
+* @param path, name string
 * @return *DB, error
 **/
-func NewDb(name string) (*DB, error) {
+func NewDb(path, name string) (*DB, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
+	path = filepath.Join(path, name)
 	result := &DB{
 		Name:    name,
-		Path:    fmt.Sprintf("%s/%s", path, name),
+		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
+		mu:      sync.RWMutex{},
+	}
+
+	err := loadConfig(result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = loadTransaction(result)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -73,13 +96,6 @@ func (s *DB) ToJson() (et.Json, error) {
 }
 
 /**
-* Debug
-**/
-func (s *DB) Debug() {
-	s.isDebug = true
-}
-
-/**
 * SetStrict
 * @param strict bool
 **/
@@ -94,20 +110,53 @@ func (s *DB) SetStrict(strict bool) {
 **/
 func (s *DB) getSchema(name string) *Schema {
 	name = utility.Normalize(name)
-	result, ok := s.Schemas[name]
-	if ok {
+
+	s.mu.RLock()
+	result, exists := s.Schemas[name]
+	s.mu.RUnlock()
+	if exists {
 		return result
 	}
 
 	result = &Schema{
 		Database: s.Name,
 		Name:     name,
-		Models:   make(map[string]*From, 0),
+		Models:   make(map[string]*Model, 0),
 		db:       s,
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.Schemas[name] = result
 
 	return result
+}
+
+/**
+* DeleteSchema: Deletes a schema
+* @param name string
+* @return error
+ */
+func (s *DB) DeleteSchema(name string) error {
+	name = utility.Normalize(name)
+
+	s.mu.RLock()
+	schema, exists := s.Schemas[name]
+	s.mu.RUnlock()
+	if !exists {
+		return errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	err := schema.Empty()
+	if err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.Schemas, name)
+
+	return nil
 }
 
 /**
@@ -117,7 +166,7 @@ func (s *DB) getSchema(name string) *Schema {
 **/
 func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch := s.getSchema(schema)
-	model, err := sch.newModel(name, isCore, version)
+	model, err := sch.NewModel(name, isCore, version)
 	if err != nil {
 		return nil, err
 	}
@@ -125,135 +174,57 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 	return model, nil
 }
 
-var dbs *Model
+/**
+* GetModel: Returns a model
+* @param schema, name string
+* @return *Model, error
+**/
+func (s *DB) GetModel(schema, name string) (*Model, error) {
+	schema = utility.Normalize(schema)
+
+	s.mu.RLock()
+	schemaObj, exists := s.Schemas[schema]
+	s.mu.RUnlock()
+	if !exists {
+		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	return schemaObj.GetModel(name)
+}
 
 /**
-* initDbs: Initializes the dbs model
+* DeleteModel: Deletes a model
+* @param schema, name string
 * @return error
 **/
-func (s *Node) initDbs() error {
-	if dbs != nil {
-		return nil
+func (s *DB) DeleteModel(schema, name string) error {
+	schema = utility.Normalize(schema)
+	s.mu.RLock()
+	schemaObj, exists := s.Schemas[schema]
+	s.mu.RUnlock()
+	if !exists {
+		return errors.New(msg.MSG_SCHEMA_NOT_FOUND)
 	}
 
-	db, err := s.coreDb()
-	if err != nil {
-		return err
+	return schemaObj.DeleteModel(name)
+}
+
+/**
+* Empty: Empties the database
+* @return error
+**/
+func (s *DB) Empty() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, schema := range s.Schemas {
+		err := schema.Empty()
+		if err != nil {
+			return err
+		}
 	}
 
-	dbs, err = db.NewModel("", "dbs", true, 1)
-	if err != nil {
-		return err
-	}
-	if err := dbs.Init(); err != nil {
-		return err
-	}
+	s.Schemas = make(map[string]*Schema, 0)
 
 	return nil
-}
-
-/**
-* coreDb: Creates the core database
-* @return *catalog.DB, error
-**/
-func (s *Node) coreDb() (*catalog.DB, error) {
-	name := "josefina"
-	s.muDB.RLock()
-	result, ok := s.dbs[name]
-	s.muDB.RUnlock()
-	if ok {
-		return result, nil
-	}
-
-	result, err := catalog.NewDb(name)
-	if err != nil {
-		return nil, err
-	}
-	s.muDB.Lock()
-	s.dbs[name] = result
-	s.muDB.Unlock()
-
-	return result, nil
-}
-
-/**
-* GetDb: Gets a model
-* @param name string, dest *jdb.Model
-* @return bool, error
-**/
-func (s *Node) GetDb(name string) (*catalog.DB, bool) {
-	leader, imLeader := s.GetLeader()
-	if imLeader {
-		return s.lead.getDb(name)
-	}
-
-	if leader != nil {
-		res := s.Request(leader, "Leader.GetDb", name)
-		if res.Error != nil {
-			return nil, false
-		}
-
-		var result *catalog.DB
-		var exists bool
-		err := res.Get(&result, &exists)
-		if err != nil {
-			return nil, false
-		}
-
-		return result, exists
-	}
-
-	return nil, false
-}
-
-/**
-* CreateDb: Creates a new database
-* @param name string
-* @return *DB, error
-**/
-func (s *Node) CreateDb(name string) (*catalog.DB, error) {
-	leader, imLeader := s.GetLeader()
-	if imLeader {
-		return s.lead.CreateDb(name)
-	}
-
-	if leader != nil {
-		res := s.Request(leader, "Leader.CreateDb", name)
-		if res.Error != nil {
-			return nil, res.Error
-		}
-
-		var result *catalog.DB
-		err := res.Get(&result)
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	return nil, errors.New(msg.MSG_LEADER_NOT_FOUND)
-}
-
-/**
-* DropDb: Removes a db
-* @param name string
-* @return error
-**/
-func (s *Node) DropDb(name string) error {
-	leader, imLeader := s.GetLeader()
-	if imLeader {
-		return s.lead.DropDb(name)
-	}
-
-	if leader != nil {
-		res := s.Request(leader, "Leader.DropDb", name)
-		if res.Error != nil {
-			return res.Error
-		}
-
-		return nil
-	}
-
-	return errors.New(msg.MSG_LEADER_NOT_FOUND)
 }

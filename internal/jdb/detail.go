@@ -1,4 +1,4 @@
-package catalog
+package jdb
 
 /**
 * Detail: Represents a detail in the database
