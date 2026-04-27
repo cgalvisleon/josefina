@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -53,6 +54,31 @@ func loadTransaction(db *DB) error {
 	}
 
 	db.transaction = result
+	source, err := db.transaction.Source()
+	if err != nil {
+		return err
+	}
+
+	source.ForEach(func(idx string, src []byte) (bool, error) {
+		var tx Tx
+		if err := json.Unmarshal(src, &tx); err != nil {
+			return false, err
+		}
+
+		tx.db = db
+		if tx.Status == PENDING {
+			err := tx.Rollback()
+			if err != nil {
+				db.putError("rollback", err)
+				return true, err
+			}
+			_, err = source.Delete(idx)
+			if err != nil {
+				return true, err
+			}
+		}
+		return true, nil
+	}, false, 0, 0, 1)
 
 	return nil
 }

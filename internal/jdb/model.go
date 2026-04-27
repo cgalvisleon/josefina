@@ -982,26 +982,6 @@ func (s *Model) Count() (int, error) {
 }
 
 /**
-* ForEachTx: Iterates over all transactions
-* @param next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int
-* @return error
-**/
-func (s *Model) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int) error {
-	st, err := s.Source()
-	if err != nil {
-		return err
-	}
-
-	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		var tx Tx
-		if err := json.Unmarshal(src, &tx); err != nil {
-			return false, err
-		}
-		return next(idx, tx)
-	}, asc, offset, limit, workers)
-}
-
-/**
 * ForEach: Iterates over all documents in the primary store
 * @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
 * @return error

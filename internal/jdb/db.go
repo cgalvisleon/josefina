@@ -30,6 +30,7 @@ type DB struct {
 	config      *Config            `json:"-"`         // Configuration
 	transaction *Model             `json:"-"`         // Transaction
 	schemas     *Model             `json:"-"`         // Schemas
+	errors      *Model             `json:"-"`         // Errors
 }
 
 /**
@@ -55,6 +56,11 @@ func NewDb(path, name string) (*DB, error) {
 		return nil, err
 	}
 
+	err = loadErrors(result)
+	if err != nil {
+		return nil, err
+	}
+
 	err = loadTransaction(result)
 	if err != nil {
 		return nil, err
@@ -66,6 +72,33 @@ func NewDb(path, name string) (*DB, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* Load: Load the database
+* @return error
+**/
+func (s *DB) Load() error {
+	s.mu = sync.RWMutex{}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	err := loadConfig(s)
+	if err != nil {
+		return err
+	}
+
+	err = loadTransaction(s)
+	if err != nil {
+		return err
+	}
+
+	err = loadSchemas(s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
