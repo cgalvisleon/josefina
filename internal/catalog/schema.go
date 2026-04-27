@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -64,11 +65,14 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 		AfterInserts:  make([]*Trigger, 0),
 		AfterUpdates:  make([]*Trigger, 0),
 		AfterDeletes:  make([]*Trigger, 0),
+		TTL:           make(map[string]time.Duration, 0),
 		Version:       version,
 		IsCore:        isCore,
 		stores:        make(map[string]*store.FileStore, 0),
 		btrees:        make(map[string]*BTree, 0),
 		mode:          store.ReadWrite,
+		ttl:           make(map[string]*time.Timer, 0),
+		muTTL:         sync.Mutex{},
 		schema:        s,
 	}
 	_, err := result.defineIndexField()
@@ -92,6 +96,8 @@ func (s *Schema) DeleteModel(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	name = utility.Normalize(name)
+
 	model, exists := s.Models[name]
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
@@ -104,6 +110,24 @@ func (s *Schema) DeleteModel(name string) error {
 	delete(s.Models, name)
 
 	return nil
+}
+
+/**
+* GetModel: Returns a model
+* @param string name
+* @return *Model, error
+**/
+func (s *Schema) GetModel(name string) (*Model, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	name = utility.Normalize(name)
+	result, exists := s.Models[name]
+	if !exists {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return result, nil
 }
 
 /**

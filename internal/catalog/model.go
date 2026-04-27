@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/js"
@@ -84,6 +85,7 @@ type Model struct {
 	AfterUpdates  []*Trigger                  `json:"-"`            // After update triggers
 	BeforeDeletes []*Trigger                  `json:"-"`            // Before delete triggers
 	AfterDeletes  []*Trigger                  `json:"-"`            // After delete triggers
+	TTL           map[string]time.Duration    `json:"ttl"`          // Timers
 	Version       int                         `json:"version"`      // Version
 	IsCore        bool                        `json:"is_core"`      // Is core model
 	IsStrict      bool                        `json:"is_strict"`    // Is strict model
@@ -94,6 +96,8 @@ type Model struct {
 	storeVm       js.Store                    `json:"-"`            // Virtual machine
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
+	ttl           map[string]*time.Timer      `json:"-"`            // Timers
+	muTTL         sync.Mutex                  `json:"-"`            // Mutex for TTL
 	isDebug       bool                        `json:"-"`            // Is debug
 }
 
@@ -193,6 +197,10 @@ func (s *Model) Init() error {
 		}
 	}
 
+	for idx, duration := range s.TTL {
+		s.setTTL(idx, duration)
+	}
+
 	s.IsInit = true
 	return nil
 }
@@ -266,17 +274,54 @@ func (s *Model) Source() (*store.FileStore, error) {
 }
 
 /**
-* Put: Puts a raw value by primary key
-* @param idx string, value any
+* setTTL: Sets a TTL for a key
+* @param idx string, expiration time.Duration
 * @return error
 **/
-func (s *Model) Put(idx string, value any) error {
+func (s *Model) setTTL(idx string, expiration time.Duration) {
+	s.muTTL.Lock()
+
+	if t, exists := s.ttl[idx]; exists {
+		t.Stop()
+	}
+
+	s.ttl[idx] = time.AfterFunc(expiration, func() {
+		source, err := s.Source()
+		if err != nil {
+			return
+		}
+
+		source.Delete(idx)
+
+		s.muTTL.Lock()
+		delete(s.ttl, idx)
+		s.muTTL.Unlock()
+	})
+
+	s.muTTL.Unlock()
+}
+
+/**
+* Put: Puts a raw value by primary key
+* @param idx string, value any, expiration time.Duration
+* @return error
+**/
+func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 	source, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	return source.Put(idx, value)
+	err = source.Put(idx, value)
+	if err != nil {
+		return err
+	}
+
+	if expiration != 0 {
+		s.setTTL(idx, expiration)
+	}
+
+	return nil
 }
 
 /**

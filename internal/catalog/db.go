@@ -8,25 +8,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
-	"github.com/cgalvisleon/josefina/internal/store"
 )
+
+type Config struct {
+	TTL   time.Duration `json:"ttl"`
+	model *Model        `json:"-"`
+}
 
 /**
 * DB: Represents a database
 **/
 type DB struct {
-	Name     string             `json:"name"`      // Database name
-	Path     string             `json:"path"`      // Path to the database
-	Schemas  map[string]*Schema `json:"schemas"`   // Schemas
-	Tx       *Model             `json:"tx"`        // Transaction
-	TxTTL    time.Duration      `json:"tx_ttl"`    // Transaction time to live
-	IsStrict bool               `json:"is_strict"` // Is strict mode
-	Ticker   *time.Ticker       `json:"-"`         // Ticker
-	mu       sync.RWMutex       `json:"-"`         // Mutex
+	Name        string             `json:"name"`      // Database name
+	Path        string             `json:"path"`      // Path to the database
+	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
+	IsStrict    bool               `json:"is_strict"` // Is strict mode
+	Ticker      *time.Ticker       `json:"-"`         // Ticker
+	mu          sync.RWMutex       `json:"-"`         // Mutex
+	config      *Config            `json:"-"`         // Configuration
+	transaction *Model             `json:"-"`         // Transaction
 }
 
 /**
@@ -39,53 +42,20 @@ func NewDb(path, name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	txTTL := time.Duration(envar.GetInt("TX_TTL", 12)) * time.Hour
 	path = filepath.Join(path, name)
 	result := &DB{
 		Name:    name,
 		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
-		TxTTL:   txTTL,
 		mu:      sync.RWMutex{},
 	}
-	var err error
-	result.Tx, err = result.NewModel("", "tx", true, 1)
+
+	err := loadConfig(result)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Tx.OnIndex(INDEX, func(st *store.FileStore, id string, ref *store.RecordRef) {
-		var tx *Tx
-		exists, err := st.Read(ref, &tx)
-		if err != nil {
-			return
-		}
-		if !exists {
-			return
-		}
-
-		if time.Since(tx.CreatedAt) > result.TxTTL && tx.Status == COMMITTED {
-			err := result.Tx.Remove(tx.ID)
-			if err != nil {
-				return
-			}
-		}
-	})
-
-	result.Ticker = time.NewTicker(result.TxTTL)
-	for range result.Ticker.C {
-		result.Tx.ForEachTx(func(idx string, tx Tx) (bool, error) {
-			if time.Since(tx.CreatedAt) > result.TxTTL && tx.Status == COMMITTED {
-				err := result.Tx.Remove(tx.ID)
-				if err != nil {
-					return false, err
-				}
-			}
-			return true, nil
-		}, true, 0, 0, 1)
-	}
-
-	err = result.Tx.Init()
+	err = loadTransaction(result)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +110,7 @@ func (s *DB) SetStrict(strict bool) {
 **/
 func (s *DB) getSchema(name string) *Schema {
 	name = utility.Normalize(name)
+
 	s.mu.RLock()
 	result, exists := s.Schemas[name]
 	s.mu.RUnlock()
@@ -168,6 +139,7 @@ func (s *DB) getSchema(name string) *Schema {
  */
 func (s *DB) DeleteSchema(name string) error {
 	name = utility.Normalize(name)
+
 	s.mu.RLock()
 	schema, exists := s.Schemas[name]
 	s.mu.RUnlock()
@@ -200,6 +172,24 @@ func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, er
 	}
 
 	return model, nil
+}
+
+/**
+* GetModel: Returns a model
+* @param schema, name string
+* @return *Model, error
+**/
+func (s *DB) GetModel(schema, name string) (*Model, error) {
+	schema = utility.Normalize(schema)
+
+	s.mu.RLock()
+	schemaObj, exists := s.Schemas[schema]
+	s.mu.RUnlock()
+	if !exists {
+		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	return schemaObj.GetModel(name)
 }
 
 /**

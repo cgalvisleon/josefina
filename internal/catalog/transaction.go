@@ -35,6 +35,22 @@ type Transaction struct {
 	tx        *Tx       `json:"-"`
 }
 
+func loadTransaction(db *DB) error {
+	result, err := db.NewModel("", "transaction", true, 1)
+	if err != nil {
+		return err
+	}
+
+	err = result.Init()
+	if err != nil {
+		return err
+	}
+
+	db.transaction = result
+
+	return nil
+}
+
 /**
 * SetStatus: Sets the status of the transaction
 * @param status string
@@ -88,7 +104,8 @@ func (s *Tx) save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	err := s.db.Tx.Put(s.ID, s)
+	ttl := s.db.config.TTL
+	err := s.db.transaction.Put(s.ID, s, ttl)
 	if err != nil {
 		return err
 	}
