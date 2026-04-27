@@ -69,11 +69,18 @@ func loadTransaction(db *DB) error {
 		if tx.Status == PENDING {
 			err := tx.Rollback()
 			if err != nil {
-				db.putError("rollback", err)
+				_, er := db.putError(db.transaction.Key(), "rollback", tx.ID, err)
+				if er != nil {
+					return true, er
+				}
 				return true, err
 			}
 			_, err = source.Delete(idx)
 			if err != nil {
+				_, er := db.putError(db.transaction.Key(), "rollback:delete", tx.ID, err)
+				if er != nil {
+					return true, er
+				}
 				return true, err
 			}
 		}
@@ -286,7 +293,7 @@ func (s *Tx) Commit() error {
 func (s *Tx) Items(model *Model) []et.Json {
 	result := []et.Json{}
 	for _, transaction := range s.Transactions {
-		if transaction.model.Table == model.Table {
+		if transaction.model.Key() == model.Key() {
 			result = append(result, transaction.New)
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/js"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/strs"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -27,7 +28,18 @@ type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
-	Table    string `json:"table"`
+}
+
+/**
+* Key: Returns the key of the from
+* @return string
+**/
+func (s *From) Key() string {
+	result := ""
+	if s.Schema != "" {
+		result = s.Name
+	}
+	return strs.Append(result, s.Name, ".")
 }
 
 /**
@@ -40,7 +52,6 @@ func ToFrom(def et.Json) *From {
 		Database: def.Str("database"),
 		Schema:   def.Str("schema"),
 		Name:     def.Str("name"),
-		Table:    def.Str("table"),
 	}
 }
 
@@ -53,7 +64,6 @@ type Model struct {
 	Database      string                      `json:"database"`     // Database name
 	Schema        string                      `json:"schema"`       // Schema name
 	Name          string                      `json:"name"`         // Model name
-	Table         string                      `json:"table"`        // Table name
 	IsInit        bool                        `json:"-"`            // Is initialized
 	Path          string                      `json:"path"`         // Path to the model
 	Fields        map[string]*Field           `json:"fields"`       // Fields
@@ -97,7 +107,6 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		Database:      s.Database,
 		Schema:        s.Name,
 		Name:          name,
-		Table:         fmt.Sprintf("%s.%s", s.Name, name),
 		Path:          path,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]string, 0),
@@ -141,6 +150,18 @@ func (s *Model) Save() error {
 		return nil
 	}
 	return s.schema.save()
+}
+
+/**
+* Key: Get the key of the model
+* @return string
+**/
+func (s *Model) Key() string {
+	result := ""
+	if s.Schema != "" {
+		result = s.Name
+	}
+	return strs.Append(result, s.Name, ".")
 }
 
 /**
@@ -209,7 +230,6 @@ func (s *Model) From() *From {
 		Database: s.Database,
 		Schema:   s.Schema,
 		Name:     s.Name,
-		Table:    s.Table,
 	}
 }
 

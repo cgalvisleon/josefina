@@ -20,14 +20,16 @@ func loadErrors(db *DB) error {
 
 /**
 * putError
-* @param tag string, err error
+* @param model, tag, id string, err error
 * @return error
 **/
-func (db *DB) putError(tag string, err error) (string, error) {
+func (db *DB) putError(model, tag, id string, err error) (string, error) {
 	idx := db.errors.GenKey()
 	_, er := db.errors.Insert(idx, et.Json{
 		INDEX:   idx,
+		"model": model,
 		"tag":   tag,
+		"id":    id,
 		"error": err.Error(),
 	}, nil, 0)
 	if er != nil {
