@@ -104,7 +104,7 @@ func (s *Tx) save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	ttl := s.db.config.TTL
+	ttl := s.db.config.TransactionTTL
 	err := s.db.transaction.Put(s.ID, s, ttl)
 	if err != nil {
 		return err

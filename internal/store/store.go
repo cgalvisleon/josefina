@@ -79,30 +79,31 @@ type Putfn func(*FileStore, string, []byte)
 type Deletefn func(*FileStore, string)
 
 type FileStore struct {
-	ID           string                `json:"id"`
-	Name         string                `json:"name"`
-	Path         string                `json:"path"`
-	WAL          uint64                `json:"wal"`
-	TombStones   int                   `json:"tomb_stones"`
-	PathSegments string                `json:"path_segments"`
-	PathSnapshot string                `json:"path_snapshot"`
-	PathCompact  string                `json:"path_compact"`
-	MaxSegment   int64                 `json:"max_segment"`
-	SyncOnWrite  bool                  `json:"sync_on_write"`
-	Size         int64                 `json:"size"`
-	writeMu      sync.Mutex            `json:"-"` // SOLO WAL append
-	indexMu      sync.RWMutex          `json:"-"` // índice en memoria
-	segments     []*segment            `json:"-"` // segmentos de datos
-	active       *segment              `json:"-"` // segmento activo para escritura
-	index        map[string]*RecordRef `json:"-"` // índice en memoria
-	keys         []string              `json:"-"` // claves en memoria
-	mode         Mode                  `json:"-"` // modo de operación
-	onSetIndex   []SetIndexFn          `json:"-"` // función de actualización de índice
-	onPut        []Putfn               `json:"-"` // función de escritura
-	onDelete     []Deletefn            `json:"-"` // función de eliminación
-	compacting   int32                 `json:"-"` // 0 = idle, 1 = running
-	compactWg    sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
-	isDebug      bool                  `json:"-"`
+	ID                  string                `json:"id"`
+	Name                string                `json:"name"`
+	Path                string                `json:"path"`
+	WAL                 uint64                `json:"wal"`
+	TombStones          int                   `json:"tomb_stones"`
+	PathSegments        string                `json:"path_segments"`
+	PathSnapshot        string                `json:"path_snapshot"`
+	PathCompact         string                `json:"path_compact"`
+	MaxSegment          int64                 `json:"max_segment"`
+	SyncOnWrite         bool                  `json:"sync_on_write"`
+	Size                int64                 `json:"size"`
+	MinThresholdCompact int                   `json:"min_threshold_compact"`
+	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
+	indexMu             sync.RWMutex          `json:"-"` // índice en memoria
+	segments            []*segment            `json:"-"` // segmentos de datos
+	active              *segment              `json:"-"` // segmento activo para escritura
+	index               map[string]*RecordRef `json:"-"` // índice en memoria
+	keys                []string              `json:"-"` // claves en memoria
+	mode                Mode                  `json:"-"` // modo de operación
+	onSetIndex          []SetIndexFn          `json:"-"` // función de actualización de índice
+	onPut               []Putfn               `json:"-"` // función de escritura
+	onDelete            []Deletefn            `json:"-"` // función de eliminación
+	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
+	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
+	isDebug             bool                  `json:"-"`
 }
 
 /**
@@ -353,9 +354,8 @@ func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRe
 
 	n := len(s.index)
 	threshold := int(float64(n) * 0.1) // 10% del tamaño del índice
-	minThreshold := envar.GetInt("MIN_COMPACT_THRESHOLD", 1000)
-	if threshold < minThreshold {
-		threshold = minThreshold
+	if threshold < s.MinThresholdCompact {
+		threshold = s.MinThresholdCompact
 	}
 	if s.TombStones > threshold {
 		if atomic.CompareAndSwapInt32(&s.compacting, 0, 1) {
@@ -869,18 +869,20 @@ func (s *FileStore) Prune() error {
 func Open(path, name string, mode Mode) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
+	minThreshold := envar.GetInt("MIN_THRESHOLD_COMPACT", 1000)
 	name = utility.Normalize(name)
 	fs := &FileStore{
-		Name:         name,
-		Path:         filepath.Join(path, name),
-		PathSegments: filepath.Join(path, name, "segments"),
-		PathSnapshot: filepath.Join(path, name, "snapshot"),
-		PathCompact:  filepath.Join(path, name, "compact"),
-		MaxSegment:   maxSegmentMG,
-		mode:         mode,
-		onSetIndex:   make([]SetIndexFn, 0),
-		onPut:        make([]Putfn, 0),
-		onDelete:     make([]Deletefn, 0),
+		Name:                name,
+		Path:                filepath.Join(path, name),
+		PathSegments:        filepath.Join(path, name, "segments"),
+		PathSnapshot:        filepath.Join(path, name, "snapshot"),
+		PathCompact:         filepath.Join(path, name, "compact"),
+		MaxSegment:          maxSegmentMG,
+		MinThresholdCompact: minThreshold,
+		mode:                mode,
+		onSetIndex:          make([]SetIndexFn, 0),
+		onPut:               make([]Putfn, 0),
+		onDelete:            make([]Deletefn, 0),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)

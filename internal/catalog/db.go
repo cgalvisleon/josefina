@@ -14,8 +14,8 @@ import (
 )
 
 type Config struct {
-	TTL   time.Duration `json:"ttl"`
-	model *Model        `json:"-"`
+	TransactionTTL time.Duration `json:"transaction_ttl"`
+	model          *Model        `json:"-"`
 }
 
 /**

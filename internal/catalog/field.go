@@ -2,14 +2,45 @@ package catalog
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type Ttl struct {
+	CreatedAt time.Time     `json:"created_at"`
+	Duration  time.Duration `json:"duration"`
+}
+
+/**
+* IsEnabled
+* @return bool
+**/
+func (s *Ttl) IsEnabled() bool {
+	return s.Duration > 0
+}
+
+/**
+* IsExpired
+* @return bool
+**/
+func (s *Ttl) IsExpired() bool {
+	return time.Now().After(s.CreatedAt.Add(s.Duration))
+}
+
+/**
+* GetExpiresAt
+* @return time.Time
+**/
+func (s *Ttl) GetExpiresAt() time.Time {
+	return s.CreatedAt.Add(s.Duration)
+}
+
 const (
 	ID         string = "id"
 	INDEX      string = "_idx"
+	TTL        string = "_ttl"
 	STATUS     string = "status"
 	VERSION    string = "version"
 	PROJECT_ID string = "project_id"

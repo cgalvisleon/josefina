@@ -4,11 +4,9 @@ import (
 	"errors"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
-	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 /**
@@ -43,39 +41,7 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 
 	path := filepath.Join(s.db.Path, s.Name)
 	path = filepath.Join(path, name)
-	result = &Model{
-		Database:      s.Database,
-		Schema:        s.Name,
-		Name:          name,
-		Path:          path,
-		Fields:        make(map[string]*Field, 0),
-		Indexes:       make([]string, 0),
-		PrimaryKeys:   make([]string, 0),
-		ForeignKeys:   make(map[string]*Detail, 0),
-		Unique:        make([]string, 0),
-		Required:      make([]string, 0),
-		Hidden:        make([]string, 0),
-		Details:       make(map[string]*Detail, 0),
-		Rollups:       make(map[string]*Detail, 0),
-		Relations:     make(map[string]*Detail, 0),
-		Calcs:         make(map[string][]byte, 0),
-		BeforeInserts: make([]*Trigger, 0),
-		BeforeUpdates: make([]*Trigger, 0),
-		BeforeDeletes: make([]*Trigger, 0),
-		AfterInserts:  make([]*Trigger, 0),
-		AfterUpdates:  make([]*Trigger, 0),
-		AfterDeletes:  make([]*Trigger, 0),
-		TTL:           make(map[string]time.Duration, 0),
-		Version:       version,
-		IsCore:        isCore,
-		stores:        make(map[string]*store.FileStore, 0),
-		btrees:        make(map[string]*BTree, 0),
-		mode:          store.ReadWrite,
-		ttl:           make(map[string]*time.Timer, 0),
-		muTTL:         sync.Mutex{},
-		schema:        s,
-	}
-	_, err := result.defineIndexField()
+	result, err := newModel(s, name, path, version, isCore)
 	if err != nil {
 		return nil, err
 	}

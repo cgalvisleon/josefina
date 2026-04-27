@@ -24,11 +24,12 @@ func loadConfig(db *DB) error {
 	if err != nil {
 		return err
 	}
+
 	if !exists {
 		ttl := time.Duration(envar.GetInt("TTL_TRANSACCION", 300)) * time.Second
 		config = &Config{
-			TTL:   ttl,
-			model: model,
+			TransactionTTL: ttl,
+			model:          model,
 		}
 	}
 
