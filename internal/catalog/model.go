@@ -11,7 +11,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/js"
 	"github.com/cgalvisleon/et/reg"
-	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -312,18 +311,17 @@ func (s *Model) Source() (*store.FileStore, error) {
 
 /**
 * setTTL: Sets a TTL for a key
-* @param idx string, expiration time.Duration
+* @param idx string, ttl *Ttl
 * @return error
 **/
-func (s *Model) setTTL(idx string, expiration time.Duration) error {
+func (s *Model) setTTL(idx string, ttl *Ttl) error {
+	if ttl == nil {
+		return nil
+	}
+
 	store, err := s.Store(TTL)
 	if err != nil {
 		return err
-	}
-
-	ttl := &Ttl{
-		CreatedAt: timezone.Now(),
-		Duration:  expiration,
 	}
 
 	err = store.Put(idx, ttl)
@@ -381,7 +379,8 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 	}
 
 	if expiration != 0 {
-		err = s.setTTL(idx, expiration)
+		ttl := newTtl(expiration)
+		err = s.setTTL(idx, ttl)
 		if err != nil {
 			return err
 		}
@@ -400,13 +399,16 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) Get(idx string, dest any) (bool, error) {
+func (s *Model) Get(idx string, dest any, ttl *Ttl) (bool, error) {
 	ttlSource, err := s.Store(TTL)
 	if err != nil {
 		return false, err
 	}
 
-	var ttl Ttl
+	if ttl == nil {
+		ttl = &Ttl{}
+	}
+
 	exists, err := ttlSource.Get(idx, &ttl)
 	if err != nil {
 		return false, err
@@ -440,6 +442,16 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 * @return error
 **/
 func (s *Model) Remove(idx string) error {
+	storeTtl, err := s.Store(TTL)
+	if err != nil {
+		return err
+	}
+
+	_, err = storeTtl.Delete(idx)
+	if err != nil {
+		return err
+	}
+
 	source, err := s.Source()
 	if err != nil {
 		return err
@@ -451,10 +463,10 @@ func (s *Model) Remove(idx string) error {
 
 /**
 * putObject: Inserts or updates a document and keeps secondary indexes in sync.
-* @param idx string, object et.Json
+* @param idx string, object et.Json, ttl *Ttl
 * @return error
 **/
-func (s *Model) putObject(idx string, object et.Json) error {
+func (s *Model) putObject(idx string, object et.Json, ttl *Ttl) error {
 	object[INDEX] = idx
 
 	// Save document to primary store.
@@ -484,6 +496,13 @@ func (s *Model) putObject(idx string, object et.Json) error {
 		}
 	}
 
+	if ttl != nil {
+		err := s.setTTL(idx, ttl)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -493,7 +512,16 @@ func (s *Model) putObject(idx string, object et.Json) error {
 * @return error
 **/
 func (s *Model) deleteObject(idx string, current et.Json) error {
-	// Remove from primary store.
+	storeTtl, err := s.Store(TTL)
+	if err != nil {
+		return err
+	}
+
+	_, err = storeTtl.Delete(idx)
+	if err != nil {
+		return err
+	}
+
 	source, err := s.Source()
 	if err != nil {
 		return err
@@ -581,7 +609,12 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 		}
 	}
 
-	tx.Add(s, INSERT, idx, old, new, expiration)
+	ttl := newTtl(expiration)
+	var err error
+	tx, err = tx.Add(s, INSERT, idx, old, new, ttl)
+	if err != nil {
+		return tx, err
+	}
 
 	for _, trigger := range s.AfterInserts {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -617,8 +650,9 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 **/
 func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
-	old := et.Json{}
-	exists, err := s.Get(idx, &old)
+	var old et.Json
+	var ttl Ttl
+	exists, err := s.Get(idx, &old, &ttl)
 	if err != nil {
 		return tx, err
 	}
@@ -633,7 +667,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, UPDATE, idx, old, new, 0)
+	tx.Add(s, UPDATE, idx, old, new, &ttl)
 
 	for _, trigger := range s.AfterUpdates {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -669,8 +703,9 @@ func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration
 **/
 func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
-	old := et.Json{}
-	exists, err := s.Get(idx, &old)
+	var old et.Json
+	var ttl Ttl
+	exists, err := s.Get(idx, &old, &ttl)
 	if err != nil {
 		return tx, err
 	}
@@ -686,10 +721,13 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, DELETE, idx, old, new, 0)
+	tx, err = tx.Add(s, DELETE, idx, old, new, &ttl)
+	if err != nil {
+		return tx, err
+	}
 
 	for _, trigger := range s.AfterDeletes {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
 			return tx, err
 		}
@@ -699,33 +737,47 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 }
 
 /**
-* Equal: Gets the model as object
-* @param idx string
-* @return et.Json, error
-**/
-func (s *Model) Equal(idx string) (et.Json, error) {
-	var dest et.Json
-	exists, err := s.Get(idx, &dest)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
-	}
-	return dest, nil
-}
-
-/**
-* EqualByIndex: Returns all primary keys where field == key.
+* EqualIndex: Returns all primary keys where field == key.
 * @param field string, key IndexKey
 * @return []string, bool
 **/
-func (s *Model) EqualByIndex(field string, key IndexKey) ([]string, bool) {
+func (s *Model) EqualIndex(field string, key IndexKey) ([]et.Json, error) {
+	var result = []et.Json{}
+	if map[string]bool{INDEX: true, TTL: true}[field] {
+		source, err := s.Store(field)
+		if err != nil {
+			return result, err
+		}
+
+		var item et.Json
+		_, err = source.Get(key.String(), &item)
+		if err != nil {
+			return result, err
+		}
+		result = append(result, item)
+		return result, nil
+	}
+
 	bt, err := s.indexBTree(field)
 	if err != nil {
-		return nil, false
+		return result, err
 	}
-	return bt.Equal(key)
+
+	idxs, _ := bt.Equal(key)
+	if err != nil {
+		return result, err
+	}
+
+	for _, idx := range idxs {
+		var item et.Json
+		_, err := s.Get(idx, &item, nil)
+		if err != nil {
+			return result, err
+		}
+		result = append(result, item)
+	}
+
+	return result, nil
 }
 
 /**

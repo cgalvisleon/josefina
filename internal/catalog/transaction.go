@@ -23,17 +23,17 @@ const (
 )
 
 type Transaction struct {
-	model      *Model        `json:"-"`
-	From       *From         `json:"from"`
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
-	Command    string        `json:"command"`
-	ID         string        `json:"id"`
-	New        et.Json       `json:"new"`
-	Old        et.Json       `json:"old"`
-	Expiration time.Duration `json:"expiration"`
-	Status     string        `json:"status"`
-	tx         *Tx           `json:"-"`
+	model     *Model    `json:"-"`
+	From      *From     `json:"from"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Command   string    `json:"command"`
+	ID        string    `json:"id"`
+	New       et.Json   `json:"new"`
+	Old       et.Json   `json:"old"`
+	Ttl       *Ttl      `json:"ttl"`
+	Status    string    `json:"status"`
+	tx        *Tx       `json:"-"`
 }
 
 func loadTransaction(db *DB) error {
@@ -144,19 +144,19 @@ func (s *Tx) SetStatus(status string) error {
 * @param model *Model, command string, id string, old, new et.Json, expiration time.Duration
 * @return (*Tx, error)
 **/
-func (s *Tx) Add(model *Model, command, idx string, old, new et.Json, expiration time.Duration) (*Tx, error) {
+func (s *Tx) Add(model *Model, command, idx string, old, new et.Json, ttl *Ttl) (*Tx, error) {
 	now := timezone.Now()
 	s.Transactions = append(s.Transactions, &Transaction{
-		model:      model,
-		From:       model.From(),
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		Command:    command,
-		ID:         idx,
-		New:        new,
-		Old:        old,
-		Expiration: expiration,
-		tx:         s,
+		model:     model,
+		From:      model.From(),
+		CreatedAt: now,
+		UpdatedAt: now,
+		Command:   command,
+		ID:        idx,
+		New:       new,
+		Old:       old,
+		Ttl:       ttl,
+		tx:        s,
 	})
 	err := s.SetStatus(PENDING)
 	if err != nil {
@@ -184,13 +184,13 @@ func (s *Tx) Rollback() error {
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case UPDATE:
-			err := model.putObject(transaction.ID, transaction.Old)
+			err := model.putObject(transaction.ID, transaction.Old, transaction.Ttl)
 			if err != nil {
 				return err
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case DELETE:
-			err := model.putObject(transaction.ID, transaction.Old)
+			err := model.putObject(transaction.ID, transaction.Old, transaction.Ttl)
 			if err != nil {
 				return err
 			}
@@ -215,7 +215,7 @@ func (s *Tx) Commit() error {
 		s.Executions = append([]*Transaction{transaction}, s.Executions...)
 		switch transaction.Command {
 		case INSERT:
-			err := model.putObject(transaction.ID, transaction.New)
+			err := model.putObject(transaction.ID, transaction.New, transaction.Ttl)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
@@ -224,7 +224,7 @@ func (s *Tx) Commit() error {
 			}
 			transaction.SetStatus(COMMITTED)
 		case UPDATE:
-			err := model.putObject(transaction.ID, transaction.New)
+			err := model.putObject(transaction.ID, transaction.New, transaction.Ttl)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {

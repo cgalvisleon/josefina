@@ -26,10 +26,10 @@ type DB struct {
 	Path        string             `json:"path"`      // Path to the database
 	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
-	Ticker      *time.Ticker       `json:"-"`         // Ticker
 	mu          sync.RWMutex       `json:"-"`         // Mutex
 	config      *Config            `json:"-"`         // Configuration
 	transaction *Model             `json:"-"`         // Transaction
+	schemas     *Model             `json:"-"`         // Schemas
 }
 
 /**
@@ -225,7 +225,6 @@ func (s *DB) Empty() error {
 	}
 
 	s.Schemas = make(map[string]*Schema, 0)
-	s.Ticker.Stop()
 
 	return nil
 }

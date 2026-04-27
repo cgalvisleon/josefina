@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -11,6 +12,22 @@ import (
 type Ttl struct {
 	CreatedAt time.Time     `json:"created_at"`
 	Duration  time.Duration `json:"duration"`
+}
+
+/**
+* newTtl
+* @param duration time.Duration
+* @return *Ttl
+**/
+func newTtl(duration time.Duration) *Ttl {
+	if duration == 0 {
+		return nil
+	}
+
+	return &Ttl{
+		CreatedAt: timezone.Now(),
+		Duration:  duration,
+	}
 }
 
 /**
