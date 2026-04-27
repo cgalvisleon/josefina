@@ -36,8 +36,13 @@ type Transaction struct {
 	tx        *Tx       `json:"-"`
 }
 
+/**
+* loadTransaction: Loads the transaction model
+* @param db *DB
+* @return error
+**/
 func loadTransaction(db *DB) error {
-	result, err := db.NewModel("", "transaction", true, 1)
+	result, err := db.NewModel("", "transactions", true, 1)
 	if err != nil {
 		return err
 	}

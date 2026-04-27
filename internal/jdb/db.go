@@ -60,6 +60,11 @@ func NewDb(path, name string) (*DB, error) {
 		return nil, err
 	}
 
+	err = loadSchemas(result)
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 

@@ -51,7 +51,6 @@ func (s *Model) DefineIndex(field string) (bool, error) {
 	if idx == -1 {
 		s.Indexes = append(s.Indexes, field)
 	}
-
 	return idx != -1, nil
 }
 
@@ -72,7 +71,6 @@ func (s *Model) DefineIndexes(fields ...string) error {
 			s.Indexes = append(s.Indexes, field)
 		}
 	}
-
 	return nil
 }
 
@@ -156,7 +154,6 @@ func (s *Model) DefinePrimaryKeys(fields ...string) error {
 			s.DefineUnique(field)
 		}
 	}
-
 	return nil
 }
 
@@ -201,26 +198,16 @@ func (s *Model) defineIndexField() (*Field, error) {
 }
 
 /**
-* defineTTL: Defines the TTL field
-* @return *Field, error
-**/
-func (s *Model) defineTTL() (*Field, error) {
-	result, err := s.defineField(TTL, TpAtrib, TpKey, "")
-	if err != nil {
-		return nil, err
-	}
-	s.DefineIndexes(TTL)
-	s.DefineHidden(TTL)
-	return result, nil
-}
-
-/**
 * DefineAtrib: Defines the field
 * @param name string, tpData TypeData, defaultValue interface{}
 * @return *Field, error
 **/
 func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	return s.defineField(name, TpAtrib, tpData, defaultValue)
+	result, err := s.defineField(name, TpAtrib, tpData, defaultValue)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 /**

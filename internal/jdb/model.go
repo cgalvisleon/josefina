@@ -75,6 +75,7 @@ type Model struct {
 	AfterDeletes  []*Trigger                  `json:"-"`            // After delete triggers
 	Version       int                         `json:"version"`      // Version
 	IsCore        bool                        `json:"is_core"`      // Is core model
+	IsChangue     bool                        `json:"is_changue"`   // Is changue
 	IsStrict      bool                        `json:"is_strict"`    // Is strict model
 	stores        map[string]*store.FileStore `json:"-"`            // Stores
 	btrees        map[string]*BTree           `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
@@ -117,6 +118,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		AfterDeletes:  make([]*Trigger, 0),
 		Version:       version,
 		IsCore:        isCore,
+		IsChangue:     false,
 		stores:        make(map[string]*store.FileStore, 0),
 		btrees:        make(map[string]*BTree, 0),
 		mode:          store.ReadWrite,
@@ -130,10 +132,22 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 	return result, nil
 }
 
+/*
+* save: Save model data
+* @return error
+**/
+func (s *Model) Save() error {
+	if s.IsCore {
+		return nil
+	}
+	return s.schema.save()
+}
+
 /**
 * Serialize
 * @return []byte, error
-**/
+*
+ */
 func (s *Model) Serialize() ([]byte, error) {
 	result, err := json.Marshal(s)
 	if err != nil {
@@ -173,7 +187,6 @@ func (s *Model) IsDebug() *Model {
 
 /**
 * Stricted: Sets the model to strict
-* @return void
 **/
 func (s *Model) Stricted() {
 	s.IsStrict = true

@@ -8,7 +8,7 @@ import (
 )
 
 func loadConfig(db *DB) error {
-	model, err := db.NewModel("", "conf", true, 1)
+	model, err := db.NewModel("", "config", true, 1)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,27 @@ import (
 )
 
 /**
+* loadSchemas: Loads the schemas
+* @param db *DB
+* @return error
+**/
+func loadSchemas(db *DB) error {
+	result, err := db.NewModel("", "schemas", true, 1)
+	if err != nil {
+		return err
+	}
+
+	err = result.Init()
+	if err != nil {
+		return err
+	}
+
+	db.schemas = result
+
+	return nil
+}
+
+/**
 * Schema: Represents a schema in the database
 **/
 type Schema struct {
@@ -18,6 +39,23 @@ type Schema struct {
 	Models   map[string]*Model `json:"models"`   // Models
 	db       *DB               `json:"-"`        // Database
 	mu       sync.RWMutex      `json:"-"`        // Mutex
+}
+
+/**
+* save: Save schema data
+* @return error
+**/
+func (s *Schema) save() error {
+	if s.db == nil {
+		return errors.New(msg.MSG_DB_IS_NIL)
+	}
+
+	err := s.db.transaction.Put(s.Name, s, 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -50,6 +88,11 @@ func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error)
 	defer s.mu.Unlock()
 	s.Models[result.Name] = result
 
+	err = s.save()
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -75,7 +118,7 @@ func (s *Schema) DeleteModel(name string) error {
 
 	delete(s.Models, name)
 
-	return nil
+	return s.save()
 }
 
 /**
@@ -113,5 +156,5 @@ func (s *Schema) Empty() error {
 
 	s.Models = make(map[string]*Model, 0)
 
-	return nil
+	return s.save()
 }
