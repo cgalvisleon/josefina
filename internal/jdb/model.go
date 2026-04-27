@@ -137,6 +137,10 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 	if err != nil {
 		return nil, err
 	}
+	_, err = result.defineTTL()
+	if err != nil {
+		return nil, err
+	}
 
 	return result, nil
 }
@@ -369,6 +373,60 @@ func (s *Model) setTTL(idx string, ttl *Ttl) error {
 	}
 
 	go s.cleanExpired()
+
+	return nil
+}
+
+/**
+* getTTL: Gets a TTL for a key
+* @param idx string
+* @return *Ttl, error
+**/
+func (s *Model) getTTL(idx string) (*Ttl, error) {
+	store, err := s.Store(TTL)
+	if err != nil {
+		return nil, err
+	}
+
+	var result *Ttl
+	exists, err := store.Get(idx, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
+	return result, nil
+}
+
+/**
+* clearTTL: Clears a TTL for a key
+* @param idx string
+* @return error
+**/
+func (s *Model) clearTTL(idx string) error {
+	ttl, err := s.getTTL(idx)
+	if err != nil {
+		return err
+	}
+
+	if ttl == nil {
+		return nil
+	}
+
+	if ttl.IsExpired() {
+		ttlSource, err := s.Store(TTL)
+		if err != nil {
+			return err
+		}
+
+		_, err = ttlSource.Delete(idx)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -1013,6 +1071,8 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
+		s.clearTTL(idx)
+
 		item := et.Json{}
 		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err

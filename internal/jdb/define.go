@@ -198,6 +198,18 @@ func (s *Model) defineIndexField() (*Field, error) {
 }
 
 /**
+* defineTTL: Defines the TTL field
+* @return *Field, error
+**/
+func (s *Model) defineTTL() (*Field, error) {
+	result, err := s.defineField(TTL, TpAtrib, TpDateTime, "")
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+/**
 * DefineAtrib: Defines the field
 * @param name string, tpData TypeData, defaultValue interface{}
 * @return *Field, error

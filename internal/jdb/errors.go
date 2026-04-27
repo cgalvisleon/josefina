@@ -1,6 +1,10 @@
 package jdb
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"time"
+
+	"github.com/cgalvisleon/et/et"
+)
 
 func loadErrors(db *DB) error {
 	result, err := db.NewModel("", "errors", true, 1)
@@ -31,7 +35,7 @@ func (db *DB) putError(model, tag, id string, err error) (string, error) {
 		"tag":   tag,
 		"id":    id,
 		"error": err.Error(),
-	}, nil, 0)
+	}, nil, time.Hour*24*30*3)
 	if er != nil {
 		return "", er
 	}

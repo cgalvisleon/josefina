@@ -266,3 +266,25 @@ func (s *DB) Empty() error {
 
 	return nil
 }
+
+/**
+* ForEachTx: Iterates over all transactions
+* @param next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int
+* @return error
+**/
+func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int) error {
+	st, err := s.transaction.Source()
+	if err != nil {
+		return err
+	}
+
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
+		s.transaction.clearTTL(idx)
+
+		var tx Tx
+		if err := json.Unmarshal(src, &tx); err != nil {
+			return false, err
+		}
+		return next(idx, tx)
+	}, asc, offset, limit, workers)
+}
