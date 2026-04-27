@@ -11,6 +11,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/js"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -85,7 +86,6 @@ type Model struct {
 	AfterUpdates  []*Trigger                  `json:"-"`            // After update triggers
 	BeforeDeletes []*Trigger                  `json:"-"`            // Before delete triggers
 	AfterDeletes  []*Trigger                  `json:"-"`            // After delete triggers
-	TTL           map[string]time.Duration    `json:"ttl"`          // Timers
 	Version       int                         `json:"version"`      // Version
 	IsCore        bool                        `json:"is_core"`      // Is core model
 	IsStrict      bool                        `json:"is_strict"`    // Is strict model
@@ -96,8 +96,6 @@ type Model struct {
 	storeVm       js.Store                    `json:"-"`            // Virtual machine
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
-	ttl           map[string]*time.Timer      `json:"-"`            // Timers
-	muTTL         sync.Mutex                  `json:"-"`            // Mutex for TTL
 	isDebug       bool                        `json:"-"`            // Is debug
 }
 
@@ -129,14 +127,11 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		AfterInserts:  make([]*Trigger, 0),
 		AfterUpdates:  make([]*Trigger, 0),
 		AfterDeletes:  make([]*Trigger, 0),
-		TTL:           make(map[string]time.Duration, 0),
 		Version:       version,
 		IsCore:        isCore,
 		stores:        make(map[string]*store.FileStore, 0),
 		btrees:        make(map[string]*BTree, 0),
 		mode:          store.ReadWrite,
-		ttl:           make(map[string]*time.Timer, 0),
-		muTTL:         sync.Mutex{},
 		schema:        s,
 	}
 	_, err := result.defineIndexField()
@@ -232,8 +227,8 @@ func (s *Model) Init() error {
 
 	// Open each secondary BTree (Init loads persisted data from its own store).
 	for _, name := range s.Indexes {
-		if name == INDEX {
-			if _, err := s.Store(INDEX); err != nil {
+		if map[string]bool{INDEX: true, TTL: true}[name] {
+			if _, err := s.Store(name); err != nil {
 				return err
 			}
 			continue
@@ -241,10 +236,6 @@ func (s *Model) Init() error {
 		if _, err := s.indexBTree(name); err != nil {
 			return err
 		}
-	}
-
-	for idx, duration := range s.TTL {
-		s.setTTL(idx, duration)
 	}
 
 	s.IsInit = true
@@ -324,27 +315,58 @@ func (s *Model) Source() (*store.FileStore, error) {
 * @param idx string, expiration time.Duration
 * @return error
 **/
-func (s *Model) setTTL(idx string, expiration time.Duration) {
-	s.muTTL.Lock()
-
-	if t, exists := s.ttl[idx]; exists {
-		t.Stop()
+func (s *Model) setTTL(idx string, expiration time.Duration) error {
+	store, err := s.Store(TTL)
+	if err != nil {
+		return err
 	}
 
-	s.ttl[idx] = time.AfterFunc(expiration, func() {
-		source, err := s.Source()
+	ttl := &Ttl{
+		CreatedAt: timezone.Now(),
+		Duration:  expiration,
+	}
+
+	err = store.Put(idx, ttl)
+	if err != nil {
+		return err
+	}
+
+	go s.cleanExpired()
+
+	return nil
+}
+
+/**
+* cleanExpired: Cleans expired TTLs
+* @return error
+**/
+func (s *Model) cleanExpired() error {
+	ttlSource, err := s.Store(TTL)
+	if err != nil {
+		return err
+	}
+
+	if ttlSource.Count() < ttlSource.MinThresholdCompact {
+		return nil
+	}
+
+	ttlSource.ForEach(func(idx string, src []byte) (bool, error) {
+		var ttl Ttl
+		err := json.Unmarshal(src, &ttl)
 		if err != nil {
-			return
+			return true, err
 		}
 
-		source.Delete(idx)
+		if ttl.IsExpired() {
+			_, err := ttlSource.Delete(idx)
+			if err != nil {
+				return true, err
+			}
+		}
+		return true, nil
+	}, true, 0, 0, 1)
 
-		s.muTTL.Lock()
-		delete(s.ttl, idx)
-		s.muTTL.Unlock()
-	})
-
-	s.muTTL.Unlock()
+	return nil
 }
 
 /**
@@ -358,13 +380,16 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 		return err
 	}
 
+	if expiration != 0 {
+		err = s.setTTL(idx, expiration)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = source.Put(idx, value)
 	if err != nil {
 		return err
-	}
-
-	if expiration != 0 {
-		s.setTTL(idx, expiration)
 	}
 
 	return nil
@@ -376,12 +401,32 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 * @return bool, error
 **/
 func (s *Model) Get(idx string, dest any) (bool, error) {
+	ttlSource, err := s.Store(TTL)
+	if err != nil {
+		return false, err
+	}
+
+	var ttl Ttl
+	exists, err := ttlSource.Get(idx, &ttl)
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		if ttl.IsExpired() {
+			_, err := ttlSource.Delete(idx)
+			if err != nil {
+				return false, err
+			}
+			return false, nil
+		}
+	}
+
 	source, err := s.Source()
 	if err != nil {
 		return false, err
 	}
 
-	exists, err := source.Get(idx, &dest)
+	exists, err = source.Get(idx, &dest)
 	if err != nil {
 		return false, err
 	}
@@ -523,10 +568,10 @@ func (s *Model) IsExists(idx string) (bool, error) {
 
 /**
 * insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx
+* @param idx string, new et.Json, tx *Tx, expiration time.Duration
 * @return (*Transaction, error)
 **/
-func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
@@ -536,7 +581,7 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, INSERT, idx, old, new)
+	tx.Add(s, INSERT, idx, old, new, expiration)
 
 	for _, trigger := range s.AfterInserts {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -550,10 +595,10 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 
 /**
 * Insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json
+* @param idx string, new et.Json, tx *Tx, expiration time.Duration
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
 	exists, err := s.IsExists(idx)
 	if err != nil {
 		return tx, err
@@ -562,7 +607,7 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		return tx, errors.New(msg.MSG_RECORD_EXISTS)
 	}
 
-	return s.insert(idx, new, tx)
+	return s.insert(idx, new, tx, expiration)
 }
 
 /**
@@ -588,7 +633,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, UPDATE, idx, old, new)
+	tx.Add(s, UPDATE, idx, old, new, 0)
 
 	for _, trigger := range s.AfterUpdates {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -602,10 +647,10 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 
 /**
 * Upsert: Inserts or updates a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json
+* @param idx string, new et.Json, tx *Tx, expiration time.Duration
 * @return (*Transaction, error)
 **/
-func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
 	exists, err := s.IsExists(idx)
 	if err != nil {
 		return tx, err
@@ -614,7 +659,7 @@ func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		return s.Update(idx, new, tx)
 	}
 
-	return s.insert(idx, new, tx)
+	return s.insert(idx, new, tx, expiration)
 }
 
 /**
@@ -641,7 +686,7 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, DELETE, idx, old, new)
+	tx.Add(s, DELETE, idx, old, new, 0)
 
 	for _, trigger := range s.AfterDeletes {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -800,7 +845,7 @@ func (s *Model) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, 
 		return err
 	}
 
-	return st.Iterate(func(idx string, src []byte) (bool, error) {
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
 		var tx Tx
 		if err := json.Unmarshal(src, &tx); err != nil {
 			return false, err
@@ -820,7 +865,7 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 		return err
 	}
 
-	return st.Iterate(func(idx string, src []byte) (bool, error) {
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
 		item := et.Json{}
 		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err

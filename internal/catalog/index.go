@@ -311,7 +311,7 @@ func (bt *BTree) initFromStore() error {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 
-	return bt.st.Iterate(func(storeKey string, data []byte) (bool, error) {
+	return bt.st.ForEach(func(storeKey string, data []byte) (bool, error) {
 		key, err := decodeKey(storeKey)
 		if err != nil {
 			return true, nil // skip malformed entries

@@ -753,11 +753,11 @@ func (s *FileStore) IsExist(id string) bool {
 }
 
 /**
-* Iterate
+* ForEach
 * @param fn func(id string, data []byte) bool, asc bool, offset, limit, workers int
 * @return error
 **/
-func (s *FileStore) Iterate(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
 	// 1. Snapshot consistente: índice + segmentos bajo el mismo lock
 	index, keys := s.getRecords(asc, offset, limit)
 	s.indexMu.RLock()

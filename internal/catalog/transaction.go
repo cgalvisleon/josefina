@@ -23,16 +23,17 @@ const (
 )
 
 type Transaction struct {
-	model     *Model    `json:"-"`
-	From      *From     `json:"from"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Command   string    `json:"command"`
-	ID        string    `json:"id"`
-	New       et.Json   `json:"new"`
-	Old       et.Json   `json:"old"`
-	Status    string    `json:"status"`
-	tx        *Tx       `json:"-"`
+	model      *Model        `json:"-"`
+	From       *From         `json:"from"`
+	CreatedAt  time.Time     `json:"created_at"`
+	UpdatedAt  time.Time     `json:"updated_at"`
+	Command    string        `json:"command"`
+	ID         string        `json:"id"`
+	New        et.Json       `json:"new"`
+	Old        et.Json       `json:"old"`
+	Expiration time.Duration `json:"expiration"`
+	Status     string        `json:"status"`
+	tx         *Tx           `json:"-"`
 }
 
 func loadTransaction(db *DB) error {
@@ -140,24 +141,24 @@ func (s *Tx) SetStatus(status string) error {
 
 /**
 * Add: Adds a new transaction
-* @param model *Model, command string, id string, old, new et.Json
+* @param model *Model, command string, id string, old, new et.Json, expiration time.Duration
 * @return (*Tx, error)
 **/
-func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) (*Tx, error) {
+func (s *Tx) Add(model *Model, command, idx string, old, new et.Json, expiration time.Duration) (*Tx, error) {
 	now := timezone.Now()
 	s.Transactions = append(s.Transactions, &Transaction{
-		model:     model,
-		From:      model.From(),
-		CreatedAt: now,
-		UpdatedAt: now,
-		Command:   command,
-		ID:        idx,
-		New:       new,
-		Old:       old,
-		Status:    PENDING,
-		tx:        s,
+		model:      model,
+		From:       model.From(),
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		Command:    command,
+		ID:         idx,
+		New:        new,
+		Old:        old,
+		Expiration: expiration,
+		tx:         s,
 	})
-	err := s.save()
+	err := s.SetStatus(PENDING)
 	if err != nil {
 		return s, err
 	}
