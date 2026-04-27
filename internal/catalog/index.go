@@ -44,21 +44,27 @@ type IndexKey struct {
 * @param v string
 * @return IndexKey
 **/
-func KeyString(v string) IndexKey { return IndexKey{tp: KtString, str: v} }
+func KeyString(v string) IndexKey {
+	return IndexKey{tp: KtString, str: v}
+}
 
 /**
 * KeyInt: Creates an IndexKey from an int64 value.
 * @param v int64
 * @return IndexKey
 **/
-func KeyInt(v int64) IndexKey { return IndexKey{tp: KtInt, num: float64(v)} }
+func KeyInt(v int64) IndexKey {
+	return IndexKey{tp: KtInt, num: float64(v)}
+}
 
 /**
 * KeyFloat: Creates an IndexKey from a float64 value.
 * @param v float64
 * @return IndexKey
 **/
-func KeyFloat(v float64) IndexKey { return IndexKey{tp: KtFloat, num: v} }
+func KeyFloat(v float64) IndexKey {
+	return IndexKey{tp: KtFloat, num: v}
+}
 
 /**
 * KeyDateTime: Creates an IndexKey from a time.Time value.

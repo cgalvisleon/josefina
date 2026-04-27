@@ -27,21 +27,7 @@ type From struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Name     string `json:"name"`
-}
-
-/**
-* Key: Returns the key of the model
-* @return string
-**/
-func (s *From) Key() string {
-	result := s.Name
-	if s.Schema != "" {
-		result = fmt.Sprintf("%s.%s", s.Schema, result)
-	}
-	if s.Database != "" {
-		result = fmt.Sprintf("%s.%s", s.Database, result)
-	}
-	return result
+	Table    string `json:"table"`
 }
 
 /**
@@ -54,6 +40,7 @@ func ToFrom(def et.Json) *From {
 		Database: def.Str("database"),
 		Schema:   def.Str("schema"),
 		Name:     def.Str("name"),
+		Table:    def.Str("table"),
 	}
 }
 
@@ -66,6 +53,7 @@ type Model struct {
 	Database      string                      `json:"database"`     // Database name
 	Schema        string                      `json:"schema"`       // Schema name
 	Name          string                      `json:"name"`         // Model name
+	Table         string                      `json:"table"`        // Table name
 	IsInit        bool                        `json:"-"`            // Is initialized
 	Path          string                      `json:"path"`         // Path to the model
 	Fields        map[string]*Field           `json:"fields"`       // Fields
@@ -108,6 +96,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		Database:      s.Database,
 		Schema:        s.Name,
 		Name:          name,
+		Table:         fmt.Sprintf("%s.%s", s.Name, name),
 		Path:          path,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]string, 0),
@@ -207,6 +196,7 @@ func (s *Model) From() *From {
 		Database: s.Database,
 		Schema:   s.Schema,
 		Name:     s.Name,
+		Table:    s.Table,
 	}
 }
 
@@ -239,6 +229,22 @@ func (s *Model) Init() error {
 
 	s.IsInit = true
 	return nil
+}
+
+/**
+* getBtree returns the BTree for field, checking if it exists.
+* @param field string
+* @return *BTree, bool
+**/
+func (s *Model) getBtree(field string) (*BTree, bool) {
+	s.mu.RLock()
+	bt, exists := s.btrees[field]
+	s.mu.RUnlock()
+	if exists {
+		return bt, true
+	}
+
+	return nil, false
 }
 
 /**
@@ -434,6 +440,16 @@ func (s *Model) Get(idx string, dest any, ttl *Ttl) (bool, error) {
 	}
 
 	return exists, nil
+}
+
+/**
+* GetCurrent: Gets the current document by primary key
+* @param idx string, dest any
+* @return bool, error
+**/
+func (s *Model) GetCurrent(idx string, dest any) (bool, error) {
+	var ttl Ttl
+	return s.Get(idx, dest, &ttl)
 }
 
 /**
@@ -737,11 +753,11 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 }
 
 /**
-* EqualIndex: Returns all primary keys where field == key.
-* @param field string, key IndexKey
-* @return []string, bool
+* Equal: Returns all primary keys where field == key.
+* @param field string, value any, tx *Tx, page, limit int
+* @return []et.Json, error
 **/
-func (s *Model) EqualIndex(field string, key IndexKey) ([]et.Json, error) {
+func (s *Model) Equal(field string, value any, tx *Tx, page, limit int) ([]et.Json, error) {
 	var result = []et.Json{}
 	if map[string]bool{INDEX: true, TTL: true}[field] {
 		source, err := s.Store(field)
@@ -750,6 +766,7 @@ func (s *Model) EqualIndex(field string, key IndexKey) ([]et.Json, error) {
 		}
 
 		var item et.Json
+		key := KeyFromAny(value)
 		_, err = source.Get(key.String(), &item)
 		if err != nil {
 			return result, err
@@ -758,39 +775,104 @@ func (s *Model) EqualIndex(field string, key IndexKey) ([]et.Json, error) {
 		return result, nil
 	}
 
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return result, err
-	}
-
-	idxs, _ := bt.Equal(key)
-	if err != nil {
-		return result, err
-	}
-
-	for _, idx := range idxs {
-		var item et.Json
-		_, err := s.Get(idx, &item, nil)
+	bt, exists := s.getBtree(field)
+	if exists {
+		key := KeyFromAny(value)
+		idxs, _ := bt.Equal(key)
+		for _, idx := range idxs {
+			var item et.Json
+			_, err := s.GetCurrent(idx, &item)
+			if err != nil {
+				return result, err
+			}
+			result = append(result, item)
+		}
+	} else {
+		store, err := s.Source()
 		if err != nil {
 			return result, err
 		}
-		result = append(result, item)
+
+		offset := (page - 1) * limit
+		store.ForEach(func(id string, data []byte) (bool, error) {
+			var item et.Json
+			err := json.Unmarshal(data, &item)
+			if err != nil {
+				return false, err
+			}
+
+			item, ok := item.From("A").
+				Where(et.Eq(field, value)).
+				First()
+			if ok {
+				result = append(result, item)
+			}
+			return true, nil
+		}, true, offset, limit, 0)
+	}
+
+	if tx != nil {
+		items, ok := tx.Equal(s, field, value)
+		if ok {
+			result = append(result, items...)
+		}
 	}
 
 	return result, nil
 }
 
 /**
-* NotEqualByIndex: Returns all primary keys where field != key.
-* @param field string, key IndexKey
-* @return []string
+* NotEqual: Returns all primary keys where field != key.
+* @param field string, value any, tx *Tx, page, limit int
+* @return []et.Json, error
 **/
-func (s *Model) NotEqualByIndex(field string, key IndexKey) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
+func (s *Model) NotEqual(field string, value any, tx *Tx, page, limit int) ([]et.Json, error) {
+	var result = []et.Json{}
+
+	bt, exists := s.getBtree(field)
+	if exists {
+		key := KeyFromAny(value)
+		idxs := bt.NotEqual(key)
+		for _, idx := range idxs {
+			var item et.Json
+			_, err := s.GetCurrent(idx, &item)
+			if err != nil {
+				return result, err
+			}
+			result = append(result, item)
+		}
+	} else {
+		store, err := s.Source()
+		if err != nil {
+			return result, err
+		}
+
+		offset := (page - 1) * limit
+		store.ForEach(func(id string, data []byte) (bool, error) {
+			var item et.Json
+			err := json.Unmarshal(data, &item)
+			if err != nil {
+				return false, err
+			}
+
+			item, ok := item.From("A").
+				Where(et.Neg(field, value)).
+				First()
+			if ok {
+				result = append(result, item)
+			}
+			return true, nil
+		}, true, offset, limit, 0)
 	}
-	return bt.NotEqual(key)
+
+	if tx != nil {
+		items, ok := tx.NotEqual(s, field, value)
+		if ok {
+			result = append(result, items...)
+		}
+	}
+
+	return result, nil
 }
 
 /**

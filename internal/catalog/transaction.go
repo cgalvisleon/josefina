@@ -246,3 +246,48 @@ func (s *Tx) Commit() error {
 	s.SetStatus(COMMITTED)
 	return nil
 }
+
+/**
+* Items: Returns all items in the transaction
+* @param model *Model
+* @return []et.Json
+**/
+func (s *Tx) Items(model *Model) []et.Json {
+	result := []et.Json{}
+	for _, transaction := range s.Transactions {
+		if transaction.model.Table == model.Table {
+			result = append(result, transaction.New)
+		}
+	}
+	return result
+}
+
+/**
+* Equal: Returns all primary keys where field == key.
+* @param model *Model, field string, value any
+* @return []et.Json, bool
+**/
+func (s *Tx) Equal(model *Model, field string, value any) ([]et.Json, bool) {
+	items := s.Items(model)
+	result, ok := et.
+		From(items, "A").
+		Where(et.Eq(field, value)).
+		All()
+
+	return result, ok
+}
+
+/**
+* NotEqual: Returns all primary keys where field != key.
+* @param field string, value any
+* @return []et.Json, error
+**/
+func (s *Tx) NotEqual(model *Model, field string, value any) ([]et.Json, bool) {
+	items := s.Items(model)
+	result, ok := et.
+		From(items, "A").
+		Where(et.Neg(field, value)).
+		All()
+
+	return result, ok
+}
