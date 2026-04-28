@@ -495,11 +495,11 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 }
 
 /**
-* Get: Gets a document by primary key
+* get: Gets a document by primary key
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) Get(idx string, dest any, ttl *Ttl) (bool, error) {
+func (s *Model) get(idx string, dest any, ttl *Ttl) (bool, error) {
 	ttlSource, err := s.Store(TTL)
 	if err != nil {
 		return false, err
@@ -537,13 +537,13 @@ func (s *Model) Get(idx string, dest any, ttl *Ttl) (bool, error) {
 }
 
 /**
-* GetCurrent: Gets the current document by primary key
+* Current: Gets the current document by primary key
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) GetCurrent(idx string, dest any) (bool, error) {
+func (s *Model) Current(idx string, dest any) (bool, error) {
 	var ttl Ttl
-	return s.Get(idx, dest, &ttl)
+	return s.get(idx, dest, &ttl)
 }
 
 /**
@@ -765,7 +765,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
 	var ttl Ttl
-	exists, err := s.Get(idx, &old, &ttl)
+	exists, err := s.get(idx, &old, &ttl)
 	if err != nil {
 		return tx, err
 	}
@@ -818,7 +818,7 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
 	var ttl Ttl
-	exists, err := s.Get(idx, &old, &ttl)
+	exists, err := s.get(idx, &old, &ttl)
 	if err != nil {
 		return tx, err
 	}
@@ -878,7 +878,7 @@ func (s *Model) Equal(field string, value any, tx *Tx, page, limit int) ([]et.Js
 		idxs, _ := bt.Equal(key)
 		for _, idx := range idxs {
 			var item et.Json
-			_, err := s.GetCurrent(idx, &item)
+			_, err := s.Current(idx, &item)
 			if err != nil {
 				return result, err
 			}
@@ -932,7 +932,7 @@ func (s *Model) NotEqual(field string, value any, tx *Tx, page, limit int) ([]et
 		idxs := bt.NotEqual(key)
 		for _, idx := range idxs {
 			var item et.Json
-			_, err := s.GetCurrent(idx, &item)
+			_, err := s.Current(idx, &item)
 			if err != nil {
 				return result, err
 			}
