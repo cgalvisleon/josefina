@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -90,6 +91,7 @@ func (s TypeData) Str() string {
 }
 
 const (
+	TpAny           TypeData = "any"
 	TpBytes         TypeData = "bytes"
 	TpInt           TypeData = "int"
 	TpFloat         TypeData = "float"
@@ -100,8 +102,210 @@ const (
 	TpDateTime      TypeData = "datetime"
 	TpBoolean       TypeData = "boolean"
 	TpJson          TypeData = "json"
-	TpModel         TypeData = "model"
+	TpArrayJson     TypeData = "array_json"
+	TpReference     TypeData = "reference"
 )
+
+type Value struct {
+	Tp  TypeData
+	Val any
+	Str string
+	Num float64
+}
+
+func NewValue(tp TypeData, val any) (*Value, error) {
+	switch tp {
+	case TpAny:
+		return &Value{
+			Tp:  tp,
+			Val: val,
+			Str: fmt.Sprintf("%v", val),
+			Num: 0,
+		}, nil
+
+	case TpBytes:
+		var bt []byte
+		switch v := val.(type) {
+		case []byte:
+			bt = v
+		case string:
+			bt = []byte(v)
+		default:
+			var err error
+			bt, err = json.Marshal(val)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &Value{
+			Tp:  tp,
+			Val: bt,
+			Str: string(bt),
+			Num: 0,
+		}, nil
+
+	case TpInt, TpAutoIncrement:
+		var n float64
+		switch v := val.(type) {
+		case int:
+			n = float64(v)
+		case int32:
+			n = float64(v)
+		case int64:
+			n = float64(v)
+		case float32:
+			n = float64(v)
+		case float64:
+			n = v
+		default:
+			return nil, fmt.Errorf(msg.MSG_INVALID_TYPE)
+		}
+		return &Value{
+			Tp:  tp,
+			Val: val,
+			Str: fmt.Sprintf("%d", int64(n)),
+			Num: n,
+		}, nil
+
+	case TpFloat:
+		var n float64
+		switch v := val.(type) {
+		case float64:
+			n = v
+		case float32:
+			n = float64(v)
+		case int:
+			n = float64(v)
+		case int64:
+			n = float64(v)
+		default:
+			return nil, fmt.Errorf(msg.MSG_INVALID_TYPE)
+		}
+		return &Value{
+			Tp:  tp,
+			Val: val,
+			Str: fmt.Sprintf("%g", n),
+			Num: n,
+		}, nil
+
+	case TpKey, TpText, TpMemo, TpReference:
+		return &Value{
+			Tp:  tp,
+			Val: val,
+			Str: fmt.Sprintf("%v", val),
+			Num: 0,
+		}, nil
+
+	case TpDateTime:
+		var t time.Time
+		switch v := val.(type) {
+		case time.Time:
+			t = v
+		case string:
+			var err error
+			t, err = time.Parse(time.RFC3339Nano, v)
+			if err != nil {
+				t, err = time.Parse(time.RFC3339, v)
+				if err != nil {
+					return nil, fmt.Errorf(msg.MSG_INVALID_TYPE)
+				}
+			}
+		default:
+			return nil, fmt.Errorf(msg.MSG_INVALID_TYPE)
+		}
+		return &Value{
+			Tp:  tp,
+			Val: t,
+			Str: t.Format(time.RFC3339Nano),
+			Num: float64(t.UnixNano()),
+		}, nil
+
+	case TpBoolean:
+		var b bool
+		switch v := val.(type) {
+		case bool:
+			b = v
+		case int:
+			b = v != 0
+		case float64:
+			b = v != 0
+		case string:
+			b = v == "true" || v == "1"
+		default:
+			return nil, fmt.Errorf(msg.MSG_INVALID_TYPE)
+		}
+		num, str := 0.0, "false"
+		if b {
+			num, str = 1.0, "true"
+		}
+		return &Value{
+			Tp:  tp,
+			Val: b,
+			Str: str,
+			Num: num,
+		}, nil
+
+	case TpJson, TpArrayJson:
+		var bt []byte
+		switch v := val.(type) {
+		case []byte:
+			bt = v
+		case string:
+			bt = []byte(v)
+		case et.Json:
+			var err error
+			bt, err = json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			var err error
+			bt, err = json.Marshal(val)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &Value{
+			Tp:  tp,
+			Val: bt,
+			Str: string(bt),
+			Num: 0,
+		}, nil
+	}
+
+	return &Value{
+		Tp:  tp,
+		Val: val,
+		Str: fmt.Sprintf("%v", val),
+		Num: 0,
+	}, nil
+}
+
+/**
+* String
+* @return string
+**/
+func (s *Value) String() string {
+	switch s.Tp {
+	case TpKey, TpText, TpMemo, TpReference:
+		return s.Str
+	case TpInt, TpAutoIncrement:
+		return fmt.Sprintf("%d", int64(s.Num))
+	case TpFloat:
+		return fmt.Sprintf("%g", s.Num)
+	case TpBoolean:
+		if s.Num != 0 {
+			return "true"
+		}
+		return "false"
+	case TpDateTime:
+		return s.Val.(time.Time).Format(time.RFC3339Nano)
+	case TpJson, TpArrayJson, TpBytes:
+		return string(s.Val.([]byte))
+	default:
+		return fmt.Sprintf("%v", s.Val)
+	}
+}
 
 type TypeAggregation string
 
@@ -165,4 +369,13 @@ func newField(from *Model, name string, tpField TypeField, tpData TypeData, defa
 		TypeData:     tpData,
 		DefaultValue: defaultValue,
 	}, nil
+}
+
+/**
+* Value: Returns the value of the specified attribute from the given item.
+* @param item et.Json
+* @return interface{}
+**/
+func (s *Field) Value(item et.Json) interface{} {
+	return item.Get(s.Name)
 }

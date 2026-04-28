@@ -917,11 +917,11 @@ func NotBetween(field string, min, max any) *Condition {
 }
 
 /**
-* Validate
+* Evaluate
 * @param item et.Json, conditions []*Condition
 * @return bool
 **/
-func Validate(item et.Json, conditions []*Condition) bool {
+func Evaluate(item et.Json, conditions []*Condition) bool {
 	var result bool
 	for i, con := range conditions {
 		ok := con.ApplyToObject(item)

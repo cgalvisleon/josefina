@@ -90,6 +90,7 @@ type Model struct {
 	stores        map[string]*store.FileStore `json:"-"`            // Stores
 	btrees        map[string]*BTree           `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                     `json:"-"`            // Schema
+	db            *DB                         `json:"-"`            // Database
 	vm            *js.VM                      `json:"-"`            // Virtual machine
 	storeVm       js.Store                    `json:"-"`            // Virtual machine
 	mode          store.Mode                  `json:"-"`            // Mode
@@ -132,6 +133,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		btrees:        make(map[string]*BTree, 0),
 		mode:          store.ReadWrite,
 		schema:        s,
+		db:            s.db,
 	}
 	_, err := result.defineIndexField()
 	if err != nil {
@@ -1066,14 +1068,39 @@ func (s *Model) Count() (int, error) {
 }
 
 /**
+* Value: Returns the value of the specified attribute from the given item.
+* @param atrib string, item et.Json
+* @return (interface{}, bool)
+**/
+func (s *Model) Value(atrib string, item et.Json) (interface{}, bool) {
+	field, exists := s.Fields[atrib]
+	if exists {
+		return field.Value(item), true
+	}
+
+	val, ok := item[atrib]
+	if ok {
+		return val, true
+	}
+
+	return nil, false
+}
+
+/**
 * ForEach: Iterates over all documents in the primary store
-* @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
+* @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int
 * @return error
 **/
-func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error {
 	st, err := s.Source()
 	if err != nil {
 		return err
+	}
+
+	total := st.Count()
+	workers := total / 1000
+	if workers <= 0 {
+		workers = 1
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
@@ -1155,7 +1182,7 @@ func (s *Model) CreateIndex(name string) error {
 			return true, err
 		}
 		return true, nil
-	}, true, 0, 0, 1)
+	}, true, 0, 0)
 }
 
 /**

@@ -228,7 +228,7 @@ func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface
 * @return *Model, error
 **/
 func (s *Model) DefineDetail(name string, keys map[string]string, version int) (*Model, error) {
-	_, err := s.defineField(name, TpDetail, TpModel, []et.Json{})
+	_, err := s.defineField(name, TpDetail, TpReference, []et.Json{})
 	if err != nil {
 		return nil, err
 	}

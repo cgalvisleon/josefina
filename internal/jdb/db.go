@@ -14,8 +14,16 @@ import (
 )
 
 type Config struct {
-	TransactionTTL time.Duration `json:"transaction_ttl"`
-	model          *Model        `json:"-"`
+	Lang                string        `json:"lang"`
+	TransactionTTL      time.Duration `json:"transaction_ttl"`
+	RelSegSize          int           `json:"rel_seg_size"`
+	SyncOnWrite         bool          `json:"sync_on_write"`
+	TennantName         string        `json:"tennant_name"`
+	TennantPathData     string        `json:"tennant_path_data"`
+	Timezone            string        `json:"timezone"`
+	MinThresholdCompact int           `json:"min_threshold_compact"`
+	TTLTransaction      int           `json:"ttl_transaction"`
+	model               *Model        `json:"-"`
 }
 
 /**
@@ -55,7 +63,6 @@ func NewDb(path, name string) (*DB, error) {
 		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
 		mu:      sync.RWMutex{},
-		node:    node,
 	}
 
 	err := loadConfig(result)
@@ -84,19 +91,6 @@ func NewDb(path, name string) (*DB, error) {
 	}
 
 	return result, nil
-}
-
-/**
-* Save: Save the database
-* @return error
-**/
-func (s *DB) Save() error {
-	err := s.node.dbs.Put(s.Name, s, 0)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 /**
@@ -156,6 +150,25 @@ func (s *DB) ToJson() (et.Json, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* Save: Save the database
+* @param tx *Tx
+* @return (*Tx, error)
+**/
+func (s *DB) Save(tx *Tx) (*Tx, error) {
+	item, err := s.ToJson()
+	if err != nil {
+		return tx, err
+	}
+
+	tx, err = s.node.dbs.Upsert(s.Name, item, tx, 0)
+	if err != nil {
+		return tx, err
+	}
+
+	return tx, nil
 }
 
 /**
