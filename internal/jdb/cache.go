@@ -1,5 +1,96 @@
 package jdb
 
+import (
+	"encoding/json"
+	"time"
+)
+
+/**
+* loadCache: Loads the cache
+* @param db *DB
+* @return error
+**/
 func loadCache(db *DB) error {
+	result, err := db.NewModel("", "cache", true, 1)
+	if err != nil {
+		return err
+	}
+
+	err = result.Init()
+	if err != nil {
+		return err
+	}
+
+	db.Cache = make(map[string][]byte)
+	db.cache = result
+
 	return nil
+}
+
+/**
+* SetCache: Stores a value in memory and in the persistent cache with an optional expiration.
+* @param key string, value any, expiration time.Duration
+* @return error
+**/
+func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	s.muCache.Lock()
+	s.Cache[key] = data
+	s.muCache.Unlock()
+
+	return s.cache.Put(key, value, expiration)
+}
+
+/**
+* GetCache: Returns a cached value. Checks memory first; on miss checks the persistent cache.
+* Evicts the memory entry if the persistent layer reports expiration.
+* @param key string, dest any
+* @return bool, error
+**/
+func (s *DB) GetCache(key string, dest any) (bool, error) {
+	s.muCache.RLock()
+	data, inMemory := s.Cache[key]
+	s.muCache.RUnlock()
+
+	if inMemory {
+		if err := json.Unmarshal(data, dest); err == nil {
+			return true, nil
+		}
+	}
+
+	exists, err := s.cache.GetCurrent(key, dest)
+	if err != nil {
+		return false, err
+	}
+	if !exists {
+		s.muCache.Lock()
+		delete(s.Cache, key)
+		s.muCache.Unlock()
+		return false, nil
+	}
+
+	if data, err := json.Marshal(dest); err == nil {
+		s.muCache.Lock()
+		s.Cache[key] = data
+		s.muCache.Unlock()
+	}
+
+	return true, nil
+}
+
+/**
+* DeleteCache: Removes a value from memory and from the persistent cache.
+* @param key string
+* @return error
+**/
+func (s *DB) DeleteCache(key string) error {
+	s.muCache.Lock()
+	delete(s.Cache, key)
+	s.muCache.Unlock()
+
+	return s.cache.Remove(key)
 }

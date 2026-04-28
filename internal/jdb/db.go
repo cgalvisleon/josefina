@@ -28,6 +28,7 @@ type DB struct {
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
 	Cache       map[string][]byte  `json:"-"`         // Cache
 	mu          sync.RWMutex       `json:"-"`         // Mutex
+	muCache     sync.RWMutex       `json:"-"`         // Mutex for cache
 	config      *Config            `json:"-"`         // Configuration
 	errors      *Model             `json:"-"`         // Errors
 	transaction *Model             `json:"-"`         // Transaction
@@ -37,11 +38,11 @@ type DB struct {
 }
 
 /**
-* newDb: Creates a new database
-* @param node *Node, path, name string
+* NewDb: Creates a new database
+* @param path, name string
 * @return *DB, error
 **/
-func newDb(node *Node, path, name string) (*DB, error) {
+func NewDb(path, name string) (*DB, error) {
 	name = utility.Normalize(name)
 
 	if !utility.ValidStr(name, 0, []string{""}) {
@@ -77,9 +78,10 @@ func newDb(node *Node, path, name string) (*DB, error) {
 		return nil, err
 	}
 
-	node.muDbs.Lock()
-	node.DBS[name] = result
-	node.muDbs.Unlock()
+	err = loadCache(result)
+	if err != nil {
+		return nil, err
+	}
 
 	return result, nil
 }

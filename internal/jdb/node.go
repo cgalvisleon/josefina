@@ -41,8 +41,6 @@ type Node struct {
 	muSession *sync.RWMutex       `json:"-"`
 	dbs       *Model              `json:"-"`
 	users     *Model              `json:"-"`
-	started   bool                `json:"-"`
-	isDebug   bool                `json:"-"`
 }
 
 var (
@@ -64,8 +62,18 @@ func Load() error {
 		muSession: &sync.RWMutex{},
 	}
 
+	name := "_catalog"
 	path := envar.GetStr("DATA_PATH", "./data")
-	catalog, err := newDb(node, path, "_catalog")
+	catalog, err := NewDb(path, name)
+	if err != nil {
+		return err
+	}
+
+	node.muDbs.Lock()
+	node.DBS[name] = catalog
+	node.muDbs.Unlock()
+
+	node.dbs, err = catalog.NewModel("", "dbs", true, 1)
 	if err != nil {
 		return err
 	}
