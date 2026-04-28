@@ -476,7 +476,10 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 	}
 
 	if expiration != 0 {
-		ttl := newTtl(expiration)
+		ttl, err := newTtl(value, expiration)
+		if err != nil {
+			return err
+		}
 		err = s.setTTL(idx, ttl)
 		if err != nil {
 			return err
@@ -716,8 +719,11 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 		}
 	}
 
-	ttl := newTtl(expiration)
-	var err error
+	ttl, err := newTtl(new, expiration)
+	if err != nil {
+		return tx, err
+	}
+
 	tx, err = tx.Add(s, INSERT, idx, old, new, ttl)
 	if err != nil {
 		return tx, err

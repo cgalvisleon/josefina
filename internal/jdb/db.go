@@ -26,7 +26,7 @@ type DB struct {
 	Path        string             `json:"path"`      // Path to the database
 	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
-	Cache       map[string][]byte  `json:"-"`         // Cache
+	Cache       map[string]*Ttl    `json:"-"`         // Cache
 	mu          sync.RWMutex       `json:"-"`         // Mutex
 	muCache     sync.RWMutex       `json:"-"`         // Mutex for cache
 	config      *Config            `json:"-"`         // Configuration

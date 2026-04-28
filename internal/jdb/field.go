@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 )
 
 type Ttl struct {
+	Value     []byte        `json:"value"`
 	CreatedAt time.Time     `json:"created_at"`
 	Duration  time.Duration `json:"duration"`
 }
@@ -19,23 +21,21 @@ type Ttl struct {
 * @param duration time.Duration
 * @return *Ttl
 **/
-func newTtl(duration time.Duration) *Ttl {
-	if duration == 0 {
-		return nil
+func newTtl(value any, duration time.Duration) (*Ttl, error) {
+	bt, ok := value.([]byte)
+	if !ok {
+		var err error
+		bt, err = json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Ttl{
+		Value:     bt,
 		CreatedAt: timezone.Now(),
 		Duration:  duration,
-	}
-}
-
-/**
-* IsEnabled
-* @return bool
-**/
-func (s *Ttl) IsEnabled() bool {
-	return s.Duration > 0
+	}, nil
 }
 
 /**
@@ -43,6 +43,9 @@ func (s *Ttl) IsEnabled() bool {
 * @return bool
 **/
 func (s *Ttl) IsExpired() bool {
+	if s.Duration == 0 {
+		return false
+	}
 	return time.Now().After(s.CreatedAt.Add(s.Duration))
 }
 

@@ -21,7 +21,7 @@ func loadCache(db *DB) error {
 		return err
 	}
 
-	db.Cache = make(map[string][]byte)
+	db.Cache = make(map[string]*Ttl)
 	db.cache = result
 
 	return nil
@@ -33,16 +33,16 @@ func loadCache(db *DB) error {
 * @return error
 **/
 func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
-	data, err := json.Marshal(value)
+	ttl, err := newTtl(value, expiration)
 	if err != nil {
 		return err
 	}
 
 	s.muCache.Lock()
-	s.Cache[key] = data
+	s.Cache[key] = ttl
 	s.muCache.Unlock()
 
-	return s.cache.Put(key, value, expiration)
+	return s.cache.Put(key, ttl, expiration)
 }
 
 /**
@@ -53,32 +53,41 @@ func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
 **/
 func (s *DB) GetCache(key string, dest any) (bool, error) {
 	s.muCache.RLock()
-	data, inMemory := s.Cache[key]
+	ttl, inMemory := s.Cache[key]
 	s.muCache.RUnlock()
 
 	if inMemory {
-		if err := json.Unmarshal(data, dest); err == nil {
+		if ttl.IsExpired() {
+			s.muCache.Lock()
+			delete(s.Cache, key)
+			s.muCache.Unlock()
+			s.cache.clearTTL(key)
+			return false, nil
+		}
+		if err := json.Unmarshal(ttl.Value, dest); err == nil {
 			return true, nil
 		}
 	}
 
-	exists, err := s.cache.GetCurrent(key, dest)
+	source, err := s.cache.Source()
+	if err != nil {
+		return false, err
+	}
+	exists, err := source.Get(key, &ttl)
 	if err != nil {
 		return false, err
 	}
 	if !exists {
-		s.muCache.Lock()
-		delete(s.Cache, key)
-		s.muCache.Unlock()
 		return false, nil
 	}
 
-	if data, err := json.Marshal(dest); err == nil {
-		s.muCache.Lock()
-		s.Cache[key] = data
-		s.muCache.Unlock()
+	if err := json.Unmarshal(ttl.Value, dest); err != nil {
+		return false, err
 	}
 
+	s.muCache.Lock()
+	s.Cache[key] = ttl
+	s.muCache.Unlock()
 	return true, nil
 }
 
