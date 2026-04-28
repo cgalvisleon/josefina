@@ -26,19 +26,24 @@ type DB struct {
 	Path        string             `json:"path"`      // Path to the database
 	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
+	Cache       map[string][]byte  `json:"-"`         // Cache
 	mu          sync.RWMutex       `json:"-"`         // Mutex
 	config      *Config            `json:"-"`         // Configuration
 	errors      *Model             `json:"-"`         // Errors
 	transaction *Model             `json:"-"`         // Transaction
 	schemas     *Model             `json:"-"`         // Schemas
+	cache       *Model             `json:"-"`         // Cache
+	node        *Node              `json:"-"`         // Node
 }
 
 /**
-* NewDb: Creates a new database
-* @param path, name string
+* newDb: Creates a new database
+* @param node *Node, path, name string
 * @return *DB, error
 **/
-func NewDb(path, name string) (*DB, error) {
+func newDb(node *Node, path, name string) (*DB, error) {
+	name = utility.Normalize(name)
+
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -49,6 +54,7 @@ func NewDb(path, name string) (*DB, error) {
 		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
 		mu:      sync.RWMutex{},
+		node:    node,
 	}
 
 	err := loadConfig(result)
@@ -71,14 +77,31 @@ func NewDb(path, name string) (*DB, error) {
 		return nil, err
 	}
 
+	node.muDbs.Lock()
+	node.DBS[name] = result
+	node.muDbs.Unlock()
+
 	return result, nil
 }
 
 /**
-* Load: Load the database
+* Save: Save the database
 * @return error
 **/
-func (s *DB) Load() error {
+func (s *DB) Save() error {
+	err := s.node.dbs.Put(s.Name, s, 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* Init: Initialize the database
+* @return error
+**/
+func (s *DB) Init() error {
 	s.mu = sync.RWMutex{}
 	s.mu.Lock()
 	defer s.mu.Unlock()

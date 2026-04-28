@@ -7,7 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/internal/catalog"
+	"github.com/cgalvisleon/josefina/internal/jdb"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
@@ -118,7 +118,7 @@ func testStore() {
 
 func testCatalog() {
 	// ── Setup ─────────────────────────────────────────────────────────────────
-	db, err := catalog.NewDb("./data", "test")
+	db, err := jdb.NewDb("./data", "test")
 	if err != nil {
 		logs.Fatal(err)
 	}
@@ -128,9 +128,9 @@ func testCatalog() {
 		logs.Fatal(err)
 	}
 
-	model.DefineAtrib("name", catalog.TpText, "")
-	model.DefineAtrib("age", catalog.TpInt, 0)
-	model.DefineAtrib("id", catalog.TpKey, "")
+	model.DefineAtrib("name", jdb.TpText, "")
+	model.DefineAtrib("age", jdb.TpInt, 0)
+	model.DefineAtrib("id", jdb.TpKey, "")
 	model.DefinePrimaryKeys("id")
 	model.DefineIndexes("name", "age")
 
@@ -147,7 +147,7 @@ func testCatalog() {
 		{"id": "pk4", "name": "Dave", "age": int64(28)},
 		{"id": "pk5", "name": "Eve", "age": int64(22)},
 	}
-	var tx *catalog.Tx
+	var tx *jdb.Tx
 	for _, u := range users {
 		tx, err = model.Insert(u.Str("id"), u, tx)
 		if err != nil {
@@ -176,7 +176,7 @@ func testCatalog() {
 
 	// ── GetByIndex por nombre exacto ──────────────────────────────────────────
 	logs.Info("--- GetByIndex name=Alice ---")
-	pks, ok := model.EqualByIndex("name", catalog.KeyString("Alice"))
+	pks, ok := model.EqualByIndex("name", jdb.KeyString("Alice"))
 	if !ok {
 		logs.Info("name=Alice: not found")
 	} else {
@@ -184,7 +184,7 @@ func testCatalog() {
 	}
 
 	logs.Info("--- GetByIndex name=Zzz (no existe) ---")
-	pks, ok = model.EqualByIndex("name", catalog.KeyString("Zzz"))
+	pks, ok = model.EqualByIndex("name", jdb.KeyString("Zzz"))
 	if !ok {
 		logs.Info("name=Zzz: not found (expected)")
 	} else {
@@ -193,11 +193,11 @@ func testCatalog() {
 
 	// ── RangeIndex por edad ───────────────────────────────────────────────────
 	logs.Info("--- RangeIndex age [25, 30] asc ---")
-	pks = model.BetweenByIndex("age", catalog.KeyInt(25), catalog.KeyInt(30), true)
+	pks = model.BetweenByIndex("age", jdb.KeyInt(25), jdb.KeyInt(30), true)
 	logs.Infof("age [25,30]: pks=%v", pks)
 
 	logs.Info("--- RangeIndex age [0, 99] desc ---")
-	pks = model.BetweenByIndex("age", catalog.KeyInt(0), catalog.KeyInt(99), false)
+	pks = model.BetweenByIndex("age", jdb.KeyInt(0), jdb.KeyInt(99), false)
 	logs.Infof("age [0,99] desc: pks=%v", pks)
 
 	// ── Simular restart: re-init reconstruye BTrees desde FileStore ───────────
@@ -206,7 +206,7 @@ func testCatalog() {
 	if err := model.Init(); err != nil {
 		logs.Errorf("re-init: %v", err)
 	}
-	pks, ok = model.EqualByIndex("name", catalog.KeyString("Bob"))
+	pks, ok = model.EqualByIndex("name", jdb.KeyString("Bob"))
 	if !ok {
 		logs.Debug("restart: name=Bob not found (BTree rebuild failed)")
 	} else {
@@ -222,12 +222,12 @@ func testCatalog() {
 	count, _ = model.Count()
 	logs.Infof("after delete: count=%d", count)
 
-	pks, ok = model.EqualByIndex("name", catalog.KeyString("Bob"))
+	pks, ok = model.EqualByIndex("name", jdb.KeyString("Bob"))
 	if !ok {
 		logs.Info("name=Bob after delete: not found (expected)")
 	} else {
 		logs.Infof("name=Bob after delete: pks=%v (unexpected)", pks)
 	}
 
-	logs.Info("=== catalog test done ===")
+	logs.Info("=== jdb test done ===")
 }
