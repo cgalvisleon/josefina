@@ -1,10 +1,12 @@
 package jdb
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"sync"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
@@ -56,6 +58,38 @@ func (s *Schema) save() error {
 	}
 
 	return nil
+}
+
+/**
+* Serialize
+* @return []byte, error
+**/
+func (s *Schema) Serialize() ([]byte, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s *Schema) ToJson() (et.Json, error) {
+	definition, err := s.Serialize()
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(definition, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
 }
 
 /**

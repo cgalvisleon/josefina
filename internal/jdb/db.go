@@ -28,9 +28,9 @@ type DB struct {
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
 	mu          sync.RWMutex       `json:"-"`         // Mutex
 	config      *Config            `json:"-"`         // Configuration
+	errors      *Model             `json:"-"`         // Errors
 	transaction *Model             `json:"-"`         // Transaction
 	schemas     *Model             `json:"-"`         // Schemas
-	errors      *Model             `json:"-"`         // Errors
 }
 
 /**
@@ -273,13 +273,14 @@ func (s *DB) Empty() error {
 * @return error
 **/
 func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int) error {
-	st, err := s.transaction.Source()
+	model := s.transaction
+	st, err := model.Source()
 	if err != nil {
 		return err
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		s.transaction.clearTTL(idx)
+		model.clearTTL(idx)
 
 		var tx Tx
 		if err := json.Unmarshal(src, &tx); err != nil {
@@ -287,4 +288,77 @@ func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, off
 		}
 		return next(idx, tx)
 	}, asc, offset, limit, workers)
+}
+
+/**
+* ForEachError: Iterates over all transactions with errors
+* @param next func(idx string, err et.Json) (bool, error), asc bool, offset, limit, workers int
+* @return error
+**/
+func (s *DB) ForEachError(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+	model := s.errors
+	st, err := model.Source()
+	if err != nil {
+		return err
+	}
+
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
+		model.clearTTL(idx)
+
+		var item et.Json
+		if err := json.Unmarshal(src, &item); err != nil {
+			return false, err
+		}
+		return next(idx, item)
+	}, asc, offset, limit, workers)
+}
+
+/**
+* ForEachSchema: Iterates over all schemas
+* @param next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int
+* @return error
+**/
+func (s *DB) ForEachSchema(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
+	model := s.schemas
+	st, err := model.Source()
+	if err != nil {
+		return err
+	}
+
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
+		model.clearTTL(idx)
+
+		var schema Schema
+		if err := json.Unmarshal(src, &schema); err != nil {
+			return false, err
+		}
+
+		item, err := schema.ToJson()
+		if err != nil {
+			return false, err
+		}
+
+		return next(idx, item)
+	}, asc, offset, limit, workers)
+}
+
+/**
+* ForEachModel: Iterates over all models
+* @param next func(idx string, item et.Json) (bool, error)
+* @return error
+**/
+func (s *DB) ForEachModel(schema string, next func(idx string, item et.Json) (bool, error)) error {
+	sch, exist := s.Schemas[schema]
+	if !exist {
+		return errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	for _, model := range sch.Models {
+		item, err := model.ToJson()
+		if err != nil {
+			return err
+		}
+		next(model.Key(), item)
+	}
+	return nil
 }
