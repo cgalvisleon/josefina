@@ -3,7 +3,6 @@ package jdb
 import (
 	"encoding/json"
 	"errors"
-	"slices"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -270,6 +269,9 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 		cache := tx.Items(model)
 		for _, item := range cache {
 			idx := item.Str(INDEX)
+			if idx == "" {
+				continue
+			}
 			next = addResult(idx, item)
 			if !next {
 				return result, nil
@@ -279,7 +281,6 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 		return result, nil
 	}
 
-	onlyKeys := true
 	for _, con := range s.conditions {
 		value := con.Value
 		switch v := value.(type) {
@@ -297,95 +298,62 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			}
 		}
 
-		field := con.Field
-		index, err := model.Store(field)
-		if err != nil {
-			onlyKeys = false
-			continue
-		}
-
-		keys, ok := s.keys[field]
-		if !ok {
-			asc := s.Order(field)
-			keys = index.Keys(asc, 0, 0)
-		}
-
-		s.keys[field] = con.ApplyToIndex(keys)
-	}
-
-	// Items by keys
-	items := []et.Json{}
-	addItem := func(item et.Json) {
-		index, ok := item[INDEX]
-		if !ok {
-			return
-		}
-
-		if index == "" {
-			return
-		}
-
-		idx := slices.IndexFunc(items, func(v et.Json) bool { return v[INDEX] == index })
-		if idx == -1 {
-			items = append(items, item)
-		}
-	}
-
-	for field, keys := range s.keys {
-		for _, key := range keys {
-			pks, exists := model.GetByIndex(field, KeyString(key))
-			if !exists {
-				continue
-			}
-
-			for _, idx := range pks {
-				item := et.Json{}
-				exists, err := model.GetObjet(idx, item)
+		bt, exists := model.getBtree(con.Field)
+		if exists {
+			idxs := bt.ApplyCondition(con)
+			for _, idx := range idxs {
+				item, exists, err := model.Current(idx)
 				if err != nil {
 					return nil, err
 				}
-
 				if exists {
-					addItem(item)
+					addResult(idx, item)
+				}
+			}
+
+			cache := tx.Items(model)
+			for _, item := range cache {
+				ok := item.ApplyCondition(con)
+				if ok {
+					idx := item.Str(INDEX)
+					if idx == "" {
+						continue
+					}
+					next := addResult(idx, item)
+					if !next {
+						return result, nil
+					}
+				}
+			}
+			continue
+		}
+
+		next := true
+		err := model.ForEach(func(idx string, item et.Json) (bool, error) {
+			ok := item.ApplyCondition(con)
+			if ok {
+				next = addResult(idx, item)
+			}
+			return next, nil
+		}, true, s.offset, s.limit)
+		if err != nil {
+			return nil, err
+		}
+
+		cache := tx.Items(model)
+		for _, item := range cache {
+			ok := item.ApplyCondition(con)
+			if ok {
+				idx := item.Str(INDEX)
+				if idx == "" {
+					continue
+				}
+				next := addResult(idx, item)
+				if !next {
+					return result, nil
 				}
 			}
 		}
-	}
-
-	// Items by cache
-	cache := tx.getCache(model.From)
-	for _, item := range cache {
-		addItem(item)
-	}
-
-	next := true
-	for _, item := range items {
-		ok := Validate(item, s.conditions)
-		if !ok {
-			continue
-		}
-		next := addResult(item)
-		if !next {
-			break
-		}
-	}
-
-	if onlyKeys {
-		return result, nil
-	}
-
-	// Items by data
-	asc := s.Order(INDEX)
-	err := model.ForEach(func(idx string, item et.Json) (bool, error) {
-		next = Validate(item, s.conditions)
-		return next, nil
-	}, asc, s.offset, s.limit, s.workers)
-	if err != nil {
-		return nil, err
-	}
-
-	if !next {
-		return result, nil
 	}
 
 	return result, nil

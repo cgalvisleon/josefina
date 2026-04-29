@@ -318,8 +318,6 @@ func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, off
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		model.clearTTL(idx)
-
 		var tx Tx
 		if err := json.Unmarshal(src, &tx); err != nil {
 			return false, err
@@ -341,8 +339,6 @@ func (s *DB) ForEachError(next func(idx string, item et.Json) (bool, error), asc
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		model.clearTTL(idx)
-
 		var item et.Json
 		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err
@@ -364,8 +360,6 @@ func (s *DB) ForEachSchema(next func(idx string, item et.Json) (bool, error), as
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		model.clearTTL(idx)
-
 		var schema Schema
 		if err := json.Unmarshal(src, &schema); err != nil {
 			return false, err

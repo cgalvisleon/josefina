@@ -20,7 +20,7 @@ func loadConfig(db *DB) error {
 
 	var config *Config
 	idx := fmt.Sprintf("config:%s", db.Name)
-	exists, err := model.get(idx, &config)
+	exists, err := model.Get(idx, &config)
 	if err != nil {
 		return err
 	}

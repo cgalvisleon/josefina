@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
@@ -658,6 +659,26 @@ func (bt *BTree) Equal(key IndexKey) ([]string, bool) {
 }
 
 /**
+* NotEqual: Returns all values of keys != key.
+* @param key IndexKey
+* @return []string
+**/
+func (bt *BTree) NotEqual(key IndexKey) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].Compare(key) != 0 {
+				result = append(result, leaf.vals[j]...)
+			}
+		}
+	}
+	return result
+}
+
+/**
 * Between: Returns all values of keys in [from, to] inclusive.
 * Pass zero (IndexKey{}) in from or to to indicate an open bound.
 * @param from, to IndexKey, asc bool
@@ -776,26 +797,6 @@ func (bt *BTree) LessEq(key IndexKey, asc bool) []string {
 }
 
 /**
-* NotEqual: Returns all values of keys != key.
-* @param key IndexKey
-* @return []string
-**/
-func (bt *BTree) NotEqual(key IndexKey) []string {
-	bt.mu.RLock()
-	defer bt.mu.RUnlock()
-
-	var result []string
-	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
-		for j := 0; j < len(leaf.keys); j++ {
-			if leaf.keys[j].Compare(key) != 0 {
-				result = append(result, leaf.vals[j]...)
-			}
-		}
-	}
-	return result
-}
-
-/**
 * Keys: Returns distinct keys with pagination. limit=0 returns all.
 * @param asc bool, offset, limit int
 * @return []IndexKey
@@ -832,6 +833,17 @@ func (bt *BTree) leftmostLeaf() *bpNode {
 		n = n.children[0]
 	}
 	return n
+}
+
+/**
+* ApplyCondition: Applies a condition to all keys and returns the matching ones.
+* @param condition *et.Condition
+* @return []string
+**/
+func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
+	var result []string
+
+	return result
 }
 
 /**

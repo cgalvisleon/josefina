@@ -139,10 +139,6 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 	if err != nil {
 		return nil, err
 	}
-	_, err = result.defineTTL()
-	if err != nil {
-		return nil, err
-	}
 
 	return result, nil
 }
@@ -255,7 +251,7 @@ func (s *Model) Init() error {
 
 	// Open each secondary BTree (Init loads persisted data from its own store).
 	for _, name := range s.Indexes {
-		if map[string]bool{INDEX: true, TTL: true}[name] {
+		if map[string]bool{INDEX: true}[name] {
 			if _, err := s.OpenStore(name); err != nil {
 				return err
 			}
@@ -292,22 +288,19 @@ func (s *Model) getBtree(field string) (*BTree, bool) {
 * @return *BTree, error
 **/
 func (s *Model) indexBTree(field string) (*BTree, error) {
-	s.mu.RLock()
-	bt, exists := s.btrees[field]
-	s.mu.RUnlock()
+	bt, exists := s.getBtree(field)
 	if exists {
 		return bt, nil
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	bt, err := OpenBTree(s.Path, field)
 	if err != nil {
 		return nil, err
 	}
 
+	s.mu.Lock()
 	s.btrees[field] = bt
+	s.mu.Unlock()
 	return bt, nil
 }
 
@@ -379,11 +372,11 @@ func (s *Model) Put(idx string, value any) error {
 }
 
 /**
-* get: Gets a document by primary key
+* Get: Gets a document by primary key
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) get(idx string, dest any) (bool, error) {
+func (s *Model) Get(idx string, dest any) (bool, error) {
 	store, err := s.Source()
 	if err != nil {
 		return false, err
@@ -395,15 +388,6 @@ func (s *Model) get(idx string, dest any) (bool, error) {
 	}
 
 	return exists, nil
-}
-
-/**
-* Current: Gets the current document by primary key
-* @param idx string, dest any
-* @return bool, error
-**/
-func (s *Model) Current(idx string, dest any) (bool, error) {
-	return s.get(idx, dest)
 }
 
 /**
@@ -526,6 +510,20 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 	}
 
 	return tx, nil
+}
+
+/**
+* Current: Gets the current document by primary key
+* @param idx string
+* @return et.Json, bool, error
+**/
+func (s *Model) Current(idx string) (et.Json, bool, error) {
+	var dest et.Json
+	exists, err := s.Get(idx, &dest)
+	if err != nil {
+		return et.Json{}, false, err
+	}
+	return dest, exists, nil
 }
 
 /**
@@ -708,12 +706,13 @@ func (s *Model) Equal(field string, value any, tx *Tx, page, limit int) ([]et.Js
 		key := KeyFromAny(value)
 		idxs, _ := bt.Equal(key)
 		for _, idx := range idxs {
-			var item et.Json
-			_, err := s.Current(idx, &item)
+			item, exists, err := s.Current(idx)
 			if err != nil {
 				return result, err
 			}
-			result = append(result, item)
+			if exists {
+				result = append(result, item)
+			}
 		}
 	} else {
 		store, err := s.Source()
@@ -762,12 +761,13 @@ func (s *Model) NotEqual(field string, value any, tx *Tx, page, limit int) ([]et
 		key := KeyFromAny(value)
 		idxs := bt.NotEqual(key)
 		for _, idx := range idxs {
-			var item et.Json
-			_, err := s.Current(idx, &item)
+			item, exists, err := s.Current(idx)
 			if err != nil {
 				return result, err
 			}
-			result = append(result, item)
+			if exists {
+				result = append(result, item)
+			}
 		}
 	} else {
 		store, err := s.Source()

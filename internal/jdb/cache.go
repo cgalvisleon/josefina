@@ -42,7 +42,7 @@ func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
 	s.Cache[key] = ttl
 	s.muCache.Unlock()
 
-	return s.cache.Put(key, ttl, expiration)
+	return s.cache.Put(key, ttl)
 }
 
 /**
@@ -61,7 +61,7 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 			s.muCache.Lock()
 			delete(s.Cache, key)
 			s.muCache.Unlock()
-			s.cache.clearTTL(key)
+			s.cache.Remove(key)
 			return false, nil
 		}
 		if err := json.Unmarshal(ttl.Value, dest); err == nil {
@@ -69,11 +69,7 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 		}
 	}
 
-	source, err := s.cache.Source()
-	if err != nil {
-		return false, err
-	}
-	exists, err := source.Get(key, &ttl)
+	exists, err := s.cache.Get(key, &ttl)
 	if err != nil {
 		return false, err
 	}

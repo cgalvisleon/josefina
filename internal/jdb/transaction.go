@@ -219,13 +219,13 @@ func (s *Tx) Rollback() error {
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case UPDATE:
-			err := model.putObject(transaction.Idx, transaction.Old, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				return err
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case DELETE:
-			err := model.putObject(transaction.Idx, transaction.Old, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				return err
 			}
@@ -250,7 +250,7 @@ func (s *Tx) Commit() error {
 		s.Executions = append([]*Transaction{transaction}, s.Executions...)
 		switch transaction.Command {
 		case INSERT:
-			err := model.putObject(transaction.Idx, transaction.New, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.New)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
@@ -259,7 +259,7 @@ func (s *Tx) Commit() error {
 			}
 			transaction.SetStatus(COMMITTED)
 		case UPDATE:
-			err := model.putObject(transaction.Idx, transaction.New, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.New)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
