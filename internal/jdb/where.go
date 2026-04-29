@@ -227,18 +227,28 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 	}
 
 	tx = GetTx(s.db, tx)
+	keys := map[string]int{}
 	result := []et.Json{}
 	model := s.from
 
-	addResult := func(item et.Json) bool {
+	addResult := func(idx string, item et.Json) bool {
 		if len(s.selects) == 0 {
 			item = item.Hidden(model.Hidden)
 		} else {
 			item = item.Select(s.selects)
 		}
 		item = item.Hidden(s.hidden)
-		result = append(result, item)
+
 		n := len(result)
+		id, exists := keys[idx]
+		if exists {
+			result[id] = item
+		} else {
+			keys[idx] = n
+			result = append(result, item)
+			n++
+		}
+
 		return n < s.limit
 	}
 
@@ -246,7 +256,7 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 		next := true
 		asc := s.Order(INDEX)
 		err := model.ForEach(func(idx string, item et.Json) (bool, error) {
-			next = addResult(item)
+			next = addResult(idx, item)
 			return next, nil
 		}, asc, s.offset, s.limit)
 		if err != nil {
@@ -259,7 +269,8 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 
 		cache := tx.Items(model)
 		for _, item := range cache {
-			next = addResult(item)
+			idx := item.Str(INDEX)
+			next = addResult(idx, item)
 			if !next {
 				return result, nil
 			}
@@ -274,13 +285,13 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 		switch v := value.(type) {
 		case *Where:
 			var err error
-			con.Value, err = v.Run(tx)
+			con.Value, err = v.All(tx)
 			if err != nil {
 				return nil, err
 			}
 		case Where:
 			var err error
-			con.Value, err = v.Run(tx)
+			con.Value, err = v.All(tx)
 			if err != nil {
 				return nil, err
 			}

@@ -52,7 +52,7 @@ func (s *Schema) save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	err := s.db.transaction.Put(s.Name, s, 0)
+	err := s.db.transaction.Put(s.Name, s)
 	if err != nil {
 		return err
 	}

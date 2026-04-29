@@ -29,10 +29,9 @@ type Transaction struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Command   string    `json:"command"`
-	ID        string    `json:"id"`
+	Idx       string    `json:"id"`
 	New       et.Json   `json:"new"`
 	Old       et.Json   `json:"old"`
-	Ttl       *Ttl      `json:"ttl"`
 	Status    string    `json:"status"`
 	tx        *Tx       `json:"-"`
 }
@@ -143,8 +142,7 @@ func (s *Tx) save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	ttl := s.db.config.TransactionTTL
-	err := s.db.transaction.Put(s.ID, s, ttl)
+	err := s.db.transaction.Put(s.ID, s)
 	if err != nil {
 		return err
 	}
@@ -182,7 +180,7 @@ func (s *Tx) SetStatus(status string) error {
 * @param model *Model, command string, id string, old, new et.Json, expiration time.Duration
 * @return (*Tx, error)
 **/
-func (s *Tx) Add(model *Model, command, idx string, old, new et.Json, ttl *Ttl) (*Tx, error) {
+func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) (*Tx, error) {
 	now := timezone.Now()
 	s.Transactions = append(s.Transactions, &Transaction{
 		model:     model,
@@ -190,10 +188,9 @@ func (s *Tx) Add(model *Model, command, idx string, old, new et.Json, ttl *Ttl) 
 		CreatedAt: now,
 		UpdatedAt: now,
 		Command:   command,
-		ID:        idx,
+		Idx:       idx,
 		New:       new,
 		Old:       old,
-		Ttl:       ttl,
 		tx:        s,
 	})
 	err := s.SetStatus(PENDING)
@@ -216,19 +213,19 @@ func (s *Tx) Rollback() error {
 
 		switch transaction.Command {
 		case INSERT:
-			err := model.deleteObject(transaction.ID, transaction.New)
+			err := model.deleteObject(transaction.Idx, transaction.New)
 			if err != nil {
 				return err
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case UPDATE:
-			err := model.putObject(transaction.ID, transaction.Old, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.Old, transaction.Ttl)
 			if err != nil {
 				return err
 			}
 			transaction.SetStatus(ROLLED_BACK)
 		case DELETE:
-			err := model.putObject(transaction.ID, transaction.Old, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.Old, transaction.Ttl)
 			if err != nil {
 				return err
 			}
@@ -253,7 +250,7 @@ func (s *Tx) Commit() error {
 		s.Executions = append([]*Transaction{transaction}, s.Executions...)
 		switch transaction.Command {
 		case INSERT:
-			err := model.putObject(transaction.ID, transaction.New, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.New, transaction.Ttl)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
@@ -262,7 +259,7 @@ func (s *Tx) Commit() error {
 			}
 			transaction.SetStatus(COMMITTED)
 		case UPDATE:
-			err := model.putObject(transaction.ID, transaction.New, transaction.Ttl)
+			err := model.putObject(transaction.Idx, transaction.New, transaction.Ttl)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
@@ -271,7 +268,7 @@ func (s *Tx) Commit() error {
 			}
 			transaction.SetStatus(COMMITTED)
 		case DELETE:
-			err := model.deleteObject(transaction.ID, transaction.Old)
+			err := model.deleteObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
@@ -294,7 +291,9 @@ func (s *Tx) Items(model *Model) []et.Json {
 	result := []et.Json{}
 	for _, transaction := range s.Transactions {
 		if transaction.model.Key() == model.Key() {
-			result = append(result, transaction.New)
+			item := transaction.New
+			item[INDEX] = transaction.Idx
+			result = append(result, item)
 		}
 	}
 	return result

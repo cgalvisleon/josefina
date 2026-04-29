@@ -113,6 +113,11 @@ type Value struct {
 	Num float64
 }
 
+/**
+* NewValue
+* @param tp TypeData, val any
+* @return (*Value, error)
+**/
 func NewValue(tp TypeData, val any) (*Value, error) {
 	switch tp {
 	case TpAny:
@@ -245,30 +250,71 @@ func NewValue(tp TypeData, val any) (*Value, error) {
 			Num: num,
 		}, nil
 
-	case TpJson, TpArrayJson:
-		var bt []byte
+	case TpJson:
+		var obj et.Json
 		switch v := val.(type) {
-		case []byte:
-			bt = v
-		case string:
-			bt = []byte(v)
 		case et.Json:
-			var err error
-			bt, err = json.Marshal(v)
-			if err != nil {
+			obj = v
+		case map[string]interface{}:
+			obj = et.Json(v)
+		case []byte:
+			if err := json.Unmarshal(v, &obj); err != nil {
+				return nil, err
+			}
+		case string:
+			if err := json.Unmarshal([]byte(v), &obj); err != nil {
 				return nil, err
 			}
 		default:
-			var err error
-			bt, err = json.Marshal(val)
+			bt, err := json.Marshal(val)
 			if err != nil {
 				return nil, err
 			}
+			if err := json.Unmarshal(bt, &obj); err != nil {
+				return nil, err
+			}
+		}
+		str, err := json.Marshal(obj)
+		if err != nil {
+			return nil, err
 		}
 		return &Value{
 			Tp:  tp,
-			Val: bt,
-			Str: string(bt),
+			Val: obj,
+			Str: string(str),
+			Num: 0,
+		}, nil
+
+	case TpArrayJson:
+		var arr []et.Json
+		switch v := val.(type) {
+		case []et.Json:
+			arr = v
+		case []byte:
+			if err := json.Unmarshal(v, &arr); err != nil {
+				return nil, err
+			}
+		case string:
+			if err := json.Unmarshal([]byte(v), &arr); err != nil {
+				return nil, err
+			}
+		default:
+			bt, err := json.Marshal(val)
+			if err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal(bt, &arr); err != nil {
+				return nil, err
+			}
+		}
+		str, err := json.Marshal(arr)
+		if err != nil {
+			return nil, err
+		}
+		return &Value{
+			Tp:  tp,
+			Val: arr,
+			Str: string(str),
 			Num: 0,
 		}, nil
 	}
@@ -282,28 +328,41 @@ func NewValue(tp TypeData, val any) (*Value, error) {
 }
 
 /**
-* String
-* @return string
+* Value: Returns the native Go typed value for this field.
+* @return any
 **/
-func (s *Value) String() string {
+func (s *Value) Value() any {
 	switch s.Tp {
 	case TpKey, TpText, TpMemo, TpReference:
 		return s.Str
 	case TpInt, TpAutoIncrement:
-		return fmt.Sprintf("%d", int64(s.Num))
+		return int64(s.Num)
 	case TpFloat:
-		return fmt.Sprintf("%g", s.Num)
+		return s.Num
 	case TpBoolean:
-		if s.Num != 0 {
-			return "true"
-		}
-		return "false"
+		return s.Num != 0
 	case TpDateTime:
-		return s.Val.(time.Time).Format(time.RFC3339Nano)
-	case TpJson, TpArrayJson, TpBytes:
-		return string(s.Val.([]byte))
+		if t, ok := s.Val.(time.Time); ok {
+			return t
+		}
+		return s.Val
+	case TpBytes:
+		if bt, ok := s.Val.([]byte); ok {
+			return bt
+		}
+		return s.Val
+	case TpJson:
+		if obj, ok := s.Val.(et.Json); ok {
+			return obj
+		}
+		return s.Val
+	case TpArrayJson:
+		if arr, ok := s.Val.([]et.Json); ok {
+			return arr
+		}
+		return s.Val
 	default:
-		return fmt.Sprintf("%v", s.Val)
+		return s.Val
 	}
 }
 

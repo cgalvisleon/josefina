@@ -256,7 +256,7 @@ func (s *Model) Init() error {
 	// Open each secondary BTree (Init loads persisted data from its own store).
 	for _, name := range s.Indexes {
 		if map[string]bool{INDEX: true, TTL: true}[name] {
-			if _, err := s.Store(name); err != nil {
+			if _, err := s.OpenStore(name); err != nil {
 				return err
 			}
 			continue
@@ -312,23 +312,26 @@ func (s *Model) indexBTree(field string) (*BTree, error) {
 }
 
 /**
-* Store: Opens a store
+* Store: Returns the store for name
 * @param name string
-* @return *store.FileStore, error
+* @return *store.FileStore, bool
 **/
-func (s *Model) Store(name string) (*store.FileStore, error) {
+func (s *Model) GetStore(name string) (*store.FileStore, bool) {
 	s.mu.RLock()
 	result, exists := s.stores[name]
 	s.mu.RUnlock()
+
+	return result, exists
+}
+
+/**
+* OpenStore: Opens a store
+* @param name string
+* @return *store.FileStore, error
+**/
+func (s *Model) OpenStore(name string) (*store.FileStore, error) {
+	result, exists := s.GetStore(name)
 	if exists {
-		return result, nil
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Re-check after acquiring write lock to avoid duplicate opens.
-	if result, exists = s.stores[name]; exists {
 		return result, nil
 	}
 
@@ -341,7 +344,9 @@ func (s *Model) Store(name string) (*store.FileStore, error) {
 		result = result.IsDebug()
 	}
 
+	s.mu.Lock()
 	s.stores[name] = result
+	s.mu.Unlock()
 
 	return result, nil
 }
@@ -351,119 +356,7 @@ func (s *Model) Store(name string) (*store.FileStore, error) {
 * @return *store.FileStore, error
 **/
 func (s *Model) Source() (*store.FileStore, error) {
-	return s.Store(INDEX)
-}
-
-/**
-* setTTL: Sets a TTL for a key
-* @param idx string, ttl *Ttl
-* @return error
-**/
-func (s *Model) setTTL(idx string, ttl *Ttl) error {
-	if ttl == nil {
-		return nil
-	}
-
-	store, err := s.Store(TTL)
-	if err != nil {
-		return err
-	}
-
-	err = store.Put(idx, ttl)
-	if err != nil {
-		return err
-	}
-
-	go s.cleanExpired()
-
-	return nil
-}
-
-/**
-* getTTL: Gets a TTL for a key
-* @param idx string
-* @return *Ttl, error
-**/
-func (s *Model) getTTL(idx string) (*Ttl, error) {
-	store, err := s.Store(TTL)
-	if err != nil {
-		return nil, err
-	}
-
-	var result *Ttl
-	exists, err := store.Get(idx, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, nil
-	}
-
-	return result, nil
-}
-
-/**
-* clearTTL: Clears a TTL for a key
-* @param idx string
-* @return error
-**/
-func (s *Model) clearTTL(idx string) error {
-	ttl, err := s.getTTL(idx)
-	if err != nil {
-		return err
-	}
-
-	if ttl == nil {
-		return nil
-	}
-
-	if ttl.IsExpired() {
-		ttlSource, err := s.Store(TTL)
-		if err != nil {
-			return err
-		}
-
-		_, err = ttlSource.Delete(idx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-/**
-* cleanExpired: Cleans expired TTLs
-* @return error
-**/
-func (s *Model) cleanExpired() error {
-	ttlSource, err := s.Store(TTL)
-	if err != nil {
-		return err
-	}
-
-	if ttlSource.Count() < ttlSource.MinThresholdCompact {
-		return nil
-	}
-
-	ttlSource.ForEach(func(idx string, src []byte) (bool, error) {
-		var ttl Ttl
-		err := json.Unmarshal(src, &ttl)
-		if err != nil {
-			return true, err
-		}
-
-		if ttl.IsExpired() {
-			_, err := ttlSource.Delete(idx)
-			if err != nil {
-				return true, err
-			}
-		}
-		return true, nil
-	}, true, 0, 0, 1)
-
-	return nil
+	return s.OpenStore(INDEX)
 }
 
 /**
@@ -471,24 +364,13 @@ func (s *Model) cleanExpired() error {
 * @param idx string, value any, expiration time.Duration
 * @return error
 **/
-func (s *Model) Put(idx string, value any, expiration time.Duration) error {
-	source, err := s.Source()
+func (s *Model) Put(idx string, value any) error {
+	store, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	if expiration != 0 {
-		ttl, err := newTtl(value, expiration)
-		if err != nil {
-			return err
-		}
-		err = s.setTTL(idx, ttl)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = source.Put(idx, value)
+	err = store.Put(idx, value)
 	if err != nil {
 		return err
 	}
@@ -501,36 +383,13 @@ func (s *Model) Put(idx string, value any, expiration time.Duration) error {
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) get(idx string, dest any, ttl *Ttl) (bool, error) {
-	ttlSource, err := s.Store(TTL)
+func (s *Model) get(idx string, dest any) (bool, error) {
+	store, err := s.Source()
 	if err != nil {
 		return false, err
 	}
 
-	if ttl == nil {
-		ttl = &Ttl{}
-	}
-
-	exists, err := ttlSource.Get(idx, &ttl)
-	if err != nil {
-		return false, err
-	}
-	if exists {
-		if ttl.IsExpired() {
-			_, err := ttlSource.Delete(idx)
-			if err != nil {
-				return false, err
-			}
-			return false, nil
-		}
-	}
-
-	source, err := s.Source()
-	if err != nil {
-		return false, err
-	}
-
-	exists, err = source.Get(idx, &dest)
+	exists, err := store.Get(idx, &dest)
 	if err != nil {
 		return false, err
 	}
@@ -544,8 +403,7 @@ func (s *Model) get(idx string, dest any, ttl *Ttl) (bool, error) {
 * @return bool, error
 **/
 func (s *Model) Current(idx string, dest any) (bool, error) {
-	var ttl Ttl
-	return s.get(idx, dest, &ttl)
+	return s.get(idx, dest)
 }
 
 /**
@@ -554,31 +412,26 @@ func (s *Model) Current(idx string, dest any) (bool, error) {
 * @return error
 **/
 func (s *Model) Remove(idx string) error {
-	storeTtl, err := s.Store(TTL)
+	err := s.deleteTTL(idx)
 	if err != nil {
 		return err
 	}
 
-	_, err = storeTtl.Delete(idx)
+	store, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	source, err := s.Source()
-	if err != nil {
-		return err
-	}
-
-	_, err = source.Delete(idx)
+	_, err = store.Delete(idx)
 	return err
 }
 
 /**
 * putObject: Inserts or updates a document and keeps secondary indexes in sync.
-* @param idx string, object et.Json, ttl *Ttl
+* @param idx string, object et.Json
 * @return error
 **/
-func (s *Model) putObject(idx string, object et.Json, ttl *Ttl) error {
+func (s *Model) putObject(idx string, object et.Json) error {
 	object[INDEX] = idx
 
 	// Save document to primary store.
@@ -608,13 +461,6 @@ func (s *Model) putObject(idx string, object et.Json, ttl *Ttl) error {
 		}
 	}
 
-	if ttl != nil {
-		err := s.setTTL(idx, ttl)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -624,27 +470,17 @@ func (s *Model) putObject(idx string, object et.Json, ttl *Ttl) error {
 * @return error
 **/
 func (s *Model) deleteObject(idx string, current et.Json) error {
-	storeTtl, err := s.Store(TTL)
+	store, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	_, err = storeTtl.Delete(idx)
-	if err != nil {
-		return err
-	}
-
-	source, err := s.Source()
-	if err != nil {
-		return err
-	}
-
-	exists := source.IsExist(idx)
+	exists := store.IsExist(idx)
 	if !exists {
 		return nil
 	}
 
-	if _, err := source.Delete(idx); err != nil {
+	if _, err := store.Delete(idx); err != nil {
 		return err
 	}
 
@@ -721,12 +557,7 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 		}
 	}
 
-	ttl, err := newTtl(new, expiration)
-	if err != nil {
-		return tx, err
-	}
-
-	tx, err = tx.Add(s, INSERT, idx, old, new, ttl)
+	tx, err := tx.Add(s, INSERT, idx, old, new)
 	if err != nil {
 		return tx, err
 	}
@@ -766,8 +597,7 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
-	var ttl Ttl
-	exists, err := s.get(idx, &old, &ttl)
+	exists, err := s.get(idx, &old)
 	if err != nil {
 		return tx, err
 	}
@@ -782,7 +612,7 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx.Add(s, UPDATE, idx, old, new, &ttl)
+	tx.Add(s, UPDATE, idx, old, new)
 
 	for _, trigger := range s.AfterUpdates {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -819,8 +649,7 @@ func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration
 func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
-	var ttl Ttl
-	exists, err := s.get(idx, &old, &ttl)
+	exists, err := s.get(idx, &old)
 	if err != nil {
 		return tx, err
 	}
@@ -836,7 +665,7 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 		}
 	}
 
-	tx, err = tx.Add(s, DELETE, idx, old, new, &ttl)
+	tx, err = tx.Add(s, DELETE, idx, old, new)
 	if err != nil {
 		return tx, err
 	}

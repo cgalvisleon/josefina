@@ -188,7 +188,7 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 * @return *Field, error
 **/
 func (s *Model) defineIndexField() (*Field, error) {
-	result, err := s.defineField(INDEX, TpAtrib, TpKey, "")
+	result, err := s.defineField(INDEX, TpAtrib, TpJson, "")
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (s *Model) defineIndexField() (*Field, error) {
 * @return *Field, error
 **/
 func (s *Model) defineTTL() (*Field, error) {
-	result, err := s.defineField(TTL, TpAtrib, TpDateTime, "")
+	result, err := s.defineField(TTL, TpAtrib, TpJson, "")
 	if err != nil {
 		return nil, err
 	}
