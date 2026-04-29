@@ -298,33 +298,3 @@ func (s *Tx) Items(model *Model) []et.Json {
 	}
 	return result
 }
-
-/**
-* Equal: Returns all primary keys where field == key.
-* @param model *Model, field string, value any
-* @return []et.Json, bool
-**/
-func (s *Tx) Equal(model *Model, field string, value any) ([]et.Json, bool) {
-	items := s.Items(model)
-	result, ok := et.
-		From(items, "A").
-		Where(et.Eq(field, value)).
-		All()
-
-	return result, ok
-}
-
-/**
-* NotEqual: Returns all primary keys where field != key.
-* @param field string, value any
-* @return []et.Json, error
-**/
-func (s *Tx) NotEqual(model *Model, field string, value any) ([]et.Json, bool) {
-	items := s.Items(model)
-	result, ok := et.
-		From(items, "A").
-		Where(et.Neg(field, value)).
-		All()
-
-	return result, ok
-}

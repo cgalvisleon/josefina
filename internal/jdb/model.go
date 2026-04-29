@@ -95,6 +95,8 @@ type Model struct {
 	storeVm       js.Store                    `json:"-"`            // Virtual machine
 	mode          store.Mode                  `json:"-"`            // Mode
 	mu            sync.RWMutex                `json:"-"`            // Mutex
+	onPut         []func(string, any) error   `json:"-"`            // On put
+	onRemove      []func(string, any) error   `json:"-"`            // On remove
 	isDebug       bool                        `json:"-"`            // Is debug
 }
 
@@ -134,6 +136,8 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		mode:          store.ReadWrite,
 		schema:        s,
 		db:            s.db,
+		onPut:         make([]func(string, any) error, 0),
+		onRemove:      make([]func(string, any) error, 0),
 	}
 	_, err := result.defineIndexField()
 	if err != nil {
@@ -305,6 +309,22 @@ func (s *Model) indexBTree(field string) (*BTree, error) {
 }
 
 /**
+* OnPut: Adds a function to be called when a document is put
+* @param fn func(string, any) error
+**/
+func (s *Model) OnPut(fn func(string, any) error) {
+	s.onPut = append(s.onPut, fn)
+}
+
+/**
+* OnRemove: Adds a function to be called when a document is removed
+* @param fn func(string, any) error
+**/
+func (s *Model) OnRemove(fn func(string, any) error) {
+	s.onRemove = append(s.onRemove, fn)
+}
+
+/**
 * Store: Returns the store for name
 * @param name string
 * @return *store.FileStore, bool
@@ -368,6 +388,13 @@ func (s *Model) Put(idx string, value any) error {
 		return err
 	}
 
+	// Call onPut functions
+	for _, fn := range s.onPut {
+		if err := fn(idx, value); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -391,23 +418,36 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 }
 
 /**
-* Remove: Removes a document by primary key (no index cleanup)
-* @param idx string
+* remove: Removes a document by primary key (no index cleanup)
+* @param idx string, val any
 * @return error
 **/
-func (s *Model) Remove(idx string) error {
-	err := s.deleteTTL(idx)
-	if err != nil {
-		return err
-	}
-
+func (s *Model) remove(idx string, val any) error {
 	store, err := s.Source()
 	if err != nil {
 		return err
 	}
 
-	_, err = store.Delete(idx)
+	exists, err := store.Delete(idx)
+	if exists {
+		// Call onRemove functions
+		for _, fn := range s.onRemove {
+			if err := fn(idx, val); err != nil {
+				return err
+			}
+		}
+	}
+
 	return err
+}
+
+/**
+* Remove: Removes a document by primary key (no index cleanup)
+* @param idx string
+* @return error
+**/
+func (s *Model) Remove(idx string) error {
+	return s.remove(idx, nil)
 }
 
 /**
@@ -417,14 +457,16 @@ func (s *Model) Remove(idx string) error {
 **/
 func (s *Model) putObject(idx string, object et.Json) error {
 	object[INDEX] = idx
-
-	// Save document to primary store.
-	source, err := s.Source()
+	err := s.Put(idx, object)
 	if err != nil {
 		return err
 	}
-	if err := source.Put(idx, object); err != nil {
-		return err
+
+	// Call onPut functions
+	for _, fn := range s.onPut {
+		if err := fn(idx, object); err != nil {
+			return err
+		}
 	}
 
 	// Update each secondary BTree index.
@@ -464,7 +506,8 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 		return nil
 	}
 
-	if _, err := store.Delete(idx); err != nil {
+	err = s.remove(idx, current)
+	if err != nil {
 		return err
 	}
 
@@ -541,6 +584,19 @@ func (s *Model) IsExists(idx string) (bool, error) {
 }
 
 /**
+* Count: Counts documents in the primary store
+* @return int, error
+**/
+func (s *Model) Count() (int, error) {
+	result, err := s.Source()
+	if err != nil {
+		return 0, err
+	}
+
+	return result.Count(), nil
+}
+
+/**
 * insert: Inserts a document and keeps secondary indexes in sync.
 * @param idx string, new et.Json, tx *Tx, expiration time.Duration
 * @return (*Transaction, error)
@@ -595,7 +651,7 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
-	exists, err := s.get(idx, &old)
+	exists, err := s.Get(idx, &old)
 	if err != nil {
 		return tx, err
 	}
@@ -647,7 +703,7 @@ func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration
 func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old et.Json
-	exists, err := s.get(idx, &old)
+	exists, err := s.Get(idx, &old)
 	if err != nil {
 		return tx, err
 	}
@@ -676,224 +732,6 @@ func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
 	}
 
 	return tx, nil
-}
-
-/**
-* Equal: Returns all primary keys where field == key.
-* @param field string, value any, tx *Tx, page, limit int
-* @return []et.Json, error
-**/
-func (s *Model) Equal(field string, value any, tx *Tx, page, limit int) ([]et.Json, error) {
-	var result = []et.Json{}
-	if map[string]bool{INDEX: true, TTL: true}[field] {
-		source, err := s.Store(field)
-		if err != nil {
-			return result, err
-		}
-
-		var item et.Json
-		key := KeyFromAny(value)
-		_, err = source.Get(key.String(), &item)
-		if err != nil {
-			return result, err
-		}
-		result = append(result, item)
-		return result, nil
-	}
-
-	bt, exists := s.getBtree(field)
-	if exists {
-		key := KeyFromAny(value)
-		idxs, _ := bt.Equal(key)
-		for _, idx := range idxs {
-			item, exists, err := s.Current(idx)
-			if err != nil {
-				return result, err
-			}
-			if exists {
-				result = append(result, item)
-			}
-		}
-	} else {
-		store, err := s.Source()
-		if err != nil {
-			return result, err
-		}
-
-		offset := (page - 1) * limit
-		store.ForEach(func(id string, data []byte) (bool, error) {
-			var item et.Json
-			err := json.Unmarshal(data, &item)
-			if err != nil {
-				return false, err
-			}
-
-			item, ok := item.From("A").
-				Where(et.Eq(field, value)).
-				First()
-			if ok {
-				result = append(result, item)
-			}
-			return true, nil
-		}, true, offset, limit, 0)
-	}
-
-	if tx != nil {
-		items, ok := tx.Equal(s, field, value)
-		if ok {
-			result = append(result, items...)
-		}
-	}
-
-	return result, nil
-}
-
-/**
-* NotEqual: Returns all primary keys where field != key.
-* @param field string, value any, tx *Tx, page, limit int
-* @return []et.Json, error
-**/
-func (s *Model) NotEqual(field string, value any, tx *Tx, page, limit int) ([]et.Json, error) {
-	var result = []et.Json{}
-
-	bt, exists := s.getBtree(field)
-	if exists {
-		key := KeyFromAny(value)
-		idxs := bt.NotEqual(key)
-		for _, idx := range idxs {
-			item, exists, err := s.Current(idx)
-			if err != nil {
-				return result, err
-			}
-			if exists {
-				result = append(result, item)
-			}
-		}
-	} else {
-		store, err := s.Source()
-		if err != nil {
-			return result, err
-		}
-
-		offset := (page - 1) * limit
-		store.ForEach(func(id string, data []byte) (bool, error) {
-			var item et.Json
-			err := json.Unmarshal(data, &item)
-			if err != nil {
-				return false, err
-			}
-
-			item, ok := item.From("A").
-				Where(et.Neg(field, value)).
-				First()
-			if ok {
-				result = append(result, item)
-			}
-			return true, nil
-		}, true, offset, limit, 0)
-	}
-
-	if tx != nil {
-		items, ok := tx.NotEqual(s, field, value)
-		if ok {
-			result = append(result, items...)
-		}
-	}
-
-	return result, nil
-}
-
-/**
-* BetweenByIndex: Returns all primary keys where field is in [from, to] inclusive.
-* Pass IndexKey{} for open bounds.
-* @param field string, from, to IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) BetweenByIndex(field string, from, to IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.Between(from, to, asc)
-}
-
-/**
-* MoreByIndex: Returns all primary keys where field > key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) MoreByIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.More(key, asc)
-}
-
-/**
-* MoreEqByIndex: Returns all primary keys where field >= key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) MoreEqByIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.MoreEq(key, asc)
-}
-
-/**
-* LessByIndex: Returns all primary keys where field < key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) LessByIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.Less(key, asc)
-}
-
-/**
-* LessEqByIndex: Returns all primary keys where field <= key.
-* @param field string, key IndexKey, asc bool
-* @return []string
-**/
-func (s *Model) LessEqByIndex(field string, key IndexKey, asc bool) []string {
-	bt, err := s.indexBTree(field)
-	if err != nil {
-		return nil
-	}
-	return bt.LessEq(key, asc)
-}
-
-/**
-* Exists: Checks if a primary key exists
-* @param idx string
-* @return bool, error
-**/
-func (s *Model) Exists(idx string) (bool, error) {
-	source, err := s.Store(INDEX)
-	if err != nil {
-		return false, err
-	}
-
-	return source.IsExist(idx), nil
-}
-
-/**
-* Count: Counts documents in the primary store
-* @return int, error
-**/
-func (s *Model) Count() (int, error) {
-	result, err := s.Source()
-	if err != nil {
-		return 0, err
-	}
-
-	return result.Count(), nil
 }
 
 /**
@@ -933,54 +771,12 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
-		s.clearTTL(idx)
-
 		item := et.Json{}
 		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err
 		}
 		return next(idx, item)
 	}, asc, offset, limit, workers)
-}
-
-/**
-* OnIndex
-* @param fn store.SetIndexFn
-**/
-func (s *Model) OnIndex(name string, fn store.SetIndexFn) {
-	source, err := s.Store(name)
-	if err != nil {
-		return
-	}
-	source.OnIndex(fn)
-}
-
-/**
-* OnPut
-* @param name string, fn store.Putfn
-* @return error
-**/
-func (s *Model) OnPut(name string, fn store.Putfn) error {
-	source, err := s.Store(name)
-	if err != nil {
-		return err
-	}
-	source.OnPut(fn)
-	return nil
-}
-
-/**
-* OnDelete
-* @param name string, fn store.Deletefn
-* @return error
-**/
-func (s *Model) OnDelete(name string, fn store.Deletefn) error {
-	source, err := s.Store(name)
-	if err != nil {
-		return err
-	}
-	source.OnDelete(fn)
-	return nil
 }
 
 /**
