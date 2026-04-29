@@ -652,10 +652,14 @@ func (bt *BTree) DeleteKey(key IndexKey) (bool, error) {
 /**
 * Equal: Returns all values of keys equal to key.
 * @param key IndexKey
-* @return []string, bool
+* @return []string
 **/
-func (bt *BTree) Equal(key IndexKey) ([]string, bool) {
-	return bt.Get(key)
+func (bt *BTree) Equal(key IndexKey) []string {
+	result, ok := bt.Get(key)
+	if !ok {
+		return []string{}
+	}
+	return result
 }
 
 /**
@@ -797,6 +801,249 @@ func (bt *BTree) LessEq(key IndexKey, asc bool) []string {
 }
 
 /**
+* Like: Returns all values of KtString keys matching the SQL LIKE pattern.
+* % matches any sequence of characters, _ matches any single character.
+* Non-string keys are skipped.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) Like(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	pattern := []rune(key.String())
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].tp != KtString {
+				continue
+			}
+			if matchLike([]rune(leaf.keys[j].str), pattern) {
+				result = append(result, leaf.vals[j]...)
+			}
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* In: Returns all values of keys present in the given set.
+* Duplicate primary keys across multiple index entries are deduplicated.
+* @param keys []IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) In(keys []IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	seen := map[string]bool{}
+	var result []string
+	for _, key := range keys {
+		leaf := bt.findLeaf(key)
+		i := leafSearch(leaf.keys, key)
+		if i < len(leaf.keys) && leaf.keys[i].Compare(key) == 0 {
+			for _, v := range leaf.vals[i] {
+				if !seen[v] {
+					seen[v] = true
+					result = append(result, v)
+				}
+			}
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* NotIn: Returns all values of keys NOT present in the given set.
+* Scans all leaves; results are deduplicated.
+* @param keys []IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) NotIn(keys []IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	excluded := make(map[string]bool, len(keys))
+	for _, key := range keys {
+		excluded[key.String()] = true
+	}
+
+	seen := map[string]bool{}
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if excluded[leaf.keys[j].String()] {
+				continue
+			}
+			for _, v := range leaf.vals[j] {
+				if !seen[v] {
+					seen[v] = true
+					result = append(result, v)
+				}
+			}
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* Is: Returns all values of keys that strictly match key (same KeyType and value).
+* Unlike Equal, cross-type string fallback is not used — string must match string,
+* number must match number, etc.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) Is(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	leaf := bt.findLeaf(key)
+	i := leafSearch(leaf.keys, key)
+	if i < len(leaf.keys) && leaf.keys[i].tp == key.tp && leaf.keys[i].Compare(key) == 0 {
+		out := make([]string, len(leaf.vals[i]))
+		copy(out, leaf.vals[i])
+		if !asc {
+			bpReverse(out)
+		}
+		return out
+	}
+	return []string{}
+}
+
+/**
+* IsNot: Returns all values of keys that do NOT strictly match key.
+* Complement of Is: excludes keys where both KeyType and value are equal.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) IsNot(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].tp == key.tp && leaf.keys[j].Compare(key) == 0 {
+				continue
+			}
+			result = append(result, leaf.vals[j]...)
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* Null: Returns all values of keys that represent a null field value.
+* The null sentinel is KeyString("<nil>"), produced by KeyFromAny(nil).
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) Null(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	leaf := bt.findLeaf(key)
+	i := leafSearch(leaf.keys, key)
+	if i < len(leaf.keys) && leaf.keys[i].Compare(key) == 0 {
+		out := make([]string, len(leaf.vals[i]))
+		copy(out, leaf.vals[i])
+		if !asc {
+			bpReverse(out)
+		}
+		return out
+	}
+	return []string{}
+}
+
+/**
+* NotNull: Returns all values of keys that do NOT represent a null field value.
+* Complement of Null: scans all leaves and skips the null sentinel key.
+* @param key IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) NotNull(key IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			if leaf.keys[j].Compare(key) == 0 {
+				continue
+			}
+			result = append(result, leaf.vals[j]...)
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+/**
+* NotBetween: Returns all values of keys outside the range [from, to] exclusive.
+* Complement of Between: collects keys < from and keys > to in a single leaf scan.
+* @param from, to IndexKey, asc bool
+* @return []string
+**/
+func (bt *BTree) NotBetween(from, to IndexKey, asc bool) []string {
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+
+	var result []string
+	for leaf := bt.leftmostLeaf(); leaf != nil; leaf = leaf.next {
+		for j := 0; j < len(leaf.keys); j++ {
+			k := leaf.keys[j]
+			if k.Compare(from) < 0 || k.Compare(to) > 0 {
+				result = append(result, leaf.vals[j]...)
+			}
+		}
+	}
+	if !asc {
+		bpReverse(result)
+	}
+	return result
+}
+
+// matchLike reports whether s matches pattern p using SQL LIKE semantics.
+func matchLike(s, p []rune) bool {
+	var match func(si, pi int) bool
+	match = func(si, pi int) bool {
+		if pi == len(p) {
+			return si == len(s)
+		}
+		if p[pi] == '%' {
+			for i := si; i <= len(s); i++ {
+				if match(i, pi+1) {
+					return true
+				}
+			}
+			return false
+		}
+		if si == len(s) {
+			return false
+		}
+		if p[pi] == '_' || p[pi] == s[si] {
+			return match(si+1, pi+1)
+		}
+		return false
+	}
+	return match(0, 0)
+}
+
+/**
 * Keys: Returns distinct keys with pagination. limit=0 returns all.
 * @param asc bool, offset, limit int
 * @return []IndexKey
@@ -841,9 +1088,60 @@ func (bt *BTree) leftmostLeaf() *bpNode {
 * @return []string
 **/
 func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
-	var result []string
+	switch condition.Operator {
+	case et.OpEq:
+		return bt.Equal(KeyFromAny(condition.Value))
+	case et.OpNeg:
+		return bt.NotEqual(KeyFromAny(condition.Value))
+	case et.OpLess:
+		return bt.Less(KeyFromAny(condition.Value), true)
+	case et.OpLessEq:
+		return bt.LessEq(KeyFromAny(condition.Value), true)
+	case et.OpMore:
+		return bt.More(KeyFromAny(condition.Value), true)
+	case et.OpMoreEq:
+		return bt.MoreEq(KeyFromAny(condition.Value), true)
+	case et.OpLike:
+		return bt.Like(KeyFromAny(condition.Value), true)
+	case et.OpIn:
+		if vals, ok := condition.Value.([]any); ok {
+			keys := make([]IndexKey, len(vals))
+			for i, v := range vals {
+				keys[i] = KeyFromAny(v)
+			}
+			return bt.In(keys, true)
+		}
+		return bt.In([]IndexKey{KeyFromAny(condition.Value)}, true)
+	case et.OpNotIn:
+		if vals, ok := condition.Value.([]any); ok {
+			keys := make([]IndexKey, len(vals))
+			for i, v := range vals {
+				keys[i] = KeyFromAny(v)
+			}
+			return bt.NotIn(keys, true)
+		}
+		return bt.NotIn([]IndexKey{KeyFromAny(condition.Value)}, true)
+	case et.OpIs:
+		return bt.Is(KeyFromAny(condition.Value), true)
+	case et.OpIsNot:
+		return bt.IsNot(KeyFromAny(condition.Value), true)
+	case et.OpNull:
+		return bt.Null(KeyFromAny(condition.Value), true)
+	case et.OpNotNull:
+		return bt.NotNull(KeyFromAny(condition.Value), true)
+	case et.OpBetween:
+		btValues, ok := condition.Value.(et.BetweenValue)
+		if ok {
+			return bt.Between(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
+		}
+	case et.OpNotBetween:
+		btValues, ok := condition.Value.(et.BetweenValue)
+		if ok {
+			return bt.NotBetween(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
+		}
+	}
 
-	return result
+	return []string{}
 }
 
 /**
