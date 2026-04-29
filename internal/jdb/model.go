@@ -61,43 +61,43 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                      `json:"database"`     // Database name
-	Schema        string                      `json:"schema"`       // Schema name
-	Name          string                      `json:"name"`         // Model name
-	IsInit        bool                        `json:"-"`            // Is initialized
-	Path          string                      `json:"path"`         // Path to the model
-	Fields        map[string]*Field           `json:"fields"`       // Fields
-	Indexes       []string                    `json:"indexes"`      // Indexes
-	PrimaryKeys   []string                    `json:"primary_keys"` // Primary keys
-	ForeignKeys   map[string]*Detail          `json:"foreign_keys"` // Foreign keys
-	Unique        []string                    `json:"unique"`       // Unique
-	Required      []string                    `json:"required"`     // Required
-	Hidden        []string                    `json:"hidden"`       // Hidden
-	Details       map[string]*Detail          `json:"details"`      // Details
-	Rollups       map[string]*Detail          `json:"rollups"`      // Rollups
-	Relations     map[string]*Detail          `json:"relations"`    // Relations
-	Calcs         map[string][]byte           `json:"calcs"`        // Calculated fields
-	BeforeInserts []*Trigger                  `json:"-"`            // Before insert triggers
-	AfterInserts  []*Trigger                  `json:"-"`            // After insert triggers
-	BeforeUpdates []*Trigger                  `json:"-"`            // Before update triggers
-	AfterUpdates  []*Trigger                  `json:"-"`            // After update triggers
-	BeforeDeletes []*Trigger                  `json:"-"`            // Before delete triggers
-	AfterDeletes  []*Trigger                  `json:"-"`            // After delete triggers
-	Version       int                         `json:"version"`      // Version
-	IsCore        bool                        `json:"is_core"`      // Is core model
-	IsChangue     bool                        `json:"is_changue"`   // Is changue
-	IsStrict      bool                        `json:"is_strict"`    // Is strict model
-	stores        map[string]*store.FileStore `json:"-"`            // Stores
-	btrees        map[string]*BTree           `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
-	schema        *Schema                     `json:"-"`            // Schema
-	db            *DB                         `json:"-"`            // Database
-	vm            *js.VM                      `json:"-"`            // Virtual machine
-	storeVm       js.Store                    `json:"-"`            // Virtual machine
-	mode          store.Mode                  `json:"-"`            // Mode
-	mu            sync.RWMutex                `json:"-"`            // Mutex
-	onPut         []func(string, any) error   `json:"-"`            // On put
-	onRemove      []func(string, any) error   `json:"-"`            // On remove
-	isDebug       bool                        `json:"-"`            // Is debug
+	Database      string                            `json:"database"`     // Database name
+	Schema        string                            `json:"schema"`       // Schema name
+	Name          string                            `json:"name"`         // Model name
+	IsInit        bool                              `json:"-"`            // Is initialized
+	Path          string                            `json:"path"`         // Path to the model
+	Fields        map[string]*Field                 `json:"fields"`       // Fields
+	Indexes       []string                          `json:"indexes"`      // Indexes
+	PrimaryKeys   []string                          `json:"primary_keys"` // Primary keys
+	ForeignKeys   map[string]*Detail                `json:"foreign_keys"` // Foreign keys
+	Unique        []string                          `json:"unique"`       // Unique
+	Required      []string                          `json:"required"`     // Required
+	Hidden        []string                          `json:"hidden"`       // Hidden
+	Details       map[string]*Detail                `json:"details"`      // Details
+	Rollups       map[string]*Detail                `json:"rollups"`      // Rollups
+	Relations     map[string]*Detail                `json:"relations"`    // Relations
+	Calcs         map[string][]byte                 `json:"calcs"`        // Calculated fields
+	BeforeInserts []*Trigger                        `json:"-"`            // Before insert triggers
+	AfterInserts  []*Trigger                        `json:"-"`            // After insert triggers
+	BeforeUpdates []*Trigger                        `json:"-"`            // Before update triggers
+	AfterUpdates  []*Trigger                        `json:"-"`            // After update triggers
+	BeforeDeletes []*Trigger                        `json:"-"`            // Before delete triggers
+	AfterDeletes  []*Trigger                        `json:"-"`            // After delete triggers
+	Version       int                               `json:"version"`      // Version
+	IsCore        bool                              `json:"is_core"`      // Is core model
+	IsChangue     bool                              `json:"is_changue"`   // Is changue
+	IsStrict      bool                              `json:"is_strict"`    // Is strict model
+	stores        map[string]*store.FileStore       `json:"-"`            // Stores
+	btrees        map[string]*BTree                 `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
+	schema        *Schema                           `json:"-"`            // Schema
+	db            *DB                               `json:"-"`            // Database
+	vm            *js.VM                            `json:"-"`            // Virtual machine
+	storeVm       js.Store                          `json:"-"`            // Virtual machine
+	mode          store.Mode                        `json:"-"`            // Mode
+	mu            sync.RWMutex                      `json:"-"`            // Mutex
+	onPut         []func(string, any, string) error `json:"-"`            // On put
+	onRemove      []func(string, any) error         `json:"-"`            // On remove
+	isDebug       bool                              `json:"-"`            // Is debug
 }
 
 /**
@@ -136,7 +136,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		mode:          store.ReadWrite,
 		schema:        s,
 		db:            s.db,
-		onPut:         make([]func(string, any) error, 0),
+		onPut:         make([]func(string, any, string) error, 0),
 		onRemove:      make([]func(string, any) error, 0),
 	}
 	_, err := result.defineIndexField()
@@ -310,9 +310,9 @@ func (s *Model) indexBTree(field string) (*BTree, error) {
 
 /**
 * OnPut: Adds a function to be called when a document is put
-* @param fn func(string, any) error
+* @param fn func(string, any, string) error
 **/
-func (s *Model) OnPut(fn func(string, any) error) {
+func (s *Model) OnPut(fn func(string, any, string) error) {
 	s.onPut = append(s.onPut, fn)
 }
 
@@ -383,14 +383,18 @@ func (s *Model) Put(idx string, value any) error {
 		return err
 	}
 
-	err = store.Put(idx, value)
+	exists, err := store.Put(idx, value)
 	if err != nil {
 		return err
 	}
 
 	// Call onPut functions
 	for _, fn := range s.onPut {
-		if err := fn(idx, value); err != nil {
+		command := INSERT
+		if exists {
+			command = UPDATE
+		}
+		if err := fn(idx, value, command); err != nil {
 			return err
 		}
 	}
@@ -460,13 +464,6 @@ func (s *Model) putObject(idx string, object et.Json) error {
 	err := s.Put(idx, object)
 	if err != nil {
 		return err
-	}
-
-	// Call onPut functions
-	for _, fn := range s.onPut {
-		if err := fn(idx, object); err != nil {
-			return err
-		}
 	}
 
 	// Update each secondary BTree index.

@@ -619,15 +619,15 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 /**
 * Put
 * @param id string, value any
-* @return error
+* @return error, bool
 **/
-func (s *FileStore) Put(id string, value any) error {
+func (s *FileStore) Put(id string, value any) (bool, error) {
 	if s.mode == ReadOnly {
-		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	if id == "" {
-		return errors.New(msg.MSG_ID_IS_REQUIRED)
+		return false, errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
 	bt, ok := value.([]byte)
@@ -635,13 +635,13 @@ func (s *FileStore) Put(id string, value any) error {
 		var err error
 		bt, err = json.Marshal(value)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	ref, err := s.appendRecord(id, bt, Active)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	s.indexMu.Lock()
@@ -656,7 +656,7 @@ func (s *FileStore) Put(id string, value any) error {
 		fn(s, id, bt)
 	}
 
-	return nil
+	return exists, nil
 }
 
 /**
