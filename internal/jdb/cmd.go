@@ -1,6 +1,11 @@
 package jdb
 
-import "github.com/cgalvisleon/et/et"
+import (
+	"errors"
+
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/msg"
+)
 
 type Command struct {
 	model        *Model
@@ -16,18 +21,39 @@ type Command struct {
 	AfterDelete  func(model *Model, old, new et.Join) error
 }
 
-func (c *Command) Execute() error {
+func (c *Command) Execute() (et.Item, error) {
 	switch c.command {
 	case INSERT:
-		_, err := c.model.Insert(c.data, c.tx)
-		return err
+		tx, err := c.model.Insert(c.data, c.tx)
+		if err != nil {
+			return et.Item{}, err
+		}
+		result := tx.Result()
+		if len(result) > 0 {
+			return et.NewItem(result[0]), nil
+		}
+		return et.Item{}, nil
 	case UPDATE:
-		_, err := c.model.Update(c.data, c.tx)
-		return err
+		tx, err := c.model.Update(c.data, c.tx)
+		if err != nil {
+			return et.Item{}, err
+		}
+		result := tx.Result()
+		if len(result) > 0 {
+			return et.NewItem(result[0]), nil
+		}
+		return et.Item{}, nil
 	case DELETE:
-		_, err := c.model.Delete(c.idx, c.tx)
-		return err
+		tx, err := c.model.Delete(c.idx, c.tx)
+		if err != nil {
+			return et.Item{}, err
+		}
+		result := tx.Result()
+		if len(result) > 0 {
+			return et.NewItem(result[0]), nil
+		}
+		return et.Item{}, nil
 	default:
-		return nil
+		return et.Item{}, errors.New(msg.MSG_COMMAND_NOT_FOUND)
 	}
 }
