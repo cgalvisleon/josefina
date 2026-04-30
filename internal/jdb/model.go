@@ -58,7 +58,6 @@ type Model struct {
 	schema        *Schema                                  `json:"-"`              // Schema
 	db            *DB                                      `json:"-"`              // Database
 	node          *Node                                    `json:"-"`              // Node
-	vm            *js.VM                                   `json:"-"`              // Virtual machine
 	mu            *sync.RWMutex                            `json:"-"`              // Mutex
 	onPut         []func(*Node, string, any, string) error `json:"-"`              // On put
 	onRemove      []func(*Node, string, any) error         `json:"-"`              // On remove
@@ -552,16 +551,16 @@ func (s *Model) Count() (int, error) {
 * @return error
 **/
 func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, error) {
-	var err error
-	s.vm, err = js.New(fmt.Sprintf("trigger_%s", trigger.Name))
+	name := fmt.Sprintf("trigger_%s", trigger.Name)
+	vm, err := js.New(name)
 	if err != nil {
 		return tx, err
 	}
 
-	s.vm.Set("Old", old)
-	s.vm.Set("New", new)
-	s.vm.Set("Tx", tx)
-	_, err = s.vm.Run(string(trigger.Definition))
+	vm.Set("Old", old)
+	vm.Set("New", new)
+	vm.Set("Tx", tx)
+	_, err = vm.Run(string(trigger.Definition))
 	if err != nil {
 		return tx, err
 	}

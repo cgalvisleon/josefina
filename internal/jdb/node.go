@@ -129,7 +129,6 @@ func (s *Node) loadDbs() error {
 
 /**
 * loadUsers: Load the users
-* @param db *DB
 * @return error
 **/
 func (s *Node) loadUsers() error {
@@ -147,19 +146,6 @@ func (s *Node) loadUsers() error {
 	if err = s.users.Init(); err != nil {
 		return err
 	}
-
-	s.dbs.ForEachBt(func(idx string, src []byte) (bool, error) {
-		var db DB
-		if err := json.Unmarshal(src, &db); err != nil {
-			return false, err
-		}
-
-		err := db.load(s)
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}, false, 0, 0)
 
 	return nil
 }
