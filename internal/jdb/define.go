@@ -3,6 +3,7 @@ package jdb
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
@@ -41,15 +42,22 @@ func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, def
 * @param name string
 * @return bool, error
 **/
-func (s *Model) DefineIndex(field string) (bool, error) {
+func (s *Model) DefineIndex(field string, tp TpIndex) (bool, error) {
 	_, exists := s.Fields[field]
 	if !exists {
 		return false, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
 	}
 
-	idx := slices.Index(s.Indexes, field)
+	if tp == "" {
+		tp = TpIndexHash
+	}
+
+	idx := slices.IndexFunc(s.Indexes, func(i *Index) bool { return strings.EqualFold(i.Name, field) })
 	if idx == -1 {
-		s.Indexes = append(s.Indexes, field)
+		s.Indexes = append(s.Indexes, &Index{
+			Name: field,
+			Type: tp,
+		})
 	}
 	return idx != -1, nil
 }
@@ -61,15 +69,7 @@ func (s *Model) DefineIndex(field string) (bool, error) {
 **/
 func (s *Model) DefineIndexes(fields ...string) error {
 	for _, field := range fields {
-		_, exists := s.Fields[field]
-		if !exists {
-			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
-		}
-
-		idx := slices.Index(s.Indexes, field)
-		if idx == -1 {
-			s.Indexes = append(s.Indexes, field)
-		}
+		s.DefineIndex(field, TpIndexHash)
 	}
 	return nil
 }
@@ -184,15 +184,15 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 }
 
 /**
-* defineIndexField: Defines the index field
+* defineSource: Defines the source field
 * @return *Field, error
 **/
-func (s *Model) defineIndexField() (*Field, error) {
+func (s *Model) defineSource() (*Field, error) {
 	result, err := s.defineField(INDEX, TpAtrib, TpJson, "")
 	if err != nil {
 		return nil, err
 	}
-	s.DefineIndexes(INDEX)
+	s.DefineIndex(INDEX, TpIndexHash)
 	s.DefineHidden(INDEX)
 	return result, nil
 }

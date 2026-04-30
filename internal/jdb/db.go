@@ -163,7 +163,7 @@ func (s *DB) Save(tx *Tx) (*Tx, error) {
 		return tx, err
 	}
 
-	tx, err = s.node.dbs.Upsert(s.Name, item, tx, 0)
+	tx, err = s.node.dbs.Upsert(s.Name, item, tx)
 	if err != nil {
 		return tx, err
 	}
@@ -312,9 +312,9 @@ func (s *DB) Empty() error {
 **/
 func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, offset, limit, workers int) error {
 	model := s.transaction
-	st, err := model.Source()
-	if err != nil {
-		return err
+	st, exist := model.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
@@ -333,9 +333,9 @@ func (s *DB) ForEachTx(next func(idx string, tx Tx) (bool, error), asc bool, off
 **/
 func (s *DB) ForEachError(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	model := s.errors
-	st, err := model.Source()
-	if err != nil {
-		return err
+	st, exist := model.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
@@ -354,9 +354,9 @@ func (s *DB) ForEachError(next func(idx string, item et.Json) (bool, error), asc
 **/
 func (s *DB) ForEachSchema(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit, workers int) error {
 	model := s.schemas
-	st, err := model.Source()
-	if err != nil {
-		return err
+	st, exist := model.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return st.ForEach(func(idx string, src []byte) (bool, error) {

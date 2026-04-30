@@ -34,7 +34,6 @@ func loadDbs(db *DB) error {
 }
 
 type Node struct {
-	*tcp.Node
 	Version   string              `json:"version"`
 	DBS       map[string]*DB      `json:"dbs"`
 	Sessions  map[string]*Session `json:"-"`
@@ -42,6 +41,7 @@ type Node struct {
 	muSession *sync.RWMutex       `json:"-"`
 	dbs       *Model              `json:"-"`
 	users     *Model              `json:"-"`
+	tcp       *tcp.Node           `json:"-"`
 }
 
 var (
@@ -55,12 +55,12 @@ var (
 func Load() error {
 	port := envar.GetInt("PORT", 1305)
 	node = &Node{
-		Node:      tcp.NewNode(port),
 		Version:   version,
 		DBS:       make(map[string]*DB, 0),
 		Sessions:  make(map[string]*Session, 0),
 		muDbs:     &sync.RWMutex{},
 		muSession: &sync.RWMutex{},
+		tcp:       tcp.NewNode(port),
 	}
 
 	name := "_catalog"

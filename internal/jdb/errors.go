@@ -1,8 +1,6 @@
 package jdb
 
 import (
-	"time"
-
 	"github.com/cgalvisleon/et/et"
 )
 
@@ -35,7 +33,7 @@ func (db *DB) putError(model, tag, id string, err error) (string, error) {
 		"tag":   tag,
 		"id":    id,
 		"error": err.Error(),
-	}, nil, time.Hour*24*30*3)
+	}, nil)
 	if er != nil {
 		return "", er
 	}

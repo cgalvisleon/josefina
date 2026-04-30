@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/js"
@@ -61,43 +61,44 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                            `json:"database"`     // Database name
-	Schema        string                            `json:"schema"`       // Schema name
-	Name          string                            `json:"name"`         // Model name
-	IsInit        bool                              `json:"-"`            // Is initialized
-	Path          string                            `json:"path"`         // Path to the model
-	Fields        map[string]*Field                 `json:"fields"`       // Fields
-	Indexes       []string                          `json:"indexes"`      // Indexes
-	PrimaryKeys   []string                          `json:"primary_keys"` // Primary keys
-	ForeignKeys   map[string]*Detail                `json:"foreign_keys"` // Foreign keys
-	Unique        []string                          `json:"unique"`       // Unique
-	Required      []string                          `json:"required"`     // Required
-	Hidden        []string                          `json:"hidden"`       // Hidden
-	Details       map[string]*Detail                `json:"details"`      // Details
-	Rollups       map[string]*Detail                `json:"rollups"`      // Rollups
-	Relations     map[string]*Detail                `json:"relations"`    // Relations
-	Calcs         map[string][]byte                 `json:"calcs"`        // Calculated fields
-	BeforeInserts []*Trigger                        `json:"-"`            // Before insert triggers
-	AfterInserts  []*Trigger                        `json:"-"`            // After insert triggers
-	BeforeUpdates []*Trigger                        `json:"-"`            // Before update triggers
-	AfterUpdates  []*Trigger                        `json:"-"`            // After update triggers
-	BeforeDeletes []*Trigger                        `json:"-"`            // Before delete triggers
-	AfterDeletes  []*Trigger                        `json:"-"`            // After delete triggers
-	Version       int                               `json:"version"`      // Version
-	IsCore        bool                              `json:"is_core"`      // Is core model
-	IsChangue     bool                              `json:"is_changue"`   // Is changue
-	IsStrict      bool                              `json:"is_strict"`    // Is strict model
-	stores        map[string]*store.FileStore       `json:"-"`            // Stores
-	btrees        map[string]*BTree                 `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
-	schema        *Schema                           `json:"-"`            // Schema
-	db            *DB                               `json:"-"`            // Database
-	vm            *js.VM                            `json:"-"`            // Virtual machine
-	storeVm       js.Store                          `json:"-"`            // Virtual machine
-	mode          store.Mode                        `json:"-"`            // Mode
-	mu            sync.RWMutex                      `json:"-"`            // Mutex
-	onPut         []func(string, any, string) error `json:"-"`            // On put
-	onRemove      []func(string, any) error         `json:"-"`            // On remove
-	isDebug       bool                              `json:"-"`            // Is debug
+	Database      string                                   `json:"database"`     // Database name
+	Schema        string                                   `json:"schema"`       // Schema name
+	Name          string                                   `json:"name"`         // Model name
+	IsInit        bool                                     `json:"-"`            // Is initialized
+	Path          string                                   `json:"path"`         // Path to the model
+	Fields        map[string]*Field                        `json:"fields"`       // Fields
+	Indexes       []*Index                                 `json:"indexes"`      // Indexes
+	PrimaryKeys   []string                                 `json:"primary_keys"` // Primary keys
+	ForeignKeys   map[string]*Detail                       `json:"foreign_keys"` // Foreign keys
+	Unique        []string                                 `json:"unique"`       // Unique
+	Required      []string                                 `json:"required"`     // Required
+	Hidden        []string                                 `json:"hidden"`       // Hidden
+	Details       map[string]*Detail                       `json:"details"`      // Details
+	Rollups       map[string]*Detail                       `json:"rollups"`      // Rollups
+	Relations     map[string]*Detail                       `json:"relations"`    // Relations
+	Calcs         map[string][]byte                        `json:"calcs"`        // Calculated fields
+	BeforeInserts []*Trigger                               `json:"-"`            // Before insert triggers
+	AfterInserts  []*Trigger                               `json:"-"`            // After insert triggers
+	BeforeUpdates []*Trigger                               `json:"-"`            // Before update triggers
+	AfterUpdates  []*Trigger                               `json:"-"`            // After update triggers
+	BeforeDeletes []*Trigger                               `json:"-"`            // Before delete triggers
+	AfterDeletes  []*Trigger                               `json:"-"`            // After delete triggers
+	Version       int                                      `json:"version"`      // Version
+	IsCore        bool                                     `json:"is_core"`      // Is core model
+	IsChangue     bool                                     `json:"is_changue"`   // Is changue
+	IsStrict      bool                                     `json:"is_strict"`    // Is strict model
+	stores        map[string]*store.FileStore              `json:"-"`            // Stores
+	btrees        map[string]*BTree                        `json:"-"`            // Secondary indexes (B+ tree, self-persisting)
+	schema        *Schema                                  `json:"-"`            // Schema
+	db            *DB                                      `json:"-"`            // Database
+	node          *Node                                    `json:"-"`            // Node
+	vm            *js.VM                                   `json:"-"`            // Virtual machine
+	storeVm       js.Store                                 `json:"-"`            // Virtual machine
+	mode          store.Mode                               `json:"-"`            // Mode
+	mu            sync.RWMutex                             `json:"-"`            // Mutex
+	onPut         []func(*Node, string, any, string) error `json:"-"`            // On put
+	onRemove      []func(*Node, string, any) error         `json:"-"`            // On remove
+	isDebug       bool                                     `json:"-"`            // Is debug
 }
 
 /**
@@ -112,7 +113,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		Name:          name,
 		Path:          path,
 		Fields:        make(map[string]*Field, 0),
-		Indexes:       make([]string, 0),
+		Indexes:       make([]*Index, 0),
 		PrimaryKeys:   make([]string, 0),
 		ForeignKeys:   make(map[string]*Detail, 0),
 		Unique:        make([]string, 0),
@@ -136,10 +137,11 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		mode:          store.ReadWrite,
 		schema:        s,
 		db:            s.db,
-		onPut:         make([]func(string, any, string) error, 0),
-		onRemove:      make([]func(string, any) error, 0),
+		node:          s.db.node,
+		onPut:         make([]func(*Node, string, any, string) error, 0),
+		onRemove:      make([]func(*Node, string, any) error, 0),
 	}
-	_, err := result.defineIndexField()
+	_, err := result.defineSource()
 	if err != nil {
 		return nil, err
 	}
@@ -254,15 +256,17 @@ func (s *Model) Init() error {
 	}
 
 	// Open each secondary BTree (Init loads persisted data from its own store).
-	for _, name := range s.Indexes {
-		if map[string]bool{INDEX: true}[name] {
-			if _, err := s.OpenStore(name); err != nil {
+	for _, index := range s.Indexes {
+		if strings.EqualFold(INDEX, index.Name) {
+			if err := s.loadStore(index.Name); err != nil {
 				return err
 			}
 			continue
 		}
-		if _, err := s.indexBTree(name); err != nil {
-			return err
+		if index.Type == TpIndexBTree {
+			if err := s.loadBTree(index.Name); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -287,32 +291,32 @@ func (s *Model) getBtree(field string) (*BTree, bool) {
 }
 
 /**
-* indexBTree returns the BTree for field, opening and loading it on first access.
+* loadBTree returns the BTree for field, opening and loading it on first access.
 * @param field string
-* @return *BTree, error
+* @return error
 **/
-func (s *Model) indexBTree(field string) (*BTree, error) {
+func (s *Model) loadBTree(field string) error {
 	bt, exists := s.getBtree(field)
 	if exists {
-		return bt, nil
+		return nil
 	}
 
 	bt, err := OpenBTree(s.Path, field)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	s.mu.Lock()
 	s.btrees[field] = bt
 	s.mu.Unlock()
-	return bt, nil
+	return nil
 }
 
 /**
 * OnPut: Adds a function to be called when a document is put
 * @param fn func(string, any, string) error
 **/
-func (s *Model) OnPut(fn func(string, any, string) error) {
+func (s *Model) OnPut(fn func(*Node, string, any, string) error) {
 	s.onPut = append(s.onPut, fn)
 }
 
@@ -320,7 +324,7 @@ func (s *Model) OnPut(fn func(string, any, string) error) {
 * OnRemove: Adds a function to be called when a document is removed
 * @param fn func(string, any) error
 **/
-func (s *Model) OnRemove(fn func(string, any) error) {
+func (s *Model) OnRemove(fn func(*Node, string, any) error) {
 	s.onRemove = append(s.onRemove, fn)
 }
 
@@ -338,38 +342,34 @@ func (s *Model) GetStore(name string) (*store.FileStore, bool) {
 }
 
 /**
-* OpenStore: Opens a store
+* loadStore: Loads a store
 * @param name string
-* @return *store.FileStore, error
+* @return error
 **/
-func (s *Model) OpenStore(name string) (*store.FileStore, error) {
+func (s *Model) loadStore(name string) error {
 	result, exists := s.GetStore(name)
 	if exists {
-		return result, nil
+		return nil
 	}
 
 	result, err := store.Open(s.Path, name, s.mode)
 	if err != nil {
-		return nil, err
-	}
-
-	if s.isDebug {
-		result = result.IsDebug()
+		return err
 	}
 
 	s.mu.Lock()
 	s.stores[name] = result
 	s.mu.Unlock()
 
-	return result, nil
+	return nil
 }
 
 /**
 * Source: Returns the primary store
 * @return *store.FileStore, error
 **/
-func (s *Model) Source() (*store.FileStore, error) {
-	return s.OpenStore(INDEX)
+func (s *Model) Source() (*store.FileStore, bool) {
+	return s.GetStore(INDEX)
 }
 
 /**
@@ -378,9 +378,9 @@ func (s *Model) Source() (*store.FileStore, error) {
 * @return error
 **/
 func (s *Model) Put(idx string, value any) error {
-	store, err := s.Source()
-	if err != nil {
-		return err
+	store, exist := s.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	exists, err := store.Put(idx, value)
@@ -394,7 +394,7 @@ func (s *Model) Put(idx string, value any) error {
 		if exists {
 			command = UPDATE
 		}
-		if err := fn(idx, value, command); err != nil {
+		if err := fn(s.node, idx, value, command); err != nil {
 			return err
 		}
 	}
@@ -408,9 +408,9 @@ func (s *Model) Put(idx string, value any) error {
 * @return bool, error
 **/
 func (s *Model) Get(idx string, dest any) (bool, error) {
-	store, err := s.Source()
-	if err != nil {
-		return false, err
+	store, exist := s.Source()
+	if !exist {
+		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	exists, err := store.Get(idx, &dest)
@@ -427,16 +427,16 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 * @return error
 **/
 func (s *Model) remove(idx string, val any) error {
-	store, err := s.Source()
-	if err != nil {
-		return err
+	store, exist := s.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	exists, err := store.Delete(idx)
 	if exists {
 		// Call onRemove functions
 		for _, fn := range s.onRemove {
-			if err := fn(idx, val); err != nil {
+			if err := fn(s.node, idx, val); err != nil {
 				return err
 			}
 		}
@@ -467,20 +467,22 @@ func (s *Model) putObject(idx string, object et.Json) error {
 	}
 
 	// Update each secondary BTree index.
-	for _, name := range s.Indexes {
-		if name == INDEX {
+	for _, index := range s.Indexes {
+		if index.Name == INDEX {
 			continue
 		}
-		v := object[name]
+		v := object[index.Name]
 		if v == nil {
 			continue
 		}
-		bt, err := s.indexBTree(name)
-		if err != nil {
-			return err
-		}
-		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
-			return err
+		if index.Type == TpIndexBTree {
+			bt, exist := s.getBtree(index.Name)
+			if !exist {
+				continue
+			}
+			if err := bt.Insert(KeyFromAny(v), idx); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -493,9 +495,9 @@ func (s *Model) putObject(idx string, object et.Json) error {
 * @return error
 **/
 func (s *Model) deleteObject(idx string, current et.Json) error {
-	store, err := s.Source()
-	if err != nil {
-		return err
+	store, exist := s.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	exists := store.IsExist(idx)
@@ -503,26 +505,28 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 		return nil
 	}
 
-	err = s.remove(idx, current)
+	err := s.remove(idx, current)
 	if err != nil {
 		return err
 	}
 
 	// Remove from each secondary BTree index.
-	for _, name := range s.Indexes {
-		if name == INDEX {
+	for _, index := range s.Indexes {
+		if index.Name == INDEX {
 			continue
 		}
-		v := current[name]
+		v := current[index.Name]
 		if v == nil {
 			continue
 		}
-		bt, err := s.indexBTree(name)
-		if err != nil {
-			return err
-		}
-		if _, err := bt.Delete(KeyFromAny(v), idx); err != nil {
-			return err
+		if index.Type == TpIndexBTree {
+			bt, exist := s.getBtree(index.Name)
+			if !exist {
+				continue
+			}
+			if _, err := bt.Delete(KeyFromAny(v), idx); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -572,9 +576,9 @@ func (s *Model) Current(idx string) (et.Json, bool, error) {
 * @return bool, error
 **/
 func (s *Model) IsExists(idx string) (bool, error) {
-	source, err := s.Source()
-	if err != nil {
-		return false, err
+	source, exist := s.Source()
+	if !exist {
+		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return source.IsExist(idx), nil
@@ -585,9 +589,9 @@ func (s *Model) IsExists(idx string) (bool, error) {
 * @return int, error
 **/
 func (s *Model) Count() (int, error) {
-	result, err := s.Source()
-	if err != nil {
-		return 0, err
+	result, exist := s.Source()
+	if !exist {
+		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return result.Count(), nil
@@ -595,10 +599,10 @@ func (s *Model) Count() (int, error) {
 
 /**
 * insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx, expiration time.Duration
+* @param idx string, new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
+func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
@@ -625,10 +629,10 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 
 /**
 * Insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx, expiration time.Duration
+* @param idx string, new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
+func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	exists, err := s.IsExists(idx)
 	if err != nil {
 		return tx, err
@@ -637,7 +641,7 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx, expiration time.Duration
 		return tx, errors.New(msg.MSG_RECORD_EXISTS)
 	}
 
-	return s.insert(idx, new, tx, expiration)
+	return s.insert(idx, new, tx)
 }
 
 /**
@@ -677,10 +681,10 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 
 /**
 * Upsert: Inserts or updates a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx, expiration time.Duration
+* @param idx string, new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration) (*Tx, error) {
+func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	exists, err := s.IsExists(idx)
 	if err != nil {
 		return tx, err
@@ -689,7 +693,7 @@ func (s *Model) Upsert(idx string, new et.Json, tx *Tx, expiration time.Duration
 		return s.Update(idx, new, tx)
 	}
 
-	return s.insert(idx, new, tx, expiration)
+	return s.insert(idx, new, tx)
 }
 
 /**
@@ -756,9 +760,9 @@ func (s *Model) Value(atrib string, item et.Json) (interface{}, bool) {
 * @return error
 **/
 func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error {
-	st, err := s.Source()
-	if err != nil {
-		return err
+	st, exist := s.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	total := st.Count()
@@ -781,8 +785,8 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 * @param name string
 * @return error
 **/
-func (s *Model) CreateIndex(name string) error {
-	exists, err := s.DefineIndex(name)
+func (s *Model) CreateIndex(name string, tp TpIndex) error {
+	exists, err := s.DefineIndex(name, tp)
 	if err != nil {
 		return err
 	}
@@ -796,9 +800,12 @@ func (s *Model) CreateIndex(name string) error {
 		if v == nil {
 			return true, nil
 		}
-		bt, err := s.indexBTree(name)
-		if err != nil {
-			return true, err
+		if tp != TpIndexBTree {
+			return true, nil
+		}
+		bt, exist := s.getBtree(name)
+		if !exist {
+			return true, nil
 		}
 		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
 			return true, err
@@ -906,7 +913,7 @@ func (s *Model) Empty() error {
 	}
 
 	s.Fields = make(map[string]*Field, 0)
-	s.Indexes = make([]string, 0)
+	s.Indexes = make([]*Index, 0)
 	s.PrimaryKeys = make([]string, 0)
 	s.ForeignKeys = make(map[string]*Detail, 0)
 	s.Unique = make([]string, 0)

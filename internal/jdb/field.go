@@ -106,6 +106,22 @@ const (
 	TpReference     TypeData = "reference"
 )
 
+type TpIndex string
+
+func (s TpIndex) Str() string {
+	return string(s)
+}
+
+const (
+	TpIndexHash  TpIndex = "hash"
+	TpIndexBTree TpIndex = "btree"
+)
+
+type Index struct {
+	Name string
+	Type TpIndex
+}
+
 type Value struct {
 	Tp  TypeData
 	Val any

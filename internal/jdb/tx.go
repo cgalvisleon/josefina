@@ -53,9 +53,9 @@ func loadTransaction(db *DB) error {
 	}
 
 	db.transaction = result
-	source, err := db.transaction.Source()
-	if err != nil {
-		return err
+	source, exist := db.transaction.Source()
+	if !exist {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	source.ForEach(func(idx string, src []byte) (bool, error) {
