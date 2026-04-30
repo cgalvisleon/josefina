@@ -24,8 +24,9 @@ const (
 )
 
 type Transaction struct {
-	model     *Model    `json:"-"`
-	From      *From     `json:"from"`
+	Database  string    `json:"database"`
+	Schema    string    `json:"schema"`
+	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Command   string    `json:"command"`
@@ -33,7 +34,22 @@ type Transaction struct {
 	New       et.Json   `json:"new"`
 	Old       et.Json   `json:"old"`
 	Status    string    `json:"status"`
+	model     *Model    `json:"-"`
 	tx        *Tx       `json:"-"`
+}
+
+/**
+* load: Loads the transaction
+* @param db *DB
+* @return error
+**/
+func (s *Transaction) load(tx *Tx) error {
+	model, err := tx.db.GetModel(s.Schema, s.Name)
+	if err != nil {
+		return err
+	}
+	s.model = model
+	return nil
 }
 
 /**
@@ -78,6 +94,24 @@ func GetTx(db *DB, tx *Tx) *Tx {
 	}
 	tx.db = db
 	return tx
+}
+
+func (s *Tx) load(db *DB) error {
+	s.db = db
+	for _, tx := range s.Transactions {
+		err := tx.load(s)
+		if err != nil {
+			return err
+		}
+	}
+	for _, tx := range s.Executions {
+		err := tx.load(s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /**
@@ -154,8 +188,9 @@ func (s *Tx) SetStatus(status string) error {
 func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) (*Tx, error) {
 	now := timezone.Now()
 	s.Transactions = append(s.Transactions, &Transaction{
-		model:     model,
-		From:      model.From(),
+		Database:  model.Database,
+		Schema:    model.Schema,
+		Name:      model.Name,
 		CreatedAt: now,
 		UpdatedAt: now,
 		Command:   command,
@@ -163,6 +198,7 @@ func (s *Tx) Add(model *Model, command, idx string, old, new et.Json) (*Tx, erro
 		New:       new,
 		Old:       old,
 		tx:        s,
+		model:     model,
 	})
 	err := s.SetStatus(PENDING)
 	if err != nil {
@@ -287,18 +323,16 @@ func loadTransaction(db *DB) error {
 	}
 
 	db.transaction = result
-	source, exist := db.transaction.Source()
-	if !exist {
-		return errors.New(msg.MSG_STORE_NOT_FOUND)
-	}
-
-	source.ForEach(func(idx string, src []byte) (bool, error) {
+	db.transaction.ForEachBt(func(idx string, src []byte) (bool, error) {
 		var tx Tx
 		if err := json.Unmarshal(src, &tx); err != nil {
 			return false, err
 		}
 
-		tx.db = db
+		err := tx.load(db)
+		if err != nil {
+			return false, err
+		}
 		if tx.Status == PENDING {
 			err := tx.Rollback()
 			if err != nil {
@@ -308,7 +342,7 @@ func loadTransaction(db *DB) error {
 				}
 				return true, err
 			}
-			_, err = source.Delete(idx)
+			err = db.transaction.Remove(idx)
 			if err != nil {
 				_, er := db.putError(db.transaction.Key(), "rollback:delete", tx.Idx, err)
 				if er != nil {
@@ -318,7 +352,7 @@ func loadTransaction(db *DB) error {
 			}
 		}
 		return true, nil
-	}, false, 0, 0, 1)
+	}, false, 0, 0)
 
 	return nil
 }

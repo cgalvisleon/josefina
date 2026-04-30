@@ -20,41 +20,6 @@ var (
 	ErrorFieldNotFound = errors.New(msg.MSG_FIELD_NOT_FOUND)
 )
 
-/**
-* From struct
-* Define the source of the data, atrib address is the path to the data (host:port)
-**/
-type From struct {
-	Database string `json:"database"`
-	Schema   string `json:"schema"`
-	Name     string `json:"name"`
-}
-
-/**
-* Key: Returns the key of the from
-* @return string
-**/
-func (s *From) Key() string {
-	result := ""
-	if s.Schema != "" {
-		result = s.Name
-	}
-	return strs.Append(result, s.Name, ".")
-}
-
-/**
-* ToFrom: Converts a JSON to a From
-* @param def et.Json
-* @return *From
-**/
-func ToFrom(def et.Json) *From {
-	return &From{
-		Database: def.Str("database"),
-		Schema:   def.Str("schema"),
-		Name:     def.Str("name"),
-	}
-}
-
 type Trigger struct {
 	Name       string `json:"name"`
 	Definition []byte `json:"definition"`
@@ -165,10 +130,8 @@ func (s *Model) Save() error {
 * @return string
 **/
 func (s *Model) Key() string {
-	result := ""
-	if s.Schema != "" {
-		result = s.Name
-	}
+	result := s.Database
+	result = strs.Append(result, s.Schema, ".")
 	return strs.Append(result, s.Name, ".")
 }
 
@@ -227,18 +190,6 @@ func (s *Model) Stricted() {
 **/
 func (s *Model) GenKey() string {
 	return reg.GenUUId(s.Name)
-}
-
-/**
-* From: Returns a new From instance
-* @return *From
-**/
-func (s *Model) From() *From {
-	return &From{
-		Database: s.Database,
-		Schema:   s.Schema,
-		Name:     s.Name,
-	}
 }
 
 /**
@@ -822,6 +773,28 @@ func (s *Model) Value(atrib string, item et.Json) (interface{}, bool) {
 	}
 
 	return nil, false
+}
+
+/**
+* ForEach: Iterates over all documents in the primary store
+* @param next func(idx string, src []byte) (bool, error), asc bool, offset, limit int
+* @return error
+**/
+func (s *Model) ForEachBt(next func(idx string, src []byte) (bool, error), asc bool, offset, limit int) error {
+	st, exists := s.Source()
+	if !exists {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
+	}
+
+	total := st.Count()
+	workers := total / 1000
+	if workers <= 0 {
+		workers = 1
+	}
+
+	return st.ForEach(func(idx string, src []byte) (bool, error) {
+		return next(idx, src)
+	}, asc, offset, limit, workers)
 }
 
 /**

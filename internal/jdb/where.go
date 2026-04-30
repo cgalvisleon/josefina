@@ -399,3 +399,9 @@ func (s *Where) First(tx *Tx) (et.Json, bool) {
 func (s *Where) Last(tx *Tx) (et.Json, bool) {
 	return s.One(tx, -1)
 }
+
+// func From(model *Model) *Where {
+// 	return &Where{
+// 		model: model,
+// 	}
+// }
