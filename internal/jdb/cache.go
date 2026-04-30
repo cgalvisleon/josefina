@@ -69,7 +69,7 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 		}
 	}
 
-	exists, err := s.cache.Get(key, &ttl)
+	exists, err := s.cache.Get(key, ttl)
 	if err != nil {
 		return false, err
 	}

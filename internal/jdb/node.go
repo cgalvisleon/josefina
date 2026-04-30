@@ -2,36 +2,19 @@ package jdb
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/jwt"
 	"github.com/cgalvisleon/et/tcp"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 const (
 	version = "1.0.0"
 )
-
-/**
-* loadDbs: Loads the schemas
-* @param db *DB
-* @return error
-**/
-func loadDbs(db *DB) error {
-	result, err := db.NewModel("", "schemas", true, 1)
-	if err != nil {
-		return err
-	}
-
-	err = result.Init()
-	if err != nil {
-		return err
-	}
-
-	db.schemas = result
-
-	return nil
-}
 
 type Node struct {
 	Version   string              `json:"version"`
@@ -42,6 +25,7 @@ type Node struct {
 	catalog   *DB                 `json:"-"`
 	dbs       *Model              `json:"-"`
 	users     *Model              `json:"-"`
+	sessions  *Model              `json:"-"`
 	tcp       *tcp.Node           `json:"-"`
 }
 
@@ -89,6 +73,10 @@ func (s *Node) load() error {
 	}
 
 	if err := s.loadUsers(); err != nil {
+		return err
+	}
+
+	if err := s.loadSessions(); err != nil {
 		return err
 	}
 
@@ -151,6 +139,24 @@ func (s *Node) loadUsers() error {
 }
 
 /**
+* loadSessions: Load the sessions
+* @return error
+**/
+func (s *Node) loadSessions() error {
+	var err error
+	s.sessions, err = s.catalog.NewModel("", "sessions", true, 1)
+	if err != nil {
+		return err
+	}
+
+	if err = s.sessions.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
 * GetDb: Get a database
 * @param name string
 * @return (*DB, error)
@@ -160,9 +166,38 @@ func (s *Node) GetDb(name string) (*DB, error) {
 	result, exists := s.DBS[name]
 	s.muDbs.RUnlock()
 
-	if exists {
-		return result, nil
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
 	}
 
-	return nil, nil
+	return result, nil
+}
+
+/**
+* Autentication: Autenticate a user
+* @param token string
+* @return (*Session, error)
+**/
+func (s *Node) Autentication(token string) (*Session, error) {
+	claim, err := jwt.Validate(token)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := s.GetDb(claim.App)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf(`%s:%s`, claim.UserId, claim.App)
+	var result *Session
+	exists, err := db.GetCache(key, result)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+	}
+
+	return result, nil
 }
