@@ -220,9 +220,9 @@ func (s *Where) Limit(page int, rows int) *Where {
 * @param tx *Tx
 * @return []et.Json, error
 **/
-func (s *Where) All(tx *Tx) ([]et.Json, error) {
+func (s *Where) All(tx *Tx) (et.Items, error) {
 	if s.from == nil {
-		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+		return et.Items{}, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	tx = GetTx(s.db, tx)
@@ -259,11 +259,11 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			return next, nil
 		}, asc, s.offset, s.limit)
 		if err != nil {
-			return nil, err
+			return et.Items{}, err
 		}
 
 		if !next {
-			return result, nil
+			return et.NewItems(result), nil
 		}
 
 		cache := tx.Items(model)
@@ -274,11 +274,11 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			}
 			next = addResult(idx, item)
 			if !next {
-				return result, nil
+				return et.NewItems(result), nil
 			}
 		}
 
-		return result, nil
+		return et.NewItems(result), nil
 	}
 
 	for _, con := range s.conditions {
@@ -288,13 +288,13 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			var err error
 			con.Value, err = v.All(tx)
 			if err != nil {
-				return nil, err
+				return et.Items{}, err
 			}
 		case Where:
 			var err error
 			con.Value, err = v.All(tx)
 			if err != nil {
-				return nil, err
+				return et.Items{}, err
 			}
 		}
 
@@ -304,7 +304,7 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			for _, idx := range idxs {
 				item, exists, err := model.Current(idx)
 				if err != nil {
-					return nil, err
+					return et.Items{}, err
 				}
 				if exists {
 					addResult(idx, item)
@@ -321,7 +321,7 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 					}
 					next := addResult(idx, item)
 					if !next {
-						return result, nil
+						return et.NewItems(result), nil
 					}
 				}
 			}
@@ -337,7 +337,7 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 			return next, nil
 		}, true, s.offset, s.limit)
 		if err != nil {
-			return nil, err
+			return et.Items{}, err
 		}
 
 		cache := tx.Items(model)
@@ -350,58 +350,196 @@ func (s *Where) All(tx *Tx) ([]et.Json, error) {
 				}
 				next := addResult(idx, item)
 				if !next {
-					return result, nil
+					return et.NewItems(result), nil
 				}
 			}
 		}
 	}
 
-	return result, nil
+	return et.NewItems(result), nil
 }
 
 /**
 * One
 * @param tx *Tx, idx int
-* @return et.Json, bool
+* @return et.Json, error
 **/
-func (s *Where) One(tx *Tx, idx int) (et.Json, bool) {
-	rows, err := s.All(tx)
+func (s *Where) One(tx *Tx, idx int) (et.Item, error) {
+	items, err := s.All(tx)
 	if err != nil {
-		return et.Json{}, false
+		return et.Item{}, err
 	}
 
-	n := len(rows)
-	if idx < 0 {
-		idx = n + idx
-	}
-
-	if idx >= n {
-		return et.Json{}, false
-	}
-
-	return rows[idx], true
+	return items.One(idx)
 }
 
 /**
 * First
 * @param tx *Tx
-* @return et.Json, bool
+* @return et.Json, error
 **/
-func (s *Where) First(tx *Tx) (et.Json, bool) {
+func (s *Where) First(tx *Tx) (et.Item, error) {
 	return s.One(tx, 0)
 }
 
 /**
 * Last
 * @param tx *Tx
-* @return et.Json, bool
+* @return et.Item, error
 **/
-func (s *Where) Last(tx *Tx) (et.Json, bool) {
+func (s *Where) Last(tx *Tx) (et.Item, error) {
 	return s.One(tx, -1)
 }
 
-// func From(model *Model) *Where {
-// 	return &Where{
-// 		model: model,
-// 	}
-// }
+/**
+* From
+* @param model *Model
+* @return *Where
+**/
+func From(model *Model) *Where {
+	return newWhere(model)
+}
+
+/**
+* Eq
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func Eq(field string, value interface{}) *et.Condition {
+	return et.Eq(field, value)
+}
+
+/**
+* Neg
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func Neg(field string, value interface{}) *et.Condition {
+	return et.Neg(field, value)
+}
+
+/**
+* Less
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func Less(field string, value interface{}) *et.Condition {
+	return et.Less(field, value)
+}
+
+/**
+* LessEq
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func LessEq(field string, value interface{}) *et.Condition {
+	return et.LessEq(field, value)
+}
+
+/**
+* More
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func More(field string, value interface{}) *et.Condition {
+	return et.More(field, value)
+}
+
+/**
+* MoreEq
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func MoreEq(field string, value interface{}) *et.Condition {
+	return et.MoreEq(field, value)
+}
+
+/**
+* Like
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func Like(field string, value interface{}) *et.Condition {
+	return et.Like(field, value)
+}
+
+/**
+* In
+* @param field string, value []interface{}
+* @return *et.Condition
+**/
+func In(field string, value []interface{}) *et.Condition {
+	return et.In(field, value)
+}
+
+/**
+* NotIn
+* @param field string, value []interface{}
+* @return *et.Condition
+**/
+func NotIn(field string, value []interface{}) *et.Condition {
+	return et.NotIn(field, value)
+}
+
+/**
+* Is
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func Is(field string, value interface{}) *et.Condition {
+	return et.Is(field, value)
+}
+
+/**
+* IsNot
+* @param field string, value interface{}
+* @return *et.Condition
+**/
+func IsNot(field string, value interface{}) *et.Condition {
+	return et.IsNot(field, value)
+}
+
+/**
+* Null
+* @param field string
+* @return *et.Condition
+**/
+func Null(field string) *et.Condition {
+	return et.Null(field)
+}
+
+/**
+* NotNull
+* @param field string
+* @return *et.Condition
+**/
+func NotNull(field string) *et.Condition {
+	return et.NotNull(field)
+}
+
+/**
+* Between
+* @param field string, min any, max any
+* @return *et.Condition
+**/
+func Between(field string, min, max any) *et.Condition {
+	return et.Between(field, min, max)
+}
+
+/**
+* NotBetween
+* @param field string, min any, max any
+* @return *et.Condition
+**/
+func NotBetween(field string, min, max any) *et.Condition {
+	return et.NotBetween(field, min, max)
+}
+
+/**
+* Evaluate
+* @param item et.Json, conditions []*et.Condition
+* @return bool
+**/
+func Evaluate(item et.Json, conditions []*et.Condition) bool {
+	return et.Evaluate(item, conditions)
+}

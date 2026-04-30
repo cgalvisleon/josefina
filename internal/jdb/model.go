@@ -601,7 +601,7 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 			}
 		}
 		result := et.From(cache).
-			Where(et.Eq(index.Name, value)).
+			Where(Eq(index.Name, value)).
 			All()
 		if len(result) > 0 {
 			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
@@ -693,8 +693,8 @@ func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
 			}
 		}
 		result := et.From(cache).
-			Where(et.Eq(index.Name, value)).
-			And(et.Neg(INDEX, idx)).
+			Where(Eq(index.Name, value)).
+			And(Neg(INDEX, idx)).
 			All()
 		if len(result) > 0 {
 			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)

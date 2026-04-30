@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jwt"
 	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/msg"
@@ -116,29 +118,6 @@ func (s *Node) loadDbs() error {
 }
 
 /**
-* loadUsers: Load the users
-* @return error
-**/
-func (s *Node) loadUsers() error {
-	var err error
-	s.users, err = s.catalog.NewModel("", "users", true, 1)
-	if err != nil {
-		return err
-	}
-
-	err = s.users.DefineIndexes("email", "password")
-	if err != nil {
-		return err
-	}
-
-	if err = s.users.Init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * loadSessions: Load the sessions
 * @return error
 **/
@@ -197,6 +176,35 @@ func (s *Node) Autentication(token string) (*Session, error) {
 	}
 	if !exists {
 		return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+	}
+
+	return result, nil
+}
+
+/**
+* SignInByPassword: Sign in by password
+* @param username, password, database, address string, tp TpConnection, payload et.Json, duration time.Duration
+* @return (string, error)
+**/
+func (s *Node) SignInByPassword(username, password, database, address string, tp TpConnection, payload et.Json, duration time.Duration) (string, error) {
+	db, err := s.GetDb(database)
+	if err != nil {
+		return "", err
+	}
+
+	user, err := s.GetUser(username, password)
+	if err != nil {
+		return "", err
+	}
+
+	if !user.Ok {
+		return "", errors.New(msg.MSG_USER_NOT_FOUND)
+	}
+
+	userId := user.Str(INDEX)
+	result, err := newSession(db, userId, username, address, tp, payload, duration)
+	if err != nil {
+		return "", err
 	}
 
 	return result, nil
