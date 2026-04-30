@@ -87,6 +87,7 @@ var (
 	MSG_UNSUPPORTED_STATEMENT_TYPE = "unsupported statement type: %T"
 	MSG_QUERY_NOT_FOUND            = "query not found"
 	MSG_METHOD_NOT_FOUND           = "method not found"
+	MSG_DUPLICATE_KEY_UNIQUE       = "duplicate key value violates unique constraint %s"
 )
 
 func init() {
@@ -158,5 +159,6 @@ func init() {
 		MSG_UNSUPPORTED_STATEMENT_TYPE = "tipo de statement no soportado: %T"
 		MSG_QUERY_NOT_FOUND = "query no encontrada"
 		MSG_METHOD_NOT_FOUND = "method not found"
+		MSG_DUPLICATE_KEY_UNIQUE = "valor de clave duplicado viola la restricción de unicidad"
 	}
 }

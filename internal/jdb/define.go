@@ -38,28 +38,42 @@ func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, def
 }
 
 /**
-* DefineIndex: Defines the index
+* findIndex: Finds the index
 * @param name string
-* @return bool, error
+* @return *Index, bool
 **/
-func (s *Model) DefineIndex(field string, tp TpIndex) (bool, error) {
-	_, exists := s.Fields[field]
+func (s *Model) findIndex(name string) (*Index, bool) {
+	idx := slices.IndexFunc(s.Indexes, func(i *Index) bool { return strings.EqualFold(i.Name, name) })
+	if idx == -1 {
+		return nil, false
+	}
+	return s.Indexes[idx], true
+}
+
+/**
+* DefineIndex: Defines the index
+* @param name string, tp TpIndex
+* @return *Index, error
+**/
+func (s *Model) DefineIndex(name string, tp TpIndex) (*Index, error) {
+	_, exists := s.Fields[name]
 	if !exists {
-		return false, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
+		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
 	}
 
 	if tp == "" {
 		tp = TpIndexHash
 	}
 
-	idx := slices.IndexFunc(s.Indexes, func(i *Index) bool { return strings.EqualFold(i.Name, field) })
+	idx := slices.IndexFunc(s.Indexes, func(i *Index) bool { return strings.EqualFold(i.Name, name) })
 	if idx == -1 {
 		s.Indexes = append(s.Indexes, &Index{
-			Name: field,
+			Name: name,
 			Type: tp,
 		})
+		return s.Indexes[len(s.Indexes)-1], nil
 	}
-	return idx != -1, nil
+	return s.Indexes[idx], nil
 }
 
 /**
@@ -79,20 +93,23 @@ func (s *Model) DefineIndexes(fields ...string) error {
 * @param name string
 * @return bool
 **/
-func (s *Model) DefineUnique(fields ...string) error {
-	for _, field := range fields {
-		_, ok := s.Fields[field]
-		if !ok {
-			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
-		}
-
-		idx := slices.Index(s.Unique, field)
-		if idx == -1 {
-			s.Unique = append(s.Unique, field)
-			s.DefineIndexes(field)
-		}
+func (s *Model) DefineUnique(name string) (*Index, error) {
+	_, ok := s.Fields[name]
+	if !ok {
+		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
 	}
-	return nil
+
+	index, err := s.DefineIndex(name, TpIndexBTree)
+	if err != nil {
+		return nil, err
+	}
+
+	idx := slices.IndexFunc(s.Unique, func(i *Index) bool { return strings.EqualFold(i.Name, name) })
+	if idx == -1 {
+		s.Unique = append(s.Unique, index)
+	}
+
+	return index, nil
 }
 
 /**

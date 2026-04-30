@@ -119,6 +119,7 @@ const (
 
 type Index struct {
 	Name string
+	Tag  string
 	Type TpIndex
 }
 

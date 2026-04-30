@@ -70,7 +70,7 @@ type Model struct {
 	Indexes       []*Index                                 `json:"indexes"`      // Indexes
 	PrimaryKeys   []string                                 `json:"primary_keys"` // Primary keys
 	ForeignKeys   map[string]*Detail                       `json:"foreign_keys"` // Foreign keys
-	Unique        []string                                 `json:"unique"`       // Unique
+	Unique        []*Index                                 `json:"unique"`       // Unique
 	Required      []string                                 `json:"required"`     // Required
 	Hidden        []string                                 `json:"hidden"`       // Hidden
 	Details       map[string]*Detail                       `json:"details"`      // Details
@@ -116,7 +116,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		Indexes:       make([]*Index, 0),
 		PrimaryKeys:   make([]string, 0),
 		ForeignKeys:   make(map[string]*Detail, 0),
-		Unique:        make([]string, 0),
+		Unique:        make([]*Index, 0),
 		Required:      make([]string, 0),
 		Hidden:        make([]string, 0),
 		Details:       make(map[string]*Detail, 0),
@@ -378,8 +378,8 @@ func (s *Model) Source() (*store.FileStore, bool) {
 * @return error
 **/
 func (s *Model) Put(idx string, value any) error {
-	store, exist := s.Source()
-	if !exist {
+	store, exists := s.Source()
+	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
@@ -408,8 +408,8 @@ func (s *Model) Put(idx string, value any) error {
 * @return bool, error
 **/
 func (s *Model) Get(idx string, dest any) (bool, error) {
-	store, exist := s.Source()
-	if !exist {
+	store, exists := s.Source()
+	if !exists {
 		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
@@ -427,8 +427,8 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 * @return error
 **/
 func (s *Model) remove(idx string, val any) error {
-	store, exist := s.Source()
-	if !exist {
+	store, exists := s.Source()
+	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
@@ -476,8 +476,8 @@ func (s *Model) putObject(idx string, object et.Json) error {
 			continue
 		}
 		if index.Type == TpIndexBTree {
-			bt, exist := s.getBtree(index.Name)
-			if !exist {
+			bt, exists := s.getBtree(index.Name)
+			if !exists {
 				continue
 			}
 			if err := bt.Insert(KeyFromAny(v), idx); err != nil {
@@ -495,12 +495,12 @@ func (s *Model) putObject(idx string, object et.Json) error {
 * @return error
 **/
 func (s *Model) deleteObject(idx string, current et.Json) error {
-	store, exist := s.Source()
-	if !exist {
+	store, exists := s.Source()
+	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	exists := store.IsExist(idx)
+	exists = store.IsExist(idx)
 	if !exists {
 		return nil
 	}
@@ -520,8 +520,8 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 			continue
 		}
 		if index.Type == TpIndexBTree {
-			bt, exist := s.getBtree(index.Name)
-			if !exist {
+			bt, exists := s.getBtree(index.Name)
+			if !exists {
 				continue
 			}
 			if _, err := bt.Delete(KeyFromAny(v), idx); err != nil {
@@ -531,6 +531,47 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 	}
 
 	return nil
+}
+
+/**
+* Current: Gets the current document by primary key
+* @param idx string
+* @return et.Json, bool, error
+**/
+func (s *Model) Current(idx string) (et.Json, bool, error) {
+	var dest et.Json
+	exists, err := s.Get(idx, &dest)
+	if err != nil {
+		return et.Json{}, false, err
+	}
+	return dest, exists, nil
+}
+
+/**
+* IsExists: Checks if a document exists by primary key
+* @param idx string
+* @return bool, error
+**/
+func (s *Model) IsExists(idx string) (bool, error) {
+	source, exists := s.Source()
+	if !exists {
+		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
+	}
+
+	return source.IsExist(idx), nil
+}
+
+/**
+* Count: Counts documents in the primary store
+* @return int, error
+**/
+func (s *Model) Count() (int, error) {
+	result, exists := s.Source()
+	if !exists {
+		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
+	}
+
+	return result.Count(), nil
 }
 
 /**
@@ -557,53 +598,45 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 }
 
 /**
-* Current: Gets the current document by primary key
-* @param idx string
-* @return et.Json, bool, error
-**/
-func (s *Model) Current(idx string) (et.Json, bool, error) {
-	var dest et.Json
-	exists, err := s.Get(idx, &dest)
-	if err != nil {
-		return et.Json{}, false, err
-	}
-	return dest, exists, nil
-}
-
-/**
-* IsExists: Checks if a document exists by primary key
-* @param idx string
-* @return bool, error
-**/
-func (s *Model) IsExists(idx string) (bool, error) {
-	source, exist := s.Source()
-	if !exist {
-		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
-	}
-
-	return source.IsExist(idx), nil
-}
-
-/**
-* Count: Counts documents in the primary store
-* @return int, error
-**/
-func (s *Model) Count() (int, error) {
-	result, exist := s.Source()
-	if !exist {
-		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
-	}
-
-	return result.Count(), nil
-}
-
-/**
 * insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx
+* @param idx string, data et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
+	new := et.Json{}
+	if s.IsStrict {
+		for _, field := range s.Fields {
+			if value, ok := data[field.Name]; ok {
+				new[field.Name] = value
+			}
+		}
+	} else {
+		new = data
+	}
+
+	cache := tx.Items(s)
+	for _, index := range s.Unique {
+		value := new[index.Name]
+		if value != nil {
+			if index.Type == TpIndexBTree {
+				btree, exists := s.getBtree(index.Name)
+				if exists {
+					_, ok := btree.Get(KeyFromAny(value))
+					if ok {
+						return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+					}
+				}
+			}
+		}
+		result := et.From(cache).
+			Where(et.Eq(index.Name, value)).
+			All()
+		if len(result) > 0 {
+			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+		}
+	}
+
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -629,10 +662,10 @@ func (s *Model) insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 
 /**
 * Insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json, tx *Tx
+* @param idx string, data et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) Insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	exists, err := s.IsExists(idx)
 	if err != nil {
 		return tx, err
@@ -641,16 +674,27 @@ func (s *Model) Insert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 		return tx, errors.New(msg.MSG_RECORD_EXISTS)
 	}
 
-	return s.insert(idx, new, tx)
+	return s.insert(idx, data, tx)
 }
 
 /**
 * Update: Updates a document and keeps secondary indexes in sync.
-* @param idx string, new et.Json
+* @param idx string, data et.Json
 * @return (et.Json, error)
 **/
-func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	tx = GetTx(s.schema.db, tx)
+	new := et.Json{}
+	if s.IsStrict {
+		for _, field := range s.Fields {
+			if value, ok := data[field.Name]; ok {
+				new[field.Name] = value
+			}
+		}
+	} else {
+		new = data
+	}
+
 	var old et.Json
 	exists, err := s.Get(idx, &old)
 	if err != nil {
@@ -658,6 +702,32 @@ func (s *Model) Update(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	}
 	if !exists {
 		return tx, fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
+	}
+
+	cache := tx.Items(s)
+	for _, index := range s.Unique {
+		value := new[index.Name]
+		if value != nil {
+			if index.Type == TpIndexBTree {
+				btree, exists := s.getBtree(index.Name)
+				if exists {
+					idxs, ok := btree.Get(KeyFromAny(value))
+					if ok {
+						i := slices.Index(idxs, idx)
+						if i == -1 {
+							return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+						}
+					}
+				}
+			}
+		}
+		result := et.From(cache).
+			Where(et.Eq(index.Name, value)).
+			And(et.Neg(INDEX, idx)).
+			All()
+		if len(result) > 0 {
+			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+		}
 	}
 
 	for _, trigger := range s.BeforeUpdates {
@@ -760,8 +830,8 @@ func (s *Model) Value(atrib string, item et.Json) (interface{}, bool) {
 * @return error
 **/
 func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error {
-	st, exist := s.Source()
-	if !exist {
+	st, exists := s.Source()
+	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
@@ -786,13 +856,14 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 * @return error
 **/
 func (s *Model) CreateIndex(name string, tp TpIndex) error {
-	exists, err := s.DefineIndex(name, tp)
-	if err != nil {
-		return err
-	}
-
+	_, exists := s.findIndex(name)
 	if exists {
 		return nil
+	}
+
+	_, err := s.DefineIndex(name, tp)
+	if err != nil {
+		return err
 	}
 
 	return s.ForEach(func(idx string, item et.Json) (bool, error) {
@@ -803,8 +874,8 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		if tp != TpIndexBTree {
 			return true, nil
 		}
-		bt, exist := s.getBtree(name)
-		if !exist {
+		bt, exists := s.getBtree(name)
+		if !exists {
 			return true, nil
 		}
 		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
@@ -916,7 +987,7 @@ func (s *Model) Empty() error {
 	s.Indexes = make([]*Index, 0)
 	s.PrimaryKeys = make([]string, 0)
 	s.ForeignKeys = make(map[string]*Detail, 0)
-	s.Unique = make([]string, 0)
+	s.Unique = make([]*Index, 0)
 	s.Required = make([]string, 0)
 	s.Hidden = make([]string, 0)
 	s.Details = make(map[string]*Detail, 0)
