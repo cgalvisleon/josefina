@@ -35,8 +35,8 @@ type DB struct {
 	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
 	IsStrict    bool               `json:"is_strict"` // Is strict mode
 	Cache       map[string]*Ttl    `json:"-"`         // Cache
-	mu          sync.RWMutex       `json:"-"`         // Mutex
-	muCache     sync.RWMutex       `json:"-"`         // Mutex for cache
+	mu          *sync.RWMutex      `json:"-"`         // Mutex
+	muCache     *sync.RWMutex      `json:"-"`         // Mutex for cache
 	config      *Config            `json:"-"`         // Configuration
 	errors      *Model             `json:"-"`         // Errors
 	transaction *Model             `json:"-"`         // Transaction
@@ -62,7 +62,8 @@ func NewDb(path, name string) (*DB, error) {
 		Name:    name,
 		Path:    path,
 		Schemas: make(map[string]*Schema, 0),
-		mu:      sync.RWMutex{},
+		mu:      &sync.RWMutex{},
+		muCache: &sync.RWMutex{},
 	}
 
 	err := loadConfig(result)
@@ -94,11 +95,21 @@ func NewDb(path, name string) (*DB, error) {
 }
 
 /**
+* load: Load the database
+* @param node *Node
+* @return error
+**/
+func (s *DB) load(node *Node) error {
+	s.node = node
+	return s.Init()
+}
+
+/**
 * Init: Initialize the database
 * @return error
 **/
 func (s *DB) Init() error {
-	s.mu = sync.RWMutex{}
+	s.mu = &sync.RWMutex{}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

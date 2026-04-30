@@ -96,6 +96,11 @@ func GetTx(db *DB, tx *Tx) *Tx {
 	return tx
 }
 
+/**
+* load: Loads the transaction
+* @param db *DB
+* @return error
+**/
 func (s *Tx) load(db *DB) error {
 	s.db = db
 	for _, tx := range s.Transactions {

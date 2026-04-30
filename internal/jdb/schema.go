@@ -28,7 +28,18 @@ func loadSchemas(db *DB) error {
 	}
 
 	db.schemas = result
+	db.schemas.ForEachBt(func(idx string, src []byte) (bool, error) {
+		var schema Schema
+		if err := json.Unmarshal(src, &schema); err != nil {
+			return false, err
+		}
 
+		err := schema.load(db)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}, false, 0, 0)
 	return nil
 }
 
@@ -40,7 +51,25 @@ type Schema struct {
 	Name     string            `json:"name"`     // Schema name
 	Models   map[string]*Model `json:"models"`   // Models
 	db       *DB               `json:"-"`        // Database
-	mu       sync.RWMutex      `json:"-"`        // Mutex
+	mu       *sync.RWMutex     `json:"-"`        // Mutex
+}
+
+/**
+* load: Loads the transaction
+* @param db *DB
+* @return error
+**/
+func (s *Schema) load(db *DB) error {
+	s.db = db
+	s.mu = &sync.RWMutex{}
+	for _, model := range s.Models {
+		err := model.load(s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /**
