@@ -41,3 +41,20 @@ func (s *Node) GetUser(username, password string) (et.Item, error) {
 
 	return result, nil
 }
+
+/**
+* CreateUser
+* @param username, password string
+* @return (*et.Item, error)
+**/
+func (s *Node) CreateUser(username, password string) (et.Item, error) {
+	result, err := s.users.Insert("", et.Json{
+		"email":    username,
+		"password": password,
+	}, nil)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	return result, nil
+}

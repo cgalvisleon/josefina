@@ -83,7 +83,10 @@ func (s *Model) DefineIndex(name string, tp TpIndex) (*Index, error) {
 **/
 func (s *Model) DefineIndexes(fields ...string) error {
 	for _, field := range fields {
-		s.DefineIndex(field, TpIndexHash)
+		_, err := s.DefineIndex(field, TpIndexHash)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -113,21 +116,54 @@ func (s *Model) DefineUnique(name string) (*Index, error) {
 }
 
 /**
+* DefineUniques: Defines the unique
+* @param fields ...string
+* @return error
+**/
+func (s *Model) DefineUniques(fields ...string) error {
+	for _, field := range fields {
+		_, err := s.DefineUnique(field)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/**
+* DefineRequired: Defines the required
+* @param name string
+* @return *Index, error
+**/
+func (s *Model) DefineRequired(name string) (*Index, error) {
+	_, ok := s.Fields[name]
+	if !ok {
+		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
+	}
+
+	index, err := s.DefineIndex(name, TpIndexBTree)
+	if err != nil {
+		return nil, err
+	}
+
+	idx := slices.IndexFunc(s.Required, func(i *Index) bool { return strings.EqualFold(i.Name, name) })
+	if idx == -1 {
+		s.Required = append(s.Required, index)
+	}
+
+	return index, nil
+}
+
+/**
 * DefineRequired: Defines the required
 * @param name string
 * @return bool
 **/
-func (s *Model) DefineRequired(fields ...string) error {
+func (s *Model) DefineRequiredes(fields ...string) error {
 	for _, field := range fields {
-		_, ok := s.Fields[field]
-		if !ok {
-			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
-		}
-
-		idx := slices.Index(s.Required, field)
-		if idx == -1 {
-			s.Required = append(s.Required, field)
-			s.DefineIndexes(field)
+		_, err := s.DefineRequired(field)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -185,8 +221,8 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 		if !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, pk)
 		}
-		s.DefineRequired(pk)
 
+		s.DefineRequired(pk)
 		_, ok = to.Fields[fk]
 		if !ok {
 			return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, fk)

@@ -745,6 +745,10 @@ func (s *FileStore) Delete(id string) (bool, error) {
 * @return bool
 **/
 func (s *FileStore) IsExist(id string) bool {
+	if id == "" {
+		return false
+	}
+
 	s.indexMu.RLock()
 	_, existed := s.index[id]
 	s.indexMu.RUnlock()
