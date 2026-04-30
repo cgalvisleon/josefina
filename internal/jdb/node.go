@@ -1,10 +1,10 @@
 package jdb
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/tcp"
 )
 
@@ -39,6 +39,7 @@ type Node struct {
 	Sessions  map[string]*Session `json:"-"`
 	muDbs     *sync.RWMutex       `json:"-"`
 	muSession *sync.RWMutex       `json:"-"`
+	catalog   *DB                 `json:"-"`
 	dbs       *Model              `json:"-"`
 	users     *Model              `json:"-"`
 	tcp       *tcp.Node           `json:"-"`
@@ -63,25 +64,31 @@ func Load() error {
 		tcp:       tcp.NewNode(port),
 	}
 
+	var err error
 	name := "_catalog"
 	path := envar.GetStr("DATA_PATH", "./data")
-	catalog, err := NewDb(path, name)
+	node.catalog, err = NewDb(path, name)
 	if err != nil {
 		return err
 	}
 
-	catalog.node = node
-	node.muDbs.Lock()
-	node.DBS[name] = catalog
-	node.muDbs.Unlock()
-
-	node.dbs, err = catalog.NewModel("", "dbs", true, 1)
-	if err != nil {
+	if err := node.load(); err != nil {
 		return err
 	}
 
-	node.users, err = catalog.NewModel("", "users", true, 1)
-	if err != nil {
+	return nil
+}
+
+/**
+* load: Load the node
+* @return error
+**/
+func (s *Node) load() error {
+	if err := s.loadDbs(); err != nil {
+		return err
+	}
+
+	if err := s.loadUsers(); err != nil {
 		return err
 	}
 
@@ -93,27 +100,29 @@ func Load() error {
 * @param db *DB
 * @return error
 **/
-func (s *Node) loadModels(db *DB) error {
-	model, err := db.NewModel("", "dbs", true, 1)
+func (s *Node) loadDbs() error {
+	var err error
+	s.dbs, err = s.catalog.NewModel("", "dbs", true, 1)
 	if err != nil {
 		return err
 	}
 
-	if _, err = model.DefineAtrib("name", TpText, ""); err != nil {
-		return err
-	}
-	if _, err = model.DefineAtrib("schemas", TpJson, et.Join{}); err != nil {
-		return err
-	}
-	if err = model.DefineIndexes("name", "schemas"); err != nil {
+	if err := s.dbs.Init(); err != nil {
 		return err
 	}
 
-	s.dbs = model
-	err = s.dbs.Init()
-	if err != nil {
-		return err
-	}
+	s.dbs.ForEachBt(func(idx string, src []byte) (bool, error) {
+		var db DB
+		if err := json.Unmarshal(src, &db); err != nil {
+			return false, err
+		}
+
+		err := db.load(s)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}, false, 0, 0)
 
 	return nil
 }
@@ -123,9 +132,9 @@ func (s *Node) loadModels(db *DB) error {
 * @param db *DB
 * @return error
 **/
-func (s *Node) loadUsers(db *DB) error {
+func (s *Node) loadUsers() error {
 	var err error
-	s.users, err = db.NewModel("", "users", true, 1)
+	s.users, err = s.catalog.NewModel("", "users", true, 1)
 	if err != nil {
 		return err
 	}
@@ -135,10 +144,22 @@ func (s *Node) loadUsers(db *DB) error {
 		return err
 	}
 
-	err = s.users.Init()
-	if err != nil {
+	if err = s.users.Init(); err != nil {
 		return err
 	}
+
+	s.dbs.ForEachBt(func(idx string, src []byte) (bool, error) {
+		var db DB
+		if err := json.Unmarshal(src, &db); err != nil {
+			return false, err
+		}
+
+		err := db.load(s)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}, false, 0, 0)
 
 	return nil
 }
