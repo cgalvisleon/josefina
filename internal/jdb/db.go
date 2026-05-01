@@ -317,3 +317,87 @@ func (s *DB) Empty() error {
 
 	return nil
 }
+
+/**
+* Define: Defines the model
+* @param define et.Json
+* @return (*Model, error)
+**/
+func (s *DB) Define(define et.Json) (*Model, error) {
+	schema := define.Str("schema")
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	isCore := define.Bool("is_core")
+	version := define.ValInt(1, "version")
+	result, err := s.NewModel(schema, name, isCore, version)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := define.ArrayJson("fields")
+	for _, field := range fields {
+		name := field.Str("name")
+		tpData := TypeData(field.Str("type"))
+		defaultValue := field.Get("default")
+		_, err := result.DefineField(name, tpData, defaultValue)
+		if err != nil {
+			return nil, err
+		}
+	}
+	indexes := define.ArrayJson("indexes")
+	for _, index := range indexes {
+		name := index.Str("name")
+		tpIndex := index.ValStr("btree", "type")
+		_, err := result.DefineIndex(name, TpIndex(tpIndex))
+		if err != nil {
+			return nil, err
+		}
+	}
+	unique := define.ArrayStr("unique")
+	for _, name := range unique {
+		_, err := result.DefineUnique(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	required := define.ArrayStr("required")
+	for _, name := range required {
+		_, err := result.DefineRequired(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	hidden := define.ArrayStr("hidden")
+	for _, name := range hidden {
+		err := result.DefineHidden(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	primaryKeys := define.ArrayStr("primary_keys")
+	err = result.DefinePrimaryKeys(primaryKeys...)
+	if err != nil {
+		return nil, err
+	}
+	foreignKeys := define.ArrayJson("foreign_keys")
+	for _, fk := range foreignKeys {
+		toModel := fk.Json("to")
+		schema := toModel.Str("schema")
+		toName := toModel.Str("name")
+		to, err := s.GetModel(schema, toName)
+		if err != nil {
+			return nil, err
+		}
+		keys := fk.Map("keys")
+		onDeleteCascade := fk.Bool("on_delete_cascade")
+		onUpdateCascade := fk.Bool("on_update_cascade")
+		_, err = result.DefineForeignKeys(to, keys, onDeleteCascade, onUpdateCascade)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}

@@ -19,6 +19,12 @@ func (s *Model) defineField(name string, tpField TypeField, tpData TypeData, def
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
+	if !utility.ValidStr(string(tpField), 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "tpField")
+	}
+	if !utility.ValidStr(string(tpData), 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "type")
+	}
 
 	result, ok := s.Fields[name]
 	if ok {
@@ -51,11 +57,45 @@ func (s *Model) findIndex(name string) (*Index, bool) {
 }
 
 /**
+* defineSource: Defines the source field
+* @return *Field, error
+**/
+func (s *Model) defineSource() (*Field, error) {
+	result, err := s.defineField(INDEX, TpAtrib, TpJson, "")
+	if err != nil {
+		return nil, err
+	}
+	s.DefineIndex(INDEX, TpIndexHash)
+	s.DefineHidden(INDEX)
+	return result, nil
+}
+
+/**
+* DefineField: Defines the field
+* @param name string, tpData TypeData, defaultValue interface{}
+* @return *Field, error
+**/
+func (s *Model) DefineField(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
+	result, err := s.defineField(name, TpAtrib, tpData, defaultValue)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+/**
 * DefineIndex: Defines the index
 * @param name string, tp TpIndex
 * @return *Index, error
 **/
 func (s *Model) DefineIndex(name string, tp TpIndex) (*Index, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+	if !utility.ValidStr(string(tp), 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "type")
+	}
+
 	_, exists := s.Fields[name]
 	if !exists {
 		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
@@ -94,6 +134,10 @@ func (s *Model) DefineIndexes(fields ...string) error {
 * @return bool
 **/
 func (s *Model) DefineUnique(name string) (*Index, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
 	_, ok := s.Fields[name]
 	if !ok {
 		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
@@ -133,6 +177,10 @@ func (s *Model) DefineUniques(fields ...string) error {
 * @return *Index, error
 **/
 func (s *Model) DefineRequired(name string) (*Index, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
 	_, ok := s.Fields[name]
 	if !ok {
 		return nil, fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
@@ -171,16 +219,34 @@ func (s *Model) DefineRequiredes(fields ...string) error {
 * @param name string
 * @return bool
 **/
-func (s *Model) DefineHidden(fields ...string) error {
-	for _, field := range fields {
-		_, ok := s.Fields[field]
-		if !ok {
-			return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, field)
-		}
+func (s *Model) DefineHidden(name string) error {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
 
-		idx := slices.Index(s.Hidden, field)
-		if idx == -1 {
-			s.Hidden = append(s.Hidden, field)
+	_, ok := s.Fields[name]
+	if !ok {
+		return fmt.Errorf(msg.MSG_FIELD_NOT_FOUND, name)
+	}
+
+	idx := slices.Index(s.Hidden, name)
+	if idx == -1 {
+		s.Hidden = append(s.Hidden, name)
+	}
+
+	return nil
+}
+
+/**
+* DefineHiddens: Defines the hidden
+* @param name string
+* @return bool
+**/
+func (s *Model) DefineHiddens(fields ...string) error {
+	for _, name := range fields {
+		err := s.DefineHidden(name)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -234,45 +300,6 @@ func (s *Model) DefineForeignKeys(to *Model, keys map[string]string, onDeleteCas
 }
 
 /**
-* defineSource: Defines the source field
-* @return *Field, error
-**/
-func (s *Model) defineSource() (*Field, error) {
-	result, err := s.defineField(INDEX, TpAtrib, TpJson, "")
-	if err != nil {
-		return nil, err
-	}
-	s.DefineIndex(INDEX, TpIndexHash)
-	s.DefineHidden(INDEX)
-	return result, nil
-}
-
-/**
-* defineTTL: Defines the TTL field
-* @return *Field, error
-**/
-func (s *Model) defineTTL() (*Field, error) {
-	result, err := s.defineField(TTL, TpAtrib, TpJson, "")
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-/**
-* DefineAtrib: Defines the field
-* @param name string, tpData TypeData, defaultValue interface{}
-* @return *Field, error
-**/
-func (s *Model) DefineAtrib(name string, tpData TypeData, defaultValue interface{}) (*Field, error) {
-	result, err := s.defineField(name, TpAtrib, tpData, defaultValue)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-/**
 * DefineDetail: Defines the detail
 * @param name string, keys map[string]string, version int
 * @return *Model, error
@@ -290,12 +317,12 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 
 	forKeys := make(map[string]string)
 	for fk, pk := range keys {
-		_, err = s.DefineAtrib(pk, TpKey, "")
+		_, err = s.DefineField(pk, TpKey, "")
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = to.DefineAtrib(fk, TpKey, "")
+		_, err = to.DefineField(fk, TpKey, "")
 		if err != nil {
 			return nil, err
 		}
