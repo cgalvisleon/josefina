@@ -33,11 +33,6 @@ func (s *Node) loadUsers() error {
 		return err
 	}
 
-	err = s.users.DefineIndexes("email", "password")
-	if err != nil {
-		return err
-	}
-
 	if err = s.users.Init(); err != nil {
 		return err
 	}
