@@ -1,7 +1,10 @@
 package jdb
 
 import (
+	"errors"
+
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Command struct {
@@ -30,7 +33,7 @@ func newCommand(model *Model, cmd Cmd, idx string, items []et.Json) *Command {
 		command:      cmd,
 		idx:          idx,
 		items:        items,
-		where:        nil,
+		where:        newWhere(model),
 		beforeInsert: []func(model *Model, old, new et.Join) error{},
 		beforeUpdate: []func(model *Model, old, new et.Join) error{},
 		beforeDelete: []func(model *Model, old, new et.Join) error{},
@@ -135,21 +138,20 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
 	execute := tx == nil
 	tx = GetTx(s.model.db, tx)
-	var err error
 	for _, item := range s.items {
 		idx := item.Str(INDEX)
-		tx, err = s.model.insert(idx, item, tx)
+		err := s.model.insert(idx, item, tx)
 		if err != nil {
 			return et.Items{}, err
 		}
 
 		if execute {
-			item, err = tx.Commit()
+			_, err = tx.Commit()
 			if err != nil {
 				return et.Items{}, err
 			}
-			result.Add(item)
 		}
+		result.Add(tx.Result)
 	}
 	return result, nil
 }
@@ -159,7 +161,29 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
-	return et.Items{}, nil
+	result := et.Items{}
+	execute := tx == nil
+	tx = GetTx(s.model.db, tx)
+	items, err := s.where.All(tx)
+	if err != nil {
+		return et.Items{}, err
+	}
+	for _, item := range items.Result {
+		idx := item.Str(INDEX)
+		err := s.model.update(idx, item, tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+
+		if execute {
+			_, err = tx.Commit()
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+		result.Add(tx.Result)
+	}
+	return result, nil
 }
 
 /**
@@ -167,7 +191,32 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
-	return et.Items{}, nil
+	result := et.Items{}
+	execute := tx == nil
+	tx = GetTx(s.model.db, tx)
+	if len(s.where.conditions) == 0 {
+		return result, errors.New(msg.MSG_NO_CONDITIONS)
+	}
+	items, err := s.where.All(tx)
+	if err != nil {
+		return et.Items{}, err
+	}
+	for _, item := range items.Result {
+		idx := item.Str(INDEX)
+		err := s.model.delete(idx, tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+
+		if execute {
+			_, err = tx.Commit()
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+		result.Add(tx.Result)
+	}
+	return result, nil
 }
 
 /**
@@ -175,7 +224,25 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
-	return et.Items{}, nil
+	result := et.Items{}
+	execute := tx == nil
+	tx = GetTx(s.model.db, tx)
+	for _, item := range s.items {
+		idx := item.Str(INDEX)
+		err := s.model.upsert(idx, item, tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+
+		if execute {
+			_, err = tx.Commit()
+			if err != nil {
+				return et.Items{}, err
+			}
+		}
+		result.Add(tx.Result)
+	}
+	return result, nil
 }
 
 /**
@@ -183,5 +250,5 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Command) bulkCmd(tx *Tx) (et.Items, error) {
-	return et.Items{}, nil
+	return s.insertCmd(tx)
 }

@@ -91,6 +91,7 @@ var (
 	MSG_DUPLICATE_KEY_UNIQUE       = "duplicate key value violates unique constraint %s"
 	MSG_INDEX_OUT_OF_RANGE         = "index out of range"
 	MSG_REQUIRED_FIELD             = "required field %s"
+	MSG_NO_CONDITIONS              = "no conditions"
 )
 
 func init() {
@@ -166,5 +167,6 @@ func init() {
 		MSG_DUPLICATE_KEY_UNIQUE = "valor de clave duplicado viola la restricción de unicidad"
 		MSG_INDEX_OUT_OF_RANGE = "índice fuera de rango"
 		MSG_REQUIRED_FIELD = "campo requerido (%s)"
+		MSG_NO_CONDITIONS = "no hay condiciones"
 	}
 }
