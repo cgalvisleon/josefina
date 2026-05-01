@@ -17,7 +17,7 @@ import (
 * @return error
 **/
 func loadSchemas(db *DB) error {
-	result, err := db.NewModel("", "schemas", true, 1)
+	result, err := db.newModel("", "schemas", true, 1)
 	if err != nil {
 		return err
 	}
@@ -109,11 +109,11 @@ func (s *Schema) ToJson() (et.Json, error) {
 }
 
 /**
-* NewModel: Returns a new model
+* newModel: Returns a new model
 * @param name string, isCore bool, version int
 * @return *Model
 **/
-func (s *Schema) NewModel(name string, isCore bool, version int) (*Model, error) {
+func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}

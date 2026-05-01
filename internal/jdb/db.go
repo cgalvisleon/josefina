@@ -236,13 +236,13 @@ func (s *DB) DeleteSchema(name string) error {
 }
 
 /**
-* NewModel: Creates a new model
+* newModel: Creates a new model
 * @param schema, name	string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) NewModel(schema, name string, isCore bool, version int) (*Model, error) {
+func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
 	sch := s.getSchema(schema)
-	model, err := sch.NewModel(name, isCore, version)
+	model, err := sch.newModel(name, isCore, version)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (s *DB) Define(define Define) (*Model, error) {
 	}
 	isCore := define.IsCore
 	version := define.Version
-	result, err := s.NewModel(schema, name, isCore, version)
+	result, err := s.newModel(schema, name, isCore, version)
 	if err != nil {
 		return nil, err
 	}

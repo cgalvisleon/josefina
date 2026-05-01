@@ -92,7 +92,11 @@ func (s *Node) load() error {
 **/
 func (s *Node) loadDbs() error {
 	var err error
-	s.dbs, err = s.catalog.NewModel("", "dbs", true, 1)
+	s.dbs, err = s.catalog.Define(Define{
+		Name:    "dbs",
+		IsCore:  true,
+		Version: 1,
+	})
 	if err != nil {
 		return err
 	}
@@ -123,7 +127,11 @@ func (s *Node) loadDbs() error {
 **/
 func (s *Node) loadSessions() error {
 	var err error
-	s.sessions, err = s.catalog.NewModel("", "sessions", true, 1)
+	s.sessions, err = s.catalog.Define(Define{
+		Name:    "sessions",
+		IsCore:  true,
+		Version: 1,
+	})
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,23 @@ import "github.com/cgalvisleon/et/et"
 **/
 func (s *Node) loadUsers() error {
 	var err error
-	s.users, err = s.catalog.NewModel("", "users", true, 1)
+	s.users, err = s.catalog.Define(Define{
+		Name:    "users",
+		IsCore:  true,
+		Version: 1,
+		Fields: map[string]DefineField{
+			"email":    DefineField{},
+			"password": DefineField{},
+		},
+		Required: []DefineIndex{
+			{
+				Name: "email",
+			},
+			{
+				Name: "password",
+			},
+		},
+	})
 	if err != nil {
 		return err
 	}

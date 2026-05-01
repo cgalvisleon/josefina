@@ -5,7 +5,11 @@ import (
 )
 
 func loadErrors(db *DB) error {
-	result, err := db.NewModel("", "errors", true, 1)
+	result, err := db.Define(Define{
+		Name:    "errors",
+		IsCore:  true,
+		Version: 1,
+	})
 	if err != nil {
 		return err
 	}
