@@ -47,7 +47,7 @@ func (s *Node) loadUsers() error {
 **/
 func (s *Node) GetUser(username, password string) (et.Item, error) {
 	result, err := From(s.users).
-		Where(Eq("email", username)).
+		Where(Eq("username", username)).
 		And(Eq("password", password)).
 		First(nil)
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *Node) GetUser(username, password string) (et.Item, error) {
 func (s *Node) CreateUser(username, password string) (et.Item, error) {
 	result, err := s.users.
 		Insert(et.Json{
-			"email":    username,
+			"username": username,
 			"password": password,
 		}).
 		One()

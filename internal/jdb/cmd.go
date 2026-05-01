@@ -7,18 +7,20 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+type FnTrigger func(model *Model, old, new *et.Json, tx *Tx) error
+
 type Command struct {
 	model        *Model
 	command      Cmd
 	tx           *Tx
 	items        []et.Json
 	where        *Where
-	beforeInsert []func(model *Model, old, new et.Join) error
-	beforeUpdate []func(model *Model, old, new et.Join) error
-	beforeDelete []func(model *Model, old, new et.Join) error
-	afterInsert  []func(model *Model, old, new et.Join) error
-	afterUpdate  []func(model *Model, old, new et.Join) error
-	afterDelete  []func(model *Model, old, new et.Join) error
+	beforeInsert []FnTrigger
+	beforeUpdate []FnTrigger
+	beforeDelete []FnTrigger
+	afterInsert  []FnTrigger
+	afterUpdate  []FnTrigger
+	afterDelete  []FnTrigger
 }
 
 /**
@@ -32,12 +34,12 @@ func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 		command:      cmd,
 		items:        items,
 		where:        newWhere(model),
-		beforeInsert: []func(model *Model, old, new et.Join) error{},
-		beforeUpdate: []func(model *Model, old, new et.Join) error{},
-		beforeDelete: []func(model *Model, old, new et.Join) error{},
-		afterInsert:  []func(model *Model, old, new et.Join) error{},
-		afterUpdate:  []func(model *Model, old, new et.Join) error{},
-		afterDelete:  []func(model *Model, old, new et.Join) error{},
+		beforeInsert: make([]FnTrigger, 0),
+		beforeUpdate: make([]FnTrigger, 0),
+		beforeDelete: make([]FnTrigger, 0),
+		afterInsert:  make([]FnTrigger, 0),
+		afterUpdate:  make([]FnTrigger, 0),
+		afterDelete:  make([]FnTrigger, 0),
 	}
 }
 

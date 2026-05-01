@@ -77,6 +77,12 @@ type Tx struct {
 	Result       et.Json        `json:"result"`
 	Status       string         `json:"status"`
 	db           *DB            `json:"-"`
+	beforeInsert []FnTrigger    `json:"-"`
+	beforeUpdate []FnTrigger    `json:"-"`
+	beforeDelete []FnTrigger    `json:"-"`
+	afterInsert  []FnTrigger    `json:"-"`
+	afterUpdate  []FnTrigger    `json:"-"`
+	afterDelete  []FnTrigger    `json:"-"`
 }
 
 /**
@@ -97,6 +103,12 @@ func GetTx(db *DB, tx *Tx) *Tx {
 			Result:       et.Json{},
 			Status:       PENDING,
 			db:           db,
+			beforeInsert: make([]FnTrigger, 0),
+			beforeUpdate: make([]FnTrigger, 0),
+			beforeDelete: make([]FnTrigger, 0),
+			afterInsert:  make([]FnTrigger, 0),
+			afterUpdate:  make([]FnTrigger, 0),
+			afterDelete:  make([]FnTrigger, 0),
 		}
 	}
 	tx.db = db

@@ -624,6 +624,13 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) error {
 		}
 	}
 
+	for _, fnTrigger := range tx.beforeInsert {
+		err := fnTrigger(s, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
 	_, err := tx.Add(s, INSERT, idx, old, new)
 	if err != nil {
 		return err
@@ -631,6 +638,13 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) error {
 
 	for _, trigger := range s.AfterInserts {
 		err = s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, fnTrigger := range tx.afterInsert {
+		err := fnTrigger(s, &old, &new, tx)
 		if err != nil {
 			return err
 		}
@@ -712,6 +726,13 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) error {
 		}
 	}
 
+	for _, fnTrigger := range tx.beforeUpdate {
+		err := fnTrigger(s, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
 	_, err := tx.Add(s, UPDATE, idx, old, new)
 	if err != nil {
 		return err
@@ -719,6 +740,13 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) error {
 
 	for _, trigger := range s.AfterUpdates {
 		err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, fnTrigger := range tx.afterUpdate {
+		err := fnTrigger(s, &old, &new, tx)
 		if err != nil {
 			return err
 		}
@@ -769,6 +797,13 @@ func (s *Model) delete(idx string, tx *Tx) error {
 		}
 	}
 
+	for _, fnTrigger := range tx.beforeDelete {
+		err := fnTrigger(s, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
 	_, err := tx.Add(s, DELETE, idx, old, new)
 	if err != nil {
 		return err
@@ -776,6 +811,13 @@ func (s *Model) delete(idx string, tx *Tx) error {
 
 	for _, trigger := range s.AfterDeletes {
 		err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, fnTrigger := range tx.afterDelete {
+		err := fnTrigger(s, &old, &new, tx)
 		if err != nil {
 			return err
 		}
