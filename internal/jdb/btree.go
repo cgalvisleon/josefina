@@ -1090,21 +1090,21 @@ func (bt *BTree) leftmostLeaf() *bpNode {
 **/
 func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 	switch condition.Operator {
-	case et.OpEq:
+	case et.EQ:
 		return bt.Equal(KeyFromAny(condition.Value))
-	case et.OpNeg:
+	case et.NEG:
 		return bt.NotEqual(KeyFromAny(condition.Value))
-	case et.OpLess:
+	case et.LESS:
 		return bt.Less(KeyFromAny(condition.Value), true)
-	case et.OpLessEq:
+	case et.LESS_EQ:
 		return bt.LessEq(KeyFromAny(condition.Value), true)
-	case et.OpMore:
+	case et.MORE:
 		return bt.More(KeyFromAny(condition.Value), true)
-	case et.OpMoreEq:
+	case et.MORE_EQ:
 		return bt.MoreEq(KeyFromAny(condition.Value), true)
-	case et.OpLike:
+	case et.LIKE:
 		return bt.Like(KeyFromAny(condition.Value), true)
-	case et.OpIn:
+	case et.IN:
 		if vals, ok := condition.Value.([]any); ok {
 			keys := make([]IndexKey, len(vals))
 			for i, v := range vals {
@@ -1113,7 +1113,7 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 			return bt.In(keys, true)
 		}
 		return bt.In([]IndexKey{KeyFromAny(condition.Value)}, true)
-	case et.OpNotIn:
+	case et.NOT_IN:
 		if vals, ok := condition.Value.([]any); ok {
 			keys := make([]IndexKey, len(vals))
 			for i, v := range vals {
@@ -1122,20 +1122,20 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 			return bt.NotIn(keys, true)
 		}
 		return bt.NotIn([]IndexKey{KeyFromAny(condition.Value)}, true)
-	case et.OpIs:
+	case et.IS:
 		return bt.Is(KeyFromAny(condition.Value), true)
-	case et.OpIsNot:
+	case et.IS_NOT:
 		return bt.IsNot(KeyFromAny(condition.Value), true)
-	case et.OpNull:
+	case et.NULL:
 		return bt.Null(KeyFromAny(condition.Value), true)
-	case et.OpNotNull:
+	case et.NOT_NULL:
 		return bt.NotNull(KeyFromAny(condition.Value), true)
-	case et.OpBetween:
+	case et.BETWEEN:
 		btValues, ok := condition.Value.(et.BetweenValue)
 		if ok {
 			return bt.Between(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
 		}
-	case et.OpNotBetween:
+	case et.NOT_BETWEEN:
 		btValues, ok := condition.Value.(et.BetweenValue)
 		if ok {
 			return bt.NotBetween(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)

@@ -243,10 +243,34 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	return result, nil
 }
 
+type DInsert struct {
+	Schema string  `json:"schema"`
+	Name   string  `json:"name"`
+	Data   et.Join `json:"data"`
+}
+
+type DUpdate struct {
+	Schema string    `json:"schema"`
+	Name   string    `json:"name"`
+	Data   et.Join   `json:"data"`
+	Where  []et.Json `json:"where"`
+}
+
+type DDelete struct {
+	Schema string    `json:"schema"`
+	Name   string    `json:"name"`
+	Where  []et.Json `json:"where"`
+}
+
+type DBulk struct {
+	Schema string    `json:"schema"`
+	Name   string    `json:"name"`
+	Data   []et.Join `json:"data"`
+}
+
 type DCmd struct {
-	Database string    `json:"database"`
-	Schema   string    `json:"schema"`
-	Name     string    `json:"name"`
-	Data     et.Join   `json:"data"`
-	Where    []et.Json `json:"where"`
+	Insert *DInsert `json:"insert"`
+	Update *DUpdate `json:"update"`
+	Delete *DDelete `json:"delete"`
+	Bulk   *DBulk   `json:"bulk"`
 }
