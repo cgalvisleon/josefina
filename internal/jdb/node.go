@@ -122,28 +122,6 @@ func (s *Node) loadDbs() error {
 }
 
 /**
-* loadSessions: Load the sessions
-* @return error
-**/
-func (s *Node) loadSessions() error {
-	var err error
-	s.sessions, err = s.catalog.Define(Define{
-		Name:    "sessions",
-		IsCore:  true,
-		Version: 1,
-	})
-	if err != nil {
-		return err
-	}
-
-	if err = s.sessions.Init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * GetDb: Get a database
 * @param name string
 * @return (*DB, error)

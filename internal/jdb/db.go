@@ -338,6 +338,9 @@ func (s *DB) Define(define Define) (*Model, error) {
 	for _, index := range indexes {
 		name := index.Name
 		tpIndex := index.Type
+		if tpIndex == "" {
+			tpIndex = "btree"
+		}
 		_, err := result.DefineIndex(name, TpIndex(tpIndex))
 		if err != nil {
 			return nil, err

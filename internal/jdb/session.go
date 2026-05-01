@@ -149,3 +149,25 @@ func (s *Session) IsExpired() bool {
 func (s *Session) GetExpiresAt() time.Time {
 	return s.CreatedAt.Add(s.Duration)
 }
+
+/**
+* loadSessions: Load the sessions
+* @return error
+**/
+func (s *Node) loadSessions() error {
+	var err error
+	s.sessions, err = s.catalog.Define(Define{
+		Name:    "sessions",
+		IsCore:  true,
+		Version: 1,
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = s.sessions.Init(); err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -13,16 +13,20 @@ func (s *Node) loadUsers() error {
 		IsCore:  true,
 		Version: 1,
 		Fields: map[string]DefineField{
-			"email":    DefineField{},
-			"password": DefineField{},
+			"username": {
+				Type:    TpText,
+				Default: "",
+			},
+			"password": {
+				Type:    TpText,
+				Default: "",
+			},
+		},
+		PrimaryKeys: []string{
+			"username",
 		},
 		Required: []DefineIndex{
-			{
-				Name: "email",
-			},
-			{
-				Name: "password",
-			},
+			{Name: "password"},
 		},
 	})
 	if err != nil {

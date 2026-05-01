@@ -379,8 +379,7 @@ func (s *Model) DefineCalc(name string, definition []byte) error {
 }
 
 type DefineField struct {
-	Name    string      `json:"name"`
-	Type    string      `json:"type"`
+	Type    TypeData    `json:"type"`
 	Default interface{} `json:"default"`
 }
 
@@ -402,13 +401,11 @@ type DefineForeignKeys struct {
 }
 
 type DefineDetail struct {
-	Name    string            `json:"name"`
 	Keys    map[string]string `json:"keys"`
 	Version int               `json:"version"`
 }
 
 type DefineRollup struct {
-	Name    string            `json:"name"`
 	To      *DefineTo         `json:"to"`
 	Keys    map[string]string `json:"keys"`
 	Selects []string          `json:"selects"`
