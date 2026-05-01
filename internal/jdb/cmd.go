@@ -96,7 +96,7 @@ func (s *Command) ExecTx(tx *Tx) (et.Items, error) {
 	case UPSERT:
 		return s.upsertCmd(tx)
 	case BULK:
-		return s.bulkCmd(tx)
+		return s.insertCmd(tx)
 	}
 	return et.Items{}, nil
 }
@@ -243,12 +243,4 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 		result.Add(tx.Result)
 	}
 	return result, nil
-}
-
-/**
-* bulkCmd
-* @return et.Items, error
-**/
-func (s *Command) bulkCmd(tx *Tx) (et.Items, error) {
-	return s.insertCmd(tx)
 }
