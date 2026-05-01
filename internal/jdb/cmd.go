@@ -148,6 +148,12 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
 	execute := tx == nil
 	tx = GetTx(s.model.db, tx)
+	tx.beforeInsert = s.beforeInsert
+	tx.beforeUpdate = s.beforeUpdate
+	tx.beforeDelete = s.beforeDelete
+	tx.afterInsert = s.afterInsert
+	tx.afterUpdate = s.afterUpdate
+	tx.afterDelete = s.afterDelete
 	for _, item := range s.items {
 		idx := item.Str(INDEX)
 		err := s.model.insert(idx, item, tx)
@@ -174,6 +180,12 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
 	execute := tx == nil
 	tx = GetTx(s.model.db, tx)
+	tx.beforeInsert = s.beforeInsert
+	tx.beforeUpdate = s.beforeUpdate
+	tx.beforeDelete = s.beforeDelete
+	tx.afterInsert = s.afterInsert
+	tx.afterUpdate = s.afterUpdate
+	tx.afterDelete = s.afterDelete
 	items, err := s.where.All(tx)
 	if err != nil {
 		return et.Items{}, err
@@ -204,6 +216,12 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
 	execute := tx == nil
 	tx = GetTx(s.model.db, tx)
+	tx.beforeInsert = s.beforeInsert
+	tx.beforeUpdate = s.beforeUpdate
+	tx.beforeDelete = s.beforeDelete
+	tx.afterInsert = s.afterInsert
+	tx.afterUpdate = s.afterUpdate
+	tx.afterDelete = s.afterDelete
 	if len(s.where.conditions) == 0 {
 		return result, errors.New(msg.MSG_NO_CONDITIONS)
 	}
@@ -237,6 +255,12 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
 	execute := tx == nil
 	tx = GetTx(s.model.db, tx)
+	tx.beforeInsert = s.beforeInsert
+	tx.beforeUpdate = s.beforeUpdate
+	tx.beforeDelete = s.beforeDelete
+	tx.afterInsert = s.afterInsert
+	tx.afterUpdate = s.afterUpdate
+	tx.afterDelete = s.afterDelete
 	for _, item := range s.items {
 		idx := item.Str(INDEX)
 		err := s.model.upsert(idx, item, tx)
@@ -253,6 +277,66 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 		result.Add(tx.Result)
 	}
 	return result, nil
+}
+
+/**
+* BeforeInserts
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) BeforeInserts(fn FnTrigger) *Command {
+	s.beforeInsert = append(s.beforeInsert, fn)
+	return s
+}
+
+/**
+* BeforeUpdates
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) BeforeUpdates(fn FnTrigger) *Command {
+	s.beforeUpdate = append(s.beforeUpdate, fn)
+	return s
+}
+
+/**
+* BeforeDeletes
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) BeforeDeletes(fn FnTrigger) *Command {
+	s.beforeDelete = append(s.beforeDelete, fn)
+	return s
+}
+
+/**
+* AfterInserts
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) AfterInserts(fn FnTrigger) *Command {
+	s.afterInsert = append(s.afterInsert, fn)
+	return s
+}
+
+/**
+* AfterUpdates
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) AfterUpdates(fn FnTrigger) *Command {
+	s.afterUpdate = append(s.afterUpdate, fn)
+	return s
+}
+
+/**
+* AfterDeletes
+* @param fn FnTrigger
+* @return *Command
+**/
+func (s *Command) AfterDeletes(fn FnTrigger) *Command {
+	s.afterDelete = append(s.afterDelete, fn)
+	return s
 }
 
 type Diud struct {
