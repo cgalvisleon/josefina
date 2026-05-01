@@ -511,3 +511,6 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 	}
 	return result, nil
 }
+
+
+func (s *DB) Query()

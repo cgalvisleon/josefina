@@ -848,6 +848,17 @@ producerLoop:
 }
 
 /**
+* Keys: Returns a sorted key snapshot without spawning a worker pool.
+* Suitable for cursor creation; cheaper than ForEach when only IDs are needed.
+* @param asc bool, offset int, limit int
+* @return []string
+**/
+func (s *FileStore) Keys(asc bool, offset, limit int) []string {
+	_, keys := s.getRecords(asc, offset, limit)
+	return keys
+}
+
+/**
 * Prune
 * @return error
 **/
