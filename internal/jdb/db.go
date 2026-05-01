@@ -390,10 +390,63 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 		if err != nil {
 			return nil, err
 		}
-		keys := fk.Map("keys")
+		keys := fk.MapStr("keys")
 		onDeleteCascade := fk.Bool("on_delete_cascade")
 		onUpdateCascade := fk.Bool("on_update_cascade")
 		_, err = result.DefineForeignKeys(to, keys, onDeleteCascade, onUpdateCascade)
+		if err != nil {
+			return nil, err
+		}
+	}
+	details := define.ArrayJson("details")
+	for _, detail := range details {
+		name := detail.Str("name")
+		keys := detail.MapStr("keys")
+		version := detail.ValInt(1, "version")
+		_, err = result.DefineDetail(name, keys, version)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rollups := define.ArrayJson("rollups")
+	for _, rollup := range rollups {
+		name := rollup.Str("name")
+		toModel := rollup.Json("to")
+		schema := toModel.Str("schema")
+		toName := toModel.Str("name")
+		to, err := s.GetModel(schema, toName)
+		if err != nil {
+			return nil, err
+		}
+		keys := rollup.MapStr("keys")
+		selects := rollup.ArrayStr("selects")
+		err = result.DefineRollup(name, to, keys, selects)
+		if err != nil {
+			return nil, err
+		}
+	}
+	relations := define.ArrayJson("relations")
+	for _, relation := range relations {
+		toModel := relation.Json("to")
+		schema := toModel.Str("schema")
+		toName := toModel.Str("name")
+		to, err := s.GetModel(schema, toName)
+		if err != nil {
+			return nil, err
+		}
+		keys := relation.MapStr("keys")
+		onDeleteCascade := relation.Bool("on_delete_cascade")
+		onUpdateCascade := relation.Bool("on_update_cascade")
+		err = result.DefineRelation(to, keys, onDeleteCascade, onUpdateCascade)
+		if err != nil {
+			return nil, err
+		}
+	}
+	calc := define.ArrayJson("calc")
+	for _, c := range calc {
+		name := c.Str("name")
+		definition := c.Str("definition")
+		err = result.DefineCalc(name, []byte(definition))
 		if err != nil {
 			return nil, err
 		}
