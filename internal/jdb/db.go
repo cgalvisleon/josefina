@@ -307,137 +307,156 @@ func (s *DB) Empty() error {
 
 /**
 * Define: Defines the model
-* @param define et.Json
+* @param define Define
 * @return (*Model, error)
 **/
-func (s *DB) Define(define et.Json) (*Model, error) {
-	schema := define.Str("schema")
-	name := define.Str("name")
+func (s *DB) Define(define Define) (*Model, error) {
+	schema := define.Schema
+	name := define.Name
 	if !utility.ValidStr(name, 1, []string{}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
-	isCore := define.Bool("is_core")
-	version := define.ValInt(1, "version")
+	isCore := define.IsCore
+	version := define.Version
 	result, err := s.NewModel(schema, name, isCore, version)
 	if err != nil {
 		return nil, err
 	}
-	isStrict := define.Bool("is_strict")
+	isStrict := define.IsStrict
 	result.IsStrict = isStrict
 
-	fields := define.Json("fields")
-	for name, _ := range fields {
-		field := fields.Json(name)
-		tpData := TypeData(field.Str("type"))
-		defaultValue := field.Get("default")
+	fields := define.Fields
+	for name, field := range fields {
+		tpData := TypeData(field.Type)
+		defaultValue := field.Default
 		_, err := result.DefineField(name, tpData, defaultValue)
 		if err != nil {
 			return nil, err
 		}
 	}
-	indexes := define.ArrayJson("indexes")
+	indexes := define.Indexes
 	for _, index := range indexes {
-		name := index.Str("name")
-		tpIndex := index.ValStr("btree", "type")
+		name := index.Name
+		tpIndex := index.Type
 		_, err := result.DefineIndex(name, TpIndex(tpIndex))
 		if err != nil {
 			return nil, err
 		}
 	}
-	unique := define.ArrayStr("unique")
-	for _, name := range unique {
+	unique := define.Unique
+	for _, index := range unique {
+		name := index.Name
 		_, err := result.DefineUnique(name)
 		if err != nil {
 			return nil, err
 		}
 	}
-	required := define.ArrayStr("required")
-	for _, name := range required {
+	required := define.Required
+	for _, index := range required {
+		name := index.Name
 		_, err := result.DefineRequired(name)
 		if err != nil {
 			return nil, err
 		}
 	}
-	hidden := define.ArrayStr("hidden")
+	hidden := define.Hidden
 	for _, name := range hidden {
 		err := result.DefineHidden(name)
 		if err != nil {
 			return nil, err
 		}
 	}
-	primaryKeys := define.ArrayStr("primary_keys")
+	primaryKeys := define.PrimaryKeys
 	err = result.DefinePrimaryKeys(primaryKeys...)
 	if err != nil {
 		return nil, err
 	}
-	foreignKeys := define.ArrayJson("foreign_keys")
+	foreignKeys := define.ForeignKeys
 	for _, fk := range foreignKeys {
-		toModel := fk.Json("to")
-		schema := toModel.Str("schema")
-		toName := toModel.Str("name")
+		schema := fk.To.Schema
+		toName := fk.To.Name
 		to, err := s.GetModel(schema, toName)
 		if err != nil {
 			return nil, err
 		}
-		keys := fk.MapStr("keys")
-		onDeleteCascade := fk.Bool("on_delete_cascade")
-		onUpdateCascade := fk.Bool("on_update_cascade")
+		keys := fk.Keys
+		onDeleteCascade := fk.OnDeleteCascade
+		onUpdateCascade := fk.OnUpdateCascade
 		_, err = result.DefineForeignKeys(to, keys, onDeleteCascade, onUpdateCascade)
 		if err != nil {
 			return nil, err
 		}
 	}
-	details := define.Json("details")
-	for name := range details {
-		detail := details.Json(name)
-		keys := detail.MapStr("keys")
-		version := detail.ValInt(1, "version")
+	details := define.Details
+	for name, detail := range details {
+		keys := detail.Keys
+		version := detail.Version
 		_, err = result.DefineDetail(name, keys, version)
 		if err != nil {
 			return nil, err
 		}
 	}
-	rollups := define.Json("rollups")
-	for name := range rollups {
-		rollup := rollups.Json(name)
-		toModel := rollup.Json("to")
-		schema := toModel.Str("schema")
-		toName := toModel.Str("name")
+	rollups := define.Rollups
+	for name, rollup := range rollups {
+		schema := rollup.To.Schema
+		toName := rollup.To.Name
 		to, err := s.GetModel(schema, toName)
 		if err != nil {
 			return nil, err
 		}
-		keys := rollup.MapStr("keys")
-		selects := rollup.ArrayStr("selects")
+		keys := rollup.Keys
+		selects := rollup.Selects
 		err = result.DefineRollup(name, to, keys, selects)
 		if err != nil {
 			return nil, err
 		}
 	}
-	relations := define.ArrayJson("relations")
+	relations := define.Relations
 	for _, relation := range relations {
-		toModel := relation.Json("to")
-		schema := toModel.Str("schema")
-		toName := toModel.Str("name")
+		schema := relation.To.Schema
+		toName := relation.To.Name
 		to, err := s.GetModel(schema, toName)
 		if err != nil {
 			return nil, err
 		}
-		keys := relation.MapStr("keys")
-		onDeleteCascade := relation.Bool("on_delete_cascade")
-		onUpdateCascade := relation.Bool("on_update_cascade")
+		keys := relation.Keys
+		onDeleteCascade := relation.OnDeleteCascade
+		onUpdateCascade := relation.OnUpdateCascade
 		err = result.DefineRelation(to, keys, onDeleteCascade, onUpdateCascade)
 		if err != nil {
 			return nil, err
 		}
 	}
-	calc := define.Json("calc")
-	for name := range calc {
-		definition := calc.Str(name)
+	calcs := define.Calcs
+	for name, definition := range calcs {
 		err = result.DefineCalc(name, []byte(definition))
 		if err != nil {
 			return nil, err
 		}
+	}
+	beforeInsert := define.BeforeInserts
+	for _, trigger := range beforeInsert {
+		result.AddBeforeInsert(trigger.Name, string(trigger.Definition))
+	}
+	beforeUpdate := define.BeforeUpdates
+	for _, trigger := range beforeUpdate {
+		result.AddBeforeUpdate(trigger.Name, string(trigger.Definition))
+	}
+	beforeDelete := define.BeforeDeletes
+	for _, trigger := range beforeDelete {
+		result.AddBeforeDelete(trigger.Name, string(trigger.Definition))
+	}
+	afterInsert := define.AfterInserts
+	for _, trigger := range afterInsert {
+		result.AddAfterInsert(trigger.Name, string(trigger.Definition))
+	}
+	afterUpdate := define.AfterUpdates
+	for _, trigger := range afterUpdate {
+		result.AddAfterUpdate(trigger.Name, string(trigger.Definition))
+	}
+	afterDelete := define.AfterDeletes
+	for _, trigger := range afterDelete {
+		result.AddAfterDelete(trigger.Name, string(trigger.Definition))
 	}
 
 	return result, nil

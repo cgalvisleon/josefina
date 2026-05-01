@@ -422,28 +422,28 @@ type DefineRelation struct {
 }
 
 type Define struct {
-	Schema        string                   `json:"schema"`
-	Name          string                   `json:"name"`
-	Version       int                      `json:"version"`
-	IsCore        bool                     `json:"is_core"`
-	IsStrict      bool                     `json:"is_strict"`
-	Fields        map[string]*DefineField  `json:"fields"`
-	Indexes       []*DefineIndex           `json:"indexes"`
-	PrimaryKeys   []string                 `json:"primary_keys"`
-	ForeignKeys   []*DefineForeignKeys     `json:"foreign_keys"`
-	Unique        []*DefineIndex           `json:"unique"`
-	Required      []*DefineIndex           `json:"required"`
-	Hidden        []string                 `json:"hidden"`
-	Details       map[string]*DefineDetail `json:"details"`
-	Rollups       map[string]*DefineRollup `json:"rollups"`
-	Relations     []*DefineRelation        `json:"relations"`
-	Calcs         map[string][]byte        `json:"calcs"`
-	BeforeInserts []*Trigger               `json:"before_inserts"`
-	AfterInserts  []*Trigger               `json:"after_inserts"`
-	BeforeUpdates []*Trigger               `json:"before_updates"`
-	AfterUpdates  []*Trigger               `json:"after_updates"`
-	BeforeDeletes []*Trigger               `json:"before_deletes"`
-	AfterDeletes  []*Trigger               `json:"after_deletes"`
+	Schema        string                  `json:"schema"`
+	Name          string                  `json:"name"`
+	Version       int                     `json:"version"`
+	IsCore        bool                    `json:"is_core"`
+	IsStrict      bool                    `json:"is_strict"`
+	Fields        map[string]DefineField  `json:"fields"`
+	Indexes       []DefineIndex           `json:"indexes"`
+	PrimaryKeys   []string                `json:"primary_keys"`
+	ForeignKeys   []DefineForeignKeys     `json:"foreign_keys"`
+	Unique        []DefineIndex           `json:"unique"`
+	Required      []DefineIndex           `json:"required"`
+	Hidden        []string                `json:"hidden"`
+	Details       map[string]DefineDetail `json:"details"`
+	Rollups       map[string]DefineRollup `json:"rollups"`
+	Relations     []DefineRelation        `json:"relations"`
+	Calcs         map[string][]byte       `json:"calcs"`
+	BeforeInserts []Trigger               `json:"before_inserts"`
+	AfterInserts  []Trigger               `json:"after_inserts"`
+	BeforeUpdates []Trigger               `json:"before_updates"`
+	AfterUpdates  []Trigger               `json:"after_updates"`
+	BeforeDeletes []Trigger               `json:"before_deletes"`
+	AfterDeletes  []Trigger               `json:"after_deletes"`
 }
 
 /**
