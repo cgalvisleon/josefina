@@ -90,30 +90,17 @@ func (s *Schema) save() error {
 }
 
 /**
-* Serialize
-* @return []byte, error
-**/
-func (s *Schema) Serialize() ([]byte, error) {
-	result, err := json.Marshal(s)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return result, nil
-}
-
-/**
 * ToJson
 * @return et.Json, error
 **/
 func (s *Schema) ToJson() (et.Json, error) {
-	definition, err := s.Serialize()
+	bt, err := json.Marshal(s)
 	if err != nil {
 		return et.Json{}, err
 	}
 
 	result := et.Json{}
-	err = json.Unmarshal(definition, &result)
+	err = json.Unmarshal(bt, &result)
 	if err != nil {
 		return et.Json{}, err
 	}

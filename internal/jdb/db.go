@@ -132,30 +132,17 @@ func (s *DB) Init() error {
 }
 
 /**
-* Serialize
-* @return []byte, error
-**/
-func (s *DB) Serialize() ([]byte, error) {
-	result, err := json.Marshal(s)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return result, nil
-}
-
-/**
 * ToJson
 * @return et.Json, error
 **/
 func (s *DB) ToJson() (et.Json, error) {
-	definition, err := s.Serialize()
+	bt, err := json.Marshal(s)
 	if err != nil {
 		return et.Json{}, err
 	}
 
 	result := et.Json{}
-	err = json.Unmarshal(definition, &result)
+	err = json.Unmarshal(bt, &result)
 	if err != nil {
 		return et.Json{}, err
 	}
@@ -335,10 +322,12 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	isStrict := define.Bool("is_strict")
+	result.IsStrict = isStrict
 
-	fields := define.ArrayJson("fields")
-	for _, field := range fields {
-		name := field.Str("name")
+	fields := define.Json("fields")
+	for name, _ := range fields {
+		field := fields.Json(name)
 		tpData := TypeData(field.Str("type"))
 		defaultValue := field.Get("default")
 		_, err := result.DefineField(name, tpData, defaultValue)
@@ -398,9 +387,9 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 			return nil, err
 		}
 	}
-	details := define.ArrayJson("details")
-	for _, detail := range details {
-		name := detail.Str("name")
+	details := define.Json("details")
+	for name := range details {
+		detail := details.Json(name)
 		keys := detail.MapStr("keys")
 		version := detail.ValInt(1, "version")
 		_, err = result.DefineDetail(name, keys, version)
@@ -408,9 +397,9 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 			return nil, err
 		}
 	}
-	rollups := define.ArrayJson("rollups")
-	for _, rollup := range rollups {
-		name := rollup.Str("name")
+	rollups := define.Json("rollups")
+	for name := range rollups {
+		rollup := rollups.Json(name)
 		toModel := rollup.Json("to")
 		schema := toModel.Str("schema")
 		toName := toModel.Str("name")
@@ -442,10 +431,9 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 			return nil, err
 		}
 	}
-	calc := define.ArrayJson("calc")
-	for _, c := range calc {
-		name := c.Str("name")
-		definition := c.Str("definition")
+	calc := define.Json("calc")
+	for name := range calc {
+		definition := calc.Str(name)
 		err = result.DefineCalc(name, []byte(definition))
 		if err != nil {
 			return nil, err

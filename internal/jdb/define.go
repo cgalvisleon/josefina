@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -375,4 +376,91 @@ func (s *Model) DefineCalc(name string, definition []byte) error {
 
 	s.Calcs[name] = definition
 	return nil
+}
+
+type DefineField struct {
+	Name    string      `json:"name"`
+	Type    string      `json:"type"`
+	Default interface{} `json:"default"`
+}
+
+type DefineIndex struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+type DefineTo struct {
+	Schema string `json:"schema"`
+	Name   string `json:"name"`
+}
+
+type DefineForeignKeys struct {
+	To              *DefineTo         `json:"to"`
+	Keys            map[string]string `json:"keys"`
+	OnDeleteCascade bool              `json:"on_delete_cascade"`
+	OnUpdateCascade bool              `json:"on_update_cascade"`
+}
+
+type DefineDetail struct {
+	Name    string            `json:"name"`
+	Keys    map[string]string `json:"keys"`
+	Version int               `json:"version"`
+}
+
+type DefineRollup struct {
+	Name    string            `json:"name"`
+	To      *DefineTo         `json:"to"`
+	Keys    map[string]string `json:"keys"`
+	Selects []string          `json:"selects"`
+}
+
+type DefineRelation struct {
+	To              *DefineTo         `json:"to"`
+	Keys            map[string]string `json:"keys"`
+	OnDeleteCascade bool              `json:"on_delete_cascade"`
+	OnUpdateCascade bool              `json:"on_update_cascade"`
+}
+
+type Define struct {
+	Schema        string                   `json:"schema"`
+	Name          string                   `json:"name"`
+	Version       int                      `json:"version"`
+	IsCore        bool                     `json:"is_core"`
+	IsStrict      bool                     `json:"is_strict"`
+	Fields        map[string]*DefineField  `json:"fields"`
+	Indexes       []*DefineIndex           `json:"indexes"`
+	PrimaryKeys   []string                 `json:"primary_keys"`
+	ForeignKeys   []*DefineForeignKeys     `json:"foreign_keys"`
+	Unique        []*DefineIndex           `json:"unique"`
+	Required      []*DefineIndex           `json:"required"`
+	Hidden        []string                 `json:"hidden"`
+	Details       map[string]*DefineDetail `json:"details"`
+	Rollups       map[string]*DefineRollup `json:"rollups"`
+	Relations     []*DefineRelation        `json:"relations"`
+	Calcs         map[string][]byte        `json:"calcs"`
+	BeforeInserts []*Trigger               `json:"before_inserts"`
+	AfterInserts  []*Trigger               `json:"after_inserts"`
+	BeforeUpdates []*Trigger               `json:"before_updates"`
+	AfterUpdates  []*Trigger               `json:"after_updates"`
+	BeforeDeletes []*Trigger               `json:"before_deletes"`
+	AfterDeletes  []*Trigger               `json:"after_deletes"`
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s *Define) ToJson() (et.Json, error) {
+	bt, err := json.Marshal(s)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	result := et.Json{}
+	err = json.Unmarshal(bt, &result)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	return result, nil
 }

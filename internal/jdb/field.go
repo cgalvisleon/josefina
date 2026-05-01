@@ -118,9 +118,9 @@ const (
 )
 
 type Index struct {
-	Name string
-	Tag  string
-	Type TpIndex
+	Name string  `json:"name"`
+	Tag  string  `json:"tag"`
+	Type TpIndex `json:"type"`
 }
 
 /**

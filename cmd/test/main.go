@@ -38,7 +38,7 @@ func testStore() {
 	}
 	for _, r := range records {
 		id := r.Str("id")
-		if err := fs.Put(id, r); err != nil {
+		if _, err := fs.Put(id, r); err != nil {
 			logs.Errorf("put:%s: %v", id, err)
 			continue
 		}
@@ -80,7 +80,7 @@ func testStore() {
 
 	// ── Put actualiza registro existente ───────────────────────────────────
 	logs.Info("Put (update)")
-	if err := fs.Put("1", et.Json{"id": "1", "name": "Alice", "age": 31}); err != nil {
+	if _, err := fs.Put("1", et.Json{"id": "1", "name": "Alice", "age": 31}); err != nil {
 		logs.Errorf("update:%s: %v", "1", err)
 	} else {
 		logs.Infof("update:%s: lsn=%d tombstones=%d", "1", fs.WAL, fs.TombStones)
@@ -128,9 +128,9 @@ func testCatalog() {
 		logs.Fatal(err)
 	}
 
-	model.DefineAtrib("name", jdb.TpText, "")
-	model.DefineAtrib("age", jdb.TpInt, 0)
-	model.DefineAtrib("id", jdb.TpKey, "")
+	model.DefineField("name", jdb.TpText, "")
+	model.DefineField("age", jdb.TpInt, 0)
+	model.DefineField("id", jdb.TpKey, "")
 	model.DefinePrimaryKeys("id")
 	model.DefineIndexes("name", "age")
 
