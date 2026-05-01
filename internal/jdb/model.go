@@ -770,16 +770,14 @@ func (s *Model) delete(idx string, tx *Tx) (*Transaction, error) {
 		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 	tx = GetTx(s.db, tx)
-	var err error
 	var old et.Json
-	exists, err := s.Get(idx, &old)
-	if err != nil {
+	if exists, err := s.Get(idx, &old); err != nil {
 		return nil, err
-	}
-	if !exists {
+	} else if !exists {
 		return nil, nil
 	}
 
+	var err error
 	new := et.Json{}
 	for _, trigger := range s.BeforeDeletes {
 		tx, err = s.fireTriggers(trigger, &old, &new, tx)
