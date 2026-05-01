@@ -18,6 +18,7 @@ const (
 	UPDATE Cmd = "update"
 	DELETE Cmd = "delete"
 	UPSERT Cmd = "upsert"
+	BULK   Cmd = "bulk"
 )
 
 const (
@@ -259,11 +260,11 @@ func (s *Tx) Rollback() error {
 * Commit: Commits a transaction
 * @return (et.Item, error)
 **/
-func (s *Tx) Commit() (et.Item, error) {
+func (s *Tx) Commit() (et.Json, error) {
 	for _, transaction := range s.Transactions {
 		model := transaction.model
 		if model == nil {
-			return et.Item{}, nil
+			return nil, errors.New(msg.MSG_NODE_IS_NIL)
 		}
 
 		s.Executions = append([]*Transaction{transaction}, s.Executions...)
@@ -273,7 +274,7 @@ func (s *Tx) Commit() (et.Item, error) {
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return et.Item{}, err
+					return nil, err
 				}
 			}
 			transaction.SetStatus(COMMITTED)
@@ -282,7 +283,7 @@ func (s *Tx) Commit() (et.Item, error) {
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return et.Item{}, err
+					return nil, err
 				}
 			}
 			transaction.SetStatus(COMMITTED)
@@ -291,14 +292,14 @@ func (s *Tx) Commit() (et.Item, error) {
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return et.Item{}, err
+					return nil, err
 				}
 			}
 			transaction.SetStatus(COMMITTED)
 		}
 	}
 	s.SetStatus(COMMITTED)
-	return et.NewItem(s.Result), nil
+	return s.Result, nil
 }
 
 /**

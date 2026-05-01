@@ -53,7 +53,7 @@ func (s *Node) CreateUser(username, password string) (et.Item, error) {
 			"email":    username,
 			"password": password,
 		}).
-		Exec()
+		One()
 	if err != nil {
 		return et.Item{}, err
 	}

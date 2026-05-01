@@ -803,22 +803,87 @@ func (s *Model) delete(idx string, tx *Tx) (*Transaction, error) {
 }
 
 /**
-* value: Returns the value of the specified attribute from the given item.
-* @param atrib string, item et.Json
-* @return (interface{}, bool)
+* AddBeforeInsert
+* @param name string, definition string
 **/
-func (s *Model) value(atrib string, item et.Json) (interface{}, bool) {
-	field, exists := s.Fields[atrib]
-	if exists {
-		return field.Value(item), true
+func (s *Model) AddBeforeInsert(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.BeforeInserts[idx].Definition = bt
+	} else {
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
 	}
+}
 
-	val, ok := item[atrib]
-	if ok {
-		return val, true
+/**
+* AddAfterInsert
+* @param name string, definition string
+**/
+func (s *Model) AddAfterInsert(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.AfterInserts[idx].Definition = bt
+	} else {
+		s.AfterInserts = append(s.AfterInserts, &Trigger{Name: name, Definition: bt})
 	}
+}
 
-	return nil, false
+/**
+* AddBeforeUpdate
+* @param name string, definition string
+**/
+func (s *Model) AddBeforeUpdate(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.BeforeUpdates[idx].Definition = bt
+	} else {
+		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: bt})
+	}
+}
+
+/**
+* AddAfterUpdate
+* @param name string, definition string
+**/
+func (s *Model) AddAfterUpdate(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.AfterUpdates[idx].Definition = bt
+	} else {
+		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: bt})
+	}
+}
+
+/**
+* AddBeforeDelete
+* @param name string, definition string
+**/
+func (s *Model) AddBeforeDelete(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.BeforeDeletes[idx].Definition = bt
+	} else {
+		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: bt})
+	}
+}
+
+/**
+* AddAfterDelete
+* @param name string, definition string
+**/
+func (s *Model) AddAfterDelete(name string, definition string) {
+	bt := []byte(definition)
+	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
+	if idx != -1 {
+		s.AfterDeletes[idx].Definition = bt
+	} else {
+		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: bt})
+	}
 }
 
 /**
@@ -905,90 +970,6 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 }
 
 /**
-* AddBeforeInsert
-* @param name string, definition string
-**/
-func (s *Model) AddBeforeInsert(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.BeforeInserts[idx].Definition = bt
-	} else {
-		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
-* AddAfterInsert
-* @param name string, definition string
-**/
-func (s *Model) AddAfterInsert(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.AfterInserts[idx].Definition = bt
-	} else {
-		s.AfterInserts = append(s.AfterInserts, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
-* AddBeforeUpdate
-* @param name string, definition string
-**/
-func (s *Model) AddBeforeUpdate(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.BeforeUpdates[idx].Definition = bt
-	} else {
-		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
-* AddAfterUpdate
-* @param name string, definition string
-**/
-func (s *Model) AddAfterUpdate(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.AfterUpdates[idx].Definition = bt
-	} else {
-		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
-* AddBeforeDelete
-* @param name string, definition string
-**/
-func (s *Model) AddBeforeDelete(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.BeforeDeletes[idx].Definition = bt
-	} else {
-		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
-* AddAfterDelete
-* @param name string, definition string
-**/
-func (s *Model) AddAfterDelete(name string, definition string) {
-	bt := []byte(definition)
-	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
-	if idx != -1 {
-		s.AfterDeletes[idx].Definition = bt
-	} else {
-		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: bt})
-	}
-}
-
-/**
 * Empty: Empties the model
 * @return error
 **/
@@ -1039,7 +1020,10 @@ func (s *Model) Where(condition *et.Condition) *Where {
 * @return *Command
 **/
 func (s *Model) Insert(data et.Json) *Command {
-	return insertCmd(s, data)
+	idx := data.Str(INDEX)
+	items := []et.Json{data}
+	result := newCommand(s, INSERT, idx, items)
+	return result
 }
 
 /**
@@ -1048,7 +1032,10 @@ func (s *Model) Insert(data et.Json) *Command {
 * @return *Command
 **/
 func (s *Model) Update(data et.Json) *Command {
-	return updateCmd(s, data)
+	idx := data.Str(INDEX)
+	items := []et.Json{data}
+	result := newCommand(s, UPDATE, idx, items)
+	return result
 }
 
 /**
@@ -1057,7 +1044,8 @@ func (s *Model) Update(data et.Json) *Command {
 * @return *Command
 **/
 func (s *Model) Delete(idx string) *Command {
-	return deleteCmd(s, idx)
+	result := newCommand(s, DELETE, idx, []et.Json{})
+	return result
 }
 
 /**
@@ -1066,5 +1054,18 @@ func (s *Model) Delete(idx string) *Command {
 * @return *Command
 **/
 func (s *Model) Upsert(data et.Json) *Command {
-	return upsertCmd(s, data)
+	idx := data.Str(INDEX)
+	items := []et.Json{data}
+	result := newCommand(s, UPSERT, idx, items)
+	return result
+}
+
+/**
+* Bulk
+* @param items []et.Json
+* @return *Command
+**/
+func (s *Model) Bulk(items []et.Json) *Command {	
+	result := newCommand(s, BULK, "", items)
+	return result
 }
