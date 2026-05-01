@@ -1,10 +1,7 @@
 package jdb
 
 import (
-	"errors"
-
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
 type Command struct {
@@ -13,47 +10,74 @@ type Command struct {
 	tx           *Tx
 	idx          string
 	data         et.Json
-	BeforeInsert func(model *Model, old, new et.Join) error
-	BeforeUpdate func(model *Model, old, new et.Join) error
-	BeforeDelete func(model *Model, old, new et.Join) error
-	AfterInsert  func(model *Model, old, new et.Join) error
-	AfterUpdate  func(model *Model, old, new et.Join) error
-	AfterDelete  func(model *Model, old, new et.Join) error
+	where        *Where
+	beforeInsert []func(model *Model, old, new et.Join) error
+	beforeUpdate []func(model *Model, old, new et.Join) error
+	beforeDelete []func(model *Model, old, new et.Join) error
+	afterInsert  []func(model *Model, old, new et.Join) error
+	afterUpdate  []func(model *Model, old, new et.Join) error
+	afterDelete  []func(model *Model, old, new et.Join) error
 }
 
-func (c *Command) Execute() (et.Item, error) {
-	switch c.command {
-	case INSERT:
-		tx, err := c.model.Insert(c.data, c.tx)
-		if err != nil {
-			return et.Item{}, err
-		}
-		result := tx.Result()
-		if len(result) > 0 {
-			return et.NewItem(result[0]), nil
-		}
-		return et.Item{}, nil
-	case UPDATE:
-		tx, err := c.model.Update(c.data, c.tx)
-		if err != nil {
-			return et.Item{}, err
-		}
-		result := tx.Result()
-		if len(result) > 0 {
-			return et.NewItem(result[0]), nil
-		}
-		return et.Item{}, nil
-	case DELETE:
-		tx, err := c.model.Delete(c.idx, c.tx)
-		if err != nil {
-			return et.Item{}, err
-		}
-		result := tx.Result()
-		if len(result) > 0 {
-			return et.NewItem(result[0]), nil
-		}
-		return et.Item{}, nil
-	default:
-		return et.Item{}, errors.New(msg.MSG_COMMAND_NOT_FOUND)
+func (s *Command) Where(condition *et.Condition) *Where {
+	s.where = newWhere(s.model)
+	s.where.Add(condition)
+	return s.where
+}
+
+/**
+* Exec
+* @return (et.Item, error)
+**/
+func (c *Command) Exec() (et.Item, error) {
+	return et.Item{}, nil
+}
+
+/**
+* newCommand
+* @param model *Model, cmd Cmd, idx string, data et.Json
+* @return *Command
+**/
+func newCommand(model *Model, cmd Cmd, idx string, data et.Json) *Command {
+	return &Command{
+		model:        model,
+		command:      cmd,
+		idx:          idx,
+		data:         data,
+		where:        nil,
+		beforeInsert: []func(model *Model, old, new et.Join) error{},
+		beforeUpdate: []func(model *Model, old, new et.Join) error{},
+		beforeDelete: []func(model *Model, old, new et.Join) error{},
+		afterInsert:  []func(model *Model, old, new et.Join) error{},
+		afterUpdate:  []func(model *Model, old, new et.Join) error{},
+		afterDelete:  []func(model *Model, old, new et.Join) error{},
 	}
+}
+
+/**
+* Insert
+* @param model *Model, data et.Json
+* @return *Command
+**/
+func Insert(model *Model, data et.Json) *Command {
+	idx := data.Str(INDEX)
+	result := newCommand(model, INSERT, idx, data)
+	return result
+}
+
+func Update(model *Model, data et.Json) *Command {
+	idx := data.Str(INDEX)
+	result := newCommand(model, UPDATE, idx, data)
+	return result
+}
+
+func Delete(model *Model, idx string) *Command {
+	result := newCommand(model, DELETE, idx, et.Json{})
+	return result
+}
+
+func Upsert(model *Model, data et.Json) *Command {
+	idx := data.Str(INDEX)
+	result := newCommand(model, UPSERT, idx, data)
+	return result
 }

@@ -168,18 +168,19 @@ func (s *DB) ToJson() (et.Json, error) {
 * @param tx *Tx
 * @return (*Tx, error)
 **/
-func (s *DB) Save(tx *Tx) (*Tx, error) {
-	item, err := s.ToJson()
+func (s *DB) Save() error {
+	data, err := s.ToJson()
 	if err != nil {
-		return tx, err
+		return err
 	}
 
-	tx, err = s.node.dbs.Upsert(s.Name, item, tx)
+	_, err = Insert(s.node.dbs, data).
+		Exec()
 	if err != nil {
-		return tx, err
+		return err
 	}
 
-	return tx, nil
+	return nil
 }
 
 /**

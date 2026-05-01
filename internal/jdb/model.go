@@ -18,6 +18,7 @@ import (
 
 var (
 	ErrorFieldNotFound = errors.New(msg.MSG_FIELD_NOT_FOUND)
+	ErrorRecordExists  = errors.New(msg.MSG_RECORD_EXISTS)
 )
 
 type Trigger struct {
@@ -573,8 +574,18 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 * @param idx string, data et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 	tx = GetTx(s.db, tx)
+	if idx == "" {
+		idx = s.GenKey()
+	}
+
+	if exists, err := s.IsExists(idx); err != nil {
+		return nil, err
+	} else if exists {
+		return nil, ErrorRecordExists
+	}
+
 	new := et.Json{}
 	if s.IsStrict {
 		for _, field := range s.Fields {
@@ -586,7 +597,7 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 		new = data
 	}
 
-	cache := tx.Items(s)
+	itemsTx := tx.Items(s)
 	for _, index := range s.Unique {
 		value := new[index.Name]
 		if value != nil {
@@ -595,81 +606,63 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 				if exists {
 					_, ok := btree.Get(KeyFromAny(value))
 					if ok {
-						return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+						return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 					}
 				}
 			}
 		}
-		result := et.From(cache).
+		result := et.From(itemsTx).
 			Where(Eq(index.Name, value)).
 			All()
 		if len(result) > 0 {
-			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+			return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 		}
 	}
 
 	for _, index := range s.Required {
 		if _, ok := new[index.Name]; !ok {
-			return tx, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+			return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 		}
-		for _, itemC := range cache {
-			if _, ok := itemC[index.Name]; !ok {
-				return tx, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+		for _, item := range itemsTx {
+			if _, ok := item[index.Name]; !ok {
+				return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 			}
 		}
 	}
 
+	var err error
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	tx, err := tx.Add(s, INSERT, idx, old, new)
+	trans, err := tx.Add(s, INSERT, idx, old, new)
 	if err != nil {
-		return tx, err
+		return nil, err
 	}
 
 	for _, trigger := range s.AfterInserts {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	return tx, nil
+	tx.Result = new
+	return trans, nil
 }
 
 /**
-* Insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, data et.Json, tx *Tx
+* update: Updates a document and keeps secondary indexes in sync.
+* @param idx string, data et.Json
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) update(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 	if idx == "" {
-		idx = s.GenKey()
-	}
-	exists, err := s.IsExists(idx)
-	if err != nil {
-		return tx, err
-	}
-	if exists {
-		return tx, errors.New(msg.MSG_RECORD_EXISTS)
-	}
-
-	return s.insert(idx, data, tx)
-}
-
-/**
-* Update: Updates a document and keeps secondary indexes in sync.
-* @param idx string, data et.Json
-* @return (et.Json, error)
-**/
-func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
-	if idx == "" {
-		return tx, errors.New(msg.MSG_RECORD_NOT_FOUND)
+		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 	tx = GetTx(s.db, tx)
 	new := et.Json{}
@@ -684,15 +677,13 @@ func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	}
 
 	var old et.Json
-	exists, err := s.Get(idx, &old)
-	if err != nil {
-		return tx, err
-	}
-	if !exists {
-		return tx, fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
+	if exists, err := s.Get(idx, &old); err != nil {
+		return nil, err
+	} else if !exists {
+		return nil, fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
 	}
 
-	cache := tx.Items(s)
+	itemsTx := tx.Items(s)
 	for _, index := range s.Unique {
 		value := new[index.Name]
 		if value != nil {
@@ -703,100 +694,114 @@ func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
 					if ok {
 						i := slices.Index(idxs, idx)
 						if i == -1 {
-							return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+							return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 						}
 					}
 				}
 			}
 		}
-		result := et.From(cache).
+		result := et.From(itemsTx).
 			Where(Eq(index.Name, value)).
 			And(Neg(INDEX, idx)).
 			All()
 		if len(result) > 0 {
-			return tx, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+			return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 		}
 	}
 
+	for _, index := range s.Required {
+		if _, ok := new[index.Name]; !ok {
+			return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+		}
+		for _, item := range itemsTx {
+			if _, ok := item[index.Name]; !ok {
+				return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+			}
+		}
+	}
+
+	var err error
 	for _, trigger := range s.BeforeUpdates {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	tx.Add(s, UPDATE, idx, old, new)
+	result, err := tx.Add(s, UPDATE, idx, old, new)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, trigger := range s.AfterUpdates {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	return tx, nil
+	tx.Result = new
+	return result, nil
 }
 
 /**
-* Upsert: Inserts or updates a document and keeps secondary indexes in sync.
+* upsert: Inserts or updates a document and keeps secondary indexes in sync.
 * @param new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
-	if idx == "" {
-		return tx, errors.New(msg.MSG_RECORD_NOT_FOUND)
-	}
-	exists, err := s.IsExists(idx)
-	if err != nil {
-		return tx, err
-	}
-	if exists {
-		return s.Update(idx, new, tx)
+func (s *Model) upsert(idx string, new et.Json, tx *Tx) (*Transaction, error) {
+	result, err := s.insert(idx, new, tx)
+	if errors.Is(err, ErrorRecordExists) {
+		return s.update(idx, new, tx)
+	} else if err != nil {
+		return nil, err
 	}
 
-	return s.insert(idx, new, tx)
+	return result, nil
 }
 
 /**
-* Delete: Removes a document and cleans up all secondary indexes.
+* delete: Removes a document and cleans up all secondary indexes.
 * @param idx string
-* @return error
+* @return (*Transaction, error)
 **/
-func (s *Model) Delete(idx string, tx *Tx) (*Tx, error) {
+func (s *Model) delete(idx string, tx *Tx) (*Transaction, error) {
 	if idx == "" {
-		return tx, errors.New(msg.MSG_RECORD_NOT_FOUND)
+		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 	tx = GetTx(s.db, tx)
+	var err error
 	var old et.Json
 	exists, err := s.Get(idx, &old)
 	if err != nil {
-		return tx, err
+		return nil, err
 	}
 	if !exists {
-		return tx, nil
+		return nil, nil
 	}
 
 	new := et.Json{}
 	for _, trigger := range s.BeforeDeletes {
-		tx, err := s.fireTriggers(trigger, &old, &new, tx)
+		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	tx, err = tx.Add(s, DELETE, idx, old, new)
+	result, err := tx.Add(s, DELETE, idx, old, new)
 	if err != nil {
-		return tx, err
+		return nil, err
 	}
 
 	for _, trigger := range s.AfterDeletes {
 		tx, err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return tx, err
+			return nil, err
 		}
 	}
 
-	return tx, nil
+	tx.Result = old
+	return result, nil
 }
 
 /**

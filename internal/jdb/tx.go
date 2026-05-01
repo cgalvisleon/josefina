@@ -17,6 +17,7 @@ const (
 	INSERT Cmd = "insert"
 	UPDATE Cmd = "update"
 	DELETE Cmd = "delete"
+	UPSERT Cmd = "upsert"
 )
 
 const (
@@ -35,7 +36,6 @@ type Transaction struct {
 	Idx       string    `json:"id"`
 	New       et.Json   `json:"new"`
 	Old       et.Json   `json:"old"`
-	Result    et.Json   `json:"result"`
 	Status    string    `json:"status"`
 	model     *Model    `json:"-"`
 	tx        *Tx       `json:"-"`
@@ -73,6 +73,7 @@ type Tx struct {
 	Idx          string         `json:"idx"`
 	Transactions []*Transaction `json:"transactions"`
 	Executions   []*Transaction `json:"executions"`
+	Result       et.Json        `json:"result"`
 	Status       string         `json:"status"`
 	db           *DB            `json:"-"`
 }
@@ -92,6 +93,7 @@ func GetTx(db *DB, tx *Tx) *Tx {
 			Idx:          idx,
 			Transactions: []*Transaction{},
 			Executions:   []*Transaction{},
+			Result:       et.Json{},
 			Status:       PENDING,
 			db:           db,
 		}
@@ -194,9 +196,9 @@ func (s *Tx) SetStatus(status string) error {
 * @param model *Model, command string, id string, old, new et.Json, expiration time.Duration
 * @return (*Tx, error)
 **/
-func (s *Tx) Add(model *Model, command Cmd, idx string, old, new et.Json) (*Tx, error) {
+func (s *Tx) Add(model *Model, command Cmd, idx string, old, new et.Json) (*Transaction, error) {
 	now := timezone.Now()
-	s.Transactions = append(s.Transactions, &Transaction{
+	result := &Transaction{
 		Database:  model.Database,
 		Schema:    model.Schema,
 		Name:      model.Name,
@@ -206,15 +208,15 @@ func (s *Tx) Add(model *Model, command Cmd, idx string, old, new et.Json) (*Tx, 
 		Idx:       idx,
 		New:       new,
 		Old:       old,
-		Result:    et.Json{},
 		tx:        s,
 		model:     model,
-	})
+	}
+	s.Transactions = append(s.Transactions, result)
 	err := s.SetStatus(PENDING)
 	if err != nil {
-		return s, err
+		return result, err
 	}
-	return s, nil
+	return result, nil
 }
 
 /**
@@ -234,21 +236,18 @@ func (s *Tx) Rollback() error {
 			if err != nil {
 				return err
 			}
-			transaction.Result = transaction.New
 			transaction.SetStatus(ROLLED_BACK)
 		case UPDATE:
 			err := model.putObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				return err
 			}
-			transaction.Result = transaction.Old
 			transaction.SetStatus(ROLLED_BACK)
 		case DELETE:
 			err := model.putObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				return err
 			}
-			transaction.Result = transaction.Old
 			transaction.SetStatus(ROLLED_BACK)
 		}
 	}
@@ -258,13 +257,13 @@ func (s *Tx) Rollback() error {
 
 /**
 * Commit: Commits a transaction
-* @return error
+* @return (et.Item, error)
 **/
-func (s *Tx) Commit() error {
+func (s *Tx) Commit() (et.Item, error) {
 	for _, transaction := range s.Transactions {
 		model := transaction.model
 		if model == nil {
-			return nil
+			return et.Item{}, nil
 		}
 
 		s.Executions = append([]*Transaction{transaction}, s.Executions...)
@@ -274,35 +273,32 @@ func (s *Tx) Commit() error {
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return err
+					return et.Item{}, err
 				}
 			}
-			transaction.Result = transaction.New
 			transaction.SetStatus(COMMITTED)
 		case UPDATE:
 			err := model.putObject(transaction.Idx, transaction.New)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return err
+					return et.Item{}, err
 				}
 			}
-			transaction.Result = transaction.New
 			transaction.SetStatus(COMMITTED)
 		case DELETE:
 			err := model.deleteObject(transaction.Idx, transaction.Old)
 			if err != nil {
 				err = s.Rollback()
 				if err != nil {
-					return err
+					return et.Item{}, err
 				}
 			}
-			transaction.Result = transaction.Old
 			transaction.SetStatus(COMMITTED)
 		}
 	}
 	s.SetStatus(COMMITTED)
-	return nil
+	return et.NewItem(s.Result), nil
 }
 
 /**
@@ -318,18 +314,6 @@ func (s *Tx) Items(model *Model) []et.Json {
 			item[INDEX] = transaction.Idx
 			result = append(result, item)
 		}
-	}
-	return result
-}
-
-/**
-* Result: Returns the result of the transaction
-* @return []et.Json
-**/
-func (s *Tx) Result() []et.Json {
-	result := []et.Json{}
-	for _, transaction := range s.Transactions {
-		result = append(result, transaction.Result)
 	}
 	return result
 }
