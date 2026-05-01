@@ -5,7 +5,7 @@ import (
 )
 
 func loadErrors(db *DB) error {
-	result, err := db.Define(Define{
+	result, err := db.Define(DModel{
 		Name:    "errors",
 		IsCore:  true,
 		Version: 1,

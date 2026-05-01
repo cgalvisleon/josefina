@@ -378,76 +378,76 @@ func (s *Model) DefineCalc(name string, definition []byte) error {
 	return nil
 }
 
-type DefineField struct {
+type DField struct {
 	Type    TypeData    `json:"type"`
 	Default interface{} `json:"default"`
 }
 
-type DefineIndex struct {
+type DIndex struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-type DefineTo struct {
+type DTo struct {
 	Schema string `json:"schema"`
 	Name   string `json:"name"`
 }
 
-type DefineForeignKeys struct {
-	To              *DefineTo         `json:"to"`
+type DForeignKeys struct {
+	To              DTo               `json:"to"`
 	Keys            map[string]string `json:"keys"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
 	OnUpdateCascade bool              `json:"on_update_cascade"`
 }
 
-type DefineDetail struct {
+type DDetail struct {
 	Keys    map[string]string `json:"keys"`
 	Version int               `json:"version"`
 }
 
-type DefineRollup struct {
-	To      *DefineTo         `json:"to"`
+type DRollup struct {
+	To      DTo               `json:"to"`
 	Keys    map[string]string `json:"keys"`
 	Selects []string          `json:"selects"`
 }
 
-type DefineRelation struct {
-	To              *DefineTo         `json:"to"`
+type DRelation struct {
+	To              DTo               `json:"to"`
 	Keys            map[string]string `json:"keys"`
 	OnDeleteCascade bool              `json:"on_delete_cascade"`
 	OnUpdateCascade bool              `json:"on_update_cascade"`
 }
 
-type Define struct {
-	Schema        string                  `json:"schema"`
-	Name          string                  `json:"name"`
-	Version       int                     `json:"version"`
-	IsCore        bool                    `json:"is_core"`
-	IsStrict      bool                    `json:"is_strict"`
-	Fields        map[string]DefineField  `json:"fields"`
-	Indexes       []DefineIndex           `json:"indexes"`
-	PrimaryKeys   []string                `json:"primary_keys"`
-	ForeignKeys   []DefineForeignKeys     `json:"foreign_keys"`
-	Unique        []DefineIndex           `json:"unique"`
-	Required      []DefineIndex           `json:"required"`
-	Hidden        []string                `json:"hidden"`
-	Details       map[string]DefineDetail `json:"details"`
-	Rollups       map[string]DefineRollup `json:"rollups"`
-	Relations     []DefineRelation        `json:"relations"`
-	Calcs         map[string][]byte       `json:"calcs"`
-	BeforeInserts []Trigger               `json:"before_inserts"`
-	AfterInserts  []Trigger               `json:"after_inserts"`
-	BeforeUpdates []Trigger               `json:"before_updates"`
-	AfterUpdates  []Trigger               `json:"after_updates"`
-	BeforeDeletes []Trigger               `json:"before_deletes"`
-	AfterDeletes  []Trigger               `json:"after_deletes"`
+type DModel struct {
+	Schema        string             `json:"schema"`
+	Name          string             `json:"name"`
+	Version       int                `json:"version"`
+	IsCore        bool               `json:"is_core"`
+	IsStrict      bool               `json:"is_strict"`
+	Fields        map[string]DField  `json:"fields"`
+	Indexes       []DIndex           `json:"indexes"`
+	PrimaryKeys   []string           `json:"primary_keys"`
+	ForeignKeys   []DForeignKeys     `json:"foreign_keys"`
+	Unique        []DIndex           `json:"unique"`
+	Required      []DIndex           `json:"required"`
+	Hidden        []string           `json:"hidden"`
+	Details       map[string]DDetail `json:"details"`
+	Rollups       map[string]DRollup `json:"rollups"`
+	Relations     []DRelation        `json:"relations"`
+	Calcs         map[string][]byte  `json:"calcs"`
+	BeforeInserts []Trigger          `json:"before_inserts"`
+	AfterInserts  []Trigger          `json:"after_inserts"`
+	BeforeUpdates []Trigger          `json:"before_updates"`
+	AfterUpdates  []Trigger          `json:"after_updates"`
+	BeforeDeletes []Trigger          `json:"before_deletes"`
+	AfterDeletes  []Trigger          `json:"after_deletes"`
 }
 
 /**
 * ToJson
 * @return et.Json, error
 **/
-func (s *Define) ToJson() (et.Json, error) {
+func (s *DModel) ToJson() (et.Json, error) {
 	bt, err := json.Marshal(s)
 	if err != nil {
 		return et.Json{}, err

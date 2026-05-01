@@ -8,11 +8,11 @@ import "github.com/cgalvisleon/et/et"
 **/
 func (s *Node) loadUsers() error {
 	var err error
-	s.users, err = s.catalog.Define(Define{
+	s.users, err = s.catalog.Define(DModel{
 		Name:    "users",
 		IsCore:  true,
 		Version: 1,
-		Fields: map[string]DefineField{
+		Fields: map[string]DField{
 			"username": {
 				Type:    TpText,
 				Default: "",
@@ -25,7 +25,7 @@ func (s *Node) loadUsers() error {
 		PrimaryKeys: []string{
 			"username",
 		},
-		Required: []DefineIndex{
+		Required: []DIndex{
 			{Name: "password"},
 		},
 	})

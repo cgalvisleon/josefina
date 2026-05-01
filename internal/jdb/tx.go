@@ -325,7 +325,7 @@ func (s *Tx) Items(model *Model) []et.Json {
 * @return error
 **/
 func loadTransaction(db *DB) error {
-	result, err := db.Define(Define{
+	result, err := db.Define(DModel{
 		Name:    "transactions",
 		IsCore:  true,
 		Version: 1,

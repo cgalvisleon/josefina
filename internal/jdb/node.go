@@ -92,7 +92,7 @@ func (s *Node) load() error {
 **/
 func (s *Node) loadDbs() error {
 	var err error
-	s.dbs, err = s.catalog.Define(Define{
+	s.dbs, err = s.catalog.Define(DModel{
 		Name:    "dbs",
 		IsCore:  true,
 		Version: 1,

@@ -307,10 +307,10 @@ func (s *DB) Empty() error {
 
 /**
 * Define: Defines the model
-* @param define Define
+* @param define DModel
 * @return (*Model, error)
 **/
-func (s *DB) Define(define Define) (*Model, error) {
+func (s *DB) Define(define DModel) (*Model, error) {
 	schema := define.Schema
 	name := define.Name
 	if !utility.ValidStr(name, 1, []string{}) {

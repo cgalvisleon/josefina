@@ -156,7 +156,7 @@ func (s *Session) GetExpiresAt() time.Time {
 **/
 func (s *Node) loadSessions() error {
 	var err error
-	s.sessions, err = s.catalog.Define(Define{
+	s.sessions, err = s.catalog.Define(DModel{
 		Name:    "sessions",
 		IsCore:  true,
 		Version: 1,

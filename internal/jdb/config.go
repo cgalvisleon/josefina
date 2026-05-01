@@ -8,7 +8,7 @@ import (
 )
 
 func loadConfig(db *DB) error {
-	model, err := db.Define(Define{
+	model, err := db.Define(DModel{
 		Name:    "config",
 		IsCore:  true,
 		Version: 1,

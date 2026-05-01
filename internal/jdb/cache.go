@@ -11,7 +11,7 @@ import (
 * @return error
 **/
 func loadCache(db *DB) error {
-	result, err := db.Define(Define{
+	result, err := db.Define(DModel{
 		Name:    "cache",
 		IsCore:  true,
 		Version: 1,

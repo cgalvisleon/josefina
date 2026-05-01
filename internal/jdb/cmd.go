@@ -243,7 +243,7 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	return result, nil
 }
 
-type DefineCmd struct {
+type DCmd struct {
 	Database string    `json:"database"`
 	Schema   string    `json:"schema"`
 	Name     string    `json:"name"`
