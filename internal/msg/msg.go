@@ -90,6 +90,7 @@ var (
 	MSG_METHOD_NOT_FOUND           = "method not found"
 	MSG_DUPLICATE_KEY_UNIQUE       = "duplicate key value violates unique constraint %s"
 	MSG_INDEX_OUT_OF_RANGE         = "index out of range"
+	MSG_REQUIRED_FIELD             = "required field %s"
 )
 
 func init() {
@@ -164,5 +165,6 @@ func init() {
 		MSG_METHOD_NOT_FOUND = "method not found"
 		MSG_DUPLICATE_KEY_UNIQUE = "valor de clave duplicado viola la restricción de unicidad"
 		MSG_INDEX_OUT_OF_RANGE = "índice fuera de rango"
+		MSG_REQUIRED_FIELD = "campo requerido (%s)"
 	}
 }

@@ -79,16 +79,17 @@ type Tx struct {
 
 /**
 * GetTx: Returns the transaction
-* @param tx *Tx
+* @param db *DB, tx *Tx
 * @return *Tx
 **/
 func GetTx(db *DB, tx *Tx) *Tx {
 	if tx == nil {
+		idx := reg.GenULID("tx")
 		now := timezone.Now()
 		return &Tx{
 			CreatedAt:    now,
 			UpdatedAt:    now,
-			Idx:          reg.GenULID("tx"),
+			Idx:          idx,
 			Transactions: []*Transaction{},
 			Executions:   []*Transaction{},
 			Status:       PENDING,

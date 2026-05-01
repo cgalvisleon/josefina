@@ -67,10 +67,7 @@ func (s *Model) DefineIndex(name string, tp TpIndex) (*Index, error) {
 
 	idx := slices.IndexFunc(s.Indexes, func(i *Index) bool { return strings.EqualFold(i.Name, name) })
 	if idx == -1 {
-		s.Indexes = append(s.Indexes, &Index{
-			Name: name,
-			Type: tp,
-		})
+		s.Indexes = append(s.Indexes, newIndex(s, name, tp))
 		return s.Indexes[len(s.Indexes)-1], nil
 	}
 	return s.Indexes[idx], nil

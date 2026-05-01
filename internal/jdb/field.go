@@ -123,6 +123,19 @@ type Index struct {
 	Type TpIndex
 }
 
+/**
+* newIndex
+* @param name string, tp TpIndex
+* @return *Index
+**/
+func newIndex(model *Model, name string, tp TpIndex) *Index {
+	return &Index{
+		Name: name,
+		Tag:  fmt.Sprintf("%s.%s", model.Name, name),
+		Type: tp,
+	}
+}
+
 type TypeAggregation string
 
 func (s TypeAggregation) Str() string {

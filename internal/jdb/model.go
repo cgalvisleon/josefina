@@ -608,6 +608,17 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 		}
 	}
 
+	for _, index := range s.Required {
+		if _, ok := new[index.Name]; !ok {
+			return tx, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+		}
+		for _, itemC := range cache {
+			if _, ok := itemC[index.Name]; !ok {
+				return tx, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+			}
+		}
+	}
+
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
 		tx, err := s.fireTriggers(trigger, &old, &new, tx)
@@ -636,8 +647,7 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 * @param idx string, data et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Insert(data et.Json, tx *Tx) (*Tx, error) {
-	idx := data.Str(INDEX)
+func (s *Model) Insert(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	if idx == "" {
 		idx = s.GenKey()
 	}
@@ -657,8 +667,7 @@ func (s *Model) Insert(data et.Json, tx *Tx) (*Tx, error) {
 * @param idx string, data et.Json
 * @return (et.Json, error)
 **/
-func (s *Model) Update(data et.Json, tx *Tx) (*Tx, error) {
-	idx := data.Str(INDEX)
+func (s *Model) Update(idx string, data et.Json, tx *Tx) (*Tx, error) {
 	if idx == "" {
 		return tx, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
@@ -733,8 +742,7 @@ func (s *Model) Update(data et.Json, tx *Tx) (*Tx, error) {
 * @param new et.Json, tx *Tx
 * @return (*Transaction, error)
 **/
-func (s *Model) Upsert(new et.Json, tx *Tx) (*Tx, error) {
-	idx := new.Str(INDEX)
+func (s *Model) Upsert(idx string, new et.Json, tx *Tx) (*Tx, error) {
 	if idx == "" {
 		return tx, errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
@@ -743,7 +751,7 @@ func (s *Model) Upsert(new et.Json, tx *Tx) (*Tx, error) {
 		return tx, err
 	}
 	if exists {
-		return s.Update(new, tx)
+		return s.Update(idx, new, tx)
 	}
 
 	return s.insert(idx, new, tx)
