@@ -9,7 +9,7 @@ type Command struct {
 	command      Cmd
 	tx           *Tx
 	idx          string
-	data         []et.Json
+	items        []et.Json
 	where        *Where
 	beforeInsert []func(model *Model, old, new et.Join) error
 	beforeUpdate []func(model *Model, old, new et.Join) error
@@ -21,15 +21,15 @@ type Command struct {
 
 /**
 * newCommand
-* @param model *Model, cmd Cmd, idx string, data et.Json
+* @param model *Model, cmd Cmd, idx string, items et.Json
 * @return *Command
 **/
-func newCommand(model *Model, cmd Cmd, idx string, data []et.Json) *Command {
+func newCommand(model *Model, cmd Cmd, idx string, items []et.Json) *Command {
 	return &Command{
 		model:        model,
 		command:      cmd,
 		idx:          idx,
-		data:         data,
+		items:        items,
 		where:        nil,
 		beforeInsert: []func(model *Model, old, new et.Join) error{},
 		beforeUpdate: []func(model *Model, old, new et.Join) error{},
@@ -45,38 +45,74 @@ func newCommand(model *Model, cmd Cmd, idx string, data []et.Json) *Command {
 * @param condition *et.Condition
 * @return *Where
 **/
-func (s *Command) Where(condition *et.Condition) *Where {
+func (s *Command) Where(condition *et.Condition) *Command {
 	s.where = newWhere(s.model)
 	s.where.Add(condition)
-	return s.where
+	return s
 }
 
 /**
-* Exec
+* And
+* @param condition *et.Condition
+* @return *Command
+**/
+func (s *Command) And(condition *et.Condition) *Command {
+	if s.where == nil {
+		s.where = newWhere(s.model)
+	}
+	s.where.And(condition)
+	return s
+}
+
+/**
+* Or
+* @param condition *et.Condition
+* @return *Command
+**/
+func (s *Command) Or(condition *et.Condition) *Command {
+	if s.where == nil {
+		s.where = newWhere(s.model)
+	}
+	s.where.Or(condition)
+	return s
+}
+
+/**
+* ExecTx
+* @param tx *Tx
 * @return (et.Item, error)
 **/
-func (s *Command) Exec() (et.Items, error) {
+func (s *Command) ExecTx(tx *Tx) (et.Items, error) {
 	switch s.command {
 	case INSERT:
-		return s.insertCmd()
+		return s.insertCmd(tx)
 	case UPDATE:
-		return s.updateCmd()
+		return s.updateCmd(tx)
 	case DELETE:
-		return s.deleteCmd()
+		return s.deleteCmd(tx)
 	case UPSERT:
-		return s.upsertCmd()
+		return s.upsertCmd(tx)
 	case BULK:
-		return s.bulkCmd()
+		return s.bulkCmd(tx)
 	}
 	return et.Items{}, nil
 }
 
 /**
-* One
+* Exec
+* @return (et.Items, error)
+**/
+func (s *Command) Exec() (et.Items, error) {
+	return s.ExecTx(nil)
+}
+
+/**
+* OneTx
+* @param tx *Tx
 * @return (et.Item, error)
 **/
-func (s Command) One() (et.Item, error) {
-	items, err := s.Exec()
+func (s *Command) OneTx(tx *Tx) (et.Item, error) {
+	items, err := s.ExecTx(tx)
 	if err != nil {
 		return et.Item{}, err
 	}
@@ -84,18 +120,45 @@ func (s Command) One() (et.Item, error) {
 }
 
 /**
+* One
+* @return (et.Item, error)
+**/
+func (s *Command) One() (et.Item, error) {
+	return s.OneTx(nil)
+}
+
+/**
 * insertCmd
 * @return et.Items, error
 **/
-func (s *Command) insertCmd() (et.Items, error) {
-	return et.Items{}, nil
+func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
+	result := et.Items{}
+	execute := tx == nil
+	tx = GetTx(s.model.db, tx)
+	var err error
+	for _, item := range s.items {
+		idx := item.Str(INDEX)
+		tx, err = s.model.insert(idx, item, tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+
+		if execute {
+			item, err = tx.Commit()
+			if err != nil {
+				return et.Items{}, err
+			}
+			result.Add(item)
+		}
+	}
+	return result, nil
 }
 
 /**
 * updateCmd
 * @return et.Items, error
 **/
-func (s *Command) updateCmd() (et.Items, error) {
+func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 	return et.Items{}, nil
 }
 
@@ -103,7 +166,7 @@ func (s *Command) updateCmd() (et.Items, error) {
 * deleteCmd
 * @return et.Items, error
 **/
-func (s *Command) deleteCmd() (et.Items, error) {
+func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	return et.Items{}, nil
 }
 
@@ -111,7 +174,7 @@ func (s *Command) deleteCmd() (et.Items, error) {
 * upsertCmd
 * @return et.Items, error
 **/
-func (s *Command) upsertCmd() (et.Items, error) {
+func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	return et.Items{}, nil
 }
 
@@ -119,6 +182,6 @@ func (s *Command) upsertCmd() (et.Items, error) {
 * bulkCmd
 * @return et.Items, error
 **/
-func (s *Command) bulkCmd() (et.Items, error) {
+func (s *Command) bulkCmd(tx *Tx) (et.Items, error) {
 	return et.Items{}, nil
 }

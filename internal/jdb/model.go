@@ -551,11 +551,11 @@ func (s *Model) Count() (int, error) {
 * @param triggers []*Trigger, old, new et.Json
 * @return error
 **/
-func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, error) {
+func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error {
 	name := fmt.Sprintf("trigger_%s", trigger.Name)
 	vm, err := js.New(name)
 	if err != nil {
-		return tx, err
+		return err
 	}
 
 	vm.Set("Old", old)
@@ -563,27 +563,27 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) (*Tx, 
 	vm.Set("Tx", tx)
 	_, err = vm.Run(string(trigger.Definition))
 	if err != nil {
-		return tx, err
+		return err
 	}
 
-	return tx, nil
+	return nil
 }
 
 /**
 * insert: Inserts a document and keeps secondary indexes in sync.
 * @param idx string, data et.Json, tx *Tx
-* @return (*Transaction, error)
+* @return error
 **/
-func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Transaction, error) {
+func (s *Model) insert(idx string, data et.Json, tx *Tx) error {
 	tx = GetTx(s.db, tx)
 	if idx == "" {
 		idx = s.GenKey()
 	}
 
 	if exists, err := s.IsExists(idx); err != nil {
-		return nil, err
+		return err
 	} else if exists {
-		return nil, ErrorRecordExists
+		return ErrorRecordExists
 	}
 
 	new := et.Json{}
@@ -606,7 +606,7 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 				if exists {
 					_, ok := btree.Get(KeyFromAny(value))
 					if ok {
-						return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+						return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 					}
 				}
 			}
@@ -615,54 +615,53 @@ func (s *Model) insert(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 			Where(Eq(index.Name, value)).
 			All()
 		if len(result) > 0 {
-			return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+			return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 		}
 	}
 
 	for _, index := range s.Required {
 		if _, ok := new[index.Name]; !ok {
-			return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+			return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 		}
 		for _, item := range itemsTx {
 			if _, ok := item[index.Name]; !ok {
-				return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+				return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 			}
 		}
 	}
 
-	var err error
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	trans, err := tx.Add(s, INSERT, idx, old, new)
+	_, err := tx.Add(s, INSERT, idx, old, new)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, trigger := range s.AfterInserts {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err = s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	tx.Result = new
-	return trans, nil
+	return nil
 }
 
 /**
 * update: Updates a document and keeps secondary indexes in sync.
 * @param idx string, data et.Json
-* @return (*Transaction, error)
+* @return error
 **/
-func (s *Model) update(idx string, data et.Json, tx *Tx) (*Transaction, error) {
+func (s *Model) update(idx string, data et.Json, tx *Tx) error {
 	if idx == "" {
-		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
+		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 	tx = GetTx(s.db, tx)
 	new := et.Json{}
@@ -678,9 +677,9 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 
 	var old et.Json
 	if exists, err := s.Get(idx, &old); err != nil {
-		return nil, err
+		return err
 	} else if !exists {
-		return nil, fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
+		return fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
 	}
 
 	itemsTx := tx.Items(s)
@@ -694,7 +693,7 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 					if ok {
 						i := slices.Index(idxs, idx)
 						if i == -1 {
-							return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+							return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 						}
 					}
 				}
@@ -705,101 +704,99 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) (*Transaction, error) {
 			And(Neg(INDEX, idx)).
 			All()
 		if len(result) > 0 {
-			return nil, fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+			return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 		}
 	}
 
 	for _, index := range s.Required {
 		if _, ok := new[index.Name]; !ok {
-			return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+			return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 		}
 		for _, item := range itemsTx {
 			if _, ok := item[index.Name]; !ok {
-				return nil, fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+				return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 			}
 		}
 	}
 
-	var err error
 	for _, trigger := range s.BeforeUpdates {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	result, err := tx.Add(s, UPDATE, idx, old, new)
+	_, err := tx.Add(s, UPDATE, idx, old, new)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, trigger := range s.AfterUpdates {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	tx.Result = new
-	return result, nil
+	return nil
 }
 
 /**
 * upsert: Inserts or updates a document and keeps secondary indexes in sync.
 * @param new et.Json, tx *Tx
-* @return (*Transaction, error)
+* @return error
 **/
-func (s *Model) upsert(idx string, new et.Json, tx *Tx) (*Transaction, error) {
-	result, err := s.insert(idx, new, tx)
+func (s *Model) upsert(idx string, new et.Json, tx *Tx) error {
+	err := s.insert(idx, new, tx)
 	if errors.Is(err, ErrorRecordExists) {
 		return s.update(idx, new, tx)
 	} else if err != nil {
-		return nil, err
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
 /**
 * delete: Removes a document and cleans up all secondary indexes.
 * @param idx string
-* @return (*Transaction, error)
+* @return error
 **/
-func (s *Model) delete(idx string, tx *Tx) (*Transaction, error) {
+func (s *Model) delete(idx string, tx *Tx) error {
 	if idx == "" {
-		return nil, errors.New(msg.MSG_RECORD_NOT_FOUND)
+		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 	tx = GetTx(s.db, tx)
 	var old et.Json
 	if exists, err := s.Get(idx, &old); err != nil {
-		return nil, err
+		return err
 	} else if !exists {
-		return nil, nil
+		return nil
 	}
 
-	var err error
 	new := et.Json{}
 	for _, trigger := range s.BeforeDeletes {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	result, err := tx.Add(s, DELETE, idx, old, new)
+	_, err := tx.Add(s, DELETE, idx, old, new)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, trigger := range s.AfterDeletes {
-		tx, err = s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new, tx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	tx.Result = old
-	return result, nil
+	return nil
 }
 
 /**
@@ -1065,7 +1062,7 @@ func (s *Model) Upsert(data et.Json) *Command {
 * @param items []et.Json
 * @return *Command
 **/
-func (s *Model) Bulk(items []et.Json) *Command {	
+func (s *Model) Bulk(items []et.Json) *Command {
 	result := newCommand(s, BULK, "", items)
 	return result
 }
