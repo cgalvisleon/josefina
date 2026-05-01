@@ -174,7 +174,8 @@ func (s *DB) Save() error {
 		return err
 	}
 
-	_, err = Insert(s.node.dbs, data).
+	_, err = s.node.dbs.
+		Insert(data).
 		Exec()
 	if err != nil {
 		return err

@@ -803,11 +803,11 @@ func (s *Model) delete(idx string, tx *Tx) (*Transaction, error) {
 }
 
 /**
-* Value: Returns the value of the specified attribute from the given item.
+* value: Returns the value of the specified attribute from the given item.
 * @param atrib string, item et.Json
 * @return (interface{}, bool)
 **/
-func (s *Model) Value(atrib string, item et.Json) (interface{}, bool) {
+func (s *Model) value(atrib string, item et.Json) (interface{}, bool) {
 	field, exists := s.Fields[atrib]
 	if exists {
 		return field.Value(item), true
@@ -1022,4 +1022,49 @@ func (s *Model) Empty() error {
 	s.btrees = make(map[string]*BTree, 0)
 
 	return nil
+}
+
+/**
+* Where
+* @param condition *et.Condition
+* @return *Where
+**/
+func (s *Model) Where(condition *et.Condition) *Where {
+	return From(s).Where(condition)
+}
+
+/**
+* Insert
+* @param data et.Json
+* @return *Command
+**/
+func (s *Model) Insert(data et.Json) *Command {
+	return insertCmd(s, data)
+}
+
+/**
+* update
+* @param data et.Json
+* @return *Command
+**/
+func (s *Model) Update(data et.Json) *Command {
+	return updateCmd(s, data)
+}
+
+/**
+* Delete
+* @param idx string
+* @return *Command
+**/
+func (s *Model) Delete(idx string) *Command {
+	return deleteCmd(s, idx)
+}
+
+/**
+* Upsert
+* @param data et.Json
+* @return *Command
+**/
+func (s *Model) Upsert(data et.Json) *Command {
+	return upsertCmd(s, data)
 }

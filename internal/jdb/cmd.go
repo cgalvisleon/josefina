@@ -55,28 +55,43 @@ func newCommand(model *Model, cmd Cmd, idx string, data et.Json) *Command {
 }
 
 /**
-* Insert
+* insertCmd
 * @param model *Model, data et.Json
 * @return *Command
 **/
-func Insert(model *Model, data et.Json) *Command {
+func insertCmd(model *Model, data et.Json) *Command {
 	idx := data.Str(INDEX)
 	result := newCommand(model, INSERT, idx, data)
 	return result
 }
 
-func Update(model *Model, data et.Json) *Command {
+/**
+* updateCmd
+* @param model *Model, data et.Json
+* @return *Command
+**/
+func updateCmd(model *Model, data et.Json) *Command {
 	idx := data.Str(INDEX)
 	result := newCommand(model, UPDATE, idx, data)
 	return result
 }
 
-func Delete(model *Model, idx string) *Command {
+/**
+* deleteCmd
+* @param model *Model, idx string
+* @return *Command
+**/
+func deleteCmd(model *Model, idx string) *Command {
 	result := newCommand(model, DELETE, idx, et.Json{})
 	return result
 }
 
-func Upsert(model *Model, data et.Json) *Command {
+/**
+* upsertCmd
+* @param model *Model, data et.Json
+* @return *Command
+**/
+func upsertCmd(model *Model, data et.Json) *Command {
 	idx := data.Str(INDEX)
 	result := newCommand(model, UPSERT, idx, data)
 	return result
