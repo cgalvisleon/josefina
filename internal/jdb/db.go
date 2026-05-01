@@ -464,3 +464,50 @@ func (s *DB) Define(define DModel) (*Model, error) {
 
 	return result, nil
 }
+
+/**
+* Command
+* @param cmds []DCmd
+* @return (et.Items, error)
+ */
+func (s *DB) Command(cmds []DCmd) (et.Items, error) {
+	result := et.Items{}
+	for _, cmd := range cmds {
+		if cmd.Insert != nil {
+			model, err := s.GetModel(cmd.Insert.Schema, cmd.Insert.Name)
+			if err != nil {
+				return result, err
+			}
+			return model.
+				Insert(cmd.Insert.Data).
+				Exec()
+		} else if cmd.Update != nil {
+			model, err := s.GetModel(cmd.Update.Schema, cmd.Update.Name)
+			if err != nil {
+				return result, err
+			}
+			command := model.Update(cmd.Update.Data)
+			for _, condition := range cmd.Update.Where {
+				command.Add(&condition)
+			}
+			return command.Exec()
+		} else if cmd.Delete != nil {
+			model, err := s.GetModel(cmd.Delete.Schema, cmd.Delete.Name)
+			if err != nil {
+				return result, err
+			}
+			command := model.Delete()
+			for _, condition := range cmd.Delete.Where {
+				command.Add(&condition)
+			}
+			return command.Exec()
+		} else if cmd.Bulk != nil {
+			model, err := s.GetModel(cmd.Bulk.Schema, cmd.Bulk.Name)
+			if err != nil {
+				return result, err
+			}
+			return model.Bulk(cmd.Bulk.Data).Exec()
+		}
+	}
+	return result, nil
+}

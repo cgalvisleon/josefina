@@ -42,6 +42,16 @@ func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 }
 
 /**
+* Add
+* @param condition *et.Condition
+* @return *Command
+**/
+func (s *Command) Add(condition *et.Condition) *Command {
+	s.where.Add(condition)
+	return s
+}
+
+/**
 * Where
 * @param condition *et.Condition
 * @return *Where
@@ -243,34 +253,22 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	return result, nil
 }
 
-type DInsert struct {
-	Schema string  `json:"schema"`
-	Name   string  `json:"name"`
-	Data   et.Join `json:"data"`
-}
-
-type DUpdate struct {
-	Schema string    `json:"schema"`
-	Name   string    `json:"name"`
-	Data   et.Join   `json:"data"`
-	Where  []et.Json `json:"where"`
-}
-
-type DDelete struct {
-	Schema string    `json:"schema"`
-	Name   string    `json:"name"`
-	Where  []et.Json `json:"where"`
+type Diud struct {
+	Schema string         `json:"schema"`
+	Name   string         `json:"name"`
+	Data   et.Json        `json:"data"`
+	Where  []et.Condition `json:"where"`
 }
 
 type DBulk struct {
 	Schema string    `json:"schema"`
 	Name   string    `json:"name"`
-	Data   []et.Join `json:"data"`
+	Data   []et.Json `json:"data"`
 }
 
 type DCmd struct {
-	Insert *DInsert `json:"insert"`
-	Update *DUpdate `json:"update"`
-	Delete *DDelete `json:"delete"`
-	Bulk   *DBulk   `json:"bulk"`
+	Insert *Diud  `json:"insert"`
+	Update *Diud  `json:"update"`
+	Delete *Diud  `json:"delete"`
+	Bulk   *DBulk `json:"bulk"`
 }

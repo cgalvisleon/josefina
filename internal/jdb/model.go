@@ -1009,7 +1009,7 @@ func (s *Model) Insert(data et.Json) *Command {
 }
 
 /**
-* update
+* Update
 * @param data et.Json
 * @return *Command
 **/
