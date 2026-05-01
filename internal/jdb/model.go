@@ -1003,9 +1003,8 @@ func (s *Model) Where(condition *et.Condition) *Where {
 * @return *Command
 **/
 func (s *Model) Insert(data et.Json) *Command {
-	idx := data.Str(INDEX)
 	items := []et.Json{data}
-	result := newCommand(s, INSERT, idx, items)
+	result := newCommand(s, INSERT, items)
 	return result
 }
 
@@ -1015,19 +1014,17 @@ func (s *Model) Insert(data et.Json) *Command {
 * @return *Command
 **/
 func (s *Model) Update(data et.Json) *Command {
-	idx := data.Str(INDEX)
 	items := []et.Json{data}
-	result := newCommand(s, UPDATE, idx, items)
+	result := newCommand(s, UPDATE, items)
 	return result
 }
 
 /**
 * Delete
-* @param idx string
 * @return *Command
 **/
-func (s *Model) Delete(idx string) *Command {
-	result := newCommand(s, DELETE, idx, []et.Json{})
+func (s *Model) Delete() *Command {
+	result := newCommand(s, DELETE, []et.Json{})
 	return result
 }
 
@@ -1037,9 +1034,8 @@ func (s *Model) Delete(idx string) *Command {
 * @return *Command
 **/
 func (s *Model) Upsert(data et.Json) *Command {
-	idx := data.Str(INDEX)
 	items := []et.Json{data}
-	result := newCommand(s, UPSERT, idx, items)
+	result := newCommand(s, UPSERT, items)
 	return result
 }
 
@@ -1049,6 +1045,6 @@ func (s *Model) Upsert(data et.Json) *Command {
 * @return *Command
 **/
 func (s *Model) Bulk(items []et.Json) *Command {
-	result := newCommand(s, BULK, "", items)
+	result := newCommand(s, BULK, items)
 	return result
 }

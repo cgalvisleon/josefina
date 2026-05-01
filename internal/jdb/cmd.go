@@ -11,7 +11,6 @@ type Command struct {
 	model        *Model
 	command      Cmd
 	tx           *Tx
-	idx          string
 	items        []et.Json
 	where        *Where
 	beforeInsert []func(model *Model, old, new et.Join) error
@@ -27,11 +26,10 @@ type Command struct {
 * @param model *Model, cmd Cmd, idx string, items et.Json
 * @return *Command
 **/
-func newCommand(model *Model, cmd Cmd, idx string, items []et.Json) *Command {
+func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 	return &Command{
 		model:        model,
 		command:      cmd,
-		idx:          idx,
 		items:        items,
 		where:        newWhere(model),
 		beforeInsert: []func(model *Model, old, new et.Join) error{},
@@ -243,4 +241,33 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 		result.Add(tx.Result)
 	}
 	return result, nil
+}
+
+type CmdInsert struct {
+	Database string  `json:"database"`
+	Schema   string  `json:"schema"`
+	Name     string  `json:"name"`
+	Data     et.Join `json:"data"`
+}
+
+type CmdBulk struct {
+	Database string    `json:"database"`
+	Schema   string    `json:"schema"`
+	Name     string    `json:"name"`
+	Data     []et.Join `json:"data"`
+}
+
+type CmdUpdate struct {
+	Database string    `json:"database"`
+	Schema   string    `json:"schema"`
+	Name     string    `json:"name"`
+	Data     et.Join   `json:"data"`
+	Where    []et.Json `json:"where"`
+}
+
+type CmdDelete struct {
+	Database string    `json:"database"`
+	Schema   string    `json:"schema"`
+	Name     string    `json:"name"`
+	Where    []et.Json `json:"where"`
 }

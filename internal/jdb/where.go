@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/cgalvisleon/et/et"
@@ -63,19 +62,12 @@ func (s *Where) IsDebug() *Where {
 * ToJson
 * @return et.Json
 **/
-func (s *Where) ToJson() (et.Json, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
+func (s *Where) ToJson() []et.Json {
+	result := []et.Json{}
+	for _, condition := range s.conditions {
+		result = append(result, condition.ToJson())
 	}
-
-	var result et.Json
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result
 }
 
 /**
