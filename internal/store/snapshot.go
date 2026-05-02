@@ -13,7 +13,9 @@ import (
 )
 
 /**
-* CreateSnapshot
+* CreateSnapshot: Persists the current in-memory index to a snapshot file.
+* Only records from segments other than the active one are included.
+* The file is written atomically via a tmp-then-rename pattern.
 * @return error
 **/
 func (s *FileStore) CreateSnapshot() error {
@@ -73,7 +75,7 @@ func (s *FileStore) CreateSnapshot() error {
 }
 
 /**
-* tryLoadSnapshot loads the snapshot index if it exists and is valid.
+* tryLoadSnapshot: Loads the snapshot index if it exists and passes CRC validation.
 * Returns (true, nil) when loaded, (false, nil) when absent, (false, err) when corrupt.
 * @return bool, error
 **/

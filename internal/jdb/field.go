@@ -11,6 +11,9 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* Ttl: Holds a cached byte value together with its creation time and expiration duration.
+**/
 type Ttl struct {
 	Value     []byte        `json:"value"`
 	CreatedAt time.Time     `json:"created_at"`
@@ -18,9 +21,9 @@ type Ttl struct {
 }
 
 /**
-* newTtl
-* @param duration time.Duration
-* @return *Ttl
+* newTtl: Creates a new TTL entry serializing value to bytes.
+* @param value any, duration time.Duration
+* @return *Ttl, error
 **/
 func newTtl(value any, duration time.Duration) (*Ttl, error) {
 	bt, ok := value.([]byte)
@@ -70,8 +73,15 @@ const (
 	UPDATED_AT string = "updated_at"
 )
 
+/**
+* TypeField: Classifies the structural role of a field within a model.
+**/
 type TypeField string
 
+/**
+* Str: Returns the string representation of the TypeField.
+* @return string
+**/
 func (s TypeField) Str() string {
 	return string(s)
 }
@@ -84,8 +94,15 @@ const (
 	TpAggregation TypeField = "aggregation"
 )
 
+/**
+* TypeData: Describes the value type stored in a field.
+**/
 type TypeData string
 
+/**
+* Str: Returns the string representation of the TypeData.
+* @return string
+**/
 func (s TypeData) Str() string {
 	return string(s)
 }
@@ -106,8 +123,15 @@ const (
 	TpReference     TypeData = "reference"
 )
 
+/**
+* TpIndex: Identifies the index implementation (hash or btree).
+**/
 type TpIndex string
 
+/**
+* Str: Returns the string representation of the TpIndex.
+* @return string
+**/
 func (s TpIndex) Str() string {
 	return string(s)
 }
@@ -136,8 +160,15 @@ func newIndex(model *Model, name string, tp TpIndex) *Index {
 	}
 }
 
+/**
+* TypeAggregation: Identifies the aggregation function applied to a rollup field.
+**/
 type TypeAggregation string
 
+/**
+* Str: Returns the string representation of the TypeAggregation.
+* @return string
+**/
 func (s TypeAggregation) Str() string {
 	return string(s)
 }

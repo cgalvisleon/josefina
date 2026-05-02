@@ -18,6 +18,9 @@ const (
 	version = "1.0.0"
 )
 
+/**
+* Node: Runtime instance of the database engine; owns all databases, sessions, and the TCP transport.
+**/
 type Node struct {
 	Version   string              `json:"version"`
 	DBS       map[string]*DB      `json:"dbs"`

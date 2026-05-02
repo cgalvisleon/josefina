@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"sync"
@@ -23,14 +24,36 @@ import (
 )
 
 const (
-	packageName     = "store"
-	maxIdLen        = 65535
-	fixedHeaderSize = 19 // LSN(8) + DataLen(4) + CRC(4) + IDLen(2) + Status(1)
+	packageName       = "store"
+	maxIdLen          = 65535
+	fixedHeaderSize   = 19  // LSN(8) + DataLen(4) + CRC(4) + IDLen(2) + Status(1)
+	workerThreshold   = 128 // below this, sequential is faster than goroutine pool
+	workerRecordRatio = 128 // one worker per this many records
 )
 
 /**
-* newRecordHeaderAt
-* @param id string, data []byte, status byte
+* optimalWorkers: Returns the worker count for a parallel ForEach.
+* For I/O-bound segment reads: scales up to 2×GOMAXPROCS capped by one
+* worker per workerRecordRatio records. Returns 1 for small sets, which
+* triggers the sequential fast path (no goroutines or channels).
+* @param total int
+* @return int
+**/
+func optimalWorkers(total int) int {
+	if total <= workerThreshold {
+		return 1
+	}
+	max := runtime.GOMAXPROCS(0) * 2
+	w := (total + workerRecordRatio - 1) / workerRecordRatio
+	if w > max {
+		w = max
+	}
+	return w
+}
+
+/**
+* newRecordHeaderAt: Encodes a WAL record header at the given LSN.
+* @param lsn uint64, id string, data []byte, status byte
 * @return recordHeader, []byte, error
 **/
 func newRecordHeaderAt(lsn uint64, id string, data []byte, status byte) (recordHeader, []byte, error) {
@@ -758,22 +781,45 @@ func (s *FileStore) IsExist(id string) bool {
 
 /**
 * ForEach
-* @param fn func(id string, data []byte) bool, asc bool, offset, limit, workers int
+* @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
-func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit, workers int) error {
-	// 1. Snapshot consistente: índice + segmentos bajo el mismo lock
+func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
 	index, keys := s.getRecords(asc, offset, limit)
 	s.indexMu.RLock()
 	segs := s.segments
 	s.indexMu.RUnlock()
 
-	if workers <= 0 {
-		workers = 1
+	workers := optimalWorkers(len(keys))
+
+	// Sequential fast path: avoids goroutine and channel overhead for small sets.
+	if workers == 1 {
+		for _, id := range keys {
+			ref, ok := index[id]
+			if !ok {
+				continue
+			}
+			data, err := segs[ref.segment].read(ref)
+			if err != nil {
+				return err
+			}
+			cont, err := fn(id, data)
+			if err != nil {
+				return err
+			}
+			if !cont {
+				return nil
+			}
+		}
+		return nil
 	}
 
-	// 2) Worker pool
-	jobs := make(chan string, 1024)
+	// Parallel path: worker pool for I/O-bound segment reads.
+	bufSize := workers * 4
+	if bufSize > len(keys) {
+		bufSize = len(keys)
+	}
+	jobs := make(chan string, bufSize)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -794,7 +840,6 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 		})
 	}
 
-	// 3) Lanzar workers
 	wg.Add(workers)
 	for w := 0; w < workers; w++ {
 		go func() {
@@ -811,8 +856,7 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 					if !ok {
 						continue
 					}
-					seg := segs[ref.segment]
-					data, err := seg.read(ref)
+					data, err := segs[ref.segment].read(ref)
 					if err != nil {
 						setErr(err)
 						return
@@ -831,7 +875,6 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 		}()
 	}
 
-	// 4) Enviar jobs — break etiquetado para salir del for cuando ctx se cancela
 producerLoop:
 	for _, id := range keys {
 		select {

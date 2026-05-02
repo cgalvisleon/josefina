@@ -87,11 +87,11 @@ func testStore() {
 	}
 
 	// ── Iterate ────────────────────────────────────────────────────────────
-	logs.Info("Iterate (asc, offset=0, limit=0, workers=2)")
+	logs.Info("Iterate (asc, offset=0, limit=0)")
 	err = fs.ForEach(func(id string, data []byte) (bool, error) {
 		logs.Infof("  %-8s  %s", id, data)
 		return true, nil
-	}, true, 0, 0, 2)
+	}, true, 0, 0)
 	if err != nil {
 		logs.Errorf("iterate: %v", err)
 	}

@@ -7,6 +7,11 @@ import (
 	"github.com/cgalvisleon/et/envar"
 )
 
+/**
+* loadConfig: Loads or initializes the configuration for a database.
+* @param db *DB
+* @return error
+**/
 func loadConfig(db *DB) error {
 	model, err := db.Define(DModel{
 		Name:    "config",

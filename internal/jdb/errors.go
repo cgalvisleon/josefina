@@ -4,6 +4,11 @@ import (
 	"github.com/cgalvisleon/et/et"
 )
 
+/**
+* loadErrors: Initializes the internal errors model for a database.
+* @param db *DB
+* @return error
+**/
 func loadErrors(db *DB) error {
 	result, err := db.Define(DModel{
 		Name:    "errors",

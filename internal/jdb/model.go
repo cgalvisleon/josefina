@@ -922,15 +922,9 @@ func (s *Model) ForEachBt(next func(idx string, src []byte) (bool, error), asc b
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	total := st.Count()
-	workers := total / 1000
-	if workers <= 0 {
-		workers = 1
-	}
-
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
 		return next(idx, src)
-	}, asc, offset, limit, workers)
+	}, asc, offset, limit)
 }
 
 /**
@@ -944,19 +938,13 @@ func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc b
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	total := st.Count()
-	workers := total / 1000
-	if workers <= 0 {
-		workers = 1
-	}
-
 	return st.ForEach(func(idx string, src []byte) (bool, error) {
 		item := et.Json{}
 		if err := json.Unmarshal(src, &item); err != nil {
 			return false, err
 		}
 		return next(idx, item)
-	}, asc, offset, limit, workers)
+	}, asc, offset, limit)
 }
 
 /**

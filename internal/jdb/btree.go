@@ -329,7 +329,7 @@ func (bt *BTree) initFromStore() error {
 		}
 		bt.insertSlice(key, pks)
 		return true, nil
-	}, true, 0, 0, 1)
+	}, true, 0, 0)
 }
 
 /**

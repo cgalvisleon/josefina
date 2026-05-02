@@ -9,6 +9,9 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* Value: Holds a typed field value with its string and numeric representations pre-computed.
+**/
 type Value struct {
 	Tp  TypeData
 	Val any

@@ -11,7 +11,8 @@ import (
 )
 
 /**
-* Compact
+* Compact: Rewrites all live records into fresh segment files, removing tombstones.
+* Performs an atomic directory swap so readers are never blocked.
 * @return error
 **/
 func (s *FileStore) Compact() error {

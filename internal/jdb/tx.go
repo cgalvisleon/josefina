@@ -11,6 +11,9 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* Cmd: Identifies the DML operation type for a command or transaction entry.
+**/
 type Cmd string
 
 const (
@@ -27,6 +30,9 @@ const (
 	COMMITTED   = "committed"
 )
 
+/**
+* Transaction: Records a single DML operation within a Tx, including old and new state for rollback.
+**/
 type Transaction struct {
 	Database  string    `json:"database"`
 	Schema    string    `json:"schema"`
@@ -68,6 +74,9 @@ func (s *Transaction) SetStatus(status string) error {
 	return s.tx.save()
 }
 
+/**
+* Tx: Groups one or more Transaction entries and coordinates commit/rollback across all of them.
+**/
 type Tx struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`

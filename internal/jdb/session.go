@@ -11,10 +11,16 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* Status: Represents the lifecycle state of a session or transaction.
+**/
 type Status string
 
 const ()
 
+/**
+* TpConnection: Identifies the transport protocol used by a client session.
+**/
 type TpConnection string
 
 const (
@@ -23,6 +29,9 @@ const (
 	TCP       TpConnection = "tcp"
 )
 
+/**
+* Device: Classifies the kind of client connecting to the node.
+**/
 type Device string
 
 const (
@@ -31,6 +40,9 @@ const (
 	TpNode   Device = "node"
 )
 
+/**
+* Session: Represents an authenticated client connection with its JWT token cached for the duration.
+**/
 type Session struct {
 	CreatedAt  time.Time     `json:"created_at"`
 	LastAccess time.Time     `json:"last_access"`

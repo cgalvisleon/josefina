@@ -7,8 +7,15 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+/**
+* FnTrigger: Callback signature for before/after insert, update, and delete hooks.
+**/
 type FnTrigger func(model *Model, old, new *et.Json, tx *Tx) error
 
+/**
+* Command: Builder for DML operations; accumulates items, conditions, and trigger callbacks
+* before execution via Exec or ExecTx.
+**/
 type Command struct {
 	model        *Model
 	command      Cmd
@@ -339,6 +346,9 @@ func (s *Command) AfterDeletes(fn FnTrigger) *Command {
 	return s
 }
 
+/**
+* Diud: Wire format for a single insert, update, or delete command sent over the API.
+**/
 type Diud struct {
 	Schema string         `json:"schema"`
 	Name   string         `json:"name"`
@@ -346,12 +356,18 @@ type Diud struct {
 	Where  []et.Condition `json:"where"`
 }
 
+/**
+* DBulk: Wire format for a bulk-insert command sent over the API.
+**/
 type DBulk struct {
 	Schema string    `json:"schema"`
 	Name   string    `json:"name"`
 	Data   []et.Json `json:"data"`
 }
 
+/**
+* DCmd: Envelope that carries exactly one of insert, update, delete, or bulk in a command batch.
+**/
 type DCmd struct {
 	Insert *Diud  `json:"insert"`
 	Update *Diud  `json:"update"`

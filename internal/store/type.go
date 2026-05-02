@@ -40,6 +40,7 @@ func putUint16(b []byte, v uint16) {
 }
 
 /**
+* getUint32: Reads a big-endian uint32 from b.
 * @param b []byte
 * @return uint32
 **/
@@ -48,6 +49,7 @@ func getUint32(b []byte) uint32 {
 }
 
 /**
+* getUint16: Reads a big-endian uint16 from b.
 * @param b []byte
 * @return uint16
 **/
