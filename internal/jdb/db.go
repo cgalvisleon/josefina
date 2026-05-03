@@ -85,34 +85,32 @@ func (s *DB) load(node *Node) error {
 * @return error
 **/
 func (s *DB) Init() error {
-	s.mu = &sync.RWMutex{}
-
-	err := loadConfig(s)
+	err := s.loadConfig()
 	if err != nil {
 		return err
 	}
 
-	err = loadErrors(s)
+	err = s.loadErrors()
 	if err != nil {
 		return err
 	}
 
-	err = loadTransaction(s)
+	err = s.loadTransaction()
 	if err != nil {
 		return err
 	}
 
-	err = loadSchemas(s)
+	err = s.loadSchemas()
 	if err != nil {
 		return err
 	}
 
-	err = loadModels(s)
+	err = s.loadModels()
 	if err != nil {
 		return err
 	}
 
-	err = loadCache(s)
+	err = s.loadCache()
 	if err != nil {
 		return err
 	}

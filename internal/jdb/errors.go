@@ -9,8 +9,8 @@ import (
 * @param db *DB
 * @return error
 **/
-func loadErrors(db *DB) error {
-	result, err := db.Define(DModel{
+func (s *DB) loadErrors() error {
+	result, err := s.Define(DModel{
 		Name:    "errors",
 		IsCore:  true,
 		Version: 1,
@@ -24,7 +24,7 @@ func loadErrors(db *DB) error {
 		return err
 	}
 
-	db.errors = result
+	s.errors = result
 
 	return nil
 }

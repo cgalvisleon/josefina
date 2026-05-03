@@ -7,11 +7,10 @@ import (
 
 /**
 * loadCache: Loads the cache
-* @param db *DB
 * @return error
 **/
-func loadCache(db *DB) error {
-	result, err := db.Define(DModel{
+func (s *DB) loadCache() error {
+	result, err := s.Define(DModel{
 		Name:    "cache",
 		IsCore:  true,
 		Version: 1,
@@ -25,8 +24,8 @@ func loadCache(db *DB) error {
 		return err
 	}
 
-	db.Cache = make(map[string]*Ttl)
-	db.cache = result
+	s.Cache = make(map[string]*Ttl)
+	s.cache = result
 
 	return nil
 }

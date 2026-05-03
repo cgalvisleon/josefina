@@ -13,11 +13,10 @@ import (
 
 /**
 * loadSchemas: Loads the schemas
-* @param db *DB
 * @return error
 **/
-func loadSchemas(db *DB) error {
-	model, err := db.newModel("", "schemas", true, 1)
+func (s *DB) loadSchemas() error {
+	model, err := s.newModel("", "schemas", true, 1)
 	if err != nil {
 		return err
 	}
@@ -27,8 +26,8 @@ func loadSchemas(db *DB) error {
 		return err
 	}
 
-	db.schemas = model
-	cursor, err := db.schemas.NewCursor(false, 0, 0)
+	s.schemas = model
+	cursor, err := s.schemas.NewCursor(false, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -41,7 +40,7 @@ func loadSchemas(db *DB) error {
 			return err
 		}
 
-		err = schema.load(db)
+		err = schema.load(s)
 		if err != nil {
 			return err
 		}

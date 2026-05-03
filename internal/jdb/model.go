@@ -18,11 +18,10 @@ import (
 
 /**
 * loadModels: Loads the models
-* @param db *DB
 * @return error
 **/
-func loadModels(db *DB) error {
-	result, err := db.newModel("", "models", true, 1)
+func (s *DB) loadModels() error {
+	result, err := s.newModel("", "models", true, 1)
 	if err != nil {
 		return err
 	}
@@ -45,7 +44,7 @@ func loadModels(db *DB) error {
 			return err
 		}
 
-		schema := db.getSchema(model.Schema)
+		schema := s.getSchema(model.Schema)
 		if schema == nil {
 			return fmt.Errorf("schema %s not found", model.Schema)
 		}

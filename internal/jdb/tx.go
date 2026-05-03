@@ -342,11 +342,10 @@ func (s *Tx) Items(model *Model) []et.Json {
 
 /**
 * loadTransaction: Loads the transaction model
-* @param db *DB
 * @return error
 **/
-func loadTransaction(db *DB) error {
-	model, err := db.Define(DModel{
+func (s *DB) loadTransaction() error {
+	model, err := s.Define(DModel{
 		Name:    "transactions",
 		IsCore:  true,
 		Version: 1,
@@ -360,8 +359,8 @@ func loadTransaction(db *DB) error {
 		return err
 	}
 
-	db.transaction = model
-	cursor, err := db.transaction.NewCursor(false, 0, 0)
+	s.transaction = model
+	cursor, err := s.transaction.NewCursor(false, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -374,22 +373,22 @@ func loadTransaction(db *DB) error {
 			return err
 		}
 
-		err = tx.load(db)
+		err = tx.load(s)
 		if err != nil {
 			return err
 		}
 		if tx.Status == PENDING {
 			err := tx.Rollback()
 			if err != nil {
-				_, er := db.putError(db.transaction.Key(), "rollback", tx.Idx, err)
+				_, er := s.putError(s.transaction.Key(), "rollback", tx.Idx, err)
 				if er != nil {
 					return er
 				}
 				return err
 			}
-			err = db.transaction.Remove(tx.Idx)
+			err = s.transaction.Remove(tx.Idx)
 			if err != nil {
-				_, er := db.putError(db.transaction.Key(), "rollback:delete", tx.Idx, err)
+				_, er := s.putError(s.transaction.Key(), "rollback:delete", tx.Idx, err)
 				if er != nil {
 					return er
 				}

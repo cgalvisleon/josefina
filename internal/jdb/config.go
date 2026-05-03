@@ -12,8 +12,8 @@ import (
 * @param db *DB
 * @return error
 **/
-func loadConfig(db *DB) error {
-	model, err := db.Define(DModel{
+func (s *DB) loadConfig() error {
+	model, err := s.Define(DModel{
 		Name:    "config",
 		IsCore:  true,
 		Version: 1,
@@ -28,7 +28,7 @@ func loadConfig(db *DB) error {
 	}
 
 	var config *Config
-	idx := fmt.Sprintf("config:%s", db.Name)
+	idx := fmt.Sprintf("config:%s", s.Name)
 	exists, err := model.Get(idx, &config)
 	if err != nil {
 		return err
@@ -42,6 +42,6 @@ func loadConfig(db *DB) error {
 		}
 	}
 
-	db.config = config
+	s.config = config
 	return nil
 }
