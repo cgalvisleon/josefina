@@ -11,7 +11,7 @@ import (
 **/
 func (s *DB) loadErrors() error {
 	result, err := s.Define(DModel{
-		Name:    ".errors",
+		Name:    "errors",
 		IsCore:  true,
 		Version: 1,
 	})

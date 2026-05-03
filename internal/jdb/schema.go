@@ -17,7 +17,7 @@ import (
 **/
 func (s *DB) loadSchemas() error {
 	model, err := s.Define(DModel{
-		Name:    ".schemas",
+		Name:    "schemas",
 		IsCore:  true,
 		Version: 1,
 	})
