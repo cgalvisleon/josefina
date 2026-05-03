@@ -49,7 +49,7 @@ func loadSchemas(db *DB) error {
 type Schema struct {
 	Database string            `json:"database"` // Database name
 	Name     string            `json:"name"`     // Schema name
-	Models   map[string]*Model `json:"models"`   // Models
+	models   map[string]*Model `json:"-"`        // Models
 	db       *DB               `json:"-"`        // Database
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
@@ -62,12 +62,6 @@ type Schema struct {
 func (s *Schema) load(db *DB) error {
 	s.db = db
 	s.mu = &sync.RWMutex{}
-	for _, model := range s.Models {
-		err := model.load(s)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -81,7 +75,7 @@ func (s *Schema) save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	err := s.db.transaction.Put(s.Name, s)
+	err := s.db.schemas.Put(s.Name, s)
 	if err != nil {
 		return err
 	}
@@ -121,7 +115,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	name = utility.Normalize(name)
 
 	s.mu.RLock()
-	result, exists := s.Models[name]
+	result, exists := s.models[name]
 	s.mu.RUnlock()
 	if exists {
 		return result, nil
@@ -136,7 +130,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.Models[result.Name] = result
+	s.models[result.Name] = result
 
 	err = s.save()
 	if err != nil {
@@ -157,7 +151,7 @@ func (s *Schema) DeleteModel(name string) error {
 
 	name = utility.Normalize(name)
 
-	model, exists := s.Models[name]
+	model, exists := s.models[name]
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -166,7 +160,7 @@ func (s *Schema) DeleteModel(name string) error {
 		return err
 	}
 
-	delete(s.Models, name)
+	delete(s.models, name)
 
 	return s.save()
 }
@@ -181,7 +175,7 @@ func (s *Schema) GetModel(name string) (*Model, error) {
 	defer s.mu.Unlock()
 
 	name = utility.Normalize(name)
-	result, exists := s.Models[name]
+	result, exists := s.models[name]
 	if !exists {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
@@ -197,14 +191,14 @@ func (s *Schema) Empty() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for _, model := range s.Models {
+	for _, model := range s.models {
 		err := model.Empty()
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Models = make(map[string]*Model, 0)
+	s.models = make(map[string]*Model, 0)
 
 	return s.save()
 }

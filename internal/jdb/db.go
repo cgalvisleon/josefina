@@ -41,6 +41,7 @@ type DB struct {
 	errors      *Model             `json:"-"`         // Errors
 	transaction *Model             `json:"-"`         // Transaction
 	schemas     *Model             `json:"-"`         // Schemas
+	models      *Model             `json:"-"`         // Models
 	cache       *Model             `json:"-"`         // Cache
 	node        *Node              `json:"-"`         // Node
 }
@@ -82,6 +83,11 @@ func NewDb(path, name string) (*DB, error) {
 	}
 
 	err = loadSchemas(result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = loadModels(result)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +203,7 @@ func (s *DB) getSchema(name string) *Schema {
 	result = &Schema{
 		Database: s.Name,
 		Name:     name,
-		Models:   make(map[string]*Model, 0),
+		models:   make(map[string]*Model, 0),
 		db:       s,
 	}
 
@@ -512,5 +518,31 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 	return result, nil
 }
 
-
-func (s *DB) Query()
+/**
+func (s *DB) Query(querys []DQuery) (et.Items, error) {
+	result := et.Items{}
+	for _, query := range querys {
+		model, err := s.GetModel(query.From.Schema, query.From.Name)
+		if err != nil {
+			return result, err
+		}
+		command := model.Query()
+		for _, condition := range query.Where {
+			command.Add(&condition)
+		}
+		for _, selectField := range query.Selects {
+			command.Select(selectField)
+		}
+		for _, hiddenField := range query.Hidden {
+			command.Hidden(hiddenField)
+		}
+		for _, orderBy := range query.OrderBy {
+			command.OrderBy(orderBy.Field, orderBy.Order)
+		}
+		command.Limit(query.Limit)
+		command.Page(query.Page)
+		return command.Exec()
+	}
+	return result, nil
+}
+**/

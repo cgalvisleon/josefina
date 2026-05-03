@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 
-	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -34,25 +33,36 @@ func (s *Model) NewCursor(asc bool, offset, limit int) (*Cursor, error) {
 }
 
 /**
-* Next: Advances the cursor and writes the current record into dest.
+* Next: Advances the cursor and returns true if there are more records.
+* Returns false when there are no more records.
+* @return bool
+**/
+func (s *Cursor) Next() bool {
+	if s.pos < len(s.keys) {
+		s.pos++
+		return true
+	}
+	return false
+}
+
+/**
+* Scan: Reads the current record into dest and advances the cursor.
 * Returns io.EOF when there are no more records, nil on success, or
 * another error on store failure. Records deleted after cursor creation
 * are skipped silently.
-* @param dest *et.Json
+* @param dest any
 * @return error
 **/
-func (c *Cursor) Next(dest *et.Json) error {
-	for c.pos < len(c.keys) {
-		idx := c.keys[c.pos]
-		c.pos++
-		item, exists, err := c.model.Current(idx)
+func (s *Cursor) Scan(dest any) error {
+	if s.pos < len(s.keys) {
+		idx := s.keys[s.pos]
+		exists, err := s.model.Get(idx, dest)
 		if err != nil {
 			return err
 		}
 		if !exists {
-			continue
+			return nil
 		}
-		*dest = item
 		return nil
 	}
 	return io.EOF
@@ -61,29 +71,29 @@ func (c *Cursor) Next(dest *et.Json) error {
 /**
 * Reset: Rewinds the cursor to the beginning of the key snapshot.
 **/
-func (c *Cursor) Reset() {
-	c.pos = 0
+func (s *Cursor) Reset() {
+	s.pos = 0
 }
 
 /**
 * Len: Returns the total number of keys in the cursor snapshot.
 * @return int
 **/
-func (c *Cursor) Len() int {
-	return len(c.keys)
+func (s *Cursor) Len() int {
+	return len(s.keys)
 }
 
 /**
 * Pos: Returns the current position within the key snapshot.
 * @return int
 **/
-func (c *Cursor) Pos() int {
-	return c.pos
+func (s *Cursor) Pos() int {
+	return s.pos
 }
 
 /**
 * Close: Releases the key snapshot.
 **/
-func (c *Cursor) Close() {
-	c.keys = nil
+func (s *Cursor) Close() {
+	s.keys = nil
 }

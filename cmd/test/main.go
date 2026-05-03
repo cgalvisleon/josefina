@@ -1,241 +1,312 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
-	"github.com/cgalvisleon/josefina/internal/store"
 )
 
+const dataPath = "./data/test"
+
 func main() {
-	// testStore()
-	testCatalog()
+	os.RemoveAll(dataPath)
+	defer os.RemoveAll(dataPath)
+
+	if err := run(); err != nil {
+		logs.Fatal(err)
+	}
 }
 
-func testStore() {
-	path := filepath.Join("./", "data")
-	defer os.RemoveAll(path)
-
-	fs, err := store.Open(path, "demo", store.ReadWrite)
-	if err != nil {
-		fmt.Println("open:", err)
-		os.Exit(1)
-	}
-	defer fs.Close()
-
-	fs.IsDebug()
-	// ── Put ────────────────────────────────────────────────────────────────
-	records := []et.Json{
-		{"id": "1", "name": "Alice", "age": 30},
-		{"id": "2", "name": "Bob", "age": 25},
-		{"id": "3", "name": "Carol", "age": 35},
-		{"id": "4", "name": "Dave", "age": 28},
-		{"id": "5", "name": "Eve", "age": 22},
-	}
-	for _, r := range records {
-		id := r.Str("id")
-		if _, err := fs.Put(id, r); err != nil {
-			logs.Errorf("put:%s: %v", id, err)
-			continue
-		}
-	}
-	logs.Infof("count:%d", fs.Count())
-
-	// ── Get ────────────────────────────────────────────────────────────────
-	logs.Info("Get")
-	for _, id := range []string{"1", "3", "99"} {
-		var dest et.Json
-		existed, err := fs.Get(id, &dest)
-		if err != nil {
-			logs.Errorf("get:%s: %v", id, err)
-			continue
-		}
-		if !existed {
-			logs.Infof("get:%s: not found", id)
-			continue
-		}
-		logs.Infof("get:%s: %v", id, dest)
-	}
-
-	// ── IsExist ────────────────────────────────────────────────────────────
-	logs.Info("IsExist")
-	for _, id := range []string{"2", "99"} {
-		existed := fs.IsExist(id)
-		logs.Infof("isExist:%s: %v", id, existed)
-	}
-
-	// ── Delete ─────────────────────────────────────────────────────────────
-	logs.Info("Delete")
-	deleted, err := fs.Delete("2")
-	if err != nil {
-		logs.Errorf("delete:%s: %v", "2", err)
-	} else {
-		logs.Infof("delete:%s: deleted=%v lsn=%d", "2", deleted, fs.WAL)
-	}
-	logs.Infof("count:%d", fs.Count())
-
-	// ── Put actualiza registro existente ───────────────────────────────────
-	logs.Info("Put (update)")
-	if _, err := fs.Put("1", et.Json{"id": "1", "name": "Alice", "age": 31}); err != nil {
-		logs.Errorf("update:%s: %v", "1", err)
-	} else {
-		logs.Infof("update:%s: lsn=%d tombstones=%d", "1", fs.WAL, fs.TombStones)
-	}
-
-	// ── Iterate ────────────────────────────────────────────────────────────
-	logs.Info("Iterate (asc, offset=0, limit=0)")
-	err = fs.ForEach(func(id string, data []byte) (bool, error) {
-		logs.Infof("  %-8s  %s", id, data)
-		return true, nil
-	}, true, 0, 0)
-	if err != nil {
-		logs.Errorf("iterate: %v", err)
-	}
-
-	// ── WalSince ───────────────────────────────────────────────────────────
-	logs.Info("WalSince(3)")
-	entries, err := fs.WalSince(3)
-	if err != nil {
-		logs.Errorf("walsince: %v", err)
-	} else {
-		for _, e := range entries {
-			status := "active"
-			if e.Status == store.Deleted {
-				status = "deleted"
-			}
-			logs.Infof("  lsn=%-3d  %-8s  %-8s  %s", e.LSN, status, e.ID, e.Data)
-		}
-	}
-	logs.Info("done")
-
-	count := fs.Count()
-	logs.Infof("=== done  lsn=%d  count=%d  tombstones=%d ===", fs.WAL, count, fs.TombStones)
-}
-
-func testCatalog() {
-	// ── Setup ─────────────────────────────────────────────────────────────────
+func run() error {
+	// ── Database ──────────────────────────────────────────────────────────────
 	db, err := jdb.NewDb("./data", "test")
 	if err != nil {
-		logs.Fatal(err)
+		return err
 	}
 
-	model, err := db.NewModel("", "user", false, 1)
+	// ── Model: users ──────────────────────────────────────────────────────────
+	users, err := db.Define(jdb.DModel{
+		Name:    "users",
+		Version: 1,
+		Fields: map[string]jdb.DField{
+			"username": {Type: jdb.TpKey, Default: ""},
+			"email":    {Type: jdb.TpText, Default: ""},
+			"age":      {Type: jdb.TpInt, Default: 0},
+			"active":   {Type: jdb.TpBoolean, Default: true},
+		},
+		PrimaryKeys: []string{"username"},
+		Indexes:     []jdb.DIndex{{Name: "email"}, {Name: "age"}, {Name: "active"}},
+		Unique:      []jdb.DIndex{{Name: "email"}},
+		Required:    []jdb.DIndex{{Name: "email"}},
+	})
 	if err != nil {
-		logs.Fatal(err)
+		return err
+	}
+	if err := users.Init(); err != nil {
+		return err
 	}
 
-	model.DefineField("name", jdb.TpText, "")
-	model.DefineField("age", jdb.TpInt, 0)
-	model.DefineField("id", jdb.TpKey, "")
-	model.DefinePrimaryKeys("id")
-	model.DefineIndexes("name", "age")
-
-	if err := model.Init(); err != nil {
-		logs.Fatal(err)
+	// ── Model: orders ─────────────────────────────────────────────────────────
+	orders, err := db.Define(jdb.DModel{
+		Name:    "orders",
+		Version: 1,
+		Fields: map[string]jdb.DField{
+			"username": {Type: jdb.TpKey, Default: ""},
+			"product":  {Type: jdb.TpText, Default: ""},
+			"amount":   {Type: jdb.TpFloat, Default: 0.0},
+		},
+		Indexes:  []jdb.DIndex{{Name: "username"}, {Name: "product"}},
+		Required: []jdb.DIndex{{Name: "username"}, {Name: "product"}},
+	})
+	if err != nil {
+		return err
 	}
-	logs.Info("=== model init ok ===")
-
-	// ── Insert 5 registros ────────────────────────────────────────────────────
-	users := []et.Json{
-		{"id": "pk1", "name": "Alice", "age": int64(30)},
-		{"id": "pk2", "name": "Bob", "age": int64(25)},
-		{"id": "pk3", "name": "Carol", "age": int64(35)},
-		{"id": "pk4", "name": "Dave", "age": int64(28)},
-		{"id": "pk5", "name": "Eve", "age": int64(22)},
+	if err := orders.Init(); err != nil {
+		return err
 	}
-	var tx *jdb.Tx
-	for _, u := range users {
-		tx, err = model.Insert(u.Str("id"), u, tx, 0)
-		if err != nil {
-			logs.Errorf("insert %s: %v", u.Str("id"), err)
-			continue
+
+	// ── Insert users ──────────────────────────────────────────────────────────
+	section("Insert users")
+	userRecords := []et.Json{
+		{jdb.INDEX: "alice", "username": "alice", "email": "alice@example.com", "age": int64(30), "active": true},
+		{jdb.INDEX: "bob", "username": "bob", "email": "bob@example.com", "age": int64(25), "active": true},
+		{jdb.INDEX: "carol", "username": "carol", "email": "carol@example.com", "age": int64(35), "active": false},
+		{jdb.INDEX: "dave", "username": "dave", "email": "dave@example.com", "age": int64(28), "active": true},
+		{jdb.INDEX: "eve", "username": "eve", "email": "eve@example.com", "age": int64(22), "active": false},
+	}
+	for _, u := range userRecords {
+		if _, err := users.Insert(u).Exec(); err != nil {
+			logs.Errorf("insert user %s: %v", u.Str("username"), err)
 		}
 	}
-	count, _ := model.Count()
-	logs.Infof("inserted: count=%d", count)
+	count, _ := users.Count()
+	logs.Infof("users count: %d", count)
 
-	// ── Get por primary key ───────────────────────────────────────────────────
-	logs.Info("--- Get by primary key ---")
-	for _, id := range []string{"pk1", "pk3", "pk99"} {
-		dest := et.Json{}
-		exists, err := model.Current(id, &dest)
+	// ── Insert orders ─────────────────────────────────────────────────────────
+	section("Insert orders")
+	orderRecords := []et.Json{
+		{"username": "alice", "product": "laptop", "amount": 1200.00},
+		{"username": "alice", "product": "mouse", "amount": 25.00},
+		{"username": "bob", "product": "keyboard", "amount": 75.00},
+		{"username": "carol", "product": "monitor", "amount": 350.00},
+		{"username": "dave", "product": "laptop", "amount": 1200.00},
+	}
+	for _, o := range orderRecords {
+		if _, err := orders.Insert(o).Exec(); err != nil {
+			logs.Errorf("insert order: %v", err)
+		}
+	}
+	count, _ = orders.Count()
+	logs.Infof("orders count: %d", count)
+
+	// ── Get by primary key ────────────────────────────────────────────────────
+	section("Get by primary key")
+	for _, id := range []string{"alice", "carol", "zzz"} {
+		item, exists, err := users.Current(id)
 		if err != nil {
-			logs.Errorf("get %s: %v", id, err)
+			logs.Errorf("current %s: %v", id, err)
 			continue
 		}
 		if !exists {
-			logs.Infof("get %s: not found", id)
+			logs.Infof("current %s: not found", id)
 			continue
 		}
-		logs.Infof("get %s: %v", id, dest)
+		logs.Infof("current %s: %v", id, item)
 	}
 
-	// ── GetByIndex por nombre exacto ──────────────────────────────────────────
-	logs.Info("--- GetByIndex name=Alice ---")
-	pks, err := model.Equal("name", "Alice", nil, 0, 0)
+	// ── WHERE: single indexed condition ───────────────────────────────────────
+	section("WHERE username = alice")
+	items, err := jdb.From(users).
+		Where(jdb.Eq("username", "alice")).
+		All(nil)
 	if err != nil {
-		logs.Errorf("name=Alice: %v", err)
+		logs.Errorf("where: %v", err)
 	} else {
-		logs.Infof("name=Alice: pks=%v", et.ToString(pks))
+		logItems(items)
 	}
 
-	logs.Info("--- GetByIndex name=Zzz (no existe) ---")
-	pks, err = model.Equal("name", "Zzz", nil, 0, 0)
+	// ── WHERE: multiple AND conditions ────────────────────────────────────────
+	section("WHERE active = true AND age > 25")
+	items, err = jdb.From(users).
+		Where(jdb.Eq("active", true)).
+		And(jdb.More("age", int64(25))).
+		All(nil)
 	if err != nil {
-		logs.Info("name=Zzz: not found (expected)")
+		logs.Errorf("where and: %v", err)
 	} else {
-		logs.Infof("name=Zzz: pks=%v", et.ToString(pks))
+		logItems(items)
 	}
 
-	// ── RangeIndex por edad ───────────────────────────────────────────────────
-	// logs.Info("--- RangeIndex age [25, 30] asc ---")
-	// pks, err = model.Between("age", jdb.KeyInt(25), jdb.KeyInt(30), true, nil, 0, 0)
-	// if err != nil {
-	// 	logs.Errorf("age [25,30]: %v", err)
-	// } else {
-	// 	logs.Infof("age [25,30]: pks=%v", et.ToString(pks))
-	// }
-
-	// logs.Info("--- RangeIndex age [0, 99] desc ---")
-	// pks, err = model.Between("age", jdb.KeyInt(0), jdb.KeyInt(99), false, nil, 0, 0)
-	// if err != nil {
-	// 	logs.Errorf("age [0,99] desc: %v", err)
-	// } else {
-	// 	logs.Infof("age [0,99] desc: pks=%v", et.ToString(pks))
-	// }
-
-	// ── Simular restart: re-init reconstruye BTrees desde FileStore ───────────
-	logs.Info("--- Simulating restart ---")
-	model.IsInit = false
-	if err := model.Init(); err != nil {
-		logs.Errorf("re-init: %v", err)
-	}
-	pks, err = model.Equal("name", "Bob", nil, 0, 0)
+	// ── WHERE: OR condition ───────────────────────────────────────────────────
+	section("WHERE username = alice OR username = bob")
+	items, err = jdb.From(users).
+		Where(jdb.Eq("username", "alice")).
+		Or(jdb.Eq("username", "bob")).
+		All(nil)
 	if err != nil {
-		logs.Debug("restart: name=Bob not found (BTree rebuild failed)")
+		logs.Errorf("where or: %v", err)
 	} else {
-		logs.Infof("restart: name=Bob pks=%v (BTree rebuilt ok)", pks)
+		logItems(items)
+	}
+
+	// ── ORDER BY + LIMIT (pagination) ─────────────────────────────────────────
+	section("ORDER BY age DESC — page 1, 3 rows")
+	items, err = jdb.From(users).
+		Desc("age").
+		Limit(1, 3).
+		All(nil)
+	if err != nil {
+		logs.Errorf("order+limit: %v", err)
+	} else {
+		logItems(items)
+	}
+
+	section("ORDER BY age DESC — page 2, 3 rows")
+	items, err = jdb.From(users).
+		Desc("age").
+		Limit(2, 3).
+		All(nil)
+	if err != nil {
+		logs.Errorf("order+limit page2: %v", err)
+	} else {
+		logItems(items)
+	}
+
+	// ── INNER JOIN ────────────────────────────────────────────────────────────
+	// Returns only users that have at least one order.
+	section("INNER JOIN users ⨝ orders ON users.username = orders.username")
+	items, err = jdb.From(users).
+		InnerJoin(orders, map[string]string{"username": "username"}).
+		All(nil)
+	if err != nil {
+		logs.Errorf("inner join: %v", err)
+	} else {
+		logItems(items)
+	}
+
+	// ── LEFT JOIN ─────────────────────────────────────────────────────────────
+	// Returns all users; order fields are empty when no order exists.
+	section("LEFT JOIN users ⟕ orders ON users.username = orders.username")
+	items, err = jdb.From(users).
+		LeftJoin(orders, map[string]string{"username": "username"}).
+		All(nil)
+	if err != nil {
+		logs.Errorf("left join: %v", err)
+	} else {
+		logs.Infof("count: %d (includes users with no orders)", items.Count)
+	}
+
+	// ── RIGHT JOIN ────────────────────────────────────────────────────────────
+	// Returns all orders; user fields are empty when no user matches.
+	section("RIGHT JOIN users ⟖ orders ON users.username = orders.username")
+	items, err = jdb.From(users).
+		RightJoin(orders, map[string]string{"username": "username"}).
+		All(nil)
+	if err != nil {
+		logs.Errorf("right join: %v", err)
+	} else {
+		logs.Infof("count: %d (all orders + unmatched users)", items.Count)
+	}
+
+	// ── WHERE + JOIN combined ─────────────────────────────────────────────────
+	section("WHERE active = true — INNER JOIN orders — ORDER BY age ASC")
+	items, err = jdb.From(users).
+		Where(jdb.Eq("active", true)).
+		InnerJoin(orders, map[string]string{"username": "username"}).
+		Asc("age").
+		All(nil)
+	if err != nil {
+		logs.Errorf("where+join+order: %v", err)
+	} else {
+		logItems(items)
+	}
+
+	// ── Cursor: sequential iteration ──────────────────────────────────────────
+	section("Cursor — asc, offset 1, limit 3")
+	cursor, err := users.NewCursor(true, 1, 3)
+	if err != nil {
+		logs.Errorf("new cursor: %v", err)
+	} else {
+		defer cursor.Close()
+		logs.Infof("snapshot: %d records", cursor.Len())
+		var row et.Json
+		for {
+			if err := cursor.Next(&row); err != nil {
+				if err != io.EOF {
+					logs.Errorf("cursor.next: %v", err)
+				}
+				break
+			}
+			logs.Infof("  [pos %d] %v", cursor.Pos(), row)
+		}
+	}
+
+	// ── Upsert ────────────────────────────────────────────────────────────────
+	section("Upsert — frank (new) / alice age → 31 (existing)")
+	upserts := []et.Json{
+		{jdb.INDEX: "frank", "username": "frank", "email": "frank@example.com", "age": int64(40), "active": true},
+		{jdb.INDEX: "alice", "username": "alice", "email": "alice@example.com", "age": int64(31), "active": true},
+	}
+	for _, u := range upserts {
+		if _, err := users.Upsert(u).Exec(); err != nil {
+			logs.Errorf("upsert %s: %v", u.Str("username"), err)
+		}
+	}
+	count, _ = users.Count()
+	logs.Infof("users count after upsert: %d", count)
+	item, _, _ := users.Current("alice")
+	logs.Infof("alice after upsert: age=%v", item["age"])
+
+	// ── Update ────────────────────────────────────────────────────────────────
+	section("Update — set active=false WHERE age < 25")
+	_, err = users.Update(et.Json{"active": false}).
+		Where(jdb.Less("age", int64(25))).
+		Exec()
+	if err != nil {
+		logs.Errorf("update: %v", err)
+	} else {
+		items, _ = jdb.From(users).Where(jdb.Eq("active", false)).All(nil)
+		logs.Infof("inactive after update: %d", items.Count)
 	}
 
 	// ── Delete ────────────────────────────────────────────────────────────────
-	logs.Info("--- RemoveObject pk2 ---")
-	tx, err = model.Delete("pk2", nil)
+	section("Delete — WHERE active = false")
+	_, err = users.Delete().
+		Where(jdb.Eq("active", false)).
+		Exec()
 	if err != nil {
-		logs.Errorf("remove pk2: %v", err)
+		logs.Errorf("delete: %v", err)
 	}
-	count, _ = model.Count()
-	logs.Infof("after delete: count=%d", count)
+	count, _ = users.Count()
+	logs.Infof("users count after delete: %d", count)
 
-	pks, err = model.Equal("name", "Bob", nil, 0, 0)
+	// ── Bulk insert ───────────────────────────────────────────────────────────
+	section("Bulk insert — 3 new users")
+	_, err = users.Bulk([]et.Json{
+		{jdb.INDEX: "grace", "username": "grace", "email": "grace@example.com", "age": int64(29), "active": true},
+		{jdb.INDEX: "henry", "username": "henry", "email": "henry@example.com", "age": int64(33), "active": true},
+		{jdb.INDEX: "iris", "username": "iris", "email": "iris@example.com", "age": int64(27), "active": true},
+	}).Exec()
 	if err != nil {
-		logs.Info("name=Bob after delete: not found (expected)")
-	} else {
-		logs.Infof("name=Bob after delete: pks=%v (unexpected)", et.ToString(pks))
+		logs.Errorf("bulk: %v", err)
 	}
+	count, _ = users.Count()
+	logs.Infof("users count after bulk: %d", count)
 
-	logs.Info("=== jdb test done ===")
+	section("done")
+	return nil
+}
+
+func section(title string) {
+	logs.Infof("=== %s ===", title)
+}
+
+func logItems(items et.Items) {
+	logs.Infof("count: %d", items.Count)
+	for _, item := range items.Result {
+		logs.Infof("  %v", item)
+	}
 }

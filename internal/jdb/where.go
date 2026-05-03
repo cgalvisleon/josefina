@@ -288,9 +288,11 @@ func (s *Where) Limit(page int, rows int) *Where {
 }
 
 /**
-* All
+* All: Executes the WHERE query and returns all matching records.
+* Execution order: resolve sub-queries → collect via index or full scan →
+* apply joins → sort → offset/limit.
 * @param tx *Tx
-* @return []et.Json, error
+* @return et.Items, error
 **/
 func (s *Where) All(tx *Tx) (et.Items, error) {
 	if s.from == nil {
@@ -298,13 +300,29 @@ func (s *Where) All(tx *Tx) (et.Items, error) {
 	}
 
 	tx = GetTx(s.db, tx)
-	keys := make(map[string]int, s.limit)
-	result := make([]et.Json, 0, s.limit)
 	model := s.from
 
-	// hasCustomOrder: sort fields beyond INDEX require full collection + sort at the end.
-	// hasJoin: joins may add/remove records, so offset/limit must be applied after.
-	// needFullScan: either condition forces full collection before slicing.
+	// Resolve sub-Where condition values before any index access.
+	for _, con := range s.conditions {
+		switch v := con.Value.(type) {
+		case *Where:
+			items, err := v.All(tx)
+			if err != nil {
+				return et.Items{}, err
+			}
+			con.Value = items
+		case Where:
+			items, err := v.All(tx)
+			if err != nil {
+				return et.Items{}, err
+			}
+			con.Value = items
+		}
+	}
+
+	// needFullScan: joins require collecting everything before applying join logic
+	// (RightJoin/FullJoin add records from j.To not present in primary results).
+	// Custom order fields require sorting the full result before offset/limit.
 	hasCustomOrder := false
 	for _, ob := range s.orderBy {
 		if ob.Field != INDEX {
@@ -323,6 +341,8 @@ func (s *Where) All(tx *Tx) (et.Items, error) {
 	}
 
 	combinedHidden := append(model.Hidden[:len(model.Hidden):len(model.Hidden)], s.hidden...)
+	keys := make(map[string]int, s.limit)
+	result := make([]et.Json, 0, s.limit)
 
 	addResult := func(idx string, item et.Json) bool {
 		if len(s.selects) == 0 {
@@ -331,140 +351,173 @@ func (s *Where) All(tx *Tx) (et.Items, error) {
 			item = item.Select(s.selects)
 			item = item.Hidden(s.hidden)
 		}
-
-		n := len(result)
-		id, exists := keys[idx]
-		if exists {
-			result[id] = item
-		} else {
-			keys[idx] = n
-			result = append(result, item)
-			n++
+		if pos, exists := keys[idx]; exists {
+			result[pos] = item
+			return true
 		}
-
+		n := len(result)
+		keys[idx] = n
+		result = append(result, item)
+		n++
 		if needFullScan {
 			return true
 		}
 		return s.limit == 0 || n < s.limit
 	}
 
+	cache := tx.Items(model)
+
 	if len(s.conditions) == 0 {
-		next := true
+		// No conditions: full iteration in index order.
 		asc := s.Order(INDEX)
 		err := model.ForEach(func(idx string, item et.Json) (bool, error) {
-			next = addResult(idx, item)
-			return next, nil
+			return addResult(idx, item), nil
 		}, asc, fetchOffset, fetchLimit)
 		if err != nil {
 			return et.Items{}, err
 		}
-
-		if !next {
-			return et.NewItems(result), nil
-		}
-
-		cache := tx.Items(model)
-		for _, item := range cache {
-			idx := item.Str(INDEX)
-			if idx == "" {
-				continue
-			}
-			next = addResult(idx, item)
-			if !next {
-				return et.NewItems(result), nil
+		if s.limit == 0 || len(result) < s.limit || needFullScan {
+			for _, item := range cache {
+				idx := item.Str(INDEX)
+				if idx == "" {
+					continue
+				}
+				if !addResult(idx, item) {
+					break
+				}
 			}
 		}
 	} else {
-		cache := tx.Items(model)
+		// Determine whether btree indexes cover every "entry-point" condition.
+		// Entry-points are NaC (first condition) and OR conditions — a record can
+		// reach the result only through them. If any entry-point is not indexed we
+		// would silently miss records that satisfy only that condition, so we must
+		// fall back to a full scan evaluated against ALL conditions at once.
+		canUseBtree := true
+		anyBtree := false
+
 		for _, con := range s.conditions {
-			value := con.Value
-			switch v := value.(type) {
-			case *Where:
-				var err error
-				con.Value, err = v.All(tx)
-				if err != nil {
-					return et.Items{}, err
-				}
-			case Where:
-				var err error
-				con.Value, err = v.All(tx)
-				if err != nil {
-					return et.Items{}, err
-				}
-			}
-
-			bt, exists := model.getBtree(con.Field)
-			if exists {
-				idxs := bt.ApplyCondition(con)
-				for _, idx := range idxs {
-					// #10: skip model.Current for idx already collected by a prior condition.
-					if _, seen := keys[idx]; seen {
-						continue
-					}
-					item, exists, err := model.Current(idx)
-					if err != nil {
-						return et.Items{}, err
-					}
-					if exists {
-						addResult(idx, item)
-					}
-				}
-
-				for _, item := range cache {
-					ok := item.ApplyCondition(con)
-					if ok {
-						idx := item.Str(INDEX)
-						if idx == "" {
-							continue
-						}
-						next := addResult(idx, item)
-						if !next {
-							return et.NewItems(result), nil
-						}
-					}
+			_, hasBt := model.getBtree(con.Field)
+			if !hasBt {
+				if con.Connector != et.And {
+					canUseBtree = false
 				}
 				continue
 			}
+			anyBtree = true
+		}
 
-			next := true
-			err := model.ForEach(func(idx string, item et.Json) (bool, error) {
-				ok := item.ApplyCondition(con)
-				if ok {
-					next = addResult(idx, item)
+		if anyBtree && canUseBtree {
+			// Build candidate set:
+			//   AND / NaC conditions with btree → intersect (narrows the set).
+			//   OR conditions with btree         → union (broadens the set).
+			// Non-indexed AND conditions are handled by et.Evaluate below.
+			var andCandidates []string
+			var orCandidates []string
+			andInit := false
+
+			for _, con := range s.conditions {
+				bt, exists := model.getBtree(con.Field)
+				if !exists {
+					continue
 				}
-				return next, nil
+				idxs := bt.ApplyCondition(con)
+
+				if con.Connector == et.Or {
+					orCandidates = append(orCandidates, idxs...)
+				} else {
+					if !andInit {
+						andCandidates = idxs
+						andInit = true
+					} else {
+						set := make(map[string]struct{}, len(idxs))
+						for _, i := range idxs {
+							set[i] = struct{}{}
+						}
+						n := 0
+						for _, i := range andCandidates {
+							if _, ok := set[i]; ok {
+								andCandidates[n] = i
+								n++
+							}
+						}
+						andCandidates = andCandidates[:n]
+					}
+				}
+			}
+
+			// Merge AND and OR candidates without duplicates.
+			seen := make(map[string]struct{}, len(andCandidates)+len(orCandidates))
+			candidates := make([]string, 0, len(andCandidates)+len(orCandidates))
+			for _, idx := range andCandidates {
+				if _, ok := seen[idx]; !ok {
+					seen[idx] = struct{}{}
+					candidates = append(candidates, idx)
+				}
+			}
+			for _, idx := range orCandidates {
+				if _, ok := seen[idx]; !ok {
+					seen[idx] = struct{}{}
+					candidates = append(candidates, idx)
+				}
+			}
+
+			// Fetch each candidate and filter through ALL conditions.
+			for _, idx := range candidates {
+				item, exists, err := model.Current(idx)
+				if err != nil {
+					return et.Items{}, err
+				}
+				if !exists {
+					continue
+				}
+				if et.Evaluate(item, s.conditions) {
+					addResult(idx, item)
+				}
+			}
+
+			// Check pending transaction records against ALL conditions.
+			for _, item := range cache {
+				if et.Evaluate(item, s.conditions) {
+					idx := item.Str(INDEX)
+					if idx != "" {
+						addResult(idx, item)
+					}
+				}
+			}
+		} else {
+			// No safe btree path: single full scan evaluating ALL conditions per record.
+			// One pass — no repeated scans regardless of condition count.
+			err := model.ForEach(func(idx string, item et.Json) (bool, error) {
+				if et.Evaluate(item, s.conditions) {
+					return addResult(idx, item), nil
+				}
+				return true, nil
 			}, true, fetchOffset, fetchLimit)
 			if err != nil {
 				return et.Items{}, err
 			}
 
 			for _, item := range cache {
-				ok := item.ApplyCondition(con)
-				if ok {
+				if et.Evaluate(item, s.conditions) {
 					idx := item.Str(INDEX)
-					if idx == "" {
-						continue
-					}
-					next := addResult(idx, item)
-					if !next {
-						return et.NewItems(result), nil
+					if idx != "" {
+						addResult(idx, item)
 					}
 				}
 			}
 		}
 	}
 
-	// Apply joins before sort so join results are included in ordering.
+	// Apply joins before sort so all records participate in ordering.
 	if hasJoin {
 		var err error
-		result, err = applyJoins(result, s.joins, tx)
+		result, err = applyJoins(result, s.joins, s.from, tx)
 		if err != nil {
 			return et.Items{}, err
 		}
 	}
 
-	// #11: sort.Slice (quicksort) is faster than SliceStable when equal-element
-	// ordering does not matter, which is the common case for DB result sets.
 	if hasCustomOrder {
 		sortKeys := make([][]any, len(result))
 		for i, item := range result {
@@ -486,14 +539,12 @@ func (s *Where) All(tx *Tx) (et.Items, error) {
 		})
 	}
 
-	// Apply offset/limit when a full scan was required.
 	if needFullScan {
 		if s.offset > 0 {
 			if s.offset >= len(result) {
-				result = []et.Json{}
-			} else {
-				result = result[s.offset:]
+				return et.NewItems([]et.Json{}), nil
 			}
+			result = result[s.offset:]
 		}
 		if s.limit > 0 && len(result) > s.limit {
 			result = result[:s.limit]
@@ -688,12 +739,6 @@ func Evaluate(item et.Json, conditions []*et.Condition) bool {
 	return et.Evaluate(item, conditions)
 }
 
-type DQuery struct {
-	Schema string         `json:"schema"`
-	Name   string         `json:"name"`
-	Where  []et.Condition `json:"where"`
-}
-
 /**
 * joinLookup: Returns records from j.To that match the given primary item via j.Keys.
 * Uses the btree index on the join field when available; falls back to full scan.
@@ -805,13 +850,13 @@ func mergeJoinFields(dst, src et.Json, modelName string) et.Json {
 
 /**
 * applyJoins: Applies all joins in sequence to the result set.
-* @param items []et.Json, joins []Join, tx *Tx
+* @param items []et.Json, joins []Join, from *Model, tx *Tx
 * @return []et.Json, error
 **/
-func applyJoins(items []et.Json, joins []Join, tx *Tx) ([]et.Json, error) {
+func applyJoins(items []et.Json, joins []Join, from *Model, tx *Tx) ([]et.Json, error) {
 	for _, j := range joins {
 		var err error
-		items, err = applySingleJoin(items, j, tx)
+		items, err = applySingleJoin(items, j, from, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -821,10 +866,14 @@ func applyJoins(items []et.Json, joins []Join, tx *Tx) ([]et.Json, error) {
 
 /**
 * applySingleJoin: Applies one join to the item set according to its type.
-* @param items []et.Json, j Join, tx *Tx
+* InnerJoin  — keeps only primary records that have a match in j.To.
+* LeftJoin   — keeps all primary records; merges right fields when matched.
+* RightJoin  — keeps all j.To records; merges primary fields when matched.
+* FullJoin   — union of all primary and all j.To records, merged where matched.
+* @param items []et.Json, j Join, from *Model, tx *Tx
 * @return []et.Json, error
 **/
-func applySingleJoin(items []et.Json, j Join, tx *Tx) ([]et.Json, error) {
+func applySingleJoin(items []et.Json, j Join, from *Model, tx *Tx) ([]et.Json, error) {
 	switch j.Type {
 	case InnerJoin:
 		result := make([]et.Json, 0, len(items))
@@ -864,7 +913,8 @@ func applySingleJoin(items []et.Json, j Join, tx *Tx) ([]et.Json, error) {
 			}
 			if len(matched) > 0 {
 				toItem := matched[0]
-				result = append(result, mergeJoinFields(toItem, item, j.To.Name))
+				// j.To fields at root; primary fields prefixed with from.Name.
+				result = append(result, mergeJoinFields(toItem, item, from.Name))
 				if idx := toItem.Str(INDEX); idx != "" {
 					matchedToIdx[idx] = struct{}{}
 				}
@@ -891,6 +941,7 @@ func applySingleJoin(items []et.Json, j Join, tx *Tx) ([]et.Json, error) {
 			}
 			if len(matched) > 0 {
 				toItem := matched[0]
+				// Primary fields at root; j.To fields prefixed with j.To.Name.
 				result = append(result, mergeJoinFields(item, toItem, j.To.Name))
 				if idx := toItem.Str(INDEX); idx != "" {
 					matchedToIdx[idx] = struct{}{}
@@ -978,4 +1029,20 @@ func compareJsonValue(a, b any) int {
 		}
 	}
 	return strings.Compare(fmt.Sprintf("%v", a), fmt.Sprintf("%v", b))
+}
+
+type DFrom struct {
+	Schema string `json:"schema"`
+	Name   string `json:"name"`
+}
+
+type DQuery struct {
+	From    DFrom          `json:"from"`
+	Join    []Join         `json:"join"`
+	Where   []et.Condition `json:"where"`
+	Selects []string       `json:"selects"`
+	Hidden  []string       `json:"hidden"`
+	OrderBy []OrderField   `json:"order_by"`
+	Limit   int            `json:"limit"`
+	Page    int            `json:"page"`
 }

@@ -16,6 +16,48 @@ import (
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
+/**
+* loadModels: Loads the models
+* @param db *DB
+* @return error
+**/
+func loadModels(db *DB) error {
+	result, err := db.newModel("", "models", true, 1)
+	if err != nil {
+		return err
+	}
+
+	err = result.Init()
+	if err != nil {
+		return err
+	}
+
+	cursor, err := result.NewCursor(true, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	for cursor.Next() {
+		var model *Model
+		err := cursor.Scan(&model)
+		if err != nil {
+			return err
+		}
+
+		schema := db.getSchema(model.Schema)
+		if schema == nil {
+			return fmt.Errorf("schema %s not found", model.Schema)
+		}
+
+		err = model.load(schema)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 var (
 	ErrorFieldNotFound = errors.New(msg.MSG_FIELD_NOT_FOUND)
 	ErrorRecordExists  = errors.New(msg.MSG_RECORD_EXISTS)
@@ -127,6 +169,9 @@ func (s *Model) load(schema *Schema) error {
 	s.node = schema.db.node
 	s.onPut = make([]func(*Node, string, any, Cmd) error, 0)
 	s.onRemove = make([]func(*Node, string, any) error, 0)
+	schema.mu.Lock()
+	schema.models[s.Name] = s
+	schema.mu.Unlock()
 
 	if err := s.Init(); err != nil {
 		return err
@@ -143,7 +188,17 @@ func (s *Model) Save() error {
 	if s.IsCore {
 		return nil
 	}
-	return s.schema.save()
+
+	if s.db == nil {
+		return errors.New(msg.MSG_DB_IS_NIL)
+	}
+
+	err := s.db.models.Put(s.Name, s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
