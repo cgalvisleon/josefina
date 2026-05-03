@@ -16,7 +16,11 @@ import (
 * @return error
 **/
 func (s *DB) loadSchemas() error {
-	model, err := s.newModel("", "schemas", true, 1)
+	model, err := s.Define(DModel{
+		Name:    ".schemas",
+		IsCore:  true,
+		Version: 1,
+	})
 	if err != nil {
 		return err
 	}

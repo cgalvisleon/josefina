@@ -14,7 +14,7 @@ import (
 **/
 func (s *DB) loadConfig() error {
 	model, err := s.Define(DModel{
-		Name:    "config",
+		Name:    ".config",
 		IsCore:  true,
 		Version: 1,
 	})

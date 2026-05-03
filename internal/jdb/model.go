@@ -21,7 +21,11 @@ import (
 * @return error
 **/
 func (s *DB) loadModels() error {
-	result, err := s.newModel("", "models", true, 1)
+	result, err := s.Define(DModel{
+		Name:    "models",
+		IsCore:  true,
+		Version: 1,
+	})
 	if err != nil {
 		return err
 	}
