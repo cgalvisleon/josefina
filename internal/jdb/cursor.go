@@ -7,8 +7,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
-// Cursor holds iteration state for a single sequential scan of a Model.
-// Create one via Model.NewCursor — do not share between goroutines.
 type Cursor struct {
 	model *Model
 	keys  []string

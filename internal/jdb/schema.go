@@ -17,29 +17,37 @@ import (
 * @return error
 **/
 func loadSchemas(db *DB) error {
-	result, err := db.newModel("", "schemas", true, 1)
+	model, err := db.newModel("", "schemas", true, 1)
 	if err != nil {
 		return err
 	}
 
-	err = result.Init()
+	err = model.Init()
 	if err != nil {
 		return err
 	}
 
-	db.schemas = result
-	db.schemas.ForEachBt(func(idx string, src []byte) (bool, error) {
-		var schema Schema
-		if err := json.Unmarshal(src, &schema); err != nil {
-			return false, err
-		}
+	db.schemas = model
+	cursor, err := db.schemas.NewCursor(false, 0, 0)
+	if err != nil {
+		return err
+	}
 
-		err := schema.load(db)
+	defer cursor.Close()
+	for cursor.Next() {
+		var schema *Schema
+		err := cursor.Scan(&schema)
 		if err != nil {
-			return false, err
+			return err
 		}
-		return true, nil
-	}, false, 0, 0)
+
+		err = schema.load(db)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	return nil
 }
 

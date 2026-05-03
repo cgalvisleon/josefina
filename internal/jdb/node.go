@@ -89,8 +89,7 @@ func (s *Node) load() error {
 }
 
 /**
-* loadModels: Load the models
-* @param db *DB
+* loadDbs: Load the dbs
 * @return error
 **/
 func (s *Node) loadDbs() error {

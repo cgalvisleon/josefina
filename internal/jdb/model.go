@@ -37,6 +37,7 @@ func loadModels(db *DB) error {
 		return err
 	}
 
+	defer cursor.Close()
 	for cursor.Next() {
 		var model *Model
 		err := cursor.Scan(&model)

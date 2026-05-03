@@ -67,36 +67,6 @@ func NewDb(path, name string) (*DB, error) {
 		muCache: &sync.RWMutex{},
 	}
 
-	err := loadConfig(result)
-	if err != nil {
-		return nil, err
-	}
-
-	err = loadErrors(result)
-	if err != nil {
-		return nil, err
-	}
-
-	err = loadTransaction(result)
-	if err != nil {
-		return nil, err
-	}
-
-	err = loadSchemas(result)
-	if err != nil {
-		return nil, err
-	}
-
-	err = loadModels(result)
-	if err != nil {
-		return nil, err
-	}
-
-	err = loadCache(result)
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
@@ -124,12 +94,27 @@ func (s *DB) Init() error {
 		return err
 	}
 
+	err = loadErrors(s)
+	if err != nil {
+		return err
+	}
+
 	err = loadTransaction(s)
 	if err != nil {
 		return err
 	}
 
 	err = loadSchemas(s)
+	if err != nil {
+		return err
+	}
+
+	err = loadModels(s)
+	if err != nil {
+		return err
+	}
+
+	err = loadCache(s)
 	if err != nil {
 		return err
 	}

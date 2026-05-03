@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 
 	"github.com/cgalvisleon/et/et"
@@ -232,12 +231,10 @@ func run() error {
 	} else {
 		defer cursor.Close()
 		logs.Infof("snapshot: %d records", cursor.Len())
-		var row et.Json
-		for {
-			if err := cursor.Next(&row); err != nil {
-				if err != io.EOF {
-					logs.Errorf("cursor.next: %v", err)
-				}
+		for cursor.Next() {
+			var row et.Json
+			if err := cursor.Scan(&row); err != nil {
+				logs.Errorf("cursor.scan: %v", err)
 				break
 			}
 			logs.Infof("  [pos %d] %v", cursor.Pos(), row)
