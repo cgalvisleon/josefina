@@ -86,8 +86,6 @@ func (s *DB) load(node *Node) error {
 **/
 func (s *DB) Init() error {
 	s.mu = &sync.RWMutex{}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	err := loadConfig(s)
 	if err != nil {
@@ -190,6 +188,7 @@ func (s *DB) getSchema(name string) *Schema {
 		Name:     name,
 		models:   make(map[string]*Model, 0),
 		db:       s,
+		mu:       &sync.RWMutex{},
 	}
 
 	s.mu.Lock()

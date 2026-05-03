@@ -25,6 +25,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if err := db.Init(); err != nil {
+		return err
+	}
 
 	// ── Model: users ──────────────────────────────────────────────────────────
 	users, err := db.Define(jdb.DModel{
