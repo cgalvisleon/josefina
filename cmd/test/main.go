@@ -31,6 +31,7 @@ func run() error {
 
 	// ── Model: users ──────────────────────────────────────────────────────────
 	users, err := db.Define(jdb.DModel{
+		Schema:  "apps",
 		Name:    "users",
 		Version: 1,
 		Fields: map[string]jdb.DField{

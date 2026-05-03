@@ -139,11 +139,6 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	defer s.mu.Unlock()
 	s.models[result.Name] = result
 
-	err = s.save()
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
