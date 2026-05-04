@@ -346,6 +346,7 @@ func (s *Tx) Items(model *Model) []et.Json {
 **/
 func (s *DB) loadTransaction() error {
 	model, err := s.Define(DModel{
+		Schema:  SysSchema,
 		Name:    "transactions",
 		IsCore:  true,
 		Version: 1,

@@ -11,6 +11,7 @@ import (
 **/
 func (s *DB) loadCache() error {
 	result, err := s.Define(DModel{
+		Schema:  SysSchema,
 		Name:    "cache",
 		IsCore:  true,
 		Version: 1,

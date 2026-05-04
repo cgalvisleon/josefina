@@ -13,6 +13,10 @@ import (
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
+const (
+	SysSchema = "_catalog"
+)
+
 type Config struct {
 	Lang                string        `json:"lang"`
 	TransactionTTL      time.Duration `json:"transaction_ttl"`
@@ -171,14 +175,17 @@ func (s *DB) SetStrict(strict bool) {
 * @param name string
 * @return *Schema
 **/
-func (s *DB) getSchema(name string) *Schema {
+func (s *DB) getSchema(name string) (*Schema, error) {
 	name = utility.Normalize(name)
+	if name == SysSchema {
+		return nil, fmt.Errorf(msg.MSG_SCHEMA_RESERVED, SysSchema)
+	}
 
 	s.mu.RLock()
 	result, exists := s.Schemas[name]
 	s.mu.RUnlock()
 	if exists {
-		return result
+		return result, nil
 	}
 
 	result = &Schema{
@@ -193,7 +200,7 @@ func (s *DB) getSchema(name string) *Schema {
 	defer s.mu.Unlock()
 	s.Schemas[name] = result
 
-	return result
+	return result, nil
 }
 
 /**
@@ -229,7 +236,11 @@ func (s *DB) DeleteSchema(name string) error {
 * @return *Model, error
 **/
 func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
-	sch := s.getSchema(schema)
+	sch, err := s.getSchema(schema)
+	if err != nil {
+		return nil, err
+	}
+
 	model, err := sch.newModel(name, isCore, version)
 	if err != nil {
 		return nil, err

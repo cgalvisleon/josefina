@@ -22,6 +22,7 @@ import (
 **/
 func (s *DB) loadModels() error {
 	result, err := s.Define(DModel{
+		Schema:  SysSchema,
 		Name:    "models",
 		IsCore:  true,
 		Version: 1,
@@ -48,9 +49,9 @@ func (s *DB) loadModels() error {
 			return err
 		}
 
-		schema := s.getSchema(model.Schema)
-		if schema == nil {
-			return fmt.Errorf("schema %s not found", model.Schema)
+		schema, err := s.getSchema(model.Schema)
+		if err != nil {
+			return err
 		}
 
 		err = model.load(schema)
