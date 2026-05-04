@@ -4,6 +4,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
 const dataPath = "./data/test"
@@ -28,6 +29,8 @@ func run() error {
 	}
 
 	// ── Model: users ──────────────────────────────────────────────────────────
+	// db.Define is still used for model creation: SQL CREATE TABLE does not
+	// support josefina-specific BTree index declarations.
 	users, err := db.Define(jdb.DModel{
 		Schema:  "apps",
 		Name:    "users",
@@ -76,34 +79,30 @@ func run() error {
 
 	// ── Insert users ──────────────────────────────────────────────────────────
 	section("Insert users")
-	userRecords := []et.Json{
-		{jdb.INDEX: "alice", "username": "alice", "email": "alice@example.com", "age": int64(30), "active": true},
-		{jdb.INDEX: "bob", "username": "bob", "email": "bob@example.com", "age": int64(25), "active": true},
-		{jdb.INDEX: "carol", "username": "carol", "email": "carol@example.com", "age": int64(35), "active": false},
-		{jdb.INDEX: "dave", "username": "dave", "email": "dave@example.com", "age": int64(28), "active": true},
-		{jdb.INDEX: "eve", "username": "eve", "email": "eve@example.com", "age": int64(22), "active": false},
-	}
-	for _, u := range userRecords {
-		if _, err := users.Insert(u).Exec(); err != nil {
-			logs.Errorf("insert user %s: %v", u.Str("username"), err)
-		}
+	if _, err := stmt.ExecSQL(db, `
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('alice', 'alice', 'alice@example.com', 30, TRUE),
+			('bob',   'bob',   'bob@example.com',   25, TRUE),
+			('carol', 'carol', 'carol@example.com', 35, FALSE),
+			('dave',  'dave',  'dave@example.com',  28, TRUE),
+			('eve',   'eve',   'eve@example.com',   22, FALSE)
+	`); err != nil {
+		logs.Errorf("insert users: %v", err)
 	}
 	count, _ = users.Count()
 	logs.Infof("users count: %d", count)
 
 	// ── Insert orders ─────────────────────────────────────────────────────────
 	section("Insert orders")
-	orderRecords := []et.Json{
-		{"username": "alice", "product": "laptop", "amount": 1200.00},
-		{"username": "alice", "product": "mouse", "amount": 25.00},
-		{"username": "bob", "product": "keyboard", "amount": 75.00},
-		{"username": "carol", "product": "monitor", "amount": 350.00},
-		{"username": "dave", "product": "laptop", "amount": 1200.00},
-	}
-	for _, o := range orderRecords {
-		if _, err := orders.Insert(o).Exec(); err != nil {
-			logs.Errorf("insert order: %v", err)
-		}
+	if _, err := stmt.ExecSQL(db, `
+		INSERT INTO apps.orders (username, product, amount) VALUES
+			('alice', 'laptop',   1200.00),
+			('alice', 'mouse',      25.00),
+			('bob',   'keyboard',   75.00),
+			('carol', 'monitor',   350.00),
+			('dave',  'laptop',   1200.00)
+	`); err != nil {
+		logs.Errorf("insert orders: %v", err)
 	}
 	count, _ = orders.Count()
 	logs.Infof("orders count: %d", count)
@@ -111,94 +110,51 @@ func run() error {
 	// ── Get by primary key ────────────────────────────────────────────────────
 	section("Get by primary key")
 	for _, id := range []string{"alice", "carol", "zzz"} {
-		item, exists, err := users.Current(id)
+		items, err := stmt.ExecSQL(db,
+			"SELECT * FROM apps.users WHERE username = '"+id+"'")
 		if err != nil {
-			logs.Errorf("current %s: %v", id, err)
+			logs.Errorf("select %s: %v", id, err)
 			continue
 		}
-		if !exists {
-			logs.Infof("current %s: not found", id)
+		if items.Count == 0 {
+			logs.Infof("select %s: not found", id)
 			continue
 		}
-		logs.Infof("current %s: %v", id, item.ToString())
+		logs.Infof("select %s: %v", id, items.Result[0].ToString())
 	}
 
 	// ── WHERE: single indexed condition ───────────────────────────────────────
-	section("WHERE username = alice")
-	items, err := jdb.From(users).
-		Where(jdb.Eq("username", "alice")).
-		All()
-	if err != nil {
-		logs.Errorf("where: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("WHERE username = 'alice'")
+	logSQL(db, `SELECT * FROM apps.users WHERE username = 'alice'`)
 
 	// ── WHERE: multiple AND conditions ────────────────────────────────────────
-	section("WHERE active = true AND age > 25")
-	items, err = jdb.From(users).
-		Where(jdb.Eq("active", true)).
-		And(jdb.More("age", int64(25))).
-		All()
-	if err != nil {
-		logs.Errorf("where and: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("WHERE active = TRUE AND age > 25")
+	logSQL(db, `SELECT * FROM apps.users WHERE active = TRUE AND age > 25`)
 
 	// ── WHERE: OR condition ───────────────────────────────────────────────────
-	section("WHERE username = alice OR username = bob")
-	items, err = jdb.From(users).
-		Where(jdb.Eq("username", "alice")).
-		Or(jdb.Eq("username", "bob")).
-		All()
-	if err != nil {
-		logs.Errorf("where or: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("WHERE username = 'alice' OR username = 'bob'")
+	logSQL(db, `SELECT * FROM apps.users WHERE username = 'alice' OR username = 'bob'`)
 
 	// ── ORDER BY + LIMIT (pagination) ─────────────────────────────────────────
-	section("ORDER BY age DESC — page 1, 3 rows")
-	items, err = jdb.From(users).
-		Desc("age").
-		Limit(1, 3).
-		All()
-	if err != nil {
-		logs.Errorf("order+limit: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("ORDER BY age DESC LIMIT 3")
+	logSQL(db, `SELECT * FROM apps.users ORDER BY age DESC LIMIT 3`)
 
-	section("ORDER BY age DESC — page 2, 3 rows")
-	items, err = jdb.From(users).
-		Desc("age").
-		Limit(2, 3).
-		All()
-	if err != nil {
-		logs.Errorf("order+limit page2: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("ORDER BY age DESC LIMIT 3 OFFSET 3")
+	logSQL(db, `SELECT * FROM apps.users ORDER BY age DESC LIMIT 3 OFFSET 3`)
 
 	// ── INNER JOIN ────────────────────────────────────────────────────────────
-	// Returns only users that have at least one order.
 	section("INNER JOIN users ⨝ orders ON users.username = orders.username")
-	items, err = jdb.From(users).
-		InnerJoin(orders, map[string]string{"username": "username"}).
-		All()
-	if err != nil {
-		logs.Errorf("inner join: %v", err)
-	} else {
-		logItems(items)
-	}
+	logSQL(db, `
+		SELECT * FROM apps.users
+		INNER JOIN apps.orders ON users.username = orders.username
+	`)
 
 	// ── LEFT JOIN ─────────────────────────────────────────────────────────────
-	// Returns all users; order fields are empty when no order exists.
-	section("LEFT JOIN users ⟕ orders ON users.username = orders.username")
-	items, err = jdb.From(users).
-		LeftJoin(orders, map[string]string{"username": "username"}).
-		All()
+	section("LEFT JOIN users ⟕ orders")
+	items, err := stmt.ExecSQL(db, `
+		SELECT * FROM apps.users
+		LEFT JOIN apps.orders ON users.username = orders.username
+	`)
 	if err != nil {
 		logs.Errorf("left join: %v", err)
 	} else {
@@ -206,11 +162,11 @@ func run() error {
 	}
 
 	// ── RIGHT JOIN ────────────────────────────────────────────────────────────
-	// Returns all orders; user fields are empty when no user matches.
-	section("RIGHT JOIN users ⟖ orders ON users.username = orders.username")
-	items, err = jdb.From(users).
-		RightJoin(orders, map[string]string{"username": "username"}).
-		All()
+	section("RIGHT JOIN users ⟖ orders")
+	items, err = stmt.ExecSQL(db, `
+		SELECT * FROM apps.users
+		RIGHT JOIN apps.orders ON users.username = orders.username
+	`)
 	if err != nil {
 		logs.Errorf("right join: %v", err)
 	} else {
@@ -218,19 +174,15 @@ func run() error {
 	}
 
 	// ── WHERE + JOIN combined ─────────────────────────────────────────────────
-	section("WHERE active = true — INNER JOIN orders — ORDER BY age ASC")
-	items, err = jdb.From(users).
-		Where(jdb.Eq("active", true)).
-		InnerJoin(orders, map[string]string{"username": "username"}).
-		Asc("age").
-		All()
-	if err != nil {
-		logs.Errorf("where+join+order: %v", err)
-	} else {
-		logItems(items)
-	}
+	section("WHERE active = TRUE — INNER JOIN orders — ORDER BY age ASC")
+	logSQL(db, `
+		SELECT * FROM apps.users
+		INNER JOIN apps.orders ON users.username = orders.username
+		WHERE active = TRUE
+		ORDER BY age ASC
+	`)
 
-	// ── Cursor: sequential iteration ──────────────────────────────────────────
+	// ── Cursor: sequential iteration (no SQL equivalent) ─────────────────────
 	section("Cursor — asc, offset 1, limit 3")
 	cursor, err := users.NewCursor(true, 1, 3)
 	if err != nil {
@@ -250,38 +202,32 @@ func run() error {
 
 	// ── Upsert ────────────────────────────────────────────────────────────────
 	section("Upsert — frank (new) / alice age → 31 (existing)")
-	upserts := []et.Json{
-		{jdb.INDEX: "frank", "username": "frank", "email": "frank@example.com", "age": int64(40), "active": true},
-		{jdb.INDEX: "alice", "username": "alice", "email": "alice@example.com", "age": int64(31), "active": true},
-	}
-	for _, u := range upserts {
-		if _, err := users.Upsert(u).Exec(); err != nil {
-			logs.Errorf("upsert %s: %v", u.Str("username"), err)
-		}
+	if _, err := stmt.ExecSQL(db, `
+		UPSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('frank', 'frank', 'frank@example.com', 40, TRUE),
+			('alice', 'alice', 'alice@example.com', 31, TRUE)
+	`); err != nil {
+		logs.Errorf("upsert: %v", err)
 	}
 	count, _ = users.Count()
 	logs.Infof("users count after upsert: %d", count)
-	item, _, _ := users.Current("alice")
-	logs.Infof("alice after upsert: age=%v", item["age"])
+	aliceItems, _ := stmt.ExecSQL(db, `SELECT * FROM apps.users WHERE username = 'alice'`)
+	if aliceItems.Count > 0 {
+		logs.Infof("alice after upsert: age=%v", aliceItems.Result[0]["age"])
+	}
 
 	// ── Update ────────────────────────────────────────────────────────────────
-	section("Update — set active=false WHERE age < 25")
-	_, err = users.Update(et.Json{"active": false}).
-		Where(jdb.Less("age", int64(25))).
-		Exec()
-	if err != nil {
+	section("UPDATE — set active = FALSE WHERE age < 25")
+	if _, err := stmt.ExecSQL(db, `UPDATE apps.users SET active = FALSE WHERE age < 25`); err != nil {
 		logs.Errorf("update: %v", err)
 	} else {
-		items, _ = jdb.From(users).Where(jdb.Eq("active", false)).All()
+		items, _ := stmt.ExecSQL(db, `SELECT * FROM apps.users WHERE active = FALSE`)
 		logs.Infof("inactive after update: %d", items.Count)
 	}
 
 	// ── Delete ────────────────────────────────────────────────────────────────
-	section("Delete — WHERE active = false")
-	_, err = users.Delete().
-		Where(jdb.Eq("active", false)).
-		Exec()
-	if err != nil {
+	section("DELETE — WHERE active = FALSE")
+	if _, err := stmt.ExecSQL(db, `DELETE FROM apps.users WHERE active = FALSE`); err != nil {
 		logs.Errorf("delete: %v", err)
 	}
 	count, _ = users.Count()
@@ -289,13 +235,13 @@ func run() error {
 
 	// ── Bulk insert ───────────────────────────────────────────────────────────
 	section("Bulk insert — 3 new users")
-	_, err = users.Bulk([]et.Json{
-		{jdb.INDEX: "grace", "username": "grace", "email": "grace@example.com", "age": int64(29), "active": true},
-		{jdb.INDEX: "henry", "username": "henry", "email": "henry@example.com", "age": int64(33), "active": true},
-		{jdb.INDEX: "iris", "username": "iris", "email": "iris@example.com", "age": int64(27), "active": true},
-	}).Exec()
-	if err != nil {
-		logs.Errorf("bulk: %v", err)
+	if _, err := stmt.ExecSQL(db, `
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('grace', 'grace', 'grace@example.com', 29, TRUE),
+			('henry', 'henry', 'henry@example.com', 33, TRUE),
+			('iris',  'iris',  'iris@example.com',  27, TRUE)
+	`); err != nil {
+		logs.Errorf("bulk insert: %v", err)
 	}
 	count, _ = users.Count()
 	logs.Infof("users count after bulk: %d", count)
@@ -308,7 +254,12 @@ func section(title string) {
 	logs.Infof("=== %s ===", title)
 }
 
-func logItems(items et.Items) {
+func logSQL(db *jdb.DB, sql string) {
+	items, err := stmt.ExecSQL(db, sql)
+	if err != nil {
+		logs.Errorf("sql: %v", err)
+		return
+	}
 	logs.Infof("count: %d", items.Count)
 	for _, item := range items.Result {
 		logs.Infof("%v", item.ToString())

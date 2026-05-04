@@ -12,6 +12,20 @@ import (
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /**
+* ExecSQL: parses a SQL string and executes all statements against the given database.
+* @param db *jdb.DB
+* @param sql string
+* @return et.Items, error
+**/
+func ExecSQL(db *jdb.DB, sql string) (et.Items, error) {
+	stmts, err := ParseText(sql)
+	if err != nil {
+		return et.Items{}, err
+	}
+	return Exec(db, stmts)
+}
+
+/**
 * Exec: executes a list of parsed statements against the given database.
 * DML and SELECT statements accumulate results; DDL and cache commands return
 * an empty Items on success.
