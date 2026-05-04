@@ -153,8 +153,7 @@ func (s *Command) One() (et.Item, error) {
 **/
 func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	execute := tx == nil
-	tx = GetTx(s.model.db, tx)
+	isCommitted := GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -167,14 +166,13 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 		if err != nil {
 			return et.Items{}, err
 		}
-
-		if execute {
-			_, err = tx.Commit()
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
 		result.Add(tx.Result)
+	}
+	if isCommitted {
+		_, err := tx.Commit()
+		if err != nil {
+			return et.Items{}, err
+		}
 	}
 	return result, nil
 }
@@ -185,15 +183,14 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	execute := tx == nil
-	tx = GetTx(s.model.db, tx)
+	isCommitted := GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
 	tx.afterInsert = s.afterInsert
 	tx.afterUpdate = s.afterUpdate
 	tx.afterDelete = s.afterDelete
-	items, err := s.where.All(tx)
+	items, err := s.where.AllTx(tx)
 	if err != nil {
 		return et.Items{}, err
 	}
@@ -203,14 +200,13 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 		if err != nil {
 			return et.Items{}, err
 		}
-
-		if execute {
-			_, err = tx.Commit()
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
 		result.Add(tx.Result)
+	}
+	if isCommitted {
+		_, err = tx.Commit()
+		if err != nil {
+			return et.Items{}, err
+		}
 	}
 	return result, nil
 }
@@ -221,8 +217,7 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	execute := tx == nil
-	tx = GetTx(s.model.db, tx)
+	isCommitted := GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -232,7 +227,7 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	if len(s.where.conditions) == 0 {
 		return result, errors.New(msg.MSG_NO_CONDITIONS)
 	}
-	items, err := s.where.All(tx)
+	items, err := s.where.AllTx(tx)
 	if err != nil {
 		return et.Items{}, err
 	}
@@ -242,14 +237,14 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 		if err != nil {
 			return et.Items{}, err
 		}
-
-		if execute {
-			_, err = tx.Commit()
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
 		result.Add(tx.Result)
+	}
+
+	if isCommitted {
+		_, err = tx.Commit()
+		if err != nil {
+			return et.Items{}, err
+		}
 	}
 	return result, nil
 }
@@ -260,8 +255,7 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	execute := tx == nil
-	tx = GetTx(s.model.db, tx)
+	isCommitted := GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -274,14 +268,13 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 		if err != nil {
 			return et.Items{}, err
 		}
-
-		if execute {
-			_, err = tx.Commit()
-			if err != nil {
-				return et.Items{}, err
-			}
-		}
 		result.Add(tx.Result)
+	}
+	if isCommitted {
+		_, err := tx.Commit()
+		if err != nil {
+			return et.Items{}, err
+		}
 	}
 	return result, nil
 }

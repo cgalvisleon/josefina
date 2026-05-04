@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
@@ -11,8 +9,8 @@ import (
 const dataPath = "./data/test"
 
 func main() {
-	os.RemoveAll(dataPath)
-	defer os.RemoveAll(dataPath)
+	// os.RemoveAll(dataPath)
+	// defer os.RemoveAll(dataPath)
 
 	if err := run(); err != nil {
 		logs.Fatal(err)
@@ -54,6 +52,7 @@ func run() error {
 
 	// ── Model: orders ─────────────────────────────────────────────────────────
 	orders, err := db.Define(jdb.DModel{
+		Schema:  "apps",
 		Name:    "orders",
 		Version: 1,
 		Fields: map[string]jdb.DField{
@@ -117,14 +116,14 @@ func run() error {
 			logs.Infof("current %s: not found", id)
 			continue
 		}
-		logs.Infof("current %s: %v", id, item)
+		logs.Infof("current %s: %v", id, item.ToString())
 	}
 
 	// ── WHERE: single indexed condition ───────────────────────────────────────
 	section("WHERE username = alice")
 	items, err := jdb.From(users).
 		Where(jdb.Eq("username", "alice")).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("where: %v", err)
 	} else {
@@ -136,7 +135,7 @@ func run() error {
 	items, err = jdb.From(users).
 		Where(jdb.Eq("active", true)).
 		And(jdb.More("age", int64(25))).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("where and: %v", err)
 	} else {
@@ -148,7 +147,7 @@ func run() error {
 	items, err = jdb.From(users).
 		Where(jdb.Eq("username", "alice")).
 		Or(jdb.Eq("username", "bob")).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("where or: %v", err)
 	} else {
@@ -160,7 +159,7 @@ func run() error {
 	items, err = jdb.From(users).
 		Desc("age").
 		Limit(1, 3).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("order+limit: %v", err)
 	} else {
@@ -171,7 +170,7 @@ func run() error {
 	items, err = jdb.From(users).
 		Desc("age").
 		Limit(2, 3).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("order+limit page2: %v", err)
 	} else {
@@ -183,7 +182,7 @@ func run() error {
 	section("INNER JOIN users ⨝ orders ON users.username = orders.username")
 	items, err = jdb.From(users).
 		InnerJoin(orders, map[string]string{"username": "username"}).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("inner join: %v", err)
 	} else {
@@ -195,7 +194,7 @@ func run() error {
 	section("LEFT JOIN users ⟕ orders ON users.username = orders.username")
 	items, err = jdb.From(users).
 		LeftJoin(orders, map[string]string{"username": "username"}).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("left join: %v", err)
 	} else {
@@ -207,7 +206,7 @@ func run() error {
 	section("RIGHT JOIN users ⟖ orders ON users.username = orders.username")
 	items, err = jdb.From(users).
 		RightJoin(orders, map[string]string{"username": "username"}).
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("right join: %v", err)
 	} else {
@@ -220,7 +219,7 @@ func run() error {
 		Where(jdb.Eq("active", true)).
 		InnerJoin(orders, map[string]string{"username": "username"}).
 		Asc("age").
-		All(nil)
+		All()
 	if err != nil {
 		logs.Errorf("where+join+order: %v", err)
 	} else {
@@ -269,7 +268,7 @@ func run() error {
 	if err != nil {
 		logs.Errorf("update: %v", err)
 	} else {
-		items, _ = jdb.From(users).Where(jdb.Eq("active", false)).All(nil)
+		items, _ = jdb.From(users).Where(jdb.Eq("active", false)).All()
 		logs.Infof("inactive after update: %d", items.Count)
 	}
 
@@ -308,6 +307,6 @@ func section(title string) {
 func logItems(items et.Items) {
 	logs.Infof("count: %d", items.Count)
 	for _, item := range items.Result {
-		logs.Infof("  %v", item)
+		logs.Infof("%v", item.ToString())
 	}
 }

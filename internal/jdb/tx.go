@@ -99,11 +99,11 @@ type Tx struct {
 * @param db *DB, tx *Tx
 * @return *Tx
 **/
-func GetTx(db *DB, tx *Tx) *Tx {
+func GetTx(db *DB, tx *Tx) bool {
 	if tx == nil {
 		idx := reg.GenULID("tx")
 		now := timezone.Now()
-		return &Tx{
+		tx = &Tx{
 			CreatedAt:    now,
 			UpdatedAt:    now,
 			Idx:          idx,
@@ -119,9 +119,9 @@ func GetTx(db *DB, tx *Tx) *Tx {
 			afterUpdate:  make([]FnTrigger, 0),
 			afterDelete:  make([]FnTrigger, 0),
 		}
+		return true
 	}
-	tx.db = db
-	return tx
+	return false
 }
 
 /**
@@ -361,19 +361,16 @@ func (s *DB) loadTransaction() error {
 	}
 
 	s.transaction = model
-	cursor, err := s.transaction.NewCursor(false, 0, 0)
+	items, err := s.transaction.
+		Where(Eq("status", PENDING)).
+		All()
 	if err != nil {
 		return err
 	}
 
-	defer cursor.Close()
-	for cursor.Next() {
+	for _, item := range items.Result {
 		var tx *Tx
-		err := cursor.Scan(&tx)
-		if err != nil {
-			return err
-		}
-
+		json.Unmarshal([]byte(item.ToString()), &tx)
 		err = tx.load(s)
 		if err != nil {
 			return err
@@ -396,7 +393,6 @@ func (s *DB) loadTransaction() error {
 				return err
 			}
 		}
-		return nil
 	}
 
 	return nil

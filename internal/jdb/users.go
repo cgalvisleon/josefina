@@ -49,7 +49,7 @@ func (s *Node) GetUser(username, password string) (et.Item, error) {
 	result, err := From(s.users).
 		Where(Eq("username", username)).
 		And(Eq("password", password)).
-		First(nil)
+		First()
 	if err != nil {
 		return et.Item{}, err
 	}

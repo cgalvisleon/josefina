@@ -288,31 +288,31 @@ func (s *Where) Limit(page int, rows int) *Where {
 }
 
 /**
-* All: Executes the WHERE query and returns all matching records.
+* AllTx: Executes the WHERE query and returns all matching records.
 * Execution order: resolve sub-queries → collect via index or full scan →
 * apply joins → sort → offset/limit.
 * @param tx *Tx
 * @return et.Items, error
 **/
-func (s *Where) All(tx *Tx) (et.Items, error) {
+func (s *Where) AllTx(tx *Tx) (et.Items, error) {
 	if s.from == nil {
 		return et.Items{}, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	tx = GetTx(s.db, tx)
+	GetTx(s.db, tx)
 	model := s.from
 
 	// Resolve sub-Where condition values before any index access.
 	for _, con := range s.conditions {
 		switch v := con.Value.(type) {
 		case *Where:
-			items, err := v.All(tx)
+			items, err := v.AllTx(tx)
 			if err != nil {
 				return et.Items{}, err
 			}
 			con.Value = items
 		case Where:
-			items, err := v.All(tx)
+			items, err := v.AllTx(tx)
 			if err != nil {
 				return et.Items{}, err
 			}
@@ -555,12 +555,20 @@ func (s *Where) All(tx *Tx) (et.Items, error) {
 }
 
 /**
+* All: Executes the WHERE query and returns all matching records.
+* @return et.Items, error
+**/
+func (s *Where) All() (et.Items, error) {
+	return s.AllTx(nil)
+}
+
+/**
 * One
 * @param tx *Tx, idx int
 * @return et.Json, error
 **/
-func (s *Where) One(tx *Tx, idx int) (et.Item, error) {
-	items, err := s.All(tx)
+func (s *Where) OneTx(tx *Tx, idx int) (et.Item, error) {
+	items, err := s.AllTx(tx)
 	if err != nil {
 		return et.Item{}, err
 	}
@@ -569,21 +577,46 @@ func (s *Where) One(tx *Tx, idx int) (et.Item, error) {
 }
 
 /**
+* One: Executes the WHERE query and returns the item at the specified index.
+* @param idx int
+* @return et.Item, error
+**/
+func (s *Where) One(idx int) (et.Item, error) {
+	return s.OneTx(nil, idx)
+}
+
+/**
 * First
 * @param tx *Tx
 * @return et.Json, error
 **/
-func (s *Where) First(tx *Tx) (et.Item, error) {
-	return s.One(tx, 0)
+func (s *Where) FirstTx(tx *Tx) (et.Item, error) {
+	return s.OneTx(tx, 0)
 }
 
 /**
-* Last
+* First: Executes the WHERE query and returns the first item.
+* @return et.Item, error
+**/
+func (s *Where) First() (et.Item, error) {
+	return s.FirstTx(nil)
+}
+
+/**
+* LastTx
 * @param tx *Tx
 * @return et.Item, error
 **/
-func (s *Where) Last(tx *Tx) (et.Item, error) {
-	return s.One(tx, -1)
+func (s *Where) LastTx(tx *Tx) (et.Item, error) {
+	return s.OneTx(tx, -1)
+}
+
+/**
+* Last: Executes the WHERE query and returns the last item.
+* @return et.Item, error
+**/
+func (s *Where) Last() (et.Item, error) {
+	return s.LastTx(nil)
 }
 
 /**
