@@ -192,13 +192,26 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 	tx.afterInsert = s.afterInsert
 	tx.afterUpdate = s.afterUpdate
 	tx.afterDelete = s.afterDelete
+	s.where.keepIdx = true
 	items, err := s.where.AllTx(tx)
 	if err != nil {
 		return et.Items{}, err
 	}
+	newData := et.Json{}
+	if len(s.items) > 0 {
+		newData = s.items[0]
+	}
 	for _, item := range items.Result {
 		idx := item.Str(INDEX)
-		err := s.model.update(idx, item, tx)
+		merged := make(et.Json, len(item)+len(newData))
+		for k, v := range item {
+			merged[k] = v
+		}
+		for k, v := range newData {
+			merged[k] = v
+		}
+		delete(merged, INDEX)
+		err := s.model.update(idx, merged, tx)
 		if err != nil {
 			return et.Items{}, err
 		}
@@ -230,6 +243,7 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	if len(s.where.conditions) == 0 {
 		return result, errors.New(msg.MSG_NO_CONDITIONS)
 	}
+	s.where.keepIdx = true
 	items, err := s.where.AllTx(tx)
 	if err != nil {
 		return et.Items{}, err

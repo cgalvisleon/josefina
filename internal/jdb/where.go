@@ -63,6 +63,7 @@ type Where struct {
 	offset     int                 `json:"-"`
 	limit      int                 `json:"-"`
 	conditions []*et.Condition     `json:"-"`
+	keepIdx    bool                `json:"-"`
 	isDebug    bool                `json:"-"`
 }
 
@@ -361,6 +362,9 @@ func (s *Where) AllTx(tx *Tx) (et.Items, error) {
 		} else {
 			item = item.Select(s.selects)
 			item = item.Hidden(s.hidden)
+		}
+		if s.keepIdx {
+			item[INDEX] = idx
 		}
 		if pos, exists := keys[idx]; exists {
 			result[pos] = item

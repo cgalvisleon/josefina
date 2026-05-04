@@ -420,6 +420,9 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 * @param id string, ref *RecordRef
 **/
 func (s *FileStore) putIndex(id string, ref *RecordRef) {
+	if _, exists := s.index[id]; !exists {
+		s.keys = append(s.keys, id)
+	}
 	s.index[id] = ref
 	if s.isDebug {
 		logs.Debug("put:", s.Path, ":", s.Name, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())

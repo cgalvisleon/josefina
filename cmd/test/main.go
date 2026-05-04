@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
@@ -10,8 +12,7 @@ import (
 const dataPath = "./data/test"
 
 func main() {
-	// os.RemoveAll(dataPath)
-	// defer os.RemoveAll(dataPath)
+	os.RemoveAll(dataPath)
 
 	if err := run(); err != nil {
 		logs.Fatal(err)
@@ -78,6 +79,50 @@ func run() error {
 	logs.Infof("orders count: %d", count)
 
 	// ── Insert users ──────────────────────────────────────────────────────────
+	// ── CREATE TABLE via SQL ─────────────────────────────────────────────────
+	section("CREATE TABLE apps.products")
+	if _, err := stmt.ExecSQL(db, `
+		CREATE TABLE IF NOT EXISTS apps.products (
+			product_id KEY     NOT NULL,
+			name       TEXT    NOT NULL,
+			price      NUMERIC DEFAULT 0.0,
+			stock      INT     DEFAULT 0,
+			active     BOOLEAN DEFAULT TRUE,
+			PRIMARY KEY (product_id)
+		)
+	`); err != nil {
+		logs.Errorf("create table: %v", err)
+	} else {
+		logs.Infof("products table created")
+	}
+
+	section("INSERT INTO apps.products")
+	if _, err := stmt.ExecSQL(db, `
+		INSERT INTO apps.products (_idx, product_id, name, price, stock, active) VALUES
+			('p1', 'p1', 'Laptop',   999.99, 10, TRUE),
+			('p2', 'p2', 'Mouse',     29.99, 50, TRUE),
+			('p3', 'p3', 'Keyboard',  79.99, 30, TRUE),
+			('p4', 'p4', 'Monitor',  299.99,  8, FALSE)
+	`); err != nil {
+		logs.Errorf("insert products: %v", err)
+	}
+
+	section("SELECT apps.products WHERE active = TRUE ORDER BY price DESC")
+	logSQL(db, `SELECT * FROM apps.products WHERE active = TRUE ORDER BY price DESC`)
+
+	section("UPDATE apps.products SET stock = 0 WHERE active = FALSE")
+	if _, err := stmt.ExecSQL(db, `UPDATE apps.products SET stock = 0 WHERE active = FALSE`); err != nil {
+		logs.Errorf("update products: %v", err)
+	}
+	logSQL(db, `SELECT * FROM apps.products WHERE active = FALSE`)
+
+	section("DROP TABLE apps.products")
+	if _, err := stmt.ExecSQL(db, `DROP TABLE apps.products`); err != nil {
+		logs.Errorf("drop table: %v", err)
+	} else {
+		logs.Infof("products table dropped")
+	}
+
 	section("Insert users")
 	if _, err := stmt.ExecSQL(db, `
 		INSERT INTO apps.users (_idx, username, email, age, active) VALUES

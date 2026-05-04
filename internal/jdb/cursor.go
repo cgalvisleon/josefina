@@ -36,12 +36,8 @@ func (s *Model) NewCursor(asc bool, offset, limit int) (*Cursor, error) {
 * @return bool
 **/
 func (s *Cursor) Next() bool {
-	total := len(s.keys)
-	if total > 0 && s.pos < total {
-		s.pos++
-		return true
-	}
-	return false
+	s.pos++
+	return s.pos < len(s.keys)
 }
 
 /**
