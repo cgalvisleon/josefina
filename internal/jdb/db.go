@@ -524,30 +524,36 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 }
 
 /**
+**/
 func (s *DB) Query(querys []DQuery) (et.Items, error) {
-	result := et.Items{}
+	result := et.NewItems([]et.Json{})
+	var tx *Tx
+	tx, _ = GetTx(s, nil)
 	for _, query := range querys {
 		model, err := s.GetModel(query.From.Schema, query.From.Name)
 		if err != nil {
 			return result, err
 		}
-		command := model.Query()
+		where := From(model)
 		for _, condition := range query.Where {
-			command.Add(&condition)
+			where.Add(&condition)
 		}
 		for _, selectField := range query.Selects {
-			command.Select(selectField)
+			where.Selects(selectField)
 		}
 		for _, hiddenField := range query.Hidden {
-			command.Hidden(hiddenField)
+			where.Hidden(hiddenField)
 		}
 		for _, orderBy := range query.OrderBy {
-			command.OrderBy(orderBy.Field, orderBy.Order)
+			where.orderBy = append(where.orderBy, orderBy)
 		}
-		command.Limit(query.Limit)
-		command.Page(query.Page)
-		return command.Exec()
+		where.Limit(query.Limit, query.Page)
+		items, err := where.All()
+		if err != nil {
+			return result, err
+		}
+		result.Add(items.Result...)
 	}
+	tx.Commit()
 	return result, nil
 }
-**/
