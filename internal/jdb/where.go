@@ -288,6 +288,17 @@ func (s *Where) Limit(page int, rows int) *Where {
 }
 
 /**
+* SetOffset: Sets raw offset and row limit without page arithmetic.
+* @param offset int, rows int
+* @return *Where
+**/
+func (s *Where) SetOffset(offset int, rows int) *Where {
+	s.offset = offset
+	s.limit = rows
+	return s
+}
+
+/**
 * AllTx: Executes the WHERE query and returns all matching records.
 * Execution order: resolve sub-queries → collect via index or full scan →
 * apply joins → sort → offset/limit.

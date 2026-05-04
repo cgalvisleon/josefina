@@ -54,14 +54,37 @@ func (p *Parser) parseStmt() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	obj, err := p.parseKeyword()
-	if err != nil {
-		return nil, err
-	}
 
 	switch strings.ToUpper(verb) {
+	// ── SQL DML ───────────────────────────────────────────────────────────────
+	case "SELECT":
+		return p.parseSelect()
+	case "INSERT":
+		if err := p.expectKeyword("INTO"); err != nil {
+			return nil, err
+		}
+		return p.parseInsert()
+	case "UPDATE":
+		return p.parseUpdate()
+	case "UPSERT":
+		if err := p.expectKeyword("INTO"); err != nil {
+			return nil, err
+		}
+		return p.parseUpsert()
+	case "DELETE":
+		if err := p.expectKeyword("FROM"); err != nil {
+			return nil, err
+		}
+		return p.parseDelete()
+	// ── SQL DDL ───────────────────────────────────────────────────────────────
 	case "CREATE":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(obj) {
+		case "TABLE":
+			return p.parseCreateTable()
 		case "USER":
 			return p.parseCreateUser()
 		case "DATABASE":
@@ -69,21 +92,16 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		case "SERIE":
 			return p.parseCreateSerie()
 		default:
-			return nil, p.errf("unknown CREATE target")
-		}
-	case "GET":
-		switch strings.ToUpper(obj) {
-		case "DATABASE":
-			return p.parseGetDb()
-		case "USER":
-			return p.parseGetUser()
-		case "SERIE":
-			return p.parseGetSerie()
-		default:
-			return nil, p.errf("unknown GET target")
+			return nil, p.errf("unknown CREATE target: " + obj)
 		}
 	case "DROP":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(obj) {
+		case "TABLE":
+			return p.parseDropTable()
 		case "DATABASE":
 			return p.parseDropDb()
 		case "USER":
@@ -91,31 +109,96 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		case "SERIE":
 			return p.parseDropSerie()
 		default:
-			return nil, p.errf("unknown DROP target")
+			return nil, p.errf("unknown DROP target: " + obj)
+		}
+	case "ALTER":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
+		switch strings.ToUpper(obj) {
+		case "TABLE":
+			return p.parseAlterTable()
+		default:
+			return nil, p.errf("unknown ALTER target: " + obj)
+		}
+	// ── Custom commands ───────────────────────────────────────────────────────
+	case "GET":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
+		switch strings.ToUpper(obj) {
+		case "DATABASE":
+			return p.parseGetDb()
+		case "USER":
+			return p.parseGetUser()
+		case "SERIE":
+			return p.parseGetSerie()
+		case "CACHE":
+			return p.parseGetCache()
+		default:
+			return nil, p.errf("unknown GET target: " + obj)
 		}
 	case "USE":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(obj) {
 		case "DATABASE":
 			return p.parseUseDb()
 		default:
-			return nil, p.errf("unknown USE command")
+			return nil, p.errf("unknown USE target: " + obj)
 		}
 	case "SET":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(obj) {
 		case "SERIE":
 			return p.parseSetSerie()
+		case "CACHE":
+			return p.parseSetCache()
 		default:
-			return nil, p.errf("unknown SET target")
+			return nil, p.errf("unknown SET target: " + obj)
+		}
+	case "DEL":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
+		switch strings.ToUpper(obj) {
+		case "CACHE":
+			return p.parseDelCache()
+		default:
+			return nil, p.errf("unknown DEL target: " + obj)
+		}
+	case "EXIST":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
+		switch strings.ToUpper(obj) {
+		case "CACHE":
+			return p.parseExistCache()
+		default:
+			return nil, p.errf("unknown EXIST target: " + obj)
 		}
 	case "CHANGE":
+		obj, err := p.parseKeyword()
+		if err != nil {
+			return nil, err
+		}
 		switch strings.ToUpper(obj) {
 		case "PASSWORD":
 			return p.parseChangePassword()
 		default:
-			return nil, p.errf("unknown CHANGE target")
+			return nil, p.errf("unknown CHANGE target: " + obj)
 		}
 	default:
-		return nil, p.errf("unknown statement")
+		return nil, p.errf("unknown statement verb: " + verb)
 	}
 }
 
@@ -213,10 +296,10 @@ func (p *Parser) consumeTerm(after string) error {
 	if p.cur.typ == tokEOF {
 		return nil
 	}
-	if p.cur.typ != tokSemicolon && p.cur.typ != tokNewline {
-		return p.errf("expected ';' or newline after " + after)
+	if p.cur.typ != tokSemicolon {
+		return p.errf("expected ';' after " + after)
 	}
-	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+	for p.cur.typ == tokSemicolon {
 		p.advance()
 	}
 	if p.cur.typ == tokError {
@@ -230,7 +313,7 @@ func (p *Parser) consumeTerm(after string) error {
 * @return void
 **/
 func (p *Parser) skipSeps() {
-	for p.cur.typ == tokSemicolon || p.cur.typ == tokNewline {
+	for p.cur.typ == tokSemicolon {
 		p.advance()
 	}
 }
