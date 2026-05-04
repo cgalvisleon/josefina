@@ -2,12 +2,11 @@ package stmt
 
 import (
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
 type Jql struct {
-	query   *catalog.Model
+	query   *jdb.Model
 	command *jdb.Where
 }
 
