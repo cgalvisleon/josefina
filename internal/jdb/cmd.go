@@ -153,7 +153,8 @@ func (s *Command) One() (et.Item, error) {
 **/
 func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	isCommitted := GetTx(s.model.db, tx)
+	var isCommitted bool
+	tx, isCommitted = GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -183,7 +184,8 @@ func (s *Command) insertCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	isCommitted := GetTx(s.model.db, tx)
+	var isCommitted bool
+	tx, isCommitted = GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -217,7 +219,8 @@ func (s *Command) updateCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	isCommitted := GetTx(s.model.db, tx)
+	var isCommitted bool
+	tx, isCommitted = GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete
@@ -255,7 +258,8 @@ func (s *Command) deleteCmd(tx *Tx) (et.Items, error) {
 **/
 func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 	result := et.Items{}
-	isCommitted := GetTx(s.model.db, tx)
+	var isCommitted bool
+	tx, isCommitted = GetTx(s.model.db, tx)
 	tx.beforeInsert = s.beforeInsert
 	tx.beforeUpdate = s.beforeUpdate
 	tx.beforeDelete = s.beforeDelete

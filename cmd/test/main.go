@@ -49,6 +49,8 @@ func run() error {
 	if err := users.Init(); err != nil {
 		return err
 	}
+	count, _ := users.Count()
+	logs.Infof("users count: %d", count)
 
 	// ── Model: orders ─────────────────────────────────────────────────────────
 	orders, err := db.Define(jdb.DModel{
@@ -69,6 +71,8 @@ func run() error {
 	if err := orders.Init(); err != nil {
 		return err
 	}
+	count, _ = orders.Count()
+	logs.Infof("orders count: %d", count)
 
 	// ── Insert users ──────────────────────────────────────────────────────────
 	section("Insert users")

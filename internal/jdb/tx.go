@@ -99,7 +99,7 @@ type Tx struct {
 * @param db *DB, tx *Tx
 * @return *Tx
 **/
-func GetTx(db *DB, tx *Tx) bool {
+func GetTx(db *DB, tx *Tx) (*Tx, bool) {
 	if tx == nil {
 		idx := reg.GenULID("tx")
 		now := timezone.Now()
@@ -119,9 +119,9 @@ func GetTx(db *DB, tx *Tx) bool {
 			afterUpdate:  make([]FnTrigger, 0),
 			afterDelete:  make([]FnTrigger, 0),
 		}
-		return true
+		return tx, true
 	}
-	return false
+	return tx, false
 }
 
 /**

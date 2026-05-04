@@ -621,7 +621,7 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error 
 * @return error
 **/
 func (s *Model) insert(idx string, data et.Json, tx *Tx) error {
-	GetTx(s.db, tx)
+	tx, _ = GetTx(s.db, tx)
 	if idx == "" {
 		idx = s.GenKey()
 	}
@@ -723,7 +723,7 @@ func (s *Model) update(idx string, data et.Json, tx *Tx) error {
 	if idx == "" {
 		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
-	GetTx(s.db, tx)
+	tx, _ = GetTx(s.db, tx)
 	new := et.Json{}
 	if s.IsStrict {
 		for _, field := range s.Fields {
@@ -841,7 +841,7 @@ func (s *Model) delete(idx string, tx *Tx) error {
 	if idx == "" {
 		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
-	GetTx(s.db, tx)
+	tx, _ = GetTx(s.db, tx)
 	var old et.Json
 	if exists, err := s.Get(idx, &old); err != nil {
 		return err

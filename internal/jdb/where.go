@@ -299,7 +299,7 @@ func (s *Where) AllTx(tx *Tx) (et.Items, error) {
 		return et.Items{}, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	GetTx(s.db, tx)
+	tx, _ = GetTx(s.db, tx)
 	model := s.from
 
 	// Resolve sub-Where condition values before any index access.
@@ -559,7 +559,8 @@ func (s *Where) AllTx(tx *Tx) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Where) All() (et.Items, error) {
-	return s.AllTx(nil)
+	var tx *Tx
+	return s.AllTx(tx)
 }
 
 /**
@@ -582,7 +583,8 @@ func (s *Where) OneTx(tx *Tx, idx int) (et.Item, error) {
 * @return et.Item, error
 **/
 func (s *Where) One(idx int) (et.Item, error) {
-	return s.OneTx(nil, idx)
+	var tx *Tx
+	return s.OneTx(tx, idx)
 }
 
 /**
@@ -599,7 +601,8 @@ func (s *Where) FirstTx(tx *Tx) (et.Item, error) {
 * @return et.Item, error
 **/
 func (s *Where) First() (et.Item, error) {
-	return s.FirstTx(nil)
+	var tx *Tx
+	return s.FirstTx(tx)
 }
 
 /**
@@ -616,7 +619,8 @@ func (s *Where) LastTx(tx *Tx) (et.Item, error) {
 * @return et.Item, error
 **/
 func (s *Where) Last() (et.Item, error) {
-	return s.LastTx(nil)
+	var tx *Tx
+	return s.LastTx(tx)
 }
 
 /**
