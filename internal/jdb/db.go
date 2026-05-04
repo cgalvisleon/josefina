@@ -176,6 +176,10 @@ func (s *DB) SetStrict(strict bool) {
 * @return *Schema
 **/
 func (s *DB) newSchema(name string) *Schema {
+	name = utility.Normalize(name)
+	if name == "" {
+		name = "public"
+	}
 	result := &Schema{
 		Database: s.Name,
 		Name:     name,
@@ -197,6 +201,9 @@ func (s *DB) newSchema(name string) *Schema {
 **/
 func (s *DB) getSchema(name string) (*Schema, error) {
 	name = utility.Normalize(name)
+	if name == "" {
+		name = "public"
+	}
 	s.mu.RLock()
 	result, exists := s.Schemas[name]
 	s.mu.RUnlock()

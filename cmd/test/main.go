@@ -88,7 +88,7 @@ func run() error {
 			logs.Errorf("insert user %s: %v", u.Str("username"), err)
 		}
 	}
-	count, _ := users.Count()
+	count, _ = users.Count()
 	logs.Infof("users count: %d", count)
 
 	// ── Insert orders ─────────────────────────────────────────────────────────

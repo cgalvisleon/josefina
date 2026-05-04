@@ -27,7 +27,7 @@ func (s *Model) NewCursor(asc bool, offset, limit int) (*Cursor, error) {
 		return nil, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 	keys := st.Keys(asc, offset, limit)
-	return &Cursor{model: s, keys: keys}, nil
+	return &Cursor{model: s, keys: keys, pos: -1}, nil
 }
 
 /**
@@ -36,7 +36,8 @@ func (s *Model) NewCursor(asc bool, offset, limit int) (*Cursor, error) {
 * @return bool
 **/
 func (s *Cursor) Next() bool {
-	if s.pos < len(s.keys) {
+	total := len(s.keys)
+	if total > 0 && s.pos < total {
 		s.pos++
 		return true
 	}
@@ -52,7 +53,8 @@ func (s *Cursor) Next() bool {
 * @return error
 **/
 func (s *Cursor) Scan(dest any) error {
-	if s.pos < len(s.keys) {
+	total := len(s.keys)
+	if s.pos < total {
 		idx := s.keys[s.pos]
 		exists, err := s.model.Get(idx, dest)
 		if err != nil {
