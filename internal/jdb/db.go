@@ -171,16 +171,32 @@ func (s *DB) SetStrict(strict bool) {
 }
 
 /**
+* newSchema: Creates a new schema
+* @param db *DB, name string
+* @return *Schema
+**/
+func (s *DB) newSchema(name string) *Schema {
+	result := &Schema{
+		Database: s.Name,
+		Name:     name,
+		models:   make(map[string]*Model, 0),
+		db:       s,
+		mu:       &sync.RWMutex{},
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Schemas[name] = result
+
+	return result
+}
+
+/**
 * getSchema: Returns a schema by name
 * @param name string
 * @return *Schema
 **/
 func (s *DB) getSchema(name string) (*Schema, error) {
 	name = utility.Normalize(name)
-	if name == SysSchema {
-		return nil, fmt.Errorf(msg.MSG_SCHEMA_RESERVED, SysSchema)
-	}
-
 	s.mu.RLock()
 	result, exists := s.Schemas[name]
 	s.mu.RUnlock()
@@ -188,18 +204,7 @@ func (s *DB) getSchema(name string) (*Schema, error) {
 		return result, nil
 	}
 
-	result = &Schema{
-		Database: s.Name,
-		Name:     name,
-		models:   make(map[string]*Model, 0),
-		db:       s,
-		mu:       &sync.RWMutex{},
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Schemas[name] = result
-
+	result = s.newSchema(name)
 	return result, nil
 }
 
