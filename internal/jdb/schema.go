@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 /**
@@ -124,7 +125,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 
 	s.mu.RLock()
 	result, exists := s.models[name]
@@ -156,7 +157,7 @@ func (s *Schema) DeleteModel(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 
 	model, exists := s.models[name]
 	if !exists {
@@ -181,7 +182,7 @@ func (s *Schema) GetModel(name string) (*Model, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 	result, exists := s.models[name]
 	if !exists {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)

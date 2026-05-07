@@ -10,16 +10,17 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -30,6 +31,27 @@ const (
 	workerThreshold   = 128 // below this, sequential is faster than goroutine pool
 	workerRecordRatio = 128 // one worker per this many records
 )
+
+/**
+* normalize
+* @param input string
+* @return string
+**/
+func Normalize(input string) string {
+	// 1. Quitar espacios al inicio y final
+	s := strings.TrimSpace(input)
+
+	// 2. Reemplazar uno o más espacios por _
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
+
+	// 3. Eliminar todo lo que no sea letra, número, _ o .
+	s = regexp.MustCompile(`[^a-zA-Z0-9_.]`).ReplaceAllString(s, "")
+
+	// 4. Garantizar que no empiece con número
+	s = regexp.MustCompile(`^[0-9]+`).ReplaceAllString(s, "")
+
+	return s
+}
 
 /**
 * optimalWorkers: Returns the worker count for a parallel ForEach.
@@ -931,7 +953,7 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
 	minThreshold := envar.GetInt("MIN_THRESHOLD_COMPACT", 1000)
-	name = utility.Normalize(name)
+	name = Normalize(name)
 	fs := &FileStore{
 		Name:                name,
 		Path:                filepath.Join(path, name),

@@ -11,10 +11,12 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/cgalvisleon/josefina/internal/store"
 )
 
 const (
-	SysSchema = "_catalog"
+	SysDb     = ".catalog"
+	SysSchema = ".catalog"
 )
 
 type Config struct {
@@ -56,8 +58,7 @@ type DB struct {
 * @return *DB, error
 **/
 func NewDb(path, name string) (*DB, error) {
-	name = utility.Normalize(name)
-
+	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
@@ -176,7 +177,7 @@ func (s *DB) SetStrict(strict bool) {
 * @return *Schema
 **/
 func (s *DB) newSchema(name string) *Schema {
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 	if name == "" {
 		name = "public"
 	}
@@ -200,7 +201,7 @@ func (s *DB) newSchema(name string) *Schema {
 * @return *Schema
 **/
 func (s *DB) getSchema(name string) (*Schema, error) {
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 	if name == "" {
 		name = "public"
 	}
@@ -221,7 +222,7 @@ func (s *DB) getSchema(name string) (*Schema, error) {
 * @return error
  */
 func (s *DB) DeleteSchema(name string) error {
-	name = utility.Normalize(name)
+	name = store.Normalize(name)
 
 	s.mu.RLock()
 	schema, exists := s.Schemas[name]
@@ -267,7 +268,7 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 * @return *Model, error
 **/
 func (s *DB) GetModel(schema, name string) (*Model, error) {
-	schema = utility.Normalize(schema)
+	schema = store.Normalize(schema)
 
 	s.mu.RLock()
 	schemaObj, exists := s.Schemas[schema]
@@ -285,7 +286,8 @@ func (s *DB) GetModel(schema, name string) (*Model, error) {
 * @return error
 **/
 func (s *DB) DeleteModel(schema, name string) error {
-	schema = utility.Normalize(schema)
+	schema = store.Normalize(schema)
+
 	s.mu.RLock()
 	schemaObj, exists := s.Schemas[schema]
 	s.mu.RUnlock()
