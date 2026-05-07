@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	SysDb     = ".catalog"
-	SysSchema = ".catalog"
+	sysDb     = ".catalog"
+	sysSchema = ".catalog"
 )
 
 type Config struct {
@@ -82,6 +82,29 @@ func NewDb(path, name string) (*DB, error) {
 **/
 func (s *DB) load(node *Node) error {
 	s.node = node
+	// Mutexes are not serialized; re-initialize them when loading from JSON.
+	if s.mu == nil {
+		s.mu = &sync.RWMutex{}
+	}
+	if s.muCache == nil {
+		s.muCache = &sync.RWMutex{}
+	}
+	if s.Schemas == nil {
+		s.Schemas = make(map[string]*Schema)
+	}
+	if s.Cache == nil {
+		s.Cache = make(map[string]*Ttl)
+	}
+	// Re-initialize unexported fields in deserialized Schema objects.
+	for _, schema := range s.Schemas {
+		if schema.mu == nil {
+			schema.mu = &sync.RWMutex{}
+		}
+		if schema.models == nil {
+			schema.models = make(map[string]*Model)
+		}
+		schema.db = s
+	}
 	return s.Init()
 }
 
@@ -296,6 +319,20 @@ func (s *DB) DeleteModel(schema, name string) error {
 	}
 
 	return schemaObj.DeleteModel(name)
+}
+
+/**
+* ListSchemas: Returns all schemas in this database.
+* @return []*Schema
+**/
+func (s *DB) ListSchemas() []*Schema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]*Schema, 0, len(s.Schemas))
+	for _, sc := range s.Schemas {
+		result = append(result, sc)
+	}
+	return result
 }
 
 /**

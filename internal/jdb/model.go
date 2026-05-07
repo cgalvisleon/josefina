@@ -22,7 +22,7 @@ import (
 **/
 func (s *DB) loadModels() error {
 	result, err := s.Define(DModel{
-		Schema:  SysSchema,
+		Schema:  sysSchema,
 		Name:    "models",
 		IsCore:  true,
 		Version: 1,

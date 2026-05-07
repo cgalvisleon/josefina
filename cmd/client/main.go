@@ -6,9 +6,10 @@ import (
 )
 
 func main() {
-	envar.SetStrByArg("-host", "HOST", "localhost:1377")
-	envar.SetStrByArg("-user", "USER", "admin")
-	envar.SetStrByArg("-database", "DATABASE", "josefina")
+	envar.SetStrByArg("-data", "DATA_PATH", "./data")
+	envar.SetStrByArg("-user", "USERNAME", "admin")
+	envar.SetStrByArg("-password", "PASSWORD", "")
+	envar.SetStrByArg("-database", "DATABASE", "")
 
 	srv, err := cli.New()
 	if err != nil {

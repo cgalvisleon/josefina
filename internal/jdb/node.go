@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/jwt"
@@ -39,33 +40,54 @@ var (
 )
 
 /**
-* Load: Load the node
-* @return error
+* Load: Load the node. Accepts an optional TCP port; falls back to $PORT or 1305.
+* @param port ...int
+* @return (*Node, error)
 **/
-func Load() error {
-	port := envar.GetInt("PORT", 1305)
+func Load(port ...int) (*Node, error) {
+	p := envar.GetInt("PORT", 1305)
+	if len(port) > 0 && port[0] > 0 {
+		p = port[0]
+	}
 	node = &Node{
 		Version:   version,
 		DBS:       make(map[string]*DB, 0),
 		Sessions:  make(map[string]*Session, 0),
 		muDbs:     &sync.RWMutex{},
 		muSession: &sync.RWMutex{},
-		tcp:       tcp.NewNode(port),
+		tcp:       tcp.NewNode(p),
 	}
 
 	var err error
-	name := "_catalog"
+	name := sysDb
 	path := envar.GetStr("DATA_PATH", "./data")
 	node.catalog, err = NewDb(path, name)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	// The catalog DB needs its own transaction/error/cache models before any insert can run.
+	node.catalog.node = node
+	if err := node.catalog.Init(); err != nil {
+		return nil, err
 	}
 
 	if err := node.load(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return node, nil
+}
+
+/**
+* GetNode: Returns the singleton node instance. Must be called after Load.
+* @return (*Node, error)
+**/
+func GetNode() (*Node, error) {
+	if node == nil {
+		return nil, errors.New(msg.MSG_NODE_IS_NIL)
+	}
+	return node, nil
 }
 
 /**
@@ -113,10 +135,13 @@ func (s *Node) loadDbs() error {
 			return false, err
 		}
 
-		err := db.load(s)
-		if err != nil {
+		if err := db.load(s); err != nil {
 			return false, err
 		}
+
+		s.muDbs.Lock()
+		s.DBS[db.Name] = &db
+		s.muDbs.Unlock()
 		return true, nil
 	}, false, 0, 0)
 
@@ -167,6 +192,82 @@ func (s *Node) Autentication(token string) (*Session, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* Start: Starts the TCP listener for this node.
+* @return error
+**/
+func (s *Node) Start() error {
+	return s.tcp.Start()
+}
+
+/**
+* Authenticate: Validates a JWT token and returns the embedded claim.
+* @param token string
+* @return (*claim.Claim, error)
+**/
+func (s *Node) Authenticate(token string) (*claim.Claim, error) {
+	return jwt.Validate(token)
+}
+
+/**
+* ListUsers: Returns all registered users.
+* @return (et.Items, error)
+**/
+func (s *Node) ListUsers() (et.Items, error) {
+	return From(s.users).All()
+}
+
+/**
+* CreateDb: Creates a new user database and registers it in the catalog.
+* @param name string
+* @return (*DB, error)
+**/
+func (s *Node) CreateDb(name string) (*DB, error) {
+	s.muDbs.RLock()
+	_, exists := s.DBS[name]
+	s.muDbs.RUnlock()
+	if exists {
+		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+	}
+
+	path := envar.GetStr("DATA_PATH", "./data")
+	db, err := NewDb(path, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := db.load(s); err != nil {
+		return nil, err
+	}
+
+	if err := db.Save(); err != nil {
+		return nil, err
+	}
+
+	s.muDbs.Lock()
+	s.DBS[name] = db
+	s.muDbs.Unlock()
+
+	return db, nil
+}
+
+/**
+* DropDb: Removes a user database from the catalog and in-memory registry.
+* @param name string
+* @return error
+**/
+func (s *Node) DropDb(name string) error {
+	s.muDbs.Lock()
+	_, exists := s.DBS[name]
+	if !exists {
+		s.muDbs.Unlock()
+		return errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+	delete(s.DBS, name)
+	s.muDbs.Unlock()
+	return nil
 }
 
 /**

@@ -2,9 +2,6 @@ package jsql
 
 import (
 	"github.com/cgalvisleon/et/claim"
-	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/tcp"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
@@ -18,25 +15,23 @@ var srv *Server
 /**
 * NewServer
 * @param port int
-* @return *Server
+* @return *Server, error
 **/
-func NewServer(port int) *Server {
+func NewServer(port int) (*Server, error) {
 	if srv != nil {
-		return srv
+		return srv, nil
+	}
+
+	n, err := jdb.Load(port)
+	if err != nil {
+		return nil, err
 	}
 
 	srv = &Server{
-		Node: jdb.Load(port),
+		Node: n,
 	}
 
-	srv.OnInbound(func(c *tcp.Client, m *tcp.Message) {
-		logs.Debug(et.Json{
-			"client":  c,
-			"message": m,
-		}.ToString())
-	})
-
-	return srv
+	return srv, nil
 }
 
 /**

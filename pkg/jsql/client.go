@@ -9,7 +9,6 @@ import (
 	"github.com/cgalvisleon/et/logs"
 	lg "github.com/cgalvisleon/et/stdrout"
 	"github.com/cgalvisleon/et/tcp"
-	"github.com/cgalvisleon/josefina/internal/catalog"
 	"github.com/cgalvisleon/josefina/internal/jdb"
 )
 
@@ -53,7 +52,7 @@ func (s *Client) Start() {
 		logs.Error(res.Error)
 	}
 
-	var db *catalog.DB
+	var db *jdb.DB
 	err := res.Get(&db)
 	if err != nil {
 		logs.Error(err)

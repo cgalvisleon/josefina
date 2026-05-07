@@ -18,7 +18,7 @@ import (
 **/
 func (s *DB) loadSchemas() error {
 	model, err := s.Define(DModel{
-		Schema:  SysSchema,
+		Schema:  sysSchema,
 		Name:    "schemas",
 		IsCore:  true,
 		Version: 1,
@@ -189,6 +189,20 @@ func (s *Schema) GetModel(name string) (*Model, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* ListModels: Returns all models in this schema.
+* @return []*Model
+**/
+func (s *Schema) ListModels() []*Model {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]*Model, 0, len(s.models))
+	for _, m := range s.models {
+		result = append(result, m)
+	}
+	return result
 }
 
 /**
