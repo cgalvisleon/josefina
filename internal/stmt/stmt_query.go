@@ -111,7 +111,7 @@ type JoinClause struct {
 
 // SelectStmt: SELECT [cols] FROM table [JOIN] [WHERE] [ORDER BY] [LIMIT/OFFSET]
 type SelectStmt struct {
-	Columns []string     // empty slice means SELECT *
+	Columns []string // empty slice means SELECT *
 	From    TableRef
 	Joins   []JoinClause
 	Where   []CondExpr

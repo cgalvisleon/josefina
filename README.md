@@ -12,20 +12,117 @@ go get github.com/gorilla/websocket
 git remote add origin https://github.com/cgalvisleon/josefina.git
 ```
 
-## Server
+## Running
+
+### Server
 
 ```bash
 # Single node
-gofmt -w . && go run ./cmd/server -tcp-port 1377 -http-port 3500
+go run ./cmd/server -port 1377 -http 3500
 
-# Cluster (3 nodes)
-gofmt -w . && go run ./cmd/server -port 3500 -rpc 4300
-gofmt -w . && go run ./cmd/server -port 3501 -rpc 4301
-gofmt -w . && go run ./cmd/server -port 3502 -rpc 4302
-
-# Client REPL
-gofmt -w . && go run ./cmd/client -host 127.0.0.1:1377 -user cgalvisl -password 123456
+# Three-node cluster (separate terminals)
+go run ./cmd/server -port 1377 -http 3500
+go run ./cmd/server -port 1378 -http 3501
+go run ./cmd/server -port 1379 -http 3502
 ```
+
+### Client — TCP mode (remote)
+
+Connects to a running server over TCP. Requires the server to be started first.
+
+```bash
+go run ./cmd/client -host localhost:1377 -user admin -password secret -database mydb
+```
+
+Flags:
+
+| Flag | Default | Description |
+|---|---|---|
+| `-host` | `""` | Server address (`host:port`). When set, TCP mode is used. |
+| `-user` | `admin` | Username |
+| `-password` | `""` | Password |
+| `-database` | `""` | Database to connect to |
+
+#### Interactive session example
+
+```
+mydb=# CREATE DATABASE shop;
+Database "shop" created.
+
+mydb=# \c shop
+You are now connected to database "shop".
+
+shop=# CREATE TABLE IF NOT EXISTS products (
+shop-#   product_id KEY     NOT NULL,
+shop-#   name       TEXT    NOT NULL,
+shop-#   price      NUMERIC DEFAULT 0.0,
+shop-#   active     BOOLEAN DEFAULT TRUE,
+shop-#   PRIMARY KEY (product_id)
+shop-# );
+OK
+
+shop=# INSERT INTO products (_idx, product_id, name, price, active) VALUES
+shop-#   ('p1', 'p1', 'Laptop', 999.99, TRUE),
+shop-#   ('p2', 'p2', 'Mouse',   29.99, TRUE);
+OK
+
+shop=# SELECT * FROM products WHERE active = TRUE ORDER BY price DESC;
++------------+--------+---------+--------+
+| active     | name   | price   | product_id |
++------------+--------+---------+--------+
+| true       | Laptop | 999.99  | p1     |
+| true       | Mouse  | 29.99   | p2     |
++------------+--------+---------+--------+
+(2 rows)
+
+shop=# SET SQL STATE MYSQL;
+SQL dialect set to MYSQL.
+
+shop=# SET SQL STATE JOSEFINA;
+SQL dialect set to JOSEFINA.
+
+shop=# \timing
+Timing is on.
+
+shop=# SELECT * FROM products;
+...
+Time: 0.412 ms
+
+shop=# \q
+Bye.
+```
+
+#### Available meta-commands
+
+| Command | Description |
+|---|---|
+| `\c <db>` | Switch database |
+| `\timing` | Toggle query timing |
+| `\i <file>` | Execute SQL from a file |
+| `\help` | Show all commands |
+| `\q` | Quit |
+
+#### SET SQL STATE
+
+Changes the active SQL dialect for the session. Josefina executes queries natively; this command controls which dialect the server uses to translate and report generated SQL.
+
+```sql
+SET SQL STATE JOSEFINA;    -- default (PostgreSQL-compatible)
+SET SQL STATE POSTGRESQL;
+SET SQL STATE MYSQL;
+SET SQL STATE ORACLE;
+SET SQL STATE SQLSERVER;
+```
+
+### Client — Local mode (embedded)
+
+Loads the database engine in-process. No server needed; useful for development and scripting.
+
+```bash
+go run ./cmd/client -user admin -password secret -database mydb
+```
+
+When `-host` is omitted the client boots the jdb engine directly from the local data directory (`-data ./data`).
 
 ---
 

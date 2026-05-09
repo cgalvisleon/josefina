@@ -62,7 +62,7 @@ func (DropTableStmt) stmt() {}
 type AlterAction int
 
 const (
-	AlterAddColumn    AlterAction = iota
+	AlterAddColumn AlterAction = iota
 	AlterDropColumn
 	AlterAlterColumn
 	AlterAddPrimaryKey

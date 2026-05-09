@@ -43,7 +43,7 @@ func (CmdStmt) stmt() {}
 type SqlDialect string
 
 const (
-	DialectJosefina   SqlDialect = "JOSEFINA"    // default, PostgreSQL-compatible
+	DialectJosefina   SqlDialect = "JOSEFINA" // default, PostgreSQL-compatible
 	DialectPostgreSQL SqlDialect = "POSTGRESQL"
 	DialectMySQL      SqlDialect = "MYSQL"
 	DialectOracle     SqlDialect = "ORACLE"

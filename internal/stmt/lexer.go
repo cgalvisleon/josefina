@@ -11,16 +11,16 @@ type tokenType int
 const (
 	// Control
 	tokEOF   tokenType = iota
-	tokError            // lexer error
+	tokError           // lexer error
 	// Literals
-	tokIdent    // unquoted identifier or keyword
-	tokQIdent   // "quoted identifier"
-	tokString   // 'string literal'
-	tokDollar   // $$dollar-quoted$$
-	tokInteger  // 42
-	tokFloat    // 3.14
-	tokBoolean  // TRUE / FALSE (resolved from tokIdent)
-	tokNull     // NULL (resolved from tokIdent)
+	tokIdent   // unquoted identifier or keyword
+	tokQIdent  // "quoted identifier"
+	tokString  // 'string literal'
+	tokDollar  // $$dollar-quoted$$
+	tokInteger // 42
+	tokFloat   // 3.14
+	tokBoolean // TRUE / FALSE (resolved from tokIdent)
+	tokNull    // NULL (resolved from tokIdent)
 	// Punctuation
 	tokLParen    // (
 	tokRParen    // )
@@ -35,14 +35,14 @@ const (
 	tokSlash     // /
 	tokPercent   // %
 	// Comparison operators
-	tokEq     // =
-	tokNeq    // <> or !=
-	tokLt     // <
-	tokLtEq   // <=
-	tokGt     // >
-	tokGtEq   // >=
-	tokLike   // LIKE  (resolved from tokIdent)
-	tokILike  // ILIKE (resolved from tokIdent)
+	tokEq    // =
+	tokNeq   // <> or !=
+	tokLt    // <
+	tokLtEq  // <=
+	tokGt    // >
+	tokGtEq  // >=
+	tokLike  // LIKE  (resolved from tokIdent)
+	tokILike // ILIKE (resolved from tokIdent)
 )
 
 // keywords maps uppercase SQL keywords to their resolved token type.

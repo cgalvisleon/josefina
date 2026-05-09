@@ -23,14 +23,14 @@ const (
 )
 
 type Session struct {
-	CreatedAt  time.Time        `json:"created_at"`
-	ID         string           `json:"id"`
-	Username   string           `json:"username"`
-	Address    string           `json:"address"`
-	Status     Status           `json:"status"`
-	Type       TpConnection     `json:"type"`
-	Database   string           `json:"database"`
-	SqlDialect stmt.SqlDialect  `json:"sql_dialect"`
+	CreatedAt  time.Time       `json:"created_at"`
+	ID         string          `json:"id"`
+	Username   string          `json:"username"`
+	Address    string          `json:"address"`
+	Status     Status          `json:"status"`
+	Type       TpConnection    `json:"type"`
+	Database   string          `json:"database"`
+	SqlDialect stmt.SqlDialect `json:"sql_dialect"`
 }
 
 /**
