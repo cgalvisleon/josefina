@@ -6,7 +6,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
-	"github.com/cgalvisleon/josefina/internal/stmt"
+	"github.com/cgalvisleon/josefina/internal/stmt/postgres"
 )
 
 const dataPath = "./data/test"
@@ -290,6 +290,55 @@ func run() error {
 	}
 	count, _ = users.Count()
 	logs.Infof("users count after bulk: %d", count)
+
+	// ── Transaction: commit ───────────────────────────────────────────────────
+	section("Transaction COMMIT — insert two users atomically")
+	beforeTx, _ := users.Count()
+	if _, err := stmt.ExecSQL(db, `
+		BEGIN;
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('tx_user1', 'tx_user1', 'tx1@example.com', 28, TRUE);
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('tx_user2', 'tx_user2', 'tx2@example.com', 32, TRUE);
+		COMMIT;
+	`); err != nil {
+		logs.Errorf("transaction commit: %v", err)
+	}
+	afterTx, _ := users.Count()
+	logs.Infof("users before tx: %d  after commit: %d  (diff=%d)", beforeTx, afterTx, afterTx-beforeTx)
+
+	// ── Transaction: explicit rollback ────────────────────────────────────────
+	section("Transaction ROLLBACK — insert should not persist")
+	beforeRb, _ := users.Count()
+	if _, err := stmt.ExecSQL(db, `
+		BEGIN;
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('ghost', 'ghost', 'ghost@example.com', 99, TRUE);
+		ROLLBACK;
+	`); err != nil {
+		logs.Errorf("transaction rollback: %v", err)
+	}
+	afterRb, _ := users.Count()
+	ghostItems, _ := stmt.ExecSQL(db, `SELECT * FROM apps.users WHERE username = 'ghost'`)
+	logs.Infof("users before: %d  after rollback: %d  ghost found: %v",
+		beforeRb, afterRb, ghostItems.Count > 0)
+
+	// ── Transaction: cascaded insert user + order ─────────────────────────────
+	section("Transaction COMMIT — insert user + order in one block")
+	if _, err := stmt.ExecSQL(db, `
+		BEGIN;
+		INSERT INTO apps.users (_idx, username, email, age, active) VALUES
+			('zara', 'zara', 'zara@example.com', 26, TRUE);
+		INSERT INTO apps.orders (username, product, amount) VALUES
+			('zara', 'tablet', 499.99);
+		COMMIT;
+	`); err != nil {
+		logs.Errorf("transaction cascaded: %v", err)
+	} else {
+		zaraUser, _ := stmt.ExecSQL(db, `SELECT * FROM apps.users WHERE username = 'zara'`)
+		zaraOrders, _ := stmt.ExecSQL(db, `SELECT * FROM apps.orders WHERE username = 'zara'`)
+		logs.Infof("zara user found: %v  zara orders: %d", zaraUser.Count > 0, zaraOrders.Count)
+	}
 
 	section("done")
 	return nil

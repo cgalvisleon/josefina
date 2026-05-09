@@ -13,7 +13,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/jdb"
-	"github.com/cgalvisleon/josefina/internal/stmt"
+	stmt "github.com/cgalvisleon/josefina/internal/stmt/postgres"
 )
 
 // CLI is an interactive psql-style terminal backed directly by the jdb engine.
