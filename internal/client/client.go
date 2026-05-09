@@ -19,7 +19,12 @@ func New() (*Service, error) {
 	password := envar.GetStr("PASSWORD", "")
 	database := envar.GetStr("DATABASE", "")
 
-	console, err := cli.New(dataPath, username, password, database)
+	console, err := cli.New(cli.NodeParams{
+		DataPath: dataPath,
+		Username: username,
+		Password: password,
+		Database: database,
+	})
 	if err != nil {
 		return nil, err
 	}

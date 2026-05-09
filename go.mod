@@ -3,8 +3,8 @@ module github.com/cgalvisleon/josefina
 go 1.23.0
 
 require (
-	github.com/cgalvisleon/et v1.0.14
-	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3
+	github.com/cgalvisleon/et v1.0.22
+	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
 	github.com/go-chi/chi/v5 v5.2.1
 )
 

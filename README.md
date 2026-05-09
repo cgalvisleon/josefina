@@ -7,7 +7,7 @@ Custom distributed document database engine written in Go with SQL-like query sy
 ```bash
 goenv local 1.23.0
 go mod init github.com/cgalvisleon/josefina
-go get github.com/cgalvisleon/et@v1.0.14
+go get github.com/cgalvisleon/et@v1.0.22
 go get github.com/gorilla/websocket
 git remote add origin https://github.com/cgalvisleon/josefina.git
 ```
@@ -74,16 +74,16 @@ model, err := db.NewModel("public", "user", false, 1)
 
 #### `Field` — `TypeData` constants
 
-| Constant | Description |
-|---|---|
-| `TpKey` | String identifier (UUID, etc.) |
-| `TpText` / `TpMemo` | Short / long text |
-| `TpInt` / `TpAutoIncrement` | Integer |
-| `TpFloat` | Floating point |
-| `TpBoolean` | Boolean |
-| `TpDateTime` | Timestamp (RFC3339) |
-| `TpJson` | Nested JSON object |
-| `TpAny` | Any value |
+| Constant                    | Description                    |
+| --------------------------- | ------------------------------ |
+| `TpKey`                     | String identifier (UUID, etc.) |
+| `TpText` / `TpMemo`         | Short / long text              |
+| `TpInt` / `TpAutoIncrement` | Integer                        |
+| `TpFloat`                   | Floating point                 |
+| `TpBoolean`                 | Boolean                        |
+| `TpDateTime`                | Timestamp (RFC3339)            |
+| `TpJson`                    | Nested JSON object             |
+| `TpAny`                     | Any value                      |
 
 ---
 
@@ -164,13 +164,13 @@ pks = model.RangeIndex("age", catalog.KeyInt(25), catalog.IndexKey{}, true) // a
 
 #### Comparison operators
 
-| Method | Operator | Example |
-|---|---|---|
-| `GTIndex(field, key, asc)` | `>` | `model.GTIndex("age", KeyInt(28), true)` |
-| `GTEIndex(field, key, asc)` | `>=` | `model.GTEIndex("age", KeyInt(25), true)` |
-| `LTIndex(field, key, asc)` | `<` | `model.LTIndex("age", KeyInt(30), true)` |
-| `LTEIndex(field, key, asc)` | `<=` | `model.LTEIndex("age", KeyInt(30), true)` |
-| `NotEqualIndex(field, key)` | `!=` | `model.NotEqualIndex("name", KeyString("Bob"))` |
+| Method                      | Operator | Example                                         |
+| --------------------------- | -------- | ----------------------------------------------- |
+| `GTIndex(field, key, asc)`  | `>`      | `model.GTIndex("age", KeyInt(28), true)`        |
+| `GTEIndex(field, key, asc)` | `>=`     | `model.GTEIndex("age", KeyInt(25), true)`       |
+| `LTIndex(field, key, asc)`  | `<`      | `model.LTIndex("age", KeyInt(30), true)`        |
+| `LTEIndex(field, key, asc)` | `<=`     | `model.LTEIndex("age", KeyInt(30), true)`       |
+| `NotEqualIndex(field, key)` | `!=`     | `model.NotEqualIndex("name", KeyString("Bob"))` |
 
 ---
 
@@ -178,14 +178,14 @@ pks = model.RangeIndex("age", catalog.KeyInt(25), catalog.IndexKey{}, true) // a
 
 Keys carry type information so ordering is always correct (numeric for numbers, lexicographic for strings).
 
-| Constructor | Go type | Ordering |
-|---|---|---|
-| `KeyString(v string)` | string | Lexicographic |
-| `KeyInt(v int64)` | int64 | Numeric |
-| `KeyFloat(v float64)` | float64 | Numeric |
-| `KeyBool(v bool)` | bool | false < true |
-| `KeyDateTime(v time.Time)` | time.Time | Chronological |
-| `KeyFromAny(v any)` | any (JSON) | Auto-detect |
+| Constructor                | Go type    | Ordering      |
+| -------------------------- | ---------- | ------------- |
+| `KeyString(v string)`      | string     | Lexicographic |
+| `KeyInt(v int64)`          | int64      | Numeric       |
+| `KeyFloat(v float64)`      | float64    | Numeric       |
+| `KeyBool(v bool)`          | bool       | false < true  |
+| `KeyDateTime(v time.Time)` | time.Time  | Chronological |
+| `KeyFromAny(v any)`        | any (JSON) | Auto-detect   |
 
 `KeyFromAny` auto-detects the type from JSON-unmarshalled values (`float64` → `KeyInt` for whole numbers, RFC3339 strings → `KeyDateTime`).
 
