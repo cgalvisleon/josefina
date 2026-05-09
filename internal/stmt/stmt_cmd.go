@@ -36,3 +36,23 @@ type CmdStmt struct {
 }
 
 func (CmdStmt) stmt() {}
+
+// ── SQL dialect ───────────────────────────────────────────────────────────────
+
+// SqlDialect identifies the SQL output dialect for a session.
+type SqlDialect string
+
+const (
+	DialectJosefina   SqlDialect = "JOSEFINA"    // default, PostgreSQL-compatible
+	DialectPostgreSQL SqlDialect = "POSTGRESQL"
+	DialectMySQL      SqlDialect = "MYSQL"
+	DialectOracle     SqlDialect = "ORACLE"
+	DialectSQLServer  SqlDialect = "SQLSERVER"
+)
+
+// SetSqlStateStmt: SET SQL STATE <dialect> — switches the session SQL dialect.
+type SetSqlStateStmt struct {
+	Dialect SqlDialect
+}
+
+func (SetSqlStateStmt) stmt() {}

@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	envar.SetStrByArg("-host", "HOST", "")
 	envar.SetStrByArg("-data", "DATA_PATH", "./data")
 	envar.SetStrByArg("-user", "USERNAME", "admin")
 	envar.SetStrByArg("-password", "PASSWORD", "")

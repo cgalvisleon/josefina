@@ -195,6 +195,15 @@ func (s *Node) Autentication(token string) (*Session, error) {
 }
 
 /**
+* Mount: registers a TCP service handler on this node's TCP transport.
+* @param service tcp.Service
+* @return error
+**/
+func (s *Node) Mount(service tcp.Service) error {
+	return s.tcp.Mount(service)
+}
+
+/**
 * Start: Starts the TCP listener for this node.
 * @return error
 **/

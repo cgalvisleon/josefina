@@ -22,7 +22,7 @@ func NewServer(port int) (*Server, error) {
 		return srv, nil
 	}
 
-	n, err := jdb.Load(port)
+	n, err := jdb.Load(jdb.NodeParams{Port: port})
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +41,11 @@ func NewServer(port int) (*Server, error) {
 func (s *Server) Start() error {
 	if s.started {
 		return nil
+	}
+
+	qs := newQueryService(s)
+	if err := s.Node.Mount(qs); err != nil {
+		return err
 	}
 
 	err := s.Node.Start()

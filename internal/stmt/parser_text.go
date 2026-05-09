@@ -207,6 +207,11 @@ func (p *Parser) parseStmt() (Stmt, error) {
 			return p.parseSetSerie()
 		case "CACHE":
 			return p.parseSetCache()
+		case "SQL":
+			if err := p.expectKeyword("STATE"); err != nil {
+				return nil, err
+			}
+			return p.parseSetSqlState()
 		default:
 			return nil, p.errf("unknown SET target: " + obj)
 		}

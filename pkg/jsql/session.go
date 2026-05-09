@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
 type TpConnection int
@@ -22,13 +23,14 @@ const (
 )
 
 type Session struct {
-	CreatedAt time.Time    `json:"created_at"`
-	ID        string       `json:"id"`
-	Username  string       `json:"username"`
-	Address   string       `json:"address"`
-	Status    Status       `json:"status"`
-	Type      TpConnection `json:"type"`
-	Database  string       `json:"database"`
+	CreatedAt  time.Time        `json:"created_at"`
+	ID         string           `json:"id"`
+	Username   string           `json:"username"`
+	Address    string           `json:"address"`
+	Status     Status           `json:"status"`
+	Type       TpConnection     `json:"type"`
+	Database   string           `json:"database"`
+	SqlDialect stmt.SqlDialect  `json:"sql_dialect"`
 }
 
 /**
@@ -38,12 +40,13 @@ type Session struct {
 **/
 func NewSession(username, address string, tp TpConnection, database string) *Session {
 	return &Session{
-		CreatedAt: time.Now(),
-		ID:        reg.ULID(),
-		Username:  username,
-		Address:   address,
-		Status:    Connected,
-		Type:      tp,
-		Database:  database,
+		CreatedAt:  time.Now(),
+		ID:         reg.ULID(),
+		Username:   username,
+		Address:    address,
+		Status:     Connected,
+		Type:       tp,
+		Database:   database,
+		SqlDialect: stmt.DialectJosefina,
 	}
 }
