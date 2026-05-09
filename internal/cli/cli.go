@@ -16,6 +16,14 @@ import (
 	stmt "github.com/cgalvisleon/josefina/internal/stmt"
 )
 
+type NodeParams struct {
+	DataPath string
+	Port     int
+	Username string
+	Password string
+	Database string
+}
+
 // CLI is an interactive psql-style terminal backed directly by the jdb engine.
 type CLI struct {
 	node     *jdb.Node
@@ -32,16 +40,15 @@ type CLI struct {
 * @param dataPath, username, password, database string
 * @return (*CLI, error)
 **/
-func New(dataPath, username, password, database string) (*CLI, error) {
-	if dataPath != "" {
-		os.Setenv("DATA_PATH", dataPath)
+func New(params NodeParams) (*CLI, error) {
+	if params.DataPath != "" {
+		os.Setenv("DATA_PATH", params.DataPath)
 	}
 
-	if _, err := jdb.Load(); err != nil {
-		return nil, err
-	}
-
-	node, err := jdb.GetNode()
+	node, err := jdb.Load(jdb.NodeParams{
+		Port: params.Port,
+		Path: params.DataPath,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +59,12 @@ func New(dataPath, username, password, database string) (*CLI, error) {
 		return nil, err
 	}
 	if existing.Count == 0 {
-		if _, err = node.CreateUser(username, password); err != nil {
-			return nil, fmt.Errorf("bootstrap: could not create user %q: %w", username, err)
+		if _, err = node.CreateUser(params.Username, params.Password); err != nil {
+			return nil, fmt.Errorf("bootstrap: could not create user %q: %w", params.Username, err)
 		}
-		fmt.Printf("Bootstrap: user %q created.\n", username)
+		fmt.Printf("Bootstrap: user %q created.\n", params.Username)
 	} else {
-		user, err := node.GetUser(username, password)
+		user, err := node.GetUser(params.Username, params.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -69,17 +76,17 @@ func New(dataPath, username, password, database string) (*CLI, error) {
 	c := &CLI{
 		node:     node,
 		dbName:   "josefina",
-		username: username,
+		username: params.Username,
 		reader:   bufio.NewReader(os.Stdin),
 	}
 
-	if database != "" {
-		db, dbErr := node.GetDb(database)
+	if params.Database != "" {
+		db, dbErr := node.GetDb(params.Database)
 		if dbErr != nil {
-			fmt.Printf("Warning: database %q not found; use \\c <db> to connect.\n", database)
+			fmt.Printf("Warning: database %q not found; use \\c <db> to connect.\n", params.Database)
 		} else {
 			c.db = db
-			c.dbName = database
+			c.dbName = params.Database
 		}
 	}
 

@@ -20,6 +20,14 @@ const (
 )
 
 /**
+* NodeParams: Parameters for creating a new Node
+**/
+type NodeParams struct {
+	Port int    `json:"port"`
+	Path string `json:"path"`
+}
+
+/**
 * Node: Runtime instance of the database engine; owns all databases, sessions, and the TCP transport.
 **/
 type Node struct {
@@ -41,26 +49,29 @@ var (
 
 /**
 * Load: Load the node. Accepts an optional TCP port; falls back to $PORT or 1305.
-* @param port ...int
+* @param params NodeParams
 * @return (*Node, error)
 **/
-func Load(port ...int) (*Node, error) {
-	p := envar.GetInt("PORT", 1305)
-	if len(port) > 0 && port[0] > 0 {
-		p = port[0]
+func Load(params NodeParams) (*Node, error) {
+	if params.Port == 0 {
+		params.Port = envar.GetInt("PORT", 1305)
 	}
+
 	node = &Node{
 		Version:   version,
 		DBS:       make(map[string]*DB, 0),
 		Sessions:  make(map[string]*Session, 0),
 		muDbs:     &sync.RWMutex{},
 		muSession: &sync.RWMutex{},
-		tcp:       tcp.NewNode(p),
+		tcp:       tcp.NewNode(params.Port),
 	}
 
 	var err error
 	name := sysDb
-	path := envar.GetStr("DATA_PATH", "./data")
+	path := params.Path
+	if path == "" {
+		path = envar.GetStr("DATA_PATH", "./data")
+	}
 	node.catalog, err = NewDb(path, name)
 	if err != nil {
 		return nil, err
@@ -76,17 +87,6 @@ func Load(port ...int) (*Node, error) {
 		return nil, err
 	}
 
-	return node, nil
-}
-
-/**
-* GetNode: Returns the singleton node instance. Must be called after Load.
-* @return (*Node, error)
-**/
-func GetNode() (*Node, error) {
-	if node == nil {
-		return nil, errors.New(msg.MSG_NODE_IS_NIL)
-	}
 	return node, nil
 }
 
