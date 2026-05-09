@@ -10,6 +10,7 @@ func main() {
 	envar.SetIntByArg("-http", "HTTP", 3500)
 	envar.SetBoolByArg("-strict", "IS_STRICT", false)
 
-	srv := serv.New()
+	port := envar.GetInt("PORT", 1377)
+	srv := serv.New(port)
 	srv.Start()
 }

@@ -34,6 +34,8 @@ type Node struct {
 	Version   string              `json:"version"`
 	DBS       map[string]*DB      `json:"dbs"`
 	Sessions  map[string]*Session `json:"-"`
+	Port      int                 `json:"port"`
+	Path      string              `json:"path"`
 	muDbs     *sync.RWMutex       `json:"-"`
 	muSession *sync.RWMutex       `json:"-"`
 	catalog   *DB                 `json:"-"`
@@ -61,26 +63,11 @@ func Load(params NodeParams) (*Node, error) {
 		Version:   version,
 		DBS:       make(map[string]*DB, 0),
 		Sessions:  make(map[string]*Session, 0),
+		Port:      params.Port,
+		Path:      params.Path,
 		muDbs:     &sync.RWMutex{},
 		muSession: &sync.RWMutex{},
 		tcp:       tcp.NewNode(params.Port),
-	}
-
-	var err error
-	name := sysDb
-	path := params.Path
-	if path == "" {
-		path = envar.GetStr("DATA_PATH", "./data")
-	}
-	node.catalog, err = NewDb(path, name)
-	if err != nil {
-		return nil, err
-	}
-
-	// The catalog DB needs its own transaction/error/cache models before any insert can run.
-	node.catalog.node = node
-	if err := node.catalog.Init(); err != nil {
-		return nil, err
 	}
 
 	if err := node.load(); err != nil {
@@ -95,6 +82,21 @@ func Load(params NodeParams) (*Node, error) {
 * @return error
 **/
 func (s *Node) load() error {
+	var err error
+	path := s.Path
+	if path == "" {
+		path = envar.GetStr("DATA_PATH", "./data")
+	}
+	s.catalog, err = NewDb(path, sysDb)
+	if err != nil {
+		return err
+	}
+
+	s.catalog.node = s
+	if err := s.catalog.Init(); err != nil {
+		return err
+	}
+
 	if err := s.loadDbs(); err != nil {
 		return err
 	}
@@ -146,6 +148,38 @@ func (s *Node) loadDbs() error {
 	}, false, 0, 0)
 
 	return nil
+}
+
+/**
+* Start: Starts the TCP listener for this node.
+* @return error
+**/
+func (s *Node) Start() error {
+	return s.tcp.Start()
+}
+
+/**
+* Close: Closes the TCP listener and stops the node.
+* @return error
+**/
+func (s *Node) Close() error {
+	return s.tcp.Close()
+}
+
+/**
+* Restart: Restarts the TCP listener for this node.
+* @return error
+**/
+func (s *Node) Restart() error {
+	if err := s.tcp.Close(); err != nil {
+		return err
+	}
+
+	if err := s.load(); err != nil {
+		return err
+	}
+
+	return s.tcp.Start()
 }
 
 /**
@@ -201,14 +235,6 @@ func (s *Node) Autentication(token string) (*Session, error) {
 **/
 func (s *Node) Mount(service tcp.Service) error {
 	return s.tcp.Mount(service)
-}
-
-/**
-* Start: Starts the TCP listener for this node.
-* @return error
-**/
-func (s *Node) Start() error {
-	return s.tcp.Start()
 }
 
 /**

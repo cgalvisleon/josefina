@@ -6,7 +6,7 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/josefina/internal/cli"
-	"github.com/cgalvisleon/josefina/pkg/jsql"
+	"github.com/cgalvisleon/josefina/internal/jsql"
 )
 
 // Starter is the common interface for both local and TCP REPL modes.

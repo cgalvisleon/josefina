@@ -4,10 +4,11 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/pkg/jsql"
+	"github.com/cgalvisleon/josefina/internal/jsql"
 )
 
 type Service struct {
+	port int
 	node *jsql.Server
 }
 
@@ -15,13 +16,18 @@ type Service struct {
 * New
 * @return *Service
 **/
-func New() *Service {
-	port := envar.GetInt("PORT", 1377)
+func New(port int) *Service {
+	if port == 0 {
+		port = envar.GetInt("PORT", 1377)
+	}
 	srv, err := jsql.NewServer(port)
 	if err != nil {
 		logs.Panic(err)
 	}
-	return &Service{node: srv}
+	return &Service{
+		port: port,
+		node: srv,
+	}
 }
 
 /**
@@ -33,4 +39,14 @@ func (s *Service) Start() {
 		return
 	}
 	utility.AppWait()
+}
+
+/**
+* Stop
+**/
+func (s *Service) Stop() {
+	if err := s.node.Close(); err != nil {
+		logs.Error(err)
+		return
+	}
 }

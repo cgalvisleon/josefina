@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cgalvisleon/josefina/internal/stmt"
-	"github.com/cgalvisleon/josefina/pkg/jsql"
+	"github.com/cgalvisleon/josefina/internal/jsql"
 )
 
 func parseOne(t *testing.T, sql string) []stmt.Stmt {
