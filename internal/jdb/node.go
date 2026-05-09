@@ -83,11 +83,10 @@ func Load(params NodeParams) (*Node, error) {
 **/
 func (s *Node) load() error {
 	var err error
-	path := s.Path
-	if path == "" {
-		path = envar.GetStr("DATA_PATH", "./data")
+	if s.Path == "" {
+		s.Path = envar.GetStr("DATA_PATH", "./data")
 	}
-	s.catalog, err = NewDb(path, sysDb)
+	s.catalog, err = NewDb(s.Path, sysDb)
 	if err != nil {
 		return err
 	}
@@ -264,11 +263,10 @@ func (s *Node) CreateDb(name string) (*DB, error) {
 	_, exists := s.DBS[name]
 	s.muDbs.RUnlock()
 	if exists {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND)
+		return nil, fmt.Errorf(msg.MSG_DB_EXISTS)
 	}
 
-	path := envar.GetStr("DATA_PATH", "./data")
-	db, err := NewDb(path, name)
+	db, err := NewDb(s.Path, name)
 	if err != nil {
 		return nil, err
 	}
@@ -332,4 +330,20 @@ func (s *Node) SignInByPassword(username, password, database, address string, tp
 	}
 
 	return result, nil
+}
+
+/**
+* SetPort: Sets the port
+* @param port int
+**/
+func (s *Node) SetPort(port int) {
+	s.Port = port
+}
+
+/**
+* SetPath: Sets the path
+* @param path string
+**/
+func (s *Node) SetPath(path string) {
+	s.Path = path
 }
