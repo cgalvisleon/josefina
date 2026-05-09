@@ -6,7 +6,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/jdb"
-	"github.com/cgalvisleon/josefina/internal/stmt/postgres"
+	"github.com/cgalvisleon/josefina/internal/stmt"
 )
 
 const dataPath = "./data/test"
