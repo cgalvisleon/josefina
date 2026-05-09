@@ -65,6 +65,9 @@ func execOne(db *jdb.DB, st Stmt) (et.Items, error) {
 		return execDropTable(db, s)
 	case AlterTableStmt:
 		return execAlterTable(db, s)
+	// ── Transactions ──────────────────────────────────────────────────────────
+	case TxStmt:
+		return execTx(db, s)
 	// ── Cache ─────────────────────────────────────────────────────────────────
 	case SetCacheStmt:
 		return execSetCache(db, s)
@@ -306,6 +309,120 @@ func execAlterTable(db *jdb.DB, s AlterTableStmt) (et.Items, error) {
 	}
 
 	return et.Items{}, nil
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+
+/**
+* execTx: executes a TxStmt as an atomic unit using a shared jdb.Tx.
+* On any DML error, or when s.Rollback is true, all changes are rolled back.
+* @param db *jdb.DB
+* @param s TxStmt
+* @return et.Items, error
+**/
+func execTx(db *jdb.DB, s TxStmt) (et.Items, error) {
+	tx, _ := jdb.GetTx(db, nil)
+
+	result := et.Items{}
+	for _, st := range s.Stmts {
+		items, err := execOneWithTx(db, tx, st)
+		if err != nil {
+			tx.Rollback()
+			return et.Items{}, err
+		}
+		result.AddMany(items.Result)
+	}
+
+	if s.Rollback {
+		return et.Items{}, tx.Rollback()
+	}
+
+	_, err := tx.Commit()
+	if err != nil {
+		return et.Items{}, err
+	}
+	return result, nil
+}
+
+/**
+* execOneWithTx: dispatches a single DML statement within an existing transaction.
+* DDL and cache statements are not allowed inside a transaction block.
+* @param db *jdb.DB
+* @param tx *jdb.Tx
+* @param st Stmt
+* @return et.Items, error
+**/
+func execOneWithTx(db *jdb.DB, tx *jdb.Tx, st Stmt) (et.Items, error) {
+	switch s := st.(type) {
+	case SelectStmt:
+		return execSelect(db, s)
+	case InsertStmt:
+		return execInsertTx(db, tx, s)
+	case UpsertStmt:
+		return execUpsertTx(db, tx, s)
+	case UpdateStmt:
+		return execUpdateTx(db, tx, s)
+	case DeleteStmt:
+		return execDeleteTx(db, tx, s)
+	default:
+		return et.Items{}, fmt.Errorf("executor: statement type %T is not allowed inside a transaction", st)
+	}
+}
+
+func execInsertTx(db *jdb.DB, tx *jdb.Tx, s InsertStmt) (et.Items, error) {
+	model, err := db.GetModel(s.Table.Schema, s.Table.Name)
+	if err != nil {
+		return et.Items{}, err
+	}
+	result := et.Items{}
+	for _, row := range s.Rows {
+		items, err := model.Insert(et.Json(row)).ExecTx(tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+		result.AddMany(items.Result)
+	}
+	return result, nil
+}
+
+func execUpsertTx(db *jdb.DB, tx *jdb.Tx, s UpsertStmt) (et.Items, error) {
+	model, err := db.GetModel(s.Table.Schema, s.Table.Name)
+	if err != nil {
+		return et.Items{}, err
+	}
+	result := et.Items{}
+	for _, row := range s.Rows {
+		items, err := model.Upsert(et.Json(row)).ExecTx(tx)
+		if err != nil {
+			return et.Items{}, err
+		}
+		result.AddMany(items.Result)
+	}
+	return result, nil
+}
+
+func execUpdateTx(db *jdb.DB, tx *jdb.Tx, s UpdateStmt) (et.Items, error) {
+	model, err := db.GetModel(s.Table.Schema, s.Table.Name)
+	if err != nil {
+		return et.Items{}, err
+	}
+	data := make(et.Json, len(s.Assignments))
+	for _, a := range s.Assignments {
+		data[a.Column] = a.Value
+	}
+	cmd := model.Update(data)
+	applyCommandWhere(cmd, s.Where)
+	return cmd.ExecTx(tx)
+}
+
+func execDeleteTx(db *jdb.DB, tx *jdb.Tx, s DeleteStmt) (et.Items, error) {
+	model, err := db.GetModel(s.Table.Schema, s.Table.Name)
+	if err != nil {
+		return et.Items{}, err
+	}
+	cmd := model.Delete()
+	applyCommandWhere(cmd, s.Where)
+	return cmd.ExecTx(tx)
 }
 
 // ── Cache ─────────────────────────────────────────────────────────────────────

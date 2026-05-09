@@ -45,6 +45,5 @@ func (s *Router) Routes() http.Handler {
 	router.Private(r, router.Post, "/jquery", s.jQuery, s.PackageName, s.PackagePath, host)
 	router.Private(r, router.Post, "/query", s.query, s.PackageName, s.PackagePath, host)
 
-	middleware.SetServiceName(s.PackageName)
 	return r
 }

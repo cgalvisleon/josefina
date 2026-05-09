@@ -6,6 +6,34 @@ import (
 	"strings"
 )
 
+/**
+* parseTxBlock: collects DML statements after a BEGIN until COMMIT or ROLLBACK.
+* @return TxStmt, error
+**/
+func (p *Parser) parseTxBlock() (TxStmt, error) {
+	var stmts []Stmt
+	for {
+		p.skipSeps()
+		if p.cur.typ == tokEOF {
+			return TxStmt{}, fmt.Errorf("unterminated transaction: expected COMMIT or ROLLBACK")
+		}
+		st, err := p.parseStmt()
+		if err != nil {
+			return TxStmt{}, err
+		}
+		switch st.(type) {
+		case CommitStmt:
+			return TxStmt{Stmts: stmts, Rollback: false}, nil
+		case RollbackStmt:
+			return TxStmt{Stmts: stmts, Rollback: true}, nil
+		case BeginStmt:
+			return TxStmt{}, fmt.Errorf("nested BEGIN is not supported")
+		default:
+			stmts = append(stmts, st)
+		}
+	}
+}
+
 type Parser struct {
 	l   *lexer
 	cur token
@@ -34,7 +62,18 @@ func ParseText(input string) ([]Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, st)
+		switch st.(type) {
+		case BeginStmt:
+			tx, err := p.parseTxBlock()
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, tx)
+		case CommitStmt, RollbackStmt:
+			return nil, fmt.Errorf("unexpected %T outside a transaction at %d", st, p.cur.pos)
+		default:
+			result = append(result, st)
+		}
 	}
 }
 
@@ -56,6 +95,13 @@ func (p *Parser) parseStmt() (Stmt, error) {
 	}
 
 	switch strings.ToUpper(verb) {
+	// ── Transactions ──────────────────────────────────────────────────────────
+	case "BEGIN":
+		return p.parseBegin()
+	case "COMMIT":
+		return p.parseCommit()
+	case "ROLLBACK":
+		return p.parseRollback()
 	// ── SQL DML ───────────────────────────────────────────────────────────────
 	case "SELECT":
 		return p.parseSelect()
