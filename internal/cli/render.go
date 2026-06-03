@@ -18,10 +18,8 @@ func printBanner(username, db string) {
 	lg.Color(w, lg.Blue, "\n║   Josefina Database Engine        ║")
 	lg.Color(w, lg.Blue, "\n║   Type \\help for commands         ║")
 	lg.Color(w, lg.Blue, "\n╚══════════════════════════════════╝\n")
-	println(*w)
-	info := fmt.Sprintf("Connected as %s%s%s to %s%s%s\n",
-		lg.Yellow, username, lg.Reset, lg.Yellow, db, lg.Reset)
-	fmt.Print(info)
+	colorPrint(*w)
+	fmt.Printf("Connected as \033[33m%s\033[0m to \033[33m%s\033[0m\n", username, db)
 }
 
 /**
@@ -30,7 +28,7 @@ func printBanner(username, db string) {
 **/
 func printError(message string) {
 	w := lg.Color(nil, lg.Red, "ERROR:  "+message)
-	println(*w)
+	colorPrint(*w)
 }
 
 /**
@@ -39,7 +37,7 @@ func printError(message string) {
 **/
 func printInfo(message string) {
 	w := lg.Color(nil, lg.Cyan, message)
-	println(*w)
+	colorPrint(*w)
 }
 
 /**
@@ -48,7 +46,13 @@ func printInfo(message string) {
 **/
 func printSuccess(message string) {
 	w := lg.Color(nil, lg.Green, message)
-	println(*w)
+	colorPrint(*w)
+}
+
+// colorPrint writes a pre-colored string to stdout and appends a true ANSI
+// reset (\033[0m) so that the terminal color never bleeds into the next line.
+func colorPrint(s string) {
+	fmt.Printf("%s\033[0m\n", s)
 }
 
 /**
@@ -56,7 +60,7 @@ func printSuccess(message string) {
 **/
 func printHelp() {
 	w := lg.Color(nil, lg.Yellow, "\nAvailable commands:")
-	println(*w)
+	colorPrint(*w)
 
 	cmds := [][]string{
 		{`\l`, "List databases"},
@@ -76,7 +80,7 @@ func printHelp() {
 	printTable(rows)
 
 	w = lg.Color(nil, lg.Yellow, "\nEnd SQL statements with ';'\n")
-	println(*w)
+	colorPrint(*w)
 }
 
 // ── ASCII table ───────────────────────────────────────────────────────────────

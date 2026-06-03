@@ -9,35 +9,39 @@ import (
 	lg "github.com/cgalvisleon/et/stdrout"
 )
 
+// colorPrint writes a pre-colored string to stdout and appends a true ANSI
+// reset (\033[0m) so that the terminal color never bleeds into the next line.
+func colorPrint(s string) {
+	fmt.Printf("%s\033[0m\n", s)
+}
+
 func printBanner(username, host, db string) {
 	w := lg.Color(nil, lg.Blue, "\n╔══════════════════════════════════╗")
 	lg.Color(w, lg.Blue, "\n║   Josefina Database Engine        ║")
 	lg.Color(w, lg.Blue, "\n║   Type \\help for commands         ║")
 	lg.Color(w, lg.Blue, "\n╚══════════════════════════════════╝\n")
-	println(*w)
-	info := fmt.Sprintf("Connected as %s%s%s to %s%s%s @ %s\n",
-		lg.Yellow, username, lg.Reset, lg.Yellow, db, lg.Reset, host)
-	fmt.Print(info)
+	colorPrint(*w)
+	fmt.Printf("Connected as \033[33m%s\033[0m to \033[33m%s\033[0m @ %s\n", username, db, host)
 }
 
 func printError(message string) {
 	w := lg.Color(nil, lg.Red, "ERROR:  "+message)
-	println(*w)
+	colorPrint(*w)
 }
 
 func printInfo(message string) {
 	w := lg.Color(nil, lg.Cyan, message)
-	println(*w)
+	colorPrint(*w)
 }
 
 func printSuccess(message string) {
 	w := lg.Color(nil, lg.Green, message)
-	println(*w)
+	colorPrint(*w)
 }
 
 func printHelp() {
 	w := lg.Color(nil, lg.Yellow, "\nAvailable commands:")
-	println(*w)
+	colorPrint(*w)
 	cmds := [][]string{
 		{`\c <db>`, "Connect to (switch) database"},
 		{`SET SQL STATE <dialect>`, "Switch SQL dialect (JOSEFINA, POSTGRESQL, MYSQL, ORACLE, SQLSERVER)"},
@@ -51,7 +55,7 @@ func printHelp() {
 	rows = append(rows, cmds...)
 	printTable(rows)
 	w = lg.Color(nil, lg.Yellow, "\nEnd SQL statements with ';'\n")
-	println(*w)
+	colorPrint(*w)
 }
 
 func printTable(rows [][]string) {

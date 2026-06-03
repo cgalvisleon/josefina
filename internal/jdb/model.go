@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/js"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/et/vm"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -599,15 +599,11 @@ func (s *Model) Count() (int, error) {
 **/
 func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error {
 	name := fmt.Sprintf("trigger_%s", trigger.Name)
-	vm, err := js.New(name)
-	if err != nil {
-		return err
-	}
-
-	vm.Set("Old", old)
-	vm.Set("New", new)
-	vm.Set("Tx", tx)
-	_, err = vm.Run(string(trigger.Definition))
+	v := vm.New(name)
+	v.Set("Old", old)
+	v.Set("New", new)
+	v.Set("Tx", tx)
+	_, err := v.Run(string(trigger.Definition))
 	if err != nil {
 		return err
 	}
