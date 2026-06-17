@@ -62,7 +62,7 @@ func (s *DB) loadSchemas() error {
 type Schema struct {
 	Database string            `json:"database"` // Database name
 	Name     string            `json:"name"`     // Schema name
-	models   map[string]*Model `json:"-"`        // Models
+	Models   map[string]*Model `json:"models"`   // Models
 	db       *DB               `json:"-"`        // Database
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
@@ -116,6 +116,43 @@ func (s *Schema) ToJson() (et.Json, error) {
 }
 
 /**
+* addModel: Adds a model to the schema
+* @param model *Model
+**/
+func (s *Schema) addModel(model *Model) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Models[model.Name] = model
+}
+
+/**
+* getModel: Returns a model from the schema
+* @param name string
+* @return *Model, bool
+**/
+func (s *Schema) getModel(name string) (*Model, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	model, exists := s.Models[name]
+	return model, exists
+}
+
+/**
+* removeModel: Removes a model from the schema
+* @param name string
+* @return bool
+**/
+func (s *Schema) removeModel(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, exists := s.Models[name]
+	if exists {
+		delete(s.Models, name)
+	}
+	return exists
+}
+
+/**
 * newModel: Returns a new model
 * @param name string, isCore bool, version int
 * @return *Model
@@ -126,10 +163,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 	}
 
 	name = store.Normalize(name)
-
-	s.mu.RLock()
-	result, exists := s.models[name]
-	s.mu.RUnlock()
+	result, exists := s.getModel(name)
 	if exists {
 		return result, nil
 	}
@@ -141,9 +175,7 @@ func (s *Schema) newModel(name string, isCore bool, version int) (*Model, error)
 		return nil, err
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.models[result.Name] = result
+	s.addModel(result)
 
 	return result, nil
 }
@@ -159,7 +191,7 @@ func (s *Schema) DeleteModel(name string) error {
 
 	name = store.Normalize(name)
 
-	model, exists := s.models[name]
+	model, exists := s.Models[name]
 	if !exists {
 		return errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}

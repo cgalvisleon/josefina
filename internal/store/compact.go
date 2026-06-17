@@ -98,7 +98,7 @@ func (s *FileStore) Compact() error {
 		newRef.segment = len(newSegments) - 1
 		newIndex[id] = newRef
 		if s.isDebug {
-			logs.Debug("compacted:", s.Path, ":", s.Name, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
+			logs.Debug("compacted:", s.Path, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 
 		n++
@@ -115,10 +115,10 @@ func (s *FileStore) Compact() error {
 	oldDir := filepath.Join(s.Path, "segments.old")
 	os.RemoveAll(oldDir)
 
-	if err := os.Rename(s.PathSegments, oldDir); err != nil {
+	if err := os.Rename(s.Path, oldDir); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpDir, s.PathSegments); err != nil {
+	if err := os.Rename(tmpDir, s.Path); err != nil {
 		return err
 	}
 

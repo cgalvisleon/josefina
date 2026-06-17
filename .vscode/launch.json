@@ -47,9 +47,12 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/client",
       "args": [
-        "-host", "localhost:1377",
-        "-user", "admin",
-        "-database", "test"
+        "-host",
+        "localhost:1377",
+        "-user",
+        "admin",
+        "-database",
+        "test"
       ],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
@@ -63,11 +66,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/client",
-      "args": [
-        "-user", "admin",
-        "-password", "admin",
-        "-database", "test"
-      ],
+      "args": ["-user", "admin", "-password", "admin", "-database", "test"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
       "env": { "GOTOOLCHAIN": "auto" },
@@ -84,6 +83,20 @@
       "envFile": "${workspaceFolder}/.env",
       "env": { "GOTOOLCHAIN": "auto" },
       "dlvFlags": ["--check-go-version=false"]
+    },
+    // ── Store ───────────────────────────────────────────────────────────────
+    {
+      "name": "store",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/store",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "GOTOOLCHAIN": "auto"
+      }
     }
   ],
   "compounds": [

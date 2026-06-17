@@ -174,9 +174,7 @@ func (s *Model) load(schema *Schema) error {
 	s.node = schema.db.node
 	s.onPut = make([]func(*Node, string, any, Cmd) error, 0)
 	s.onRemove = make([]func(*Node, string, any) error, 0)
-	schema.mu.Lock()
-	schema.models[s.Name] = s
-	schema.mu.Unlock()
+	schema.addModel(s)
 
 	if err := s.Init(); err != nil {
 		return err
@@ -198,10 +196,45 @@ func (s *Model) Save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	err := s.db.models.Put(s.Name, s)
-	if err != nil {
-		return err
+	return s.db.models.Put(s.Name, s)
+}
+
+/**
+* Empty: Empties the model
+* @return error
+**/
+func (s *Model) Empty() error {
+	if s.IsCore {
+		return nil
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, store := range s.stores {
+		if err := store.Empty(); err != nil {
+			return err
+		}
+	}
+
+	s.Fields = make(map[string]*Field, 0)
+	s.Indexes = make([]*Index, 0)
+	s.PrimaryKeys = make([]string, 0)
+	s.ForeignKeys = make(map[string]*Detail, 0)
+	s.Unique = make([]*Index, 0)
+	s.Required = make([]*Index, 0)
+	s.Hidden = make([]string, 0)
+	s.Details = make(map[string]*Detail, 0)
+	s.Rollups = make(map[string]*Detail, 0)
+	s.Relations = make(map[string]*Detail, 0)
+	s.Calcs = make(map[string][]byte, 0)
+	s.BeforeInserts = make([]*Trigger, 0)
+	s.AfterInserts = make([]*Trigger, 0)
+	s.BeforeUpdates = make([]*Trigger, 0)
+	s.AfterUpdates = make([]*Trigger, 0)
+	s.BeforeDeletes = make([]*Trigger, 0)
+	s.AfterDeletes = make([]*Trigger, 0)
+	s.btrees = make(map[string]*BTree, 0)
 
 	return nil
 }
@@ -1036,42 +1069,6 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		}
 		return true, nil
 	}, true, 0, 0)
-}
-
-/**
-* Empty: Empties the model
-* @return error
-**/
-func (s *Model) Empty() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, store := range s.stores {
-		if err := store.Empty(); err != nil {
-			return err
-		}
-	}
-
-	s.Fields = make(map[string]*Field, 0)
-	s.Indexes = make([]*Index, 0)
-	s.PrimaryKeys = make([]string, 0)
-	s.ForeignKeys = make(map[string]*Detail, 0)
-	s.Unique = make([]*Index, 0)
-	s.Required = make([]*Index, 0)
-	s.Hidden = make([]string, 0)
-	s.Details = make(map[string]*Detail, 0)
-	s.Rollups = make(map[string]*Detail, 0)
-	s.Relations = make(map[string]*Detail, 0)
-	s.Calcs = make(map[string][]byte, 0)
-	s.BeforeInserts = make([]*Trigger, 0)
-	s.AfterInserts = make([]*Trigger, 0)
-	s.BeforeUpdates = make([]*Trigger, 0)
-	s.AfterUpdates = make([]*Trigger, 0)
-	s.BeforeDeletes = make([]*Trigger, 0)
-	s.AfterDeletes = make([]*Trigger, 0)
-	s.btrees = make(map[string]*BTree, 0)
-
-	return nil
 }
 
 /**

@@ -126,10 +126,9 @@ type Deletefn func(*FileStore, string)
 type FileStore struct {
 	ID                  string                `json:"id"`
 	Name                string                `json:"name"`
-	Path                string                `json:"path"`
 	WAL                 uint64                `json:"wal"`
 	TombStones          int                   `json:"tomb_stones"`
-	PathSegments        string                `json:"path_segments"`
+	Path                string                `json:"path"`
 	PathSnapshot        string                `json:"path_snapshot"`
 	PathCompact         string                `json:"path_compact"`
 	MaxSegment          int64                 `json:"max_segment"`
@@ -240,7 +239,7 @@ func (s *FileStore) OnDelete(fn Deletefn) {
 * @return error
 **/
 func (s *FileStore) loadSegments() error {
-	files, err := os.ReadDir(s.PathSegments)
+	files, err := os.ReadDir(s.Path)
 	if err != nil {
 		return err
 	}
@@ -251,7 +250,7 @@ func (s *FileStore) loadSegments() error {
 
 	for _, f := range files {
 		name := f.Name()
-		path := filepath.Join(s.PathSegments, name)
+		path := filepath.Join(s.Path, name)
 		st, _ := os.Stat(path)
 
 		flag := os.O_CREATE | os.O_RDWR
@@ -276,7 +275,7 @@ func (s *FileStore) loadSegments() error {
 		s.segments = append(s.segments, seg)
 		s.Size += size
 		if s.isDebug {
-			logs.Log(packageName, "load:segments:", s.Path, ":", s.Name, ":", seg.ToString())
+			logs.Log(packageName, "load:segments:", s.Path, ":", seg.ToString())
 		}
 	}
 
@@ -297,7 +296,7 @@ func (s *FileStore) loadSegments() error {
 **/
 func (s *FileStore) newSegment() error {
 	name := fmt.Sprintf("segment-%06d.dat", len(s.segments)+1)
-	path := filepath.Join(s.PathSegments, name)
+	path := filepath.Join(s.Path, name)
 
 	fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
@@ -314,7 +313,7 @@ func (s *FileStore) newSegment() error {
 	}
 	s.active = seg
 	if s.isDebug {
-		logs.Log(packageName, "new:segment:", s.Path, ":", s.Name, ":", seg.ToString())
+		logs.Log(packageName, "new:segment:", s.Path, ":", seg.ToString())
 	}
 
 	return nil
@@ -447,7 +446,7 @@ func (s *FileStore) putIndex(id string, ref *RecordRef) {
 	}
 	s.index[id] = ref
 	if s.isDebug {
-		logs.Debug("put:", s.Path, ":", s.Name, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
+		logs.Debug("put:", s.Path, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
 	}
 }
 
@@ -781,7 +780,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 
 	if s.isDebug {
 		i := len(s.index)
-		logs.Debug("deleted:", s.Path, ":", s.Name, ":total:", i, ":ID:", id)
+		logs.Debug("deleted:", s.Path, ":total:", i, ":ID:", id)
 	}
 
 	return true, nil
@@ -956,10 +955,9 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 	name = Normalize(name)
 	fs := &FileStore{
 		Name:                name,
-		Path:                filepath.Join(path, name),
-		PathSegments:        filepath.Join(path, name, "segments"),
-		PathSnapshot:        filepath.Join(path, name, "snapshot"),
-		PathCompact:         filepath.Join(path, name, "compact"),
+		Path:                filepath.Join(path, name, "segments"),
+		PathSnapshot:        filepath.Join(path, "snapshot", name),
+		PathCompact:         filepath.Join(path, "compact", name),
 		MaxSegment:          maxSegmentMG,
 		MinThresholdCompact: minThreshold,
 		mode:                mode,
@@ -974,11 +972,11 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 	fs.SyncOnWrite = syncOnWrite
 
 	if mode == ReadOnly {
-		if _, err := os.Stat(fs.PathSegments); os.IsNotExist(err) {
-			return nil, fmt.Errorf("%w: store not found at %s", errors.New(msg.MSG_STORE_NOT_FOUND), fs.PathSegments)
+		if _, err := os.Stat(fs.Path); os.IsNotExist(err) {
+			return nil, fmt.Errorf("%w: store not found at %s", errors.New(msg.MSG_STORE_NOT_FOUND), fs.Path)
 		}
 	} else {
-		if err := os.MkdirAll(fs.PathSegments, 0755); err != nil {
+		if err := os.MkdirAll(fs.Path, 0755); err != nil {
 			return nil, err
 		}
 		if err := os.MkdirAll(fs.PathSnapshot, 0755); err != nil {

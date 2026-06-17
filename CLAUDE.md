@@ -6,19 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Run server (single node)
 ```bash
-gofmt -w . && go run ./cmd/server -tcp-port 1377 -http-port 3500
+gofmt -w . && go run ./cmd/server -port 1377 -http 3500
 ```
 
 ### Run multiple server nodes (cluster)
 ```bash
-go run ./cmd/server -tcp-port 1377 -http-port 3500
-go run ./cmd/server -tcp-port 1378 -http-port 3501
-go run ./cmd/server -tcp-port 1379 -http-port 3502
+go run ./cmd/server -port 1377 -http 3500
+go run ./cmd/server -port 1378 -http 3501
+go run ./cmd/server -port 1379 -http 3502
 ```
 
 ### Run client (REPL)
 ```bash
+# Remote (TCP) mode — requires a running server
 go run ./cmd/client -host 127.0.0.1:1377 -user <username> -password <password>
+
+# Local (embedded) mode — boots jdb in-process, no server needed
+go run ./cmd/client -user admin -password secret -database mydb
+```
+
+### Test
+```bash
+go test ./internal/stmt/...          # parser + dialect tests (fast, no server needed)
+go test ./...                        # all packages
+go test -run TestName ./internal/stmt/  # single test
 ```
 
 ### Build
@@ -59,8 +70,8 @@ All doc comments for functions, methods, and types must use this block style:
 Josefina is a custom distributed document database engine written in Go with SQL-like query syntax. It has no external database dependency — all data is stored locally in its own file-based storage engine.
 
 ### Entry points
-- `cmd/server/main.go` — starts the database server (TCP + HTTP + WebSocket)
-- `cmd/client/main.go` — starts an interactive REPL client connected over TCP
+- `cmd/server/main.go` — starts the database server. Flags: `-port` (TCP, default 1377), `-http` (HTTP, default 3500), `-strict` (schema enforcement)
+- `cmd/client/main.go` — starts an interactive REPL; omit `-host` for local embedded mode
 
 ### Layer breakdown
 
@@ -71,38 +82,40 @@ Josefina is a custom distributed document database engine written in Go with SQL
 - Snapshots created on each segment roll-over
 - Config: `RELSEG_SIZE` (segment size in MB, default 128), `SYNC_ON_WRITE` (default true)
 
-**`internal/catalog`** — Schema and metadata layer
-- `DB` → `Schema` → `Model` → `Field` hierarchy
-- `Model` manages multiple named `FileStore` instances (one per index)
-- The primary index is always called `INDEX`; additional indexes store `map[string]bool` sets pointing to primary keys
-- `Trigger` structs hold JavaScript source for before/after insert/update/delete hooks (executed via `goja`)
+**`internal/jdb`** — Schema, catalog, database engine, and distributed node (all in one package)
+- `DB` → `Schema` → `Model` → `Field` hierarchy; catalog for a DB lives at `.catalog/.catalog`
+- `Model` owns a primary `FileStore` (key → document) plus one `FileStore` per secondary index and one in-memory B+ tree (`btree.go`, degree 32) per index — rebuilt from the FileStore on startup
+- `BTree` secondary indexes return `[]string` (primary keys) and support `Get`, `Range`, `GT`, `GTE`, `LT`, `LTE`, `NotEqual`
+- `Node` owns all databases, sessions, and the TCP transport (`tcp *tcp.Node`); loaded via `jdb.Load(NodeParams)`
+- `Vm` wraps `goja.Runtime` for JavaScript trigger execution in `Model` before/after insert/update/delete hooks; globals: `console`, `fetch`, `toJson`, `toString`, `getModel`
+- Core system models (dbs, models, users, sessions, errors, transactions) are stored inside a special `.catalog` database
 
-**`internal/jdb`** — Database engine and distributed node
-- `Node` embeds `*tcp.Server` and holds all runtime state (dbs, models, sessions, cache)
-- Leader/follower pattern: `Lead` handles writes and catalog mutations; `Follow` handles data replication
-- `Lead` contains all top-level operations: CreateDb, CreateUser, SignIn, SetCache, CreateSerie, SaveModel, etc.
-- Operations route to leader via TCP RPC if current node is not the leader
-- `Vm` wraps `goja.Runtime` for JavaScript trigger execution; provides `console`, `fetch`, `toJson`, `toString`, `getModel` globals
-- Core internal models (dbs, models, users, series, cache) are stored in a special `josefina` database
+**`internal/stmt`** — Query language parser and SQL dialect translators
+- Custom lexer (`lexer.go`) and per-statement parsers: `parser_ddl.go`, `parser_dml.go`, `parser_db.go`, `parser_user.go`, `parser_serie.go`, `parser_cache.go`, `parser_tx.go`, `parser_cmd.go`, `parser_json.go`, `parser_text.go`
+- Statement types defined in `stmt_*.go` files; execution entry point is `ExecSQL(db, sql) (et.Items, error)` in `executor.go`
+- Dialect subdirs: `internal/stmt/mysql`, `internal/stmt/oracle`, `internal/stmt/sqlserver` — each implement DDL/DML/TX translators and have their own tests
+- SQL state can be switched per session: `SET SQL STATE MYSQL|POSTGRESQL|ORACLE|SQLSERVER|JOSEFINA`
 
-**`internal/stmt`** — Query language parser
-- Custom lexer (`lexer.go`) and parser files per statement type: `parser_db.go`, `parser_user.go`, `parser_serie.go`, `parser_cache.go`, `parser_json.go`, `parser_text.go`
-- Statement types defined in `stmt_db.go`, `stmt_model.go`, `stmt_user.go`, `stmt_serie.go`, `stmt_cache.go`, `stmt_query.go`, `stmt_cmd.go`
+**`internal/jsql`** — Public server/client/auth layer wrapping `internal/jdb`
+- `server.go`: singleton `Server` embedding `*jdb.Node`; created with `NewServer(port)`
+- `client.go`: TCP client connecting to a node
+- `auth.go`, `session.go`: authentication middleware
+- `dialect.go`: active SQL dialect for the session
 
-**`internal/client`** — Interactive REPL that connects to server over TCP
+**`internal/server`** — Top-level server wiring (HTTP + WebSocket + TCP started from here)
 
-**`pkg/sql`** — Public TCP server/client wrappers around `internal/jdb`
-- `pkg/sql/server.go`: wraps `jdb.Node` as a TCP listener
-- `pkg/sql/client.go`: TCP client for connecting to a node
-- `pkg/sql/auth.go`, `pkg/sql/session.go`: authentication middleware
+**`internal/cli`** — Terminal rendering for the REPL (table formatting, output)
+
+**`internal/client`** — REPL input loop and meta-commands (`\c`, `\timing`, `\i`, `\q`)
 
 **`pkg/http`** — HTTP API layer using `go-chi/chi`
+
 **`pkg/websocket`** — WebSocket hub using `gorilla/websocket`
 
 ### Configuration
-- `config.json` — cluster peer addresses and `is_strict` mode (strict = schema enforcement)
-- `.env` — environment variables: `TENNANT_NAME`, `TENNANT_PATH_DATA`, `TCP_PORT`, `HTTP_PORT`, `RELSEG_SIZE`, `SYNC_ON_WRITE`, `DEBUG`
+- `config.json` — cluster peer addresses and `is_strict` mode
+- `.env` — environment variables: `TENNANT_NAME`, `TENNANT_PATH_DATA`, `PORT`, `HTTP`, `RELSEG_SIZE`, `SYNC_ON_WRITE`, `DEBUG`
 - Data is persisted under `./data/<TENNANT_NAME>/dbs/<database>/`
 
 ### Key dependency
-- `github.com/cgalvisleon/et` — shared utilities library providing: `tcp` (transport), `et` (JSON type), `claim` (JWT), `logs`, `envar`, `utility`, `reg`, `ws`, `server`
+- `github.com/cgalvisleon/et` — shared utilities providing: `tcp` (transport), `et` (JSON type), `claim` (JWT), `logs`, `envar`, `utility`, `reg`, `ws`, `vm` (goja wrapper)
