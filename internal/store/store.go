@@ -955,7 +955,7 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 	name = Normalize(name)
 	fs := &FileStore{
 		Name:                name,
-		Path:                filepath.Join(path, name, "segments"),
+		Path:                filepath.Join(path, "segments", name),
 		PathSnapshot:        filepath.Join(path, "snapshot", name),
 		PathCompact:         filepath.Join(path, "compact", name),
 		MaxSegment:          maxSegmentMG,
