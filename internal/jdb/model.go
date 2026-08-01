@@ -74,42 +74,42 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                                                            `json:"database"`       // Database name
-	Schema        string                                                            `json:"schema"`         // Schema name
-	Name          string                                                            `json:"name"`           // Model name
-	IsInit        bool                                                              `json:"-"`              // Is initialized
-	Path          string                                                            `json:"path"`           // Path to the model
-	Fields        map[string]*Field                                                 `json:"fields"`         // Fields
-	Indexes       []*Index                                                          `json:"indexes"`        // Indexes
-	PrimaryKeys   []string                                                          `json:"primary_keys"`   // Primary keys
-	ForeignKeys   map[string]*Detail                                                `json:"foreign_keys"`   // Foreign keys
-	Unique        []*Index                                                          `json:"unique"`         // Unique
-	Required      []*Index                                                          `json:"required"`       // Required
-	Hidden        []string                                                          `json:"hidden"`         // Hidden
-	Details       map[string]*Detail                                                `json:"details"`        // Details
-	Masters       map[string]*Detail                                                `json:"masters"`        // Masters
-	Rollups       map[string]*Detail                                                `json:"rollups"`        // Rollups
-	Relations     map[string]*Detail                                                `json:"relations"`      // Relations
-	Calcs         map[string][]byte                                                 `json:"calcs"`          // Calculated fields
-	BeforeInserts []*Trigger                                                        `json:"before_inserts"` // Before insert triggers
-	AfterInserts  []*Trigger                                                        `json:"after_inserts"`  // After insert triggers
-	BeforeUpdates []*Trigger                                                        `json:"before_updates"` // Before update triggers
-	AfterUpdates  []*Trigger                                                        `json:"after_updates"`  // After update triggers
-	BeforeDeletes []*Trigger                                                        `json:"before_deletes"` // Before delete triggers
-	AfterDeletes  []*Trigger                                                        `json:"after_deletes"`  // After delete triggers
-	Mode          store.Mode                                                        `json:"mode"`           // Mode
-	Version       int                                                               `json:"version"`        // Version
-	IsCore        bool                                                              `json:"is_core"`        // Is core model
-	IsChangue     bool                                                              `json:"is_changue"`     // Is changue
-	IsStrict      bool                                                              `json:"is_strict"`      // Is strict model
-	stores        map[string]*store.FileStore                                       `json:"-"`              // Stores
-	btrees        map[string]*BTree                                                 `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
-	schema        *Schema                                                           `json:"-"`              // Schema
-	db            *DB                                                               `json:"-"`              // Database
-	mu            *sync.RWMutex                                                     `json:"-"`              // Mutex
-	onPut         []func(model *Model, idx string, old any, new any, cmd Cmd) error `json:"-"`              // On put
-	onRemove      []func(model *Model, idx string, old any) error                   `json:"-"`              // On remove
-	isDebug       bool                                                              `json:"-"`              // Is debug
+	Database      string                                                   `json:"database"`       // Database name
+	Schema        string                                                   `json:"schema"`         // Schema name
+	Name          string                                                   `json:"name"`           // Model name
+	IsInit        bool                                                     `json:"-"`              // Is initialized
+	Path          string                                                   `json:"path"`           // Path to the model
+	Fields        map[string]*Field                                        `json:"fields"`         // Fields
+	Indexes       []*Index                                                 `json:"indexes"`        // Indexes
+	PrimaryKeys   []string                                                 `json:"primary_keys"`   // Primary keys
+	ForeignKeys   map[string]*Detail                                       `json:"foreign_keys"`   // Foreign keys
+	Unique        []*Index                                                 `json:"unique"`         // Unique
+	Required      []*Index                                                 `json:"required"`       // Required
+	Hidden        []string                                                 `json:"hidden"`         // Hidden
+	Details       map[string]*Detail                                       `json:"details"`        // Details
+	Masters       map[string]*Detail                                       `json:"masters"`        // Masters
+	Rollups       map[string]*Detail                                       `json:"rollups"`        // Rollups
+	Relations     map[string]*Detail                                       `json:"relations"`      // Relations
+	Calcs         map[string][]byte                                        `json:"calcs"`          // Calculated fields
+	BeforeInserts []*Trigger                                               `json:"before_inserts"` // Before insert triggers
+	AfterInserts  []*Trigger                                               `json:"after_inserts"`  // After insert triggers
+	BeforeUpdates []*Trigger                                               `json:"before_updates"` // Before update triggers
+	AfterUpdates  []*Trigger                                               `json:"after_updates"`  // After update triggers
+	BeforeDeletes []*Trigger                                               `json:"before_deletes"` // Before delete triggers
+	AfterDeletes  []*Trigger                                               `json:"after_deletes"`  // After delete triggers
+	Mode          store.Mode                                               `json:"mode"`           // Mode
+	Version       int                                                      `json:"version"`        // Version
+	IsCore        bool                                                     `json:"is_core"`        // Is core model
+	IsChangue     bool                                                     `json:"is_changue"`     // Is changue
+	IsStrict      bool                                                     `json:"is_strict"`      // Is strict model
+	stores        map[string]*store.FileStore                              `json:"-"`              // Stores
+	btrees        map[string]*BTree                                        `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
+	schema        *Schema                                                  `json:"-"`              // Schema
+	db            *DB                                                      `json:"-"`              // Database
+	mu            *sync.RWMutex                                            `json:"-"`              // Mutex
+	onPut         []func(model *Model, idx string, old any, new any) error `json:"-"`              // On put
+	onRemove      []func(model *Model, idx string, old any) error          `json:"-"`              // On remove
+	isDebug       bool                                                     `json:"-"`              // Is debug
 }
 
 /**
@@ -150,7 +150,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		schema:        s,
 		db:            s.db,
 		mu:            &sync.RWMutex{},
-		onPut:         make([]func(model *Model, idx string, old any, new any, cmd Cmd) error, 0),
+		onPut:         make([]func(model *Model, idx string, old any, new any) error, 0),
 		onRemove:      make([]func(model *Model, idx string, old any) error, 0),
 	}
 	_, err := result.defineSource()
@@ -171,7 +171,7 @@ func (s *Model) load(schema *Schema) error {
 	s.btrees = make(map[string]*BTree, 0)
 	s.schema = schema
 	s.db = schema.db
-	s.onPut = make([]func(model *Model, idx string, old any, new any, cmd Cmd) error, 0)
+	s.onPut = make([]func(model *Model, idx string, old any, new any) error, 0)
 	s.onRemove = make([]func(model *Model, idx string, old any) error, 0)
 	schema.addModel(s)
 
@@ -364,26 +364,26 @@ func (s *Model) loadBTree(field string) error {
 
 /**
 * OnPut: Adds a function to be called when a document is put
-* @param fn func(string, any, string) error
+* @param fn func(model *Model, idx string, old any, new any) error
 **/
-func (s *Model) OnPut(fn func(*Node, string, any, Cmd) error) {
+func (s *Model) OnPut(fn func(model *Model, idx string, old any, new any) error) {
 	s.onPut = append(s.onPut, fn)
 }
 
 /**
 * OnRemove: Adds a function to be called when a document is removed
-* @param fn func(string, any) error
+* @param fn func(model *Model, idx string, old any) error
 **/
-func (s *Model) OnRemove(fn func(*Node, string, any) error) {
+func (s *Model) OnRemove(fn func(model *Model, idx string, old any) error) {
 	s.onRemove = append(s.onRemove, fn)
 }
 
 /**
-* Store: Returns the store for name
+* getStore: Returns the store for name
 * @param name string
 * @return *store.FileStore, bool
 **/
-func (s *Model) GetStore(name string) (*store.FileStore, bool) {
+func (s *Model) getStore(name string) (*store.FileStore, bool) {
 	s.mu.RLock()
 	result, exists := s.stores[name]
 	s.mu.RUnlock()
@@ -397,7 +397,7 @@ func (s *Model) GetStore(name string) (*store.FileStore, bool) {
 * @return error
 **/
 func (s *Model) loadStore(name string) error {
-	result, exists := s.GetStore(name)
+	result, exists := s.getStore(name)
 	if exists {
 		return nil
 	}
@@ -415,11 +415,11 @@ func (s *Model) loadStore(name string) error {
 }
 
 /**
-* Source: Returns the primary store
+* source: Returns the primary store
 * @return *store.FileStore, error
 **/
-func (s *Model) Source() (*store.FileStore, bool) {
-	return s.GetStore(INDEX)
+func (s *Model) source() (*store.FileStore, bool) {
+	return s.getStore(INDEX)
 }
 
 /**
@@ -453,6 +453,30 @@ func (s *Model) Put(idx string, value any) error {
 }
 
 /**
+* remove: Removes a document by primary key (no index cleanup)
+* @param idx string, val any
+* @return error
+**/
+func (s *Model) remove(idx string, val any) error {
+	store, exists := s.Source()
+	if !exists {
+		return errors.New(msg.MSG_STORE_NOT_FOUND)
+	}
+
+	exists, err := store.Delete(idx)
+	if exists {
+		// Call onRemove functions
+		for _, fn := range s.onRemove {
+			if err := fn(s, idx, val); err != nil {
+				return err
+			}
+		}
+	}
+
+	return err
+}
+
+/**
 * Get: Gets a document by primary key
 * @param idx string, dest any
 * @return bool, error
@@ -469,30 +493,6 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 	}
 
 	return exists, nil
-}
-
-/**
-* remove: Removes a document by primary key (no index cleanup)
-* @param idx string, val any
-* @return error
-**/
-func (s *Model) remove(idx string, val any) error {
-	store, exists := s.Source()
-	if !exists {
-		return errors.New(msg.MSG_STORE_NOT_FOUND)
-	}
-
-	exists, err := store.Delete(idx)
-	if exists {
-		// Call onRemove functions
-		for _, fn := range s.onRemove {
-			if err := fn(s.node, idx, val); err != nil {
-				return err
-			}
-		}
-	}
-
-	return err
 }
 
 /**

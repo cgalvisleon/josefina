@@ -666,15 +666,15 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 /**
 * Put
 * @param id string, value any
-* @return error, bool
+* @return bool, []byte, error
 **/
-func (s *FileStore) Put(id string, value any) (bool, error) {
+func (s *FileStore) Put(id string, value any) (bool, []byte, error) {
 	if s.mode == ReadOnly {
-		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return false, nil, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	if id == "" {
-		return false, errors.New(msg.MSG_ID_IS_REQUIRED)
+		return false, nil, errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
 	bt, ok := value.([]byte)
@@ -682,13 +682,13 @@ func (s *FileStore) Put(id string, value any) (bool, error) {
 		var err error
 		bt, err = json.Marshal(value)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 	}
 
 	ref, err := s.appendRecord(id, bt, Active)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	s.indexMu.Lock()
@@ -699,31 +699,33 @@ func (s *FileStore) Put(id string, value any) (bool, error) {
 	s.putIndex(id, ref)
 	s.indexMu.Unlock()
 
+	var old []byte
 	if exists {
-		old, err := s.ReadBytes(ref)
+		old, err = s.ReadBytes(ref)
 		if err != nil {
-			return false, err
-		}
-		for _, fn := range s.onPut {
-			fn(s, id, old, bt)
-		}
-	} else {
-		for _, fn := range s.onPut {
-			fn(s, id, nil, bt)
+			return false, nil, err
 		}
 	}
 
-	return exists, nil
+	for _, fn := range s.onPut {
+		fn(s, id, old, bt)
+	}
+
+	if s.isDebug {
+		logs.Debug("put:", s.Path, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
+	}
+
+	return exists, old, nil
 }
 
 /**
 * Delete
 * @param id string
-* @return bool, error
+* @return bool, []byte, error
 **/
-func (s *FileStore) Delete(id string) (bool, error) {
+func (s *FileStore) Delete(id string) (bool, []byte, error) {
 	if s.mode == ReadOnly {
-		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return false, nil, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	s.indexMu.RLock()
@@ -731,16 +733,16 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.indexMu.RUnlock()
 
 	if !exists {
-		return false, nil
+		return false, nil, nil
 	}
 
 	old, err := s.ReadBytes(ref)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
-		return false, logs.Error(err)
+		return false, nil, err
 	}
 
 	s.indexMu.Lock()
@@ -757,7 +759,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 		logs.Debug("deleted:", s.Path, ":total:", i, ":ID:", id)
 	}
 
-	return true, nil
+	return true, old, nil
 }
 
 /**
