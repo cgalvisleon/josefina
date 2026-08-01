@@ -66,10 +66,10 @@ type Model struct {
 
 /**
 * newModel: Creates a new model
-* @param *Schema s, string name, string path, int version, bool isCore
+* @param string name, string path, int version, bool isCore
 * @return (*Model, error)
 **/
-func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, error) {
+func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, error) {
 	result := &Model{
 		Database:      s.Database,
 		Schema:        s.Name,
@@ -110,11 +110,8 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		return nil, err
 	}
 
+	s.addModel(result)
 	return result, nil
-}
-
-func loadModel(s *Schema, name string) (*Model, error) {
-
 }
 
 /**
@@ -131,27 +128,6 @@ func (s *Model) getMutex(name string) *sync.RWMutex {
 	return s.mu[name]
 }
 
-/**
-* load: Load model data
-* @param *Schema schema
-* @return error
-**/
-func (s *Model) load(schema *Schema) error {
-	s.stores = make(map[string]*store.FileStore, 0)
-	s.btrees = make(map[string]*BTree, 0)
-	s.schema = schema
-	s.db = schema.db
-	s.onPut = make([]func(model *Model, idx string, old []byte, new []byte) error, 0)
-	s.onRemove = make([]func(model *Model, idx string, old []byte) error, 0)
-	schema.addModel(s)
-
-	if err := s.Init(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 /*
 * save: Save model data
 * @return error
@@ -163,6 +139,10 @@ func (s *Model) Save() error {
 
 	if s.db == nil {
 		return errors.New(msg.MSG_DB_IS_NIL)
+	}
+
+	if s.db.models == nil {
+		return errors.New(msg.MSG_MODELS_IS_NIL)
 	}
 
 	return s.db.models.put(s.Name, s)
