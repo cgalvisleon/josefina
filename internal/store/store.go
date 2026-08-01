@@ -665,10 +665,10 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 
 /**
 * Put
-* @param id string, value any
+* @param id string, value []byte
 * @return bool, []byte, error
 **/
-func (s *FileStore) Put(id string, value any) (bool, []byte, error) {
+func (s *FileStore) Put(id string, value []byte) (bool, []byte, error) {
 	if s.mode == ReadOnly {
 		return false, nil, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
@@ -677,16 +677,7 @@ func (s *FileStore) Put(id string, value any) (bool, []byte, error) {
 		return false, nil, errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
-	bt, ok := value.([]byte)
-	if !ok {
-		var err error
-		bt, err = json.Marshal(value)
-		if err != nil {
-			return false, nil, err
-		}
-	}
-
-	ref, err := s.appendRecord(id, bt, Active)
+	ref, err := s.appendRecord(id, value, Active)
 	if err != nil {
 		return false, nil, err
 	}
@@ -701,14 +692,14 @@ func (s *FileStore) Put(id string, value any) (bool, []byte, error) {
 
 	var old []byte
 	if exists {
-		old, err = s.ReadBytes(ref)
+		old, err = s.Read(ref)
 		if err != nil {
 			return false, nil, err
 		}
 	}
 
 	for _, fn := range s.onPut {
-		fn(s, id, old, bt)
+		fn(s, id, old, value)
 	}
 
 	if s.isDebug {
@@ -736,7 +727,7 @@ func (s *FileStore) Delete(id string) (bool, []byte, error) {
 		return false, nil, nil
 	}
 
-	old, err := s.ReadBytes(ref)
+	old, err := s.Read(ref)
 	if err != nil {
 		return false, nil, err
 	}
@@ -780,27 +771,17 @@ func (s *FileStore) IsExist(id string) bool {
 }
 
 /**
-* ReadBytes
-* @param ref *RecordRef
-* @return []byte, error
-**/
-func (s *FileStore) ReadBytes(ref *RecordRef) ([]byte, error) {
-	seg := s.segments[ref.segment]
-	return seg.ReadBytes(ref)
-}
-
-/**
 * Read
-* @param ref *RecordRef, dest any
+* @param ref *RecordRef
 * @return bool, error
 **/
-func (s *FileStore) Read(ref *RecordRef, dest any) (bool, error) {
+func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
 	seg := s.segments[ref.segment]
-	err := seg.Read(ref, dest)
+	result, err := seg.Read(ref)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	return result, nil
 }
 
 /**
@@ -815,19 +796,24 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 
 /**
 * Get
-* @param id string, dest any
+* @param id string
 * @return bool, error
 **/
-func (s *FileStore) Get(id string, dest any) (bool, error) {
+func (s *FileStore) Get(id string) ([]byte, bool, error) {
 	s.indexMu.RLock()
 	ref, existed := s.index[id]
 	s.indexMu.RUnlock()
 
 	if !existed {
-		return false, nil
+		return nil, false, nil
 	}
 
-	return s.Read(ref, dest)
+	result, err := s.Read(ref)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return result, true, nil
 }
 
 /**

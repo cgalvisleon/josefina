@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -343,29 +342,15 @@ func (s *segment) read(ref *RecordRef) ([]byte, error) {
 }
 
 /**
-* ReadBytes
-* @param ref *RecordRef
-* @return []byte, error
+* Read
+* @param ref *RecordRef, dest any
+* @return error
 **/
-func (s *segment) ReadBytes(ref *RecordRef) ([]byte, error) {
+func (s *segment) Read(ref *RecordRef) ([]byte, error) {
 	result, err := s.read(ref)
 	if err != nil {
 		return nil, err
 	}
 
 	return result, nil
-}
-
-/**
-* Read
-* @param ref *RecordRef, dest any
-* @return error
-**/
-func (s *segment) Read(ref *RecordRef, dest any) error {
-	data, err := s.read(ref)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(data, dest)
 }

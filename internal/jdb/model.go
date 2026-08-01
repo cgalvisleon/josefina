@@ -428,23 +428,28 @@ func (s *Model) source() (*store.FileStore, bool) {
 * @return error
 **/
 func (s *Model) Put(idx string, value any) error {
-	store, exists := s.Source()
+	store, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	exists, err := store.Put(idx, value)
+	bt, ok := value.([]byte)
+	if !ok {
+		var err error
+		bt, err = json.Marshal(value)
+		if err != nil {
+			return err
+		}
+	}
+
+	exists, old, err := store.Put(idx, bt)
 	if err != nil {
 		return err
 	}
 
 	// Call onPut functions
 	for _, fn := range s.onPut {
-		command := INSERT
-		if exists {
-			command = UPDATE
-		}
-		if err := fn(s, idx, value, command); err != nil {
+		if err := fn(s, idx, value, old); err != nil {
 			return err
 		}
 	}
