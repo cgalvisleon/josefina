@@ -54,26 +54,6 @@ func Normalize(input string) string {
 }
 
 /**
-* optimalWorkers: Returns the worker count for a parallel ForEach.
-* For I/O-bound segment reads: scales up to 2×GOMAXPROCS capped by one
-* worker per workerRecordRatio records. Returns 1 for small sets, which
-* triggers the sequential fast path (no goroutines or channels).
-* @param total int
-* @return int
-**/
-func optimalWorkers(total int) int {
-	if total <= workerThreshold {
-		return 1
-	}
-	max := runtime.GOMAXPROCS(0) * 2
-	w := (total + workerRecordRatio - 1) / workerRecordRatio
-	if w > max {
-		w = max
-	}
-	return w
-}
-
-/**
 * newRecordHeaderAt: Encodes a WAL record header at the given LSN.
 * @param lsn uint64, id string, data []byte, status byte
 * @return recordHeader, []byte, error
@@ -818,48 +798,20 @@ func (s *FileStore) Get(id string) ([]byte, bool, error) {
 
 /**
 * ForEach
-* @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
+* @param fn func(id string, data []byte) (bool, error), offset, limit int
 * @return error
 **/
-func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
-	index, keys := s.getRecords(asc, offset, limit)
+func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), offset, limit int) error {
+	index, keys := s.getRecords(true, offset, limit)
+
 	s.indexMu.RLock()
 	segs := s.segments
 	s.indexMu.RUnlock()
 
-	workers := optimalWorkers(len(keys))
-
-	// Sequential fast path: avoids goroutine and channel overhead for small sets.
-	if workers == 1 {
-		for _, id := range keys {
-			ref, ok := index[id]
-			if !ok {
-				continue
-			}
-			data, err := segs[ref.segment].read(ref)
-			if err != nil {
-				return err
-			}
-			cont, err := fn(id, data)
-			if err != nil {
-				return err
-			}
-			if !cont {
-				return nil
-			}
-		}
-		return nil
-	}
-
-	// Parallel path: worker pool for I/O-bound segment reads.
-	bufSize := workers * 4
-	if bufSize > len(keys) {
-		bufSize = len(keys)
-	}
-	jobs := make(chan string, bufSize)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	jobs := make(chan string)
 
 	var (
 		wg      sync.WaitGroup
@@ -877,32 +829,42 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 		})
 	}
 
-	wg.Add(workers)
-	for w := 0; w < workers; w++ {
+	workers := runtime.NumCPU()
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
+
 			for {
 				select {
+
 				case <-ctx.Done():
 					return
+
 				case id, ok := <-jobs:
 					if !ok {
 						return
 					}
+
 					ref, ok := index[id]
 					if !ok {
 						continue
 					}
+
 					data, err := segs[ref.segment].read(ref)
 					if err != nil {
 						setErr(err)
 						return
 					}
+
 					cont, err := fn(id, data)
 					if err != nil {
 						setErr(err)
 						return
 					}
+
 					if !cont {
 						cancel()
 						return
@@ -912,16 +874,20 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 		}()
 	}
 
-producerLoop:
+Producer:
 	for _, id := range keys {
+
 		select {
+
 		case <-ctx.Done():
-			break producerLoop
+			break Producer
+
 		case jobs <- id:
 		}
 	}
 
 	close(jobs)
+
 	wg.Wait()
 
 	return mErr
