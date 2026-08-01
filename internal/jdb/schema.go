@@ -15,17 +15,17 @@ import (
 type Schema struct {
 	Database string            `json:"database"` // Database name
 	Name     string            `json:"name"`     // Schema name
-	Models   map[string]*Model `json:"models"`   // Models
+	models   map[string]*Model `json:"-"`        // Models
 	db       *DB               `json:"-"`        // Database
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
 
-func newSchema(db *DB, name string) *Schema {
+func (s *DB) newSchema(name string) *Schema {
 	return &Schema{
-		Database: db.Name,
+		Database: s.Name,
 		Name:     name,
-		Models:   make(map[string]*Model),
-		db:       db,
+		models:   make(map[string]*Model),
+		db:       s,
 		mu:       &sync.RWMutex{},
 	}
 }
@@ -36,7 +36,7 @@ func newSchema(db *DB, name string) *Schema {
 **/
 func (s *Schema) ToJson() et.Json {
 	models := et.Json{}
-	for _, model := range s.Models {
+	for _, model := range s.models {
 		models[model.Name] = et.Json{
 			"name":    model.Name,
 			"path":    model.Path,
@@ -80,7 +80,7 @@ func (s *Schema) save() error {
 func (s *Schema) addModel(model *Model) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.Models[model.Name] = model
+	s.models[model.Name] = model
 }
 
 /**
@@ -91,7 +91,7 @@ func (s *Schema) addModel(model *Model) {
 func (s *Schema) getModel(name string) (*Model, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	model, exists := s.Models[name]
+	model, exists := s.models[name]
 	return model, exists
 }
 
@@ -103,9 +103,9 @@ func (s *Schema) getModel(name string) (*Model, bool) {
 func (s *Schema) removeModel(name string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, exists := s.Models[name]
+	_, exists := s.models[name]
 	if exists {
-		delete(s.Models, name)
+		delete(s.models, name)
 	}
 	return exists
 }
@@ -136,30 +136,13 @@ func (s *Schema) DeleteModel(name string) error {
 * @return *Model, error
 **/
 func (s *Schema) GetModel(name string) (*Model, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	name = store.Normalize(name)
-	result, exists := s.models[name]
+	result, exists := s.getModel(name)
 	if !exists {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
 	return result, nil
-}
-
-/**
-* ListModels: Returns all models in this schema.
-* @return []*Model
-**/
-func (s *Schema) ListModels() []*Model {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*Model, 0, len(s.models))
-	for _, m := range s.models {
-		result = append(result, m)
-	}
-	return result
 }
 
 /**
@@ -178,6 +161,5 @@ func (s *Schema) Empty() error {
 	}
 
 	s.models = make(map[string]*Model, 0)
-
 	return s.save()
 }

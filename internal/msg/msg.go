@@ -96,6 +96,7 @@ var (
 	MSG_INDEX_OUT_OF_RANGE         = "index out of range"
 	MSG_REQUIRED_FIELD             = "required field %s"
 	MSG_NO_CONDITIONS              = "no conditions"
+	MSG_NAME_IS_REQUIRED           = "name is required"
 )
 
 func init() {
@@ -176,5 +177,6 @@ func init() {
 		MSG_INDEX_OUT_OF_RANGE = "índice fuera de rango"
 		MSG_REQUIRED_FIELD = "campo requerido (%s)"
 		MSG_NO_CONDITIONS = "no hay condiciones"
+		MSG_NAME_IS_REQUIRED = "name es requerido"
 	}
 }

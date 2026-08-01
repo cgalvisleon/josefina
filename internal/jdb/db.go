@@ -188,30 +188,6 @@ func (s *DB) SetStrict(strict bool) {
 }
 
 /**
-* newSchema: Creates a new schema
-* @param db *DB, name string
-* @return *Schema
-**/
-func (s *DB) newSchema(name string) *Schema {
-	name = store.Normalize(name)
-	if name == "" {
-		name = "public"
-	}
-	result := &Schema{
-		Database: s.Name,
-		Name:     name,
-		models:   make(map[string]*Model, 0),
-		db:       s,
-		mu:       &sync.RWMutex{},
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Schemas[name] = result
-
-	return result
-}
-
-/**
 * getSchema: Returns a schema by name
 * @param name string
 * @return *Schema

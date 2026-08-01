@@ -12,6 +12,7 @@ import (
 	"github.com/cgalvisleon/et/jrex"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -70,6 +71,11 @@ type Model struct {
 * @return (*Model, error)
 **/
 func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, error) {
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, errors.New(msg.MSG_NAME_IS_REQUIRED)
+	}
+
+	name = store.Normalize(name)
 	result := &Model{
 		Database:      s.Database,
 		Schema:        s.Name,
