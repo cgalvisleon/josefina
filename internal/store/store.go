@@ -122,9 +122,6 @@ type FileStore struct {
 	index               map[string]*RecordRef `json:"-"` // índice en memoria
 	keys                []string              `json:"-"` // claves en memoria
 	mode                Mode                  `json:"-"` // modo de operación
-	onSetIndex          []SetIndexFn          `json:"-"` // función de actualización de índice
-	onPut               []Putfn               `json:"-"` // función de escritura
-	onDelete            []Deletefn            `json:"-"` // función de eliminación
 	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
 	isDebug             bool                  `json:"-"`
@@ -188,30 +185,6 @@ func (s *FileStore) Count() int {
 	n := len(s.index)
 	s.indexMu.RUnlock()
 	return n
-}
-
-/**
-* OnIndex
-* @param fn SetIndexFn
-**/
-func (s *FileStore) OnIndex(fn SetIndexFn) {
-	s.onSetIndex = append(s.onSetIndex, fn)
-}
-
-/**
-* OnPut
-* @param fn Putfn
-**/
-func (s *FileStore) OnPut(fn Putfn) {
-	s.onPut = append(s.onPut, fn)
-}
-
-/**
-* OnDelete
-* @param fn Deletefn
-**/
-func (s *FileStore) OnDelete(fn Deletefn) {
-	s.onDelete = append(s.onDelete, fn)
 }
 
 /**
@@ -411,9 +384,6 @@ func (s *FileStore) setIndex(id string, segIndex int, offset int64, dataLen uint
 		s.keys = append(s.keys, id)
 	}
 	s.index[id] = ref
-	for _, fn := range s.onSetIndex {
-		fn(s, id, ref)
-	}
 }
 
 /**
@@ -646,20 +616,20 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 /**
 * Put
 * @param id string, value []byte
-* @return bool, []byte, error
+* @return bool, error
 **/
-func (s *FileStore) Put(id string, value []byte) (bool, []byte, error) {
+func (s *FileStore) Put(id string, value []byte) (bool, error) {
 	if s.mode == ReadOnly {
-		return false, nil, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	if id == "" {
-		return false, nil, errors.New(msg.MSG_ID_IS_REQUIRED)
+		return false, errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
 	ref, err := s.appendRecord(id, value, Active)
 	if err != nil {
-		return false, nil, err
+		return false, err
 	}
 
 	s.indexMu.Lock()
@@ -670,50 +640,33 @@ func (s *FileStore) Put(id string, value []byte) (bool, []byte, error) {
 	s.putIndex(id, ref)
 	s.indexMu.Unlock()
 
-	var old []byte
-	if exists {
-		old, err = s.Read(ref)
-		if err != nil {
-			return false, nil, err
-		}
-	}
-
-	for _, fn := range s.onPut {
-		fn(s, id, old, value)
-	}
-
 	if s.isDebug {
 		logs.Debug("put:", s.Path, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())
 	}
 
-	return exists, old, nil
+	return exists, nil
 }
 
 /**
 * Delete
 * @param id string
-* @return bool, []byte, error
+* @return bool, error
 **/
-func (s *FileStore) Delete(id string) (bool, []byte, error) {
+func (s *FileStore) Delete(id string) (bool, error) {
 	if s.mode == ReadOnly {
-		return false, nil, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	s.indexMu.RLock()
-	ref, exists := s.index[id]
+	_, exists := s.index[id]
 	s.indexMu.RUnlock()
 
 	if !exists {
-		return false, nil, nil
-	}
-
-	old, err := s.Read(ref)
-	if err != nil {
-		return false, nil, err
+		return false, nil
 	}
 
 	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
-		return false, nil, err
+		return false, err
 	}
 
 	s.indexMu.Lock()
@@ -721,16 +674,12 @@ func (s *FileStore) Delete(id string) (bool, []byte, error) {
 	s.deleteIndex(id)
 	s.indexMu.Unlock()
 
-	for _, fn := range s.onDelete {
-		fn(s, id, old)
-	}
-
 	if s.isDebug {
 		i := len(s.index)
 		logs.Debug("deleted:", s.Path, ":total:", i, ":ID:", id)
 	}
 
-	return true, old, nil
+	return true, nil
 }
 
 /**
@@ -779,21 +728,21 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 * @param id string
 * @return bool, error
 **/
-func (s *FileStore) Get(id string) ([]byte, bool, error) {
+func (s *FileStore) Get(id string) (bool, []byte, error) {
 	s.indexMu.RLock()
 	ref, existed := s.index[id]
 	s.indexMu.RUnlock()
 
 	if !existed {
-		return nil, false, nil
+		return false, nil, nil
 	}
 
 	result, err := s.Read(ref)
 	if err != nil {
-		return nil, false, err
+		return false, nil, err
 	}
 
-	return result, true, nil
+	return true, result, nil
 }
 
 /**
@@ -940,9 +889,6 @@ func Open(path, name string, mode Mode) (*FileStore, error) {
 		MaxSegment:          maxSegmentMG,
 		MinThresholdCompact: minThreshold,
 		mode:                mode,
-		onSetIndex:          make([]SetIndexFn, 0),
-		onPut:               make([]Putfn, 0),
-		onDelete:            make([]Deletefn, 0),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)

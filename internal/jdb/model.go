@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/jrex"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
-	"github.com/cgalvisleon/et/vm"
 	"github.com/cgalvisleon/josefina/internal/msg"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
@@ -74,42 +74,42 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                                                   `json:"database"`       // Database name
-	Schema        string                                                   `json:"schema"`         // Schema name
-	Name          string                                                   `json:"name"`           // Model name
-	IsInit        bool                                                     `json:"-"`              // Is initialized
-	Path          string                                                   `json:"path"`           // Path to the model
-	Fields        map[string]*Field                                        `json:"fields"`         // Fields
-	Indexes       []*Index                                                 `json:"indexes"`        // Indexes
-	PrimaryKeys   []string                                                 `json:"primary_keys"`   // Primary keys
-	ForeignKeys   map[string]*Detail                                       `json:"foreign_keys"`   // Foreign keys
-	Unique        []*Index                                                 `json:"unique"`         // Unique
-	Required      []*Index                                                 `json:"required"`       // Required
-	Hidden        []string                                                 `json:"hidden"`         // Hidden
-	Details       map[string]*Detail                                       `json:"details"`        // Details
-	Masters       map[string]*Detail                                       `json:"masters"`        // Masters
-	Rollups       map[string]*Detail                                       `json:"rollups"`        // Rollups
-	Relations     map[string]*Detail                                       `json:"relations"`      // Relations
-	Calcs         map[string][]byte                                        `json:"calcs"`          // Calculated fields
-	BeforeInserts []*Trigger                                               `json:"before_inserts"` // Before insert triggers
-	AfterInserts  []*Trigger                                               `json:"after_inserts"`  // After insert triggers
-	BeforeUpdates []*Trigger                                               `json:"before_updates"` // Before update triggers
-	AfterUpdates  []*Trigger                                               `json:"after_updates"`  // After update triggers
-	BeforeDeletes []*Trigger                                               `json:"before_deletes"` // Before delete triggers
-	AfterDeletes  []*Trigger                                               `json:"after_deletes"`  // After delete triggers
-	Mode          store.Mode                                               `json:"mode"`           // Mode
-	Version       int                                                      `json:"version"`        // Version
-	IsCore        bool                                                     `json:"is_core"`        // Is core model
-	IsChangue     bool                                                     `json:"is_changue"`     // Is changue
-	IsStrict      bool                                                     `json:"is_strict"`      // Is strict model
-	stores        map[string]*store.FileStore                              `json:"-"`              // Stores
-	btrees        map[string]*BTree                                        `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
-	schema        *Schema                                                  `json:"-"`              // Schema
-	db            *DB                                                      `json:"-"`              // Database
-	mu            *sync.RWMutex                                            `json:"-"`              // Mutex
-	onPut         []func(model *Model, idx string, old any, new any) error `json:"-"`              // On put
-	onRemove      []func(model *Model, idx string, old any) error          `json:"-"`              // On remove
-	isDebug       bool                                                     `json:"-"`              // Is debug
+	Database      string                                                         `json:"database"`       // Database name
+	Schema        string                                                         `json:"schema"`         // Schema name
+	Name          string                                                         `json:"name"`           // Model name
+	IsInit        bool                                                           `json:"-"`              // Is initialized
+	Path          string                                                         `json:"path"`           // Path to the model
+	Fields        map[string]*Field                                              `json:"fields"`         // Fields
+	Indexes       []*Index                                                       `json:"indexes"`        // Indexes
+	PrimaryKeys   []string                                                       `json:"primary_keys"`   // Primary keys
+	ForeignKeys   map[string]*Detail                                             `json:"foreign_keys"`   // Foreign keys
+	Unique        []*Index                                                       `json:"unique"`         // Unique
+	Required      []*Index                                                       `json:"required"`       // Required
+	Hidden        []string                                                       `json:"hidden"`         // Hidden
+	Details       map[string]*Detail                                             `json:"details"`        // Details
+	Masters       map[string]*Detail                                             `json:"masters"`        // Masters
+	Rollups       map[string]*Detail                                             `json:"rollups"`        // Rollups
+	Relations     map[string]*Detail                                             `json:"relations"`      // Relations
+	Calcs         map[string][]byte                                              `json:"calcs"`          // Calculated fields
+	BeforeInserts []*Trigger                                                     `json:"before_inserts"` // Before insert triggers
+	AfterInserts  []*Trigger                                                     `json:"after_inserts"`  // After insert triggers
+	BeforeUpdates []*Trigger                                                     `json:"before_updates"` // Before update triggers
+	AfterUpdates  []*Trigger                                                     `json:"after_updates"`  // After update triggers
+	BeforeDeletes []*Trigger                                                     `json:"before_deletes"` // Before delete triggers
+	AfterDeletes  []*Trigger                                                     `json:"after_deletes"`  // After delete triggers
+	Mode          store.Mode                                                     `json:"mode"`           // Mode
+	Version       int                                                            `json:"version"`        // Version
+	IsCore        bool                                                           `json:"is_core"`        // Is core model
+	IsChangue     bool                                                           `json:"is_changue"`     // Is changue
+	IsStrict      bool                                                           `json:"is_strict"`      // Is strict model
+	stores        map[string]*store.FileStore                                    `json:"-"`              // Stores
+	btrees        map[string]*BTree                                              `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
+	schema        *Schema                                                        `json:"-"`              // Schema
+	db            *DB                                                            `json:"-"`              // Database
+	mu            *sync.RWMutex                                                  `json:"-"`              // Mutex
+	onPut         []func(model *Model, idx string, old []byte, new []byte) error `json:"-"`              // On put
+	onRemove      []func(model *Model, idx string, old []byte) error             `json:"-"`              // On remove
+	isDebug       bool                                                           `json:"-"`              // Is debug
 }
 
 /**
@@ -150,8 +150,8 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		schema:        s,
 		db:            s.db,
 		mu:            &sync.RWMutex{},
-		onPut:         make([]func(model *Model, idx string, old any, new any) error, 0),
-		onRemove:      make([]func(model *Model, idx string, old any) error, 0),
+		onPut:         make([]func(model *Model, idx string, old []byte, new []byte) error, 0),
+		onRemove:      make([]func(model *Model, idx string, old []byte) error, 0),
 	}
 	_, err := result.defineSource()
 	if err != nil {
@@ -171,8 +171,8 @@ func (s *Model) load(schema *Schema) error {
 	s.btrees = make(map[string]*BTree, 0)
 	s.schema = schema
 	s.db = schema.db
-	s.onPut = make([]func(model *Model, idx string, old any, new any) error, 0)
-	s.onRemove = make([]func(model *Model, idx string, old any) error, 0)
+	s.onPut = make([]func(model *Model, idx string, old []byte, new []byte) error, 0)
+	s.onRemove = make([]func(model *Model, idx string, old []byte) error, 0)
 	schema.addModel(s)
 
 	if err := s.Init(); err != nil {
@@ -364,9 +364,9 @@ func (s *Model) loadBTree(field string) error {
 
 /**
 * OnPut: Adds a function to be called when a document is put
-* @param fn func(model *Model, idx string, old any, new any) error
+* @param fn func(model *Model, idx string, old []byte, new []byte) error
 **/
-func (s *Model) OnPut(fn func(model *Model, idx string, old any, new any) error) {
+func (s *Model) OnPut(fn func(model *Model, idx string, old []byte, new []byte) error) {
 	s.onPut = append(s.onPut, fn)
 }
 
@@ -374,7 +374,7 @@ func (s *Model) OnPut(fn func(model *Model, idx string, old any, new any) error)
 * OnRemove: Adds a function to be called when a document is removed
 * @param fn func(model *Model, idx string, old any) error
 **/
-func (s *Model) OnRemove(fn func(model *Model, idx string, old any) error) {
+func (s *Model) OnRemove(fn func(model *Model, idx string, old []byte) error) {
 	s.onRemove = append(s.onRemove, fn)
 }
 
@@ -423,6 +423,25 @@ func (s *Model) source() (*store.FileStore, bool) {
 }
 
 /**
+* fireTriggers: Fires the triggers
+* @param triggers []*Trigger, old, new et.Json
+* @return error
+**/
+func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error {
+	v := jrex.NewInstance()
+	v.SetCode(trigger.Definition)
+	v.Set("Old", old)
+	v.Set("New", new)
+	v.Set("Tx", tx)
+	_, err := v.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
 * Put: Puts a raw value by primary key
 * @param idx string, value any, expiration time.Duration
 * @return error
@@ -449,7 +468,14 @@ func (s *Model) Put(idx string, value any) error {
 
 	// Call onPut functions
 	for _, fn := range s.onPut {
-		if err := fn(s, idx, value, old); err != nil {
+		if err := fn(s, idx, bt, old); err != nil {
+			return err
+		}
+	}
+
+	for _, trigger := range s.BeforeInserts {
+		err := s.fireTriggers(trigger, &old, &new, tx)
+		if err != nil {
 			return err
 		}
 	}
@@ -458,23 +484,25 @@ func (s *Model) Put(idx string, value any) error {
 }
 
 /**
-* remove: Removes a document by primary key (no index cleanup)
-* @param idx string, val any
+* Delete: Removes a document by primary key (no index cleanup)
+* @param idx string
 * @return error
 **/
-func (s *Model) remove(idx string, val any) error {
-	store, exists := s.Source()
+func (s *Model) Delete(idx string) error {
+	store, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	exists, err := store.Delete(idx)
-	if exists {
-		// Call onRemove functions
-		for _, fn := range s.onRemove {
-			if err := fn(s, idx, val); err != nil {
-				return err
-			}
+	exists, old, err := store.Delete(idx)
+	if !exists {
+		return nil
+	}
+
+	// Call onRemove functions
+	for _, fn := range s.onRemove {
+		if err := fn(s, idx, old); err != nil {
+			return err
 		}
 	}
 
@@ -487,26 +515,26 @@ func (s *Model) remove(idx string, val any) error {
 * @return bool, error
 **/
 func (s *Model) Get(idx string, dest any) (bool, error) {
-	store, exists := s.Source()
+	store, exists := s.source()
 	if !exists {
 		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	exists, err := store.Get(idx, &dest)
+	exists, data, err := store.Get(idx)
 	if err != nil {
 		return false, err
 	}
 
-	return exists, nil
-}
+	if !exists {
+		return false, nil
+	}
 
-/**
-* Remove: Removes a document by primary key (no index cleanup)
-* @param idx string
-* @return error
-**/
-func (s *Model) Remove(idx string) error {
-	return s.remove(idx, nil)
+	err = json.Unmarshal(data, dest)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 /**
@@ -535,7 +563,8 @@ func (s *Model) putObject(idx string, object et.Json) error {
 			if !exists {
 				continue
 			}
-			if err := bt.Insert(KeyFromAny(v), idx); err != nil {
+			key := KeyFromAny(v)
+			if err := bt.Insert(key, idx); err != nil {
 				return err
 			}
 		}
@@ -550,17 +579,7 @@ func (s *Model) putObject(idx string, object et.Json) error {
 * @return error
 **/
 func (s *Model) deleteObject(idx string, current et.Json) error {
-	store, exists := s.Source()
-	if !exists {
-		return errors.New(msg.MSG_STORE_NOT_FOUND)
-	}
-
-	exists = store.IsExist(idx)
-	if !exists {
-		return nil
-	}
-
-	err := s.remove(idx, current)
+	err := s.Delete(idx)
 	if err != nil {
 		return err
 	}
@@ -579,7 +598,8 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 			if !exists {
 				continue
 			}
-			if _, err := bt.Delete(KeyFromAny(v), idx); err != nil {
+			key := KeyFromAny(v)
+			if _, err := bt.Delete(key, idx); err != nil {
 				return err
 			}
 		}
@@ -608,7 +628,7 @@ func (s *Model) Current(idx string) (et.Json, bool, error) {
 * @return bool, error
 **/
 func (s *Model) IsExists(idx string) (bool, error) {
-	source, exists := s.Source()
+	source, exists := s.source()
 	if !exists {
 		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
@@ -621,31 +641,12 @@ func (s *Model) IsExists(idx string) (bool, error) {
 * @return int, error
 **/
 func (s *Model) Count() (int, error) {
-	result, exists := s.Source()
+	result, exists := s.source()
 	if !exists {
 		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
 	return result.Count(), nil
-}
-
-/**
-* fireTriggers: Fires the triggers
-* @param triggers []*Trigger, old, new et.Json
-* @return error
-**/
-func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error {
-	name := fmt.Sprintf("trigger_%s", trigger.Name)
-	v := vm.New(name)
-	v.Set("Old", old)
-	v.Set("New", new)
-	v.Set("Tx", tx)
-	_, err := v.Run(string(trigger.Definition))
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 /**
