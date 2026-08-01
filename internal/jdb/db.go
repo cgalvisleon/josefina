@@ -20,6 +20,7 @@ const (
 )
 
 type Config struct {
+	IsStrict            bool          `json:"is_strict"` // Is strict mode
 	Lang                string        `json:"lang"`
 	TransactionTTL      time.Duration `json:"transaction_ttl"`
 	RelSegSize          int           `json:"rel_seg_size"`
@@ -28,28 +29,23 @@ type Config struct {
 	TennantPathData     string        `json:"tennant_path_data"`
 	Timezone            string        `json:"timezone"`
 	MinThresholdCompact int           `json:"min_threshold_compact"`
-	TTLTransaction      int           `json:"ttl_transaction"`
-	model               *Model        `json:"-"`
 }
 
 /**
 * DB: Represents a database
 **/
 type DB struct {
-	Name        string             `json:"name"`      // Database name
-	Path        string             `json:"path"`      // Path to the database
-	Schemas     map[string]*Schema `json:"schemas"`   // Schemas
-	IsStrict    bool               `json:"is_strict"` // Is strict mode
-	Cache       map[string]*Ttl    `json:"-"`         // Cache
-	mu          *sync.RWMutex      `json:"-"`         // Mutex
-	muCache     *sync.RWMutex      `json:"-"`         // Mutex for cache
-	config      *Config            `json:"-"`         // Configuration
-	errors      *Model             `json:"-"`         // Errors
-	transaction *Model             `json:"-"`         // Transaction
-	schemas     *Model             `json:"-"`         // Schemas
-	models      *Model             `json:"-"`         // Models
-	cache       *Model             `json:"-"`         // Cache
-	node        *Node              `json:"-"`         // Node
+	Name        string                   `json:"name"`    // Database name
+	Path        string                   `json:"path"`    // Path to the database
+	Config      *Config                  `json:"config"`  // Configuration
+	Schemas     map[string]*Schema       `json:"schemas"` // Schemas
+	Cache       map[string]*Ttl          `json:"-"`       // Cache
+	mu          map[string]*sync.RWMutex `json:"-"`       // Mutex
+	schemas     *Model                   `json:"-"`       // Schemas
+	models      *Model                   `json:"-"`       // Models
+	cache       *Model                   `json:"-"`       // Cache
+	transaction *Model                   `json:"-"`       // Transaction
+	errors      *Model                   `json:"-"`       // Errors
 }
 
 /**
@@ -65,11 +61,22 @@ func NewDb(path, name string) (*DB, error) {
 
 	path = filepath.Join(path, name)
 	result := &DB{
-		Name:    name,
-		Path:    path,
+		Name: name,
+		Path: path,
+		Config: &Config{
+			IsStrict:            false,
+			Lang:                "en",
+			TransactionTTL:      10 * time.Second,
+			RelSegSize:          1024,
+			SyncOnWrite:         false,
+			TennantName:         "",
+			TennantPathData:     "",
+			Timezone:            "America/Bogota",
+			MinThresholdCompact: 100,
+		},
 		Schemas: make(map[string]*Schema, 0),
-		mu:      &sync.RWMutex{},
-		muCache: &sync.RWMutex{},
+		Cache:   make(map[string]*Ttl, 0),
+		mu:      make(map[string]*sync.RWMutex, 0),
 	}
 
 	return result, nil
@@ -80,21 +87,7 @@ func NewDb(path, name string) (*DB, error) {
 * @param node *Node
 * @return error
 **/
-func (s *DB) load(node *Node) error {
-	s.node = node
-	// Mutexes are not serialized; re-initialize them when loading from JSON.
-	if s.mu == nil {
-		s.mu = &sync.RWMutex{}
-	}
-	if s.muCache == nil {
-		s.muCache = &sync.RWMutex{}
-	}
-	if s.Schemas == nil {
-		s.Schemas = make(map[string]*Schema)
-	}
-	if s.Cache == nil {
-		s.Cache = make(map[string]*Ttl)
-	}
+func (s *DB) load() error {
 	// Re-initialize unexported fields in deserialized Schema objects.
 	for _, schema := range s.Schemas {
 		if schema.mu == nil {

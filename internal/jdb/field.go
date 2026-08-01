@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"unsafe"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
@@ -35,11 +36,48 @@ func newTtl(value any, duration time.Duration) (*Ttl, error) {
 		}
 	}
 
-	return &Ttl{
+	result := &Ttl{
 		Value:     bt,
 		CreatedAt: timezone.Now(),
 		Duration:  duration,
-	}, nil
+	}
+	return result, nil
+}
+
+/**
+* MemorySize: Returns the memory size of the TTL entry.
+* @return uintptr
+**/
+func (s *Ttl) MemorySize() uintptr {
+	return unsafe.Sizeof(*s) + uintptr(cap(s.Value))
+}
+
+/**
+* Bytes: Returns the size of the TTL entry in bytes.
+* @return int
+**/
+func (s *Ttl) Bytes() int {
+	return int(s.MemorySize())
+}
+
+/**
+* KB: Returns the size of the TTL entry in kilobytes.
+* @return float64
+**/
+func (s *Ttl) KB() float64 {
+	return float64(s.Bytes()) / 1024
+}
+
+/**
+* MB: Returns the size of the TTL entry in megabytes.
+* @return float64
+**/
+func (s *Ttl) MB() float64 {
+	return float64(s.Bytes()) / 1024 / 1024
+}
+
+func (s *Ttl) GB() float64 {
+	return float64(s.Bytes()) / 1024 / 1024 / 1024
 }
 
 /**
@@ -63,12 +101,9 @@ func (s *Ttl) GetExpiresAt() time.Time {
 
 const (
 	ID         string = "id"
-	INDEX      string = "_idx"
-	TTL        string = "_ttl"
+	INDEX      string = "idx"
 	STATUS     string = "status"
 	VERSION    string = "version"
-	PROJECT_ID string = "project_id"
-	TENANT_ID  string = "tenant_id"
 	CREATED_AT string = "created_at"
 	UPDATED_AT string = "updated_at"
 )
@@ -245,7 +280,9 @@ func (s *Field) Value(item et.Json) interface{} {
 **/
 type Detail struct {
 	to              *Model            `json:"-"`                 // Target model
+	bridge          *Model            `json:"-"`                 // Bridge model
 	Keys            map[string]string `json:"key"`               // Keys
+	ToKeys          map[string]string `json:"to_key"`            // To keys
 	Selects         []string          `json:"select"`            // Selects
 	OnDeleteCascade bool              `json:"on_delete_cascade"` // On delete cascade
 	OnUpdateCascade bool              `json:"on_update_cascade"` // On update cascade
@@ -263,5 +300,17 @@ func newDetail(to *Model, keys map[string]string, selects []string, onDeleteCasc
 		Selects:         selects,
 		OnDeleteCascade: onDeleteCascade,
 		OnUpdateCascade: onUpdateCascade,
+	}
+}
+
+func newMaster(to *Model, keys map[string]string, toKeys map[string]string, selects []string) *Detail {
+	bridge := newModel(to.Schema, to.Name, to.Path, to.Version, true)
+	return &Detail{
+		to:              to,
+		bridge:          bridge,
+		Keys:            keys,
+		Selects:         selects,
+		OnDeleteCascade: true,
+		OnUpdateCascade: true,
 	}
 }

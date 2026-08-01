@@ -119,9 +119,9 @@ const (
 	ReadWrite
 )
 
-type SetIndexFn func(*FileStore, string, *RecordRef)
-type Putfn func(*FileStore, string, []byte)
-type Deletefn func(*FileStore, string)
+type SetIndexFn func(fls *FileStore, idx string, ref *RecordRef)
+type Putfn func(fls *FileStore, idx string, old, new []byte)
+type Deletefn func(fls *FileStore, idx string, old []byte)
 
 type FileStore struct {
 	ID                  string                `json:"id"`
@@ -692,18 +692,99 @@ func (s *FileStore) Put(id string, value any) (bool, error) {
 	}
 
 	s.indexMu.Lock()
-	_, exists := s.index[id]
+	ref, exists := s.index[id]
 	if exists {
 		s.TombStones++
 	}
 	s.putIndex(id, ref)
 	s.indexMu.Unlock()
 
-	for _, fn := range s.onPut {
-		fn(s, id, bt)
+	if exists {
+		old, err := s.ReadBytes(ref)
+		if err != nil {
+			return false, err
+		}
+		for _, fn := range s.onPut {
+			fn(s, id, old, bt)
+		}
+	} else {
+		for _, fn := range s.onPut {
+			fn(s, id, nil, bt)
+		}
 	}
 
 	return exists, nil
+}
+
+/**
+* Delete
+* @param id string
+* @return bool, error
+**/
+func (s *FileStore) Delete(id string) (bool, error) {
+	if s.mode == ReadOnly {
+		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	}
+
+	s.indexMu.RLock()
+	ref, exists := s.index[id]
+	s.indexMu.RUnlock()
+
+	if !exists {
+		return false, nil
+	}
+
+	old, err := s.ReadBytes(ref)
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
+		return false, logs.Error(err)
+	}
+
+	s.indexMu.Lock()
+	s.TombStones++
+	s.deleteIndex(id)
+	s.indexMu.Unlock()
+
+	for _, fn := range s.onDelete {
+		fn(s, id, old)
+	}
+
+	if s.isDebug {
+		i := len(s.index)
+		logs.Debug("deleted:", s.Path, ":total:", i, ":ID:", id)
+	}
+
+	return true, nil
+}
+
+/**
+* IsExist
+* @param id string
+* @return bool
+**/
+func (s *FileStore) IsExist(id string) bool {
+	if id == "" {
+		return false
+	}
+
+	s.indexMu.RLock()
+	_, existed := s.index[id]
+	s.indexMu.RUnlock()
+
+	return existed
+}
+
+/**
+* ReadBytes
+* @param ref *RecordRef
+* @return []byte, error
+**/
+func (s *FileStore) ReadBytes(ref *RecordRef) ([]byte, error) {
+	seg := s.segments[ref.segment]
+	return seg.ReadBytes(ref)
 }
 
 /**
@@ -745,62 +826,6 @@ func (s *FileStore) Get(id string, dest any) (bool, error) {
 	}
 
 	return s.Read(ref, dest)
-}
-
-/**
-* Delete
-* @param id string
-* @return bool, error
-**/
-func (s *FileStore) Delete(id string) (bool, error) {
-	if s.mode == ReadOnly {
-		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
-	}
-
-	s.indexMu.RLock()
-	_, exists := s.index[id]
-	s.indexMu.RUnlock()
-
-	if !exists {
-		return false, nil
-	}
-
-	if _, err := s.appendRecord(id, nil, Deleted); err != nil {
-		return false, logs.Error(err)
-	}
-
-	s.indexMu.Lock()
-	s.TombStones++
-	s.deleteIndex(id)
-	s.indexMu.Unlock()
-
-	for _, fn := range s.onDelete {
-		fn(s, id)
-	}
-
-	if s.isDebug {
-		i := len(s.index)
-		logs.Debug("deleted:", s.Path, ":total:", i, ":ID:", id)
-	}
-
-	return true, nil
-}
-
-/**
-* IsExist
-* @param id string
-* @return bool
-**/
-func (s *FileStore) IsExist(id string) bool {
-	if id == "" {
-		return false
-	}
-
-	s.indexMu.RLock()
-	_, existed := s.index[id]
-	s.indexMu.RUnlock()
-
-	return existed
 }
 
 /**

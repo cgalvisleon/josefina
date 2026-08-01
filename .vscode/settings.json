@@ -1,5 +1,6 @@
 {
   "go.lintTool": "golint",
+  "go.lintOnSave": "off",
   "gopls": {
     "ui.diagnostic.staticcheck": false
   }

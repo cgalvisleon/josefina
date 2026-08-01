@@ -3,7 +3,7 @@ module github.com/cgalvisleon/josefina
 go 1.25.0
 
 require (
-	github.com/cgalvisleon/et v1.0.25
+	github.com/cgalvisleon/et v1.0.26
 	github.com/go-chi/chi/v5 v5.2.1
 )
 

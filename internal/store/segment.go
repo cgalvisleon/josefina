@@ -343,6 +343,20 @@ func (s *segment) read(ref *RecordRef) ([]byte, error) {
 }
 
 /**
+* ReadBytes
+* @param ref *RecordRef
+* @return []byte, error
+**/
+func (s *segment) ReadBytes(ref *RecordRef) ([]byte, error) {
+	result, err := s.read(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/**
 * Read
 * @param ref *RecordRef, dest any
 * @return error
