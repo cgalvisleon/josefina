@@ -53,27 +53,6 @@ func (s *Schema) ToJson() et.Json {
 }
 
 /**
-* save: Save schema data
-* @return error
-**/
-func (s *Schema) save() error {
-	if s.db == nil {
-		return errors.New(msg.MSG_DB_IS_NIL)
-	}
-
-	if s.db.schemas == nil {
-		return errors.New(msg.MSG_SCHEMAS_IS_NIL)
-	}
-
-	err := s.db.schemas.putObject(s.Name, s.ToJson())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * addModel: Adds a model to the schema
 * @param model *Model
 **/
@@ -126,8 +105,7 @@ func (s *Schema) DeleteModel(name string) error {
 	}
 
 	s.removeModel(name)
-
-	return s.save()
+	return nil
 }
 
 /**
@@ -161,5 +139,5 @@ func (s *Schema) Empty() error {
 	}
 
 	s.models = make(map[string]*Model, 0)
-	return s.save()
+	return nil
 }

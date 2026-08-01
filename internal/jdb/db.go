@@ -35,17 +35,17 @@ type Config struct {
 * DB: Represents a database
 **/
 type DB struct {
-	Name        string                   `json:"name"`    // Database name
-	Path        string                   `json:"path"`    // Path to the database
-	Config      *Config                  `json:"config"`  // Configuration
-	Schemas     map[string]*Schema       `json:"schemas"` // Schemas
-	Cache       map[string]*Ttl          `json:"-"`       // Cache
-	mu          map[string]*sync.RWMutex `json:"-"`       // Mutex
-	schemas     *Model                   `json:"-"`       // Schemas
-	models      *Model                   `json:"-"`       // Models
-	cache       *Model                   `json:"-"`       // Cache
-	transaction *Model                   `json:"-"`       // Transaction
-	errors      *Model                   `json:"-"`       // Errors
+	Name        string                   `json:"name"`   // Database name
+	Path        string                   `json:"path"`   // Path to the database
+	Config      *Config                  `json:"config"` // Configuration
+	schemas     map[string]*Schema       `json:"-"`      // Schemas
+	Cache       map[string]*Ttl          `json:"-"`      // Cache
+	mu          map[string]*sync.RWMutex `json:"-"`      // Mutex
+	store       *Model                   `json:"-"`      // Store
+	models      *Model                   `json:"-"`      // Models
+	cache       *Model                   `json:"-"`      // Cache
+	transaction *Model                   `json:"-"`      // Transaction
+	errors      *Model                   `json:"-"`      // Errors
 }
 
 /**
