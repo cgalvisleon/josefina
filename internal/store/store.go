@@ -747,11 +747,11 @@ func (s *FileStore) Get(id string) (bool, []byte, error) {
 
 /**
 * ForEach
-* @param fn func(id string, data []byte) (bool, error), offset, limit int
+* @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
-func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), offset, limit int) error {
-	index, keys := s.getRecords(true, offset, limit)
+func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
+	index, keys := s.getRecords(asc, offset, limit)
 
 	s.indexMu.RLock()
 	segs := s.segments

@@ -24,10 +24,12 @@ const (
 	BULK   Cmd = "bulk"
 )
 
+type Status string
+
 const (
-	PENDING     = "pending"
-	ROLLED_BACK = "rolled_back"
-	COMMITTED   = "committed"
+	PENDING     Status = "pending"
+	ROLLED_BACK Status = "rolled_back"
+	COMMITTED   Status = "committed"
 )
 
 /**
@@ -41,9 +43,8 @@ type Transaction struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Command   Cmd       `json:"command"`
 	Idx       string    `json:"id"`
-	New       et.Json   `json:"new"`
-	Old       et.Json   `json:"old"`
-	Status    string    `json:"status"`
+	Data      et.Json   `json:"new"`
+	Status    Status    `json:"status"`
 	model     *Model    `json:"-"`
 	tx        *Tx       `json:"-"`
 }

@@ -172,7 +172,6 @@ func (s TpIndex) Str() string {
 }
 
 const (
-	TpIndexHash  TpIndex = "hash"
 	TpIndexBTree TpIndex = "btree"
 )
 

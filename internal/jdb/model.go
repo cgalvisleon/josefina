@@ -101,7 +101,6 @@ type Model struct {
 	Version       int                                                            `json:"version"`        // Version
 	IsCore        bool                                                           `json:"is_core"`        // Is core model
 	IsChangue     bool                                                           `json:"is_changue"`     // Is changue
-	IsStrict      bool                                                           `json:"is_strict"`      // Is strict model
 	stores        map[string]*store.FileStore                                    `json:"-"`              // Stores
 	btrees        map[string]*BTree                                              `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                                                        `json:"-"`              // Schema
@@ -195,7 +194,7 @@ func (s *Model) Save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	return s.db.models.Put(s.Name, s)
+	return s.db.models.put(s.Name, s)
 }
 
 /**
@@ -277,13 +276,6 @@ func (s *Model) IsDebug() *Model {
 }
 
 /**
-* Stricted: Sets the model to strict
-**/
-func (s *Model) Stricted() {
-	s.IsStrict = true
-}
-
-/**
 * GenKey: Returns a new key for the model
 * @return string
 **/
@@ -321,44 +313,6 @@ func (s *Model) Init() error {
 	}
 
 	s.IsInit = true
-	return nil
-}
-
-/**
-* getBtree returns the BTree for field, checking if it exists.
-* @param field string
-* @return *BTree, bool
-**/
-func (s *Model) getBtree(field string) (*BTree, bool) {
-	s.mu.RLock()
-	bt, exists := s.btrees[field]
-	s.mu.RUnlock()
-	if exists {
-		return bt, true
-	}
-
-	return nil, false
-}
-
-/**
-* loadBTree returns the BTree for field, opening and loading it on first access.
-* @param field string
-* @return error
-**/
-func (s *Model) loadBTree(field string) error {
-	bt, exists := s.getBtree(field)
-	if exists {
-		return nil
-	}
-
-	bt, err := OpenBTree(s.Path, field)
-	if err != nil {
-		return err
-	}
-
-	s.mu.Lock()
-	s.btrees[field] = bt
-	s.mu.Unlock()
 	return nil
 }
 
@@ -415,6 +369,44 @@ func (s *Model) loadStore(name string) error {
 }
 
 /**
+* getBtree returns the BTree for field, checking if it exists.
+* @param field string
+* @return *BTree, bool
+**/
+func (s *Model) getBtree(field string) (*BTree, bool) {
+	s.mu.RLock()
+	bt, exists := s.btrees[field]
+	s.mu.RUnlock()
+	if exists {
+		return bt, true
+	}
+
+	return nil, false
+}
+
+/**
+* loadBTree returns the BTree for field, opening and loading it on first access.
+* @param field string
+* @return error
+**/
+func (s *Model) loadBTree(field string) error {
+	bt, exists := s.getBtree(field)
+	if exists {
+		return nil
+	}
+
+	bt, err := OpenBTree(s.Path, field)
+	if err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	s.btrees[field] = bt
+	s.mu.Unlock()
+	return nil
+}
+
+/**
 * source: Returns the primary store
 * @return *store.FileStore, error
 **/
@@ -427,12 +419,11 @@ func (s *Model) source() (*store.FileStore, bool) {
 * @param triggers []*Trigger, old, new et.Json
 * @return error
 **/
-func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error {
+func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json) error {
 	v := jrex.NewInstance()
 	v.SetCode(trigger.Definition)
 	v.Set("Old", old)
 	v.Set("New", new)
-	v.Set("Tx", tx)
 	_, err := v.Run()
 	if err != nil {
 		return err
@@ -442,14 +433,19 @@ func (s *Model) fireTriggers(trigger *Trigger, old, new *et.Json, tx *Tx) error 
 }
 
 /**
-* Put: Puts a raw value by primary key
+* put: Puts a raw value by primary key
 * @param idx string, value any, expiration time.Duration
 * @return error
 **/
-func (s *Model) Put(idx string, value any) error {
+func (s *Model) put(idx string, value any) error {
 	store, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
+	}
+
+	_, old, err := store.Get(idx)
+	if err != nil {
+		return err
 	}
 
 	bt, ok := value.([]byte)
@@ -461,7 +457,7 @@ func (s *Model) Put(idx string, value any) error {
 		}
 	}
 
-	exists, old, err := store.Put(idx, bt)
+	_, err = store.Put(idx, bt)
 	if err != nil {
 		return err
 	}
@@ -473,30 +469,32 @@ func (s *Model) Put(idx string, value any) error {
 		}
 	}
 
-	for _, trigger := range s.BeforeInserts {
-		err := s.fireTriggers(trigger, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
 /**
-* Delete: Removes a document by primary key (no index cleanup)
+* remove: Removes a document by primary key (no index cleanup)
 * @param idx string
 * @return error
 **/
-func (s *Model) Delete(idx string) error {
+func (s *Model) remove(idx string) error {
 	store, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
 
-	exists, old, err := store.Delete(idx)
+	exists, old, err := store.Get(idx)
+	if err != nil {
+		return err
+	}
+
 	if !exists {
 		return nil
+	}
+
+	_, err = store.Delete(idx)
+	if err != nil {
+		return err
 	}
 
 	// Call onRemove functions
@@ -514,7 +512,7 @@ func (s *Model) Delete(idx string) error {
 * @param idx string, dest any
 * @return bool, error
 **/
-func (s *Model) Get(idx string, dest any) (bool, error) {
+func (s *Model) get(idx string, dest any) (bool, error) {
 	store, exists := s.source()
 	if !exists {
 		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
@@ -544,7 +542,7 @@ func (s *Model) Get(idx string, dest any) (bool, error) {
 **/
 func (s *Model) putObject(idx string, object et.Json) error {
 	object[INDEX] = idx
-	err := s.Put(idx, object)
+	err := s.put(idx, object)
 	if err != nil {
 		return err
 	}
@@ -575,13 +573,17 @@ func (s *Model) putObject(idx string, object et.Json) error {
 
 /**
 * deleteObject: Removes a document and cleans up all secondary indexes.
-* @param idx string, current et.Json
+* @param idx string
 * @return error
 **/
-func (s *Model) deleteObject(idx string, current et.Json) error {
-	err := s.Delete(idx)
+func (s *Model) deleteObject(idx string) error {
+	current, exists, err := s.current(idx)
 	if err != nil {
 		return err
+	}
+
+	if !exists {
+		return nil
 	}
 
 	// Remove from each secondary BTree index.
@@ -605,17 +607,22 @@ func (s *Model) deleteObject(idx string, current et.Json) error {
 		}
 	}
 
+	err = s.delete(idx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 /**
-* Current: Gets the current document by primary key
+* current: Gets the current document by primary key
 * @param idx string
 * @return et.Json, bool, error
 **/
-func (s *Model) Current(idx string) (et.Json, bool, error) {
+func (s *Model) current(idx string) (et.Json, bool, error) {
 	var dest et.Json
-	exists, err := s.Get(idx, &dest)
+	exists, err := s.get(idx, &dest)
 	if err != nil {
 		return et.Json{}, false, err
 	}
@@ -623,11 +630,11 @@ func (s *Model) Current(idx string) (et.Json, bool, error) {
 }
 
 /**
-* IsExists: Checks if a document exists by primary key
+* isExists: Checks if a document exists by primary key
 * @param idx string
 * @return bool, error
 **/
-func (s *Model) IsExists(idx string) (bool, error) {
+func (s *Model) isExists(idx string) (bool, error) {
 	source, exists := s.source()
 	if !exists {
 		return false, errors.New(msg.MSG_STORE_NOT_FOUND)
@@ -640,7 +647,7 @@ func (s *Model) IsExists(idx string) (bool, error) {
 * Count: Counts documents in the primary store
 * @return int, error
 **/
-func (s *Model) Count() (int, error) {
+func (s *Model) count() (int, error) {
 	result, exists := s.source()
 	if !exists {
 		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
@@ -651,216 +658,126 @@ func (s *Model) Count() (int, error) {
 
 /**
 * insert: Inserts a document and keeps secondary indexes in sync.
-* @param idx string, data et.Json, tx *Tx
+* @param idx string, data et.Json
 * @return error
 **/
-func (s *Model) insert(idx string, data et.Json, tx *Tx) error {
-	tx, _ = GetTx(s.db, tx)
-	if idx == "" {
-		idx = s.GenKey()
+func (s *Model) insert(idx string, new et.Json) error {
+	exists, err := s.isExists(idx)
+	if err != nil {
+		return err
 	}
 
-	if exists, err := s.IsExists(idx); err != nil {
-		return err
-	} else if exists {
+	if exists {
 		return ErrorRecordExists
 	}
 
-	new := et.Json{}
-	if s.IsStrict {
-		for _, field := range s.Fields {
-			if value, ok := data[field.Name]; ok {
-				new[field.Name] = value
-			}
-		}
-	} else {
-		new = data
-	}
-
-	itemsTx := tx.Items(s)
-	for _, index := range s.Unique {
-		value := new[index.Name]
-		if value != nil {
-			if index.Type == TpIndexBTree {
-				btree, exists := s.getBtree(index.Name)
-				if exists {
-					_, ok := btree.Get(KeyFromAny(value))
-					if ok {
-						return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
-					}
-				}
-			}
-		}
-		result := et.From(itemsTx).
-			Where(Eq(index.Name, value)).
-			All()
-		if len(result) > 0 {
-			return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
-		}
-	}
-
 	for _, index := range s.Required {
-		if _, ok := new[index.Name]; !ok {
+		_, exists := new[index.Name]
+		if !exists {
 			return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 		}
-		for _, item := range itemsTx {
-			if _, ok := item[index.Name]; !ok {
-				return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+	}
+
+	for _, index := range s.Unique {
+		value := new[index.Name]
+		if value == nil {
+			continue
+		}
+
+		if index.Type == TpIndexBTree {
+			btree, exists := s.getBtree(index.Name)
+			if exists {
+				_, ok := btree.Get(KeyFromAny(value))
+				if ok {
+					return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+				}
 			}
 		}
 	}
 
 	var old = et.Json{}
 	for _, trigger := range s.BeforeInserts {
-		err := s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fnTrigger := range tx.beforeInsert {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err := tx.Add(s, INSERT, idx, old, new)
+	err = s.putObject(idx, new)
 	if err != nil {
 		return err
 	}
 
 	for _, trigger := range s.AfterInserts {
-		err = s.fireTriggers(trigger, &old, &new, tx)
+		err = s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fnTrigger := range tx.afterInsert {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	tx.Result = new
 	return nil
 }
 
 /**
 * update: Updates a document and keeps secondary indexes in sync.
-* @param idx string, data et.Json
+* @param idx string, new et.Json
 * @return error
 **/
-func (s *Model) update(idx string, data et.Json, tx *Tx) error {
+func (s *Model) update(idx string, new et.Json) error {
 	if idx == "" {
 		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
-	tx, _ = GetTx(s.db, tx)
-	new := et.Json{}
-	if s.IsStrict {
-		for _, field := range s.Fields {
-			if value, ok := data[field.Name]; ok {
-				new[field.Name] = value
-			}
-		}
-	} else {
-		new = data
+
+	old, exists, err := s.current(idx)
+	if err != nil {
+		return err
 	}
 
-	var old et.Json
-	if exists, err := s.Get(idx, &old); err != nil {
-		return err
-	} else if !exists {
+	if !exists {
 		return fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
 	}
 
-	itemsTx := tx.Items(s)
-	for _, index := range s.Unique {
-		value := new[index.Name]
-		if value != nil {
-			if index.Type == TpIndexBTree {
-				btree, exists := s.getBtree(index.Name)
-				if exists {
-					idxs, ok := btree.Get(KeyFromAny(value))
-					if ok {
-						i := slices.Index(idxs, idx)
-						if i == -1 {
-							return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
-						}
-					}
-				}
-			}
-		}
-		result := et.From(itemsTx).
-			Where(Eq(index.Name, value)).
-			And(Neg(INDEX, idx)).
-			All()
-		if len(result) > 0 {
-			return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+	for _, index := range s.Required {
+		_, exists := new[index.Name]
+		if !exists {
+			return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
 		}
 	}
 
-	for _, index := range s.Required {
-		if _, ok := new[index.Name]; !ok {
-			return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+	for _, index := range s.Unique {
+		value := new[index.Name]
+		if value == nil {
+			continue
 		}
-		for _, item := range itemsTx {
-			if _, ok := item[index.Name]; !ok {
-				return fmt.Errorf(msg.MSG_REQUIRED_FIELD, index.Tag)
+
+		if index.Type == TpIndexBTree {
+			btree, exists := s.getBtree(index.Name)
+			if exists {
+				_, ok := btree.Get(KeyFromAny(value))
+				if ok {
+					return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
+				}
 			}
 		}
 	}
 
 	for _, trigger := range s.BeforeUpdates {
-		err := s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fnTrigger := range tx.beforeUpdate {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err := tx.Add(s, UPDATE, idx, old, new)
+	err = s.putObject(idx, new)
 	if err != nil {
 		return err
 	}
 
 	for _, trigger := range s.AfterUpdates {
-		err := s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
-	}
-
-	for _, fnTrigger := range tx.afterUpdate {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	tx.Result = new
-	return nil
-}
-
-/**
-* upsert: Inserts or updates a document and keeps secondary indexes in sync.
-* @param new et.Json, tx *Tx
-* @return error
-**/
-func (s *Model) upsert(idx string, new et.Json, tx *Tx) error {
-	err := s.insert(idx, new, tx)
-	if errors.Is(err, ErrorRecordExists) {
-		return s.update(idx, new, tx)
-	} else if err != nil {
-		return err
 	}
 
 	return nil
@@ -871,53 +788,56 @@ func (s *Model) upsert(idx string, new et.Json, tx *Tx) error {
 * @param idx string
 * @return error
 **/
-func (s *Model) delete(idx string, tx *Tx) error {
+func (s *Model) delete(idx string) error {
 	if idx == "" {
 		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
-	tx, _ = GetTx(s.db, tx)
-	var old et.Json
-	if exists, err := s.Get(idx, &old); err != nil {
+
+	old, exists, err := s.current(idx)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+
+	if !exists {
 		return nil
 	}
 
 	new := et.Json{}
 	for _, trigger := range s.BeforeDeletes {
-		err := s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fnTrigger := range tx.beforeDelete {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err := tx.Add(s, DELETE, idx, old, new)
+	err = s.remove(idx)
 	if err != nil {
 		return err
 	}
 
 	for _, trigger := range s.AfterDeletes {
-		err := s.fireTriggers(trigger, &old, &new, tx)
+		err := s.fireTriggers(trigger, &old, &new)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, fnTrigger := range tx.afterDelete {
-		err := fnTrigger(s, &old, &new, tx)
-		if err != nil {
-			return err
-		}
+	return nil
+}
+
+/**
+* upsert: Inserts or updates a document and keeps secondary indexes in sync.
+* @param new et.Json, tx *Tx
+* @return error
+**/
+func (s *Model) upsert(idx string, new et.Json) error {
+	err := s.insert(idx, new)
+	if errors.Is(err, ErrorRecordExists) {
+		return s.update(idx, new)
+	} else if err != nil {
+		return err
 	}
 
-	tx.Result = old
 	return nil
 }
 
@@ -926,12 +846,14 @@ func (s *Model) delete(idx string, tx *Tx) error {
 * @param name string, definition string
 **/
 func (s *Model) AddBeforeInsert(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeInserts[idx].Definition = bt
+		s.BeforeInserts[idx].Definition = definition
 	} else {
-		s.BeforeInserts = append(s.BeforeInserts, &Trigger{Name: name, Definition: bt})
+		s.BeforeInserts = append(s.BeforeInserts, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -940,12 +862,14 @@ func (s *Model) AddBeforeInsert(name string, definition string) {
 * @param name string, definition string
 **/
 func (s *Model) AddAfterInsert(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.AfterInserts, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.AfterInserts[idx].Definition = bt
+		s.AfterInserts[idx].Definition = definition
 	} else {
-		s.AfterInserts = append(s.AfterInserts, &Trigger{Name: name, Definition: bt})
+		s.AfterInserts = append(s.AfterInserts, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -954,12 +878,14 @@ func (s *Model) AddAfterInsert(name string, definition string) {
 * @param name string, definition string
 **/
 func (s *Model) AddBeforeUpdate(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeUpdates[idx].Definition = bt
+		s.BeforeUpdates[idx].Definition = definition
 	} else {
-		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{Name: name, Definition: bt})
+		s.BeforeUpdates = append(s.BeforeUpdates, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -968,12 +894,14 @@ func (s *Model) AddBeforeUpdate(name string, definition string) {
 * @param name string, definition string
 **/
 func (s *Model) AddAfterUpdate(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.AfterUpdates, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.AfterUpdates[idx].Definition = bt
+		s.AfterUpdates[idx].Definition = definition
 	} else {
-		s.AfterUpdates = append(s.AfterUpdates, &Trigger{Name: name, Definition: bt})
+		s.AfterUpdates = append(s.AfterUpdates, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -982,12 +910,14 @@ func (s *Model) AddAfterUpdate(name string, definition string) {
 * @param name string, definition string
 **/
 func (s *Model) AddBeforeDelete(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.BeforeDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.BeforeDeletes[idx].Definition = bt
+		s.BeforeDeletes[idx].Definition = definition
 	} else {
-		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{Name: name, Definition: bt})
+		s.BeforeDeletes = append(s.BeforeDeletes, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -996,12 +926,14 @@ func (s *Model) AddBeforeDelete(name string, definition string) {
 * @param name string, definition string
 **/
 func (s *Model) AddAfterDelete(name string, definition string) {
-	bt := []byte(definition)
 	idx := slices.IndexFunc(s.AfterDeletes, func(t *Trigger) bool { return t.Name == name })
 	if idx != -1 {
-		s.AfterDeletes[idx].Definition = bt
+		s.AfterDeletes[idx].Definition = definition
 	} else {
-		s.AfterDeletes = append(s.AfterDeletes, &Trigger{Name: name, Definition: bt})
+		s.AfterDeletes = append(s.AfterDeletes, &Trigger{
+			Name:       name,
+			Definition: definition,
+		})
 	}
 }
 
@@ -1011,7 +943,7 @@ func (s *Model) AddAfterDelete(name string, definition string) {
 * @return error
 **/
 func (s *Model) ForEachBt(next func(idx string, src []byte) (bool, error), asc bool, offset, limit int) error {
-	st, exists := s.Source()
+	st, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
@@ -1027,7 +959,7 @@ func (s *Model) ForEachBt(next func(idx string, src []byte) (bool, error), asc b
 * @return error
 **/
 func (s *Model) ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error {
-	st, exists := s.Source()
+	st, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
 	}
@@ -1074,65 +1006,4 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		}
 		return true, nil
 	}, true, 0, 0)
-}
-
-/**
-* Where
-* @param condition *et.Condition
-* @return *Where
-**/
-func (s *Model) Where(condition *et.Condition) *Where {
-	return From(s).Where(condition)
-}
-
-/**
-* Insert
-* @param data et.Json
-* @return *Command
-**/
-func (s *Model) Insert(data et.Json) *Command {
-	items := []et.Json{data}
-	result := newCommand(s, INSERT, items)
-	return result
-}
-
-/**
-* Update
-* @param data et.Json
-* @return *Command
-**/
-func (s *Model) Update(data et.Json) *Command {
-	items := []et.Json{data}
-	result := newCommand(s, UPDATE, items)
-	return result
-}
-
-/**
-* Delete
-* @return *Command
-**/
-func (s *Model) Delete() *Command {
-	result := newCommand(s, DELETE, []et.Json{})
-	return result
-}
-
-/**
-* Upsert
-* @param data et.Json
-* @return *Command
-**/
-func (s *Model) Upsert(data et.Json) *Command {
-	items := []et.Json{data}
-	result := newCommand(s, UPSERT, items)
-	return result
-}
-
-/**
-* Bulk
-* @param items []et.Json
-* @return *Command
-**/
-func (s *Model) Bulk(items []et.Json) *Command {
-	result := newCommand(s, BULK, items)
-	return result
 }

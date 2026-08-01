@@ -12,13 +12,6 @@ import (
 )
 
 /**
-* Status: Represents the lifecycle state of a session or transaction.
-**/
-type Status string
-
-const ()
-
-/**
 * TpConnection: Identifies the transport protocol used by a client session.
 **/
 type TpConnection string
