@@ -124,6 +124,7 @@ func (s TypeField) Str() string {
 const (
 	TpAtrib       TypeField = "atrib"
 	TpDetail      TypeField = "detail"
+	TpMaster      TypeField = "master"
 	TpRollup      TypeField = "rollup"
 	TpCalc        TypeField = "calc"
 	TpAggregation TypeField = "aggregation"
@@ -173,6 +174,7 @@ func (s TpIndex) Str() string {
 
 const (
 	TpIndexBTree TpIndex = "btree"
+	TpIndexHash  TpIndex = "hash"
 )
 
 type Index struct {
@@ -302,12 +304,12 @@ func newDetail(to *Model, keys map[string]string, selects []string, onDeleteCasc
 	}
 }
 
-func newMaster(to *Model, keys map[string]string, toKeys map[string]string, selects []string) *Detail {
-	bridge := newModel(to.Schema, to.Name, to.Path, to.Version, true)
+func newMaster(to *Model, bridge *Model, keys map[string]string, toKeys map[string]string, selects []string) *Detail {
 	return &Detail{
 		to:              to,
 		bridge:          bridge,
 		Keys:            keys,
+		ToKeys:          toKeys,
 		Selects:         selects,
 		OnDeleteCascade: true,
 		OnUpdateCascade: true,

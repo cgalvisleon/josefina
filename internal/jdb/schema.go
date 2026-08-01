@@ -67,6 +67,16 @@ type Schema struct {
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
 
+func newSchema(db *DB, name string) *Schema {
+	return &Schema{
+		Database: db.Name,
+		Name:     name,
+		Models:   make(map[string]*Model),
+		db:       db,
+		mu:       &sync.RWMutex{},
+	}
+}
+
 /**
 * load: Loads the transaction
 * @param db *DB

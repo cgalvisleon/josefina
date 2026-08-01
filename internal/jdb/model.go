@@ -16,53 +16,6 @@ import (
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
-/**
-* loadModels: Loads the models
-* @return error
-**/
-func (s *DB) loadModels() error {
-	result, err := s.Define(DModel{
-		Schema:  sysSchema,
-		Name:    "models",
-		IsCore:  true,
-		Version: 1,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = result.Init()
-	if err != nil {
-		return err
-	}
-
-	cursor, err := result.NewCursor(true, 0, 0)
-	if err != nil {
-		return err
-	}
-
-	defer cursor.Close()
-	for cursor.Next() {
-		var model *Model
-		err := cursor.Scan(&model)
-		if err != nil {
-			return err
-		}
-
-		schema, err := s.getSchema(model.Schema)
-		if err != nil {
-			return err
-		}
-
-		err = model.load(schema)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 var (
 	ErrorFieldNotFound = errors.New(msg.MSG_FIELD_NOT_FOUND)
 	ErrorRecordExists  = errors.New(msg.MSG_RECORD_EXISTS)
@@ -158,6 +111,10 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 	}
 
 	return result, nil
+}
+
+func loadModel(s *Schema, name string) (*Model, error) {
+
 }
 
 /**

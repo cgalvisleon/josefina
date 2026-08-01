@@ -338,6 +338,58 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 }
 
 /**
+* DefineMaster: Defines the master
+* @param name string, to *Model, keys map[string]string, toKeys map[string]string
+* @return error
+**/
+func (s *Model) DefineMaster(name string, keys map[string]string, to *Model, toKeys map[string]string) error {
+	_, err := s.defineField(name, TpMaster, TpJson, []et.Json{})
+	if err != nil {
+		return err
+	}
+
+	bridge, err := s.schema.newModel(fmt.Sprintf("%s_%s", s.Name, to.Name), false, 0)
+	if err != nil {
+		return err
+	}
+
+	for fk, pk := range keys {
+		_, err = s.DefineField(pk, TpKey, "")
+		if err != nil {
+			return err
+		}
+
+		_, err = bridge.DefineField(fk, TpKey, "")
+		if err != nil {
+			return err
+		}
+
+		s.DefinePrimaryKeys(pk)
+		bridge.DefineForeignKeys(to, keys, true, true)
+		bridge.DefinePrimaryKeys(fk)
+	}
+
+	for fk, pk := range toKeys {
+		_, err = to.DefineField(pk, TpKey, "")
+		if err != nil {
+			return err
+		}
+
+		_, err = bridge.DefineField(fk, TpKey, "")
+		if err != nil {
+			return err
+		}
+
+		to.DefinePrimaryKeys(pk)
+		bridge.DefineForeignKeys(to, toKeys, true, true)
+		bridge.DefinePrimaryKeys(fk)
+	}
+
+	s.Masters[name] = newMaster(to, bridge, keys, toKeys, []string{})
+	return nil
+}
+
+/**
 * DefineRollup: Defines the rollup
 * @param name string, to *Model, keys map[string]string, selects []string
 * @return error
