@@ -105,7 +105,7 @@ type Model struct {
 	btrees        map[string]*BTree                                              `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                                                        `json:"-"`              // Schema
 	db            *DB                                                            `json:"-"`              // Database
-	mu            *sync.RWMutex                                                  `json:"-"`              // Mutex
+	mu            map[string]*sync.RWMutex                                       `json:"-"`              // Mutex
 	onPut         []func(model *Model, idx string, old []byte, new []byte) error `json:"-"`              // On put
 	onRemove      []func(model *Model, idx string, old []byte) error             `json:"-"`              // On remove
 	isDebug       bool                                                           `json:"-"`              // Is debug
@@ -148,7 +148,7 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 		btrees:        make(map[string]*BTree, 0),
 		schema:        s,
 		db:            s.db,
-		mu:            &sync.RWMutex{},
+		mu:            map[string]*sync.RWMutex{},
 		onPut:         make([]func(model *Model, idx string, old []byte, new []byte) error, 0),
 		onRemove:      make([]func(model *Model, idx string, old []byte) error, 0),
 	}
@@ -158,6 +158,20 @@ func newModel(s *Schema, name, path string, version int, isCore bool) (*Model, e
 	}
 
 	return result, nil
+}
+
+/**
+* getMutex: Returns the mutex for name
+* @param name string
+* @return *sync.RWMutex
+**/
+func (s *Model) getMutex(name string) *sync.RWMutex {
+	result, exists := s.mu[name]
+	if !exists {
+		result = &sync.RWMutex{}
+		s.mu[name] = result
+	}
+	return s.mu[name]
 }
 
 /**
@@ -206,8 +220,9 @@ func (s *Model) Empty() error {
 		return nil
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.getMutex("stores")
+	mu.Lock()
+	defer mu.Unlock()
 
 	for _, store := range s.stores {
 		if err := store.Empty(); err != nil {
@@ -338,9 +353,10 @@ func (s *Model) OnRemove(fn func(model *Model, idx string, old []byte) error) {
 * @return *store.FileStore, bool
 **/
 func (s *Model) getStore(name string) (*store.FileStore, bool) {
-	s.mu.RLock()
+	mu := s.getMutex("stores")
+	mu.RLock()
 	result, exists := s.stores[name]
-	s.mu.RUnlock()
+	mu.RUnlock()
 
 	return result, exists
 }
@@ -361,11 +377,20 @@ func (s *Model) loadStore(name string) error {
 		return err
 	}
 
-	s.mu.Lock()
+	mu := s.getMutex("stores")
+	mu.Lock()
 	s.stores[name] = result
-	s.mu.Unlock()
+	mu.Unlock()
 
 	return nil
+}
+
+/**
+* source: Returns the primary store
+* @return *store.FileStore, error
+**/
+func (s *Model) source() (*store.FileStore, bool) {
+	return s.getStore(INDEX)
 }
 
 /**
@@ -374,9 +399,10 @@ func (s *Model) loadStore(name string) error {
 * @return *BTree, bool
 **/
 func (s *Model) getBtree(field string) (*BTree, bool) {
-	s.mu.RLock()
+	mu := s.getMutex("btrees")
+	mu.RLock()
 	bt, exists := s.btrees[field]
-	s.mu.RUnlock()
+	mu.RUnlock()
 	if exists {
 		return bt, true
 	}
@@ -400,18 +426,11 @@ func (s *Model) loadBTree(field string) error {
 		return err
 	}
 
-	s.mu.Lock()
+	mu := s.getMutex("btrees")
+	mu.Lock()
 	s.btrees[field] = bt
-	s.mu.Unlock()
+	mu.Unlock()
 	return nil
-}
-
-/**
-* source: Returns the primary store
-* @return *store.FileStore, error
-**/
-func (s *Model) source() (*store.FileStore, bool) {
-	return s.getStore(INDEX)
 }
 
 /**
