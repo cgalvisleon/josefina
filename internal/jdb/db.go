@@ -43,13 +43,9 @@ type DB struct {
 	Timezone            string             `json:"timezone"`
 	MinThresholdCompact int                `json:"min_threshold_compact"`
 	schemas             map[string]*Schema `json:"-"` // Schemas
-	cache               *Cache             `json:"-"` // Cache
 	mu                  *sync.RWMutex      `json:"-"` // Mutex
 	store               *Model             `json:"-"` // Store
-	transaction         *Model             `json:"-"` // Transaction
-	errors              *Model             `json:"-"` // Errors
-	users               *Model             `json:"-"` // Users
-	sessions            *Model             `json:"-"` // Sessions
+	cache               *Cache             `json:"-"` // Cache
 }
 
 /**
