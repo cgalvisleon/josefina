@@ -1,13 +1,11 @@
 package jdb
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/jwt"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -40,100 +38,12 @@ type Session struct {
 	CreatedAt  time.Time     `json:"created_at"`
 	LastAccess time.Time     `json:"last_access"`
 	Duration   time.Duration `json:"duration"`
-	Idx        string        `json:"idx"`
+	ID         string        `json:"id"`
 	UserId     string        `json:"user_id"`
-	Username   string        `json:"username"`
 	Address    string        `json:"address"`
 	App        string        `json:"app"`
 	Type       TpConnection  `json:"type"`
 	Payload    et.Json       `json:"payload"`
-	Database   string        `json:"database"`
-	db         *DB           `json:"-"`
-	node       *Node         `json:"-"`
-}
-
-/**
-* newSession
-* @param db *DB, userId, username, address, app string, tp TpConnection, duration time.Duration
-* @return string, err
-**/
-func newSession(db *DB, userId, username, address string, tp TpConnection, payload et.Json, duration time.Duration) (string, error) {
-	key := fmt.Sprintf("%s:%s", userId, db.Name)
-	err := db.DeleteCache(key)
-	if err != nil {
-		return "", err
-	}
-
-	idx := db.node.sessions.GenKey()
-	result := &Session{
-		CreatedAt: time.Now(),
-		Duration:  duration,
-		Idx:       idx,
-		UserId:    userId,
-		Username:  username,
-		Address:   address,
-		Type:      tp,
-		Database:  db.Name,
-		db:        db,
-		node:      db.node,
-	}
-
-	token, err := jwt.New(db.Name, idx, userId, username, payload, duration)
-	if err != nil {
-		return "", err
-	}
-
-	err = db.SetCache(key, token, duration)
-	if err != nil {
-		return "", err
-	}
-
-	if err := result.save(); err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-/**
-* save
-* @return error
-**/
-func (s *Session) save() error {
-	if s.node == nil {
-		return errors.New(msg.MSG_NODE_IS_NIL)
-	}
-
-	jData, err := s.ToJson()
-	if err != nil {
-		return err
-	}
-
-	err = s.node.sessions.Put(s.Idx, jData)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
-* ToJson
-* @return (et.Json, error)
-**/
-func (s *Session) ToJson() (et.Json, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	result := et.Json{}
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	return result, nil
 }
 
 /**
@@ -155,24 +65,53 @@ func (s *Session) GetExpiresAt() time.Time {
 	return s.CreatedAt.Add(s.Duration)
 }
 
+type Sessions struct {
+	sessions map[string]*Session
+	mu       *sync.RWMutex
+	store    *Model
+}
+
 /**
-* loadSessions: Load the sessions
+* loadSessions: Loads the sessions
+* @return *Sessions, error
+**/
+func (s *DB) loadSessions() (*Sessions, error) {
+	store, err := s.loadModel("", "sessions", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Sessions{
+		sessions: make(map[string]*Session),
+		mu:       &sync.RWMutex{},
+		store:    store,
+	}, nil
+}
+
+/**
+* setSession: Sets a session in the cache
+* @param session *Session
 * @return error
 **/
-func (s *Node) loadSessions() error {
-	var err error
-	s.sessions, err = s.catalog.Define(DModel{
-		Name:    "sessions",
-		IsCore:  true,
-		Version: 1,
-	})
-	if err != nil {
-		return err
-	}
-
-	if err = s.sessions.Init(); err != nil {
-		return err
-	}
-
+func (s *Sessions) setSession(session *Session) error {
+	s.mu.Lock()
+	s.sessions[session.ID] = session
+	s.mu.Unlock()
 	return nil
+}
+
+/**
+* getSession: Gets a session from the cache
+* @param id string
+* @return *Session, error
+**/
+func (s *Sessions) getSession(id string) (*Session, error) {
+	s.mu.RLock()
+	session, exists := s.sessions[id]
+	s.mu.RUnlock()
+	if !exists {
+		return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+	}
+
+	return session, nil
 }

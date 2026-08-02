@@ -30,11 +30,11 @@ func (s *DB) loadCache() (*Cache, error) {
 }
 
 /**
-* SetCache: Stores a value in memory and in the persistent cache with an optional expiration.
+* setCache: Stores a value in memory and in the persistent cache with an optional expiration.
 * @param key string, value any, expiration time.Duration
 * @return error
 **/
-func (s *Cache) SetCache(key string, value any, expiration time.Duration) error {
+func (s *Cache) setCache(key string, value any, expiration time.Duration) error {
 	ttl, err := newTtl(value, expiration)
 	if err != nil {
 		return err
@@ -48,12 +48,12 @@ func (s *Cache) SetCache(key string, value any, expiration time.Duration) error 
 }
 
 /**
-* GetCache: Returns a cached value. Checks memory first; on miss checks the persistent cache.
+* getCache: Returns a cached value. Checks memory first; on miss checks the persistent cache.
 * Evicts the memory entry if the persistent layer reports expiration.
 * @param key string, dest any
 * @return bool, error
 **/
-func (s *Cache) GetCache(key string, dest any) (bool, error) {
+func (s *Cache) getCache(key string, dest any) (bool, error) {
 	s.mu.RLock()
 	ttl, exists := s.cache[key]
 	s.mu.RUnlock()
@@ -90,11 +90,11 @@ func (s *Cache) GetCache(key string, dest any) (bool, error) {
 }
 
 /**
-* DeleteCache: Removes a value from memory and from the persistent cache.
+* deleteCache: Removes a value from memory and from the persistent cache.
 * @param key string
 * @return error
 **/
-func (s *Cache) DeleteCache(key string) error {
+func (s *Cache) deleteCache(key string) error {
 	s.mu.Lock()
 	delete(s.cache, key)
 	s.mu.Unlock()

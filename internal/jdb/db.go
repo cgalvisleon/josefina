@@ -46,6 +46,8 @@ type DB struct {
 	mu                  *sync.RWMutex      `json:"-"` // Mutex
 	store               *Model             `json:"-"` // Store
 	cache               *Cache             `json:"-"` // Cache
+	users               *Users             `json:"-"` // Users
+	sessions            *Sessions          `json:"-"` // Sessions
 }
 
 /**

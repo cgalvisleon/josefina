@@ -1089,54 +1089,55 @@ func (bt *BTree) leftmostLeaf() *bpNode {
 * @return []string
 **/
 func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
+	value := condition.Value.Value
 	switch condition.Operator {
 	case et.EQ:
-		return bt.Equal(KeyFromAny(condition.Value))
+		return bt.Equal(KeyFromAny(value))
 	case et.NEG:
-		return bt.NotEqual(KeyFromAny(condition.Value))
+		return bt.NotEqual(KeyFromAny(value))
 	case et.LESS:
-		return bt.Less(KeyFromAny(condition.Value), true)
+		return bt.Less(KeyFromAny(value), true)
 	case et.LESS_EQ:
-		return bt.LessEq(KeyFromAny(condition.Value), true)
+		return bt.LessEq(KeyFromAny(value), true)
 	case et.MORE:
-		return bt.More(KeyFromAny(condition.Value), true)
+		return bt.More(KeyFromAny(value), true)
 	case et.MORE_EQ:
-		return bt.MoreEq(KeyFromAny(condition.Value), true)
+		return bt.MoreEq(KeyFromAny(value), true)
 	case et.LIKE:
-		return bt.Like(KeyFromAny(condition.Value), true)
+		return bt.Like(KeyFromAny(value), true)
 	case et.IN:
-		if vals, ok := condition.Value.([]any); ok {
+		if vals, ok := value.([]any); ok {
 			keys := make([]IndexKey, len(vals))
 			for i, v := range vals {
 				keys[i] = KeyFromAny(v)
 			}
 			return bt.In(keys, true)
 		}
-		return bt.In([]IndexKey{KeyFromAny(condition.Value)}, true)
+		return bt.In([]IndexKey{KeyFromAny(value)}, true)
 	case et.NOT_IN:
-		if vals, ok := condition.Value.([]any); ok {
+		if vals, ok := value.([]any); ok {
 			keys := make([]IndexKey, len(vals))
 			for i, v := range vals {
 				keys[i] = KeyFromAny(v)
 			}
 			return bt.NotIn(keys, true)
 		}
-		return bt.NotIn([]IndexKey{KeyFromAny(condition.Value)}, true)
+		return bt.NotIn([]IndexKey{KeyFromAny(value)}, true)
 	case et.IS:
-		return bt.Is(KeyFromAny(condition.Value), true)
+		return bt.Is(KeyFromAny(value), true)
 	case et.IS_NOT:
-		return bt.IsNot(KeyFromAny(condition.Value), true)
+		return bt.IsNot(KeyFromAny(value), true)
 	case et.NULL:
-		return bt.Null(KeyFromAny(condition.Value), true)
+		return bt.Null(KeyFromAny(value), true)
 	case et.NOT_NULL:
-		return bt.NotNull(KeyFromAny(condition.Value), true)
+		return bt.NotNull(KeyFromAny(value), true)
 	case et.BETWEEN:
-		btValues, ok := condition.Value.(et.BetweenValue)
+		btValues, ok := value.(et.BetweenValue)
 		if ok {
 			return bt.Between(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
 		}
 	case et.NOT_BETWEEN:
-		btValues, ok := condition.Value.(et.BetweenValue)
+		btValues, ok := value.(et.BetweenValue)
 		if ok {
 			return bt.NotBetween(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
 		}

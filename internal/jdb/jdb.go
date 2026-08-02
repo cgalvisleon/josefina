@@ -49,6 +49,21 @@ func NewDb(path, name string) (*DB, error) {
 		return nil, err
 	}
 
+	result.cache, err = result.loadCache()
+	if err != nil {
+		return nil, err
+	}
+
+	result.users, err = result.loadUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	result.sessions, err = result.loadSessions()
+	if err != nil {
+		return nil, err
+	}
+
 	databases[name] = result
 	return result, nil
 }
