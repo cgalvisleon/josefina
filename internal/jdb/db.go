@@ -45,6 +45,70 @@ type DB struct {
 }
 
 /**
+* newSchema: Creates a new schema
+* @param name string
+* @return *Schema, error
+**/
+func (s *DB) newSchema(name string) (*Schema, error) {
+	name = store.Normalize(name)
+	result := &Schema{
+		Database: s.Name,
+		Name:     name,
+		models:   make(map[string]*Model),
+		db:       s,
+		mu:       &sync.RWMutex{},
+	}
+	err := s.addSchema(result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+/**
+* loadSchema: Loads a schema from the JSON definition
+* @param def et.Json
+* @return *Schema, error
+**/
+func (s *DB) loadSchema(def et.Json) (*Schema, error) {
+	name := def.Str("name")
+	result, err := s.newSchema(name)
+	if err != nil {
+		return nil, err
+	}
+
+	models := def.Json("models")
+	for name, _ := range models {
+		modelDef := models.Json(name)
+		model, err := result.loadModel(modelDef)
+		if err != nil {
+			return nil, err
+		}
+		result.addModel(model)
+	}
+
+	return result, nil
+}
+
+/**
+* ToJson
+* @return et.Json, error
+**/
+func (s *DB) ToJson() et.Json {
+	schemas := []et.Json{}
+	for _, schema := range s.schemas {
+		schemas = append(schemas, schema.ToJson())
+	}
+
+	return et.Json{
+		"name":    s.Name,
+		"path":    s.Path,
+		"config":  s.Config,
+		"schemas": s.schemas,
+	}
+}
+
+/**
 * Init: Initializes the database
 * @return error
 **/
@@ -78,24 +142,6 @@ func (s *DB) Init() error {
 	}
 
 	return nil
-}
-
-/**
-* ToJson
-* @return et.Json, error
-**/
-func (s *DB) ToJson() et.Json {
-	schemas := []et.Json{}
-	for _, schema := range s.schemas {
-		schemas = append(schemas, schema.ToJson())
-	}
-
-	return et.Json{
-		"name":    s.Name,
-		"path":    s.Path,
-		"config":  s.Config,
-		"schemas": s.schemas,
-	}
 }
 
 /**
