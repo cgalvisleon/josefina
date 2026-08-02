@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/josefina/internal/store"
 )
 
@@ -27,5 +28,14 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(test)
+	test.ForEach(func(idx string, data []byte) (bool, error) {
+		var item et.Json
+		err := json.Unmarshal(data, &item)
+		if err != nil {
+			return false, err
+		}
+
+		logs.Debug(item.ToString())
+		return true, nil
+	}, true, 0, 0)
 }

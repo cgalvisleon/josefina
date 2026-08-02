@@ -497,17 +497,19 @@ func (s *FileStore) buildIndex() error {
 /**
 * getRecords
 * @param asc bool, offset int, limit int
-* @return map[string]*RecordRef, []string
+* @return map[string]*RecordRef, []string, []*segment
 **/
-func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string) {
+func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string, []*segment) {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
+
+	segs := s.segments
 
 	n := len(s.index)
 	keys := make([]string, 0)
 	indexResult := make(map[string]*RecordRef, 0)
 	if offset >= n {
-		return indexResult, keys
+		return indexResult, keys, segs
 	}
 
 	if limit <= 0 {
@@ -541,7 +543,7 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 		}
 	}
 
-	return indexResult, keys
+	return indexResult, keys, segs
 }
 
 /**
@@ -712,7 +714,10 @@ func (s *FileStore) IsExist(id string) bool {
 * @return bool, error
 **/
 func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
+	s.indexMu.RLock()
 	seg := s.segments[ref.segment]
+	s.indexMu.RUnlock()
+
 	result, err := seg.Read(ref)
 	if err != nil {
 		return nil, err
@@ -726,7 +731,10 @@ func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
 * @return recordHeader, error
 **/
 func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
+	s.indexMu.RLock()
 	seg := s.segments[ref.segment]
+	s.indexMu.RUnlock()
+
 	return seg.ReadHeader(ref)
 }
 
@@ -758,11 +766,7 @@ func (s *FileStore) Get(id string) (bool, []byte, error) {
 * @return error
 **/
 func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
-	index, keys := s.getRecords(asc, offset, limit)
-
-	s.indexMu.RLock()
-	segs := s.segments
-	s.indexMu.RUnlock()
+	index, keys, segs := s.getRecords(asc, offset, limit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -856,7 +860,7 @@ Producer:
 * @return []string
 **/
 func (s *FileStore) Keys(asc bool, offset, limit int) []string {
-	_, keys := s.getRecords(asc, offset, limit)
+	_, keys, _ := s.getRecords(asc, offset, limit)
 	return keys
 }
 

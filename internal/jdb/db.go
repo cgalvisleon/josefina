@@ -48,6 +48,8 @@ type DB struct {
 	store               *Model             `json:"-"` // Store
 	transaction         *Model             `json:"-"` // Transaction
 	errors              *Model             `json:"-"` // Errors
+	users               *Model             `json:"-"` // Users
+	sessions            *Model             `json:"-"` // Sessions
 }
 
 /**
