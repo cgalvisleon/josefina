@@ -21,7 +21,7 @@ func main() {
 
 func run() error {
 	// ── Database ──────────────────────────────────────────────────────────────
-	db, err := jdb.NewDb("test")
+	db, err := jdb.NewDb("./data", "test")
 	if err != nil {
 		return err
 	}
