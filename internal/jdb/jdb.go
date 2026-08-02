@@ -43,11 +43,8 @@ func NewDb(path, name string) (*DB, error) {
 		schemas:             make(map[string]*Schema, 0),
 		mu:                  &sync.RWMutex{},
 	}
-	
+
 	databases[name] = result
-	if err := result.Init(); err != nil {
-		return nil, err
-	}
 	return result, nil
 }
 
@@ -72,6 +69,16 @@ func LoadDb(name string) (*DB, error) {
 		return nil, err
 	}
 
+	if err := result.Init(); err != nil {
+		return nil, err
+	}
+
+	err = result.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	databases[name] = result
 	return result, nil
 }
 

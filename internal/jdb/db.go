@@ -206,11 +206,10 @@ func (s *DB) Load() error {
 
 	schemas := def.ArrayJson("schemas")
 	for _, schema := range schemas {
-		schema, err := s.loadSchema(schema)
+		_, err := s.loadSchema(schema)
 		if err != nil {
 			return err
 		}
-		s.schemas[schema.Name] = schema
 	}
 
 	return nil
