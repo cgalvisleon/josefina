@@ -25,11 +25,9 @@ import (
 )
 
 const (
-	packageName       = "store"
-	maxIdLen          = 65535
-	fixedHeaderSize   = 19  // LSN(8) + DataLen(4) + CRC(4) + IDLen(2) + Status(1)
-	workerThreshold   = 128 // below this, sequential is faster than goroutine pool
-	workerRecordRatio = 128 // one worker per this many records
+	packageName     = "store"
+	maxIdLen        = 65535
+	fixedHeaderSize = 19 // LSN(8) + DataLen(4) + CRC(4) + IDLen(2) + Status(1)
 )
 
 /**
