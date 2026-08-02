@@ -141,6 +141,12 @@ func (s *DB) Init() error {
 		return err
 	}
 
+	for _, schema := range s.schemas {
+		if err := schema.Init(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

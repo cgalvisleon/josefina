@@ -267,6 +267,19 @@ func (s *Schema) GetModel(name string) (*Model, error) {
 }
 
 /**
+* Init: Initializes the schema
+* @return error
+**/
+func (s *Schema) Init() error {
+	for _, model := range s.models {
+		if err := model.Init(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/**
 * Empty: Empties the schema
 * @return error
 **/
