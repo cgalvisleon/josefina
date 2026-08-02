@@ -348,7 +348,7 @@ func (bt *BTree) persistKey(key IndexKey) error {
 		_, err := bt.st.Delete(encodeKey(key))
 		return err
 	}
-	_, err := bt.st.Put(encodeKey(key), leaf.vals[i])
+	_, _, err := bt.st.Put(encodeKey(key), leaf.vals[i])
 	return err
 }
 

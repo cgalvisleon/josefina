@@ -8,42 +8,25 @@ import (
 
 type Cache struct {
 	cache map[string]*Ttl
-	mu    map[string]*sync.RWMutex
+	mu    *sync.RWMutex
 	store *Model
-}
-
-func (s *DB) newCache() *Cache {
-	return &Cache{
-		cache: make(map[string]*Ttl),
-		mu:    make(map[string]*sync.RWMutex),
-		store: s.store,
-	}
 }
 
 /**
 * loadCache: Loads the cache
-* @return error
+* @return *Cache, error
 **/
-func (s *DB) loadCache() error {
-	result, err := s.Define(DModel{
-		Schema:  sysSchema,
-		Name:    "cache",
-		IsCore:  true,
-		Version: 1,
-	})
+func (s *DB) loadCache() (*Cache, error) {
+	store, err := s.loadModel("", "cache", 1, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = result.Init()
-	if err != nil {
-		return err
-	}
-
-	s.Cache = make(map[string]*Ttl)
-	s.cache = result
-
-	return nil
+	return &Cache{
+		cache: make(map[string]*Ttl),
+		mu:    &sync.RWMutex{},
+		store: store,
+	}, nil
 }
 
 /**
@@ -51,17 +34,17 @@ func (s *DB) loadCache() error {
 * @param key string, value any, expiration time.Duration
 * @return error
 **/
-func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
+func (s *Cache) SetCache(key string, value any, expiration time.Duration) error {
 	ttl, err := newTtl(value, expiration)
 	if err != nil {
 		return err
 	}
 
-	s.muCache.Lock()
-	s.Cache[key] = ttl
-	s.muCache.Unlock()
+	s.mu.Lock()
+	s.cache[key] = ttl
+	s.mu.Unlock()
 
-	return s.cache.Put(key, ttl)
+	return s.store.put(key, ttl)
 }
 
 /**
@@ -70,17 +53,17 @@ func (s *DB) SetCache(key string, value any, expiration time.Duration) error {
 * @param key string, dest any
 * @return bool, error
 **/
-func (s *DB) GetCache(key string, dest any) (bool, error) {
-	s.muCache.RLock()
-	ttl, inMemory := s.Cache[key]
-	s.muCache.RUnlock()
+func (s *Cache) GetCache(key string, dest any) (bool, error) {
+	s.mu.RLock()
+	ttl, exists := s.cache[key]
+	s.mu.RUnlock()
 
-	if inMemory {
+	if exists {
 		if ttl.IsExpired() {
-			s.muCache.Lock()
-			delete(s.Cache, key)
-			s.muCache.Unlock()
-			s.cache.Remove(key)
+			s.mu.Lock()
+			delete(s.cache, key)
+			s.mu.Unlock()
+			s.store.delete(key)
 			return false, nil
 		}
 		if err := json.Unmarshal(ttl.Value, dest); err == nil {
@@ -88,7 +71,7 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 		}
 	}
 
-	exists, err := s.cache.Get(key, ttl)
+	exists, err := s.store.get(key, ttl)
 	if err != nil {
 		return false, err
 	}
@@ -100,9 +83,9 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 		return false, err
 	}
 
-	s.muCache.Lock()
-	s.Cache[key] = ttl
-	s.muCache.Unlock()
+	s.mu.Lock()
+	s.cache[key] = ttl
+	s.mu.Unlock()
 	return true, nil
 }
 
@@ -111,10 +94,10 @@ func (s *DB) GetCache(key string, dest any) (bool, error) {
 * @param key string
 * @return error
 **/
-func (s *DB) DeleteCache(key string) error {
-	s.muCache.Lock()
-	delete(s.Cache, key)
-	s.muCache.Unlock()
+func (s *Cache) DeleteCache(key string) error {
+	s.mu.Lock()
+	delete(s.cache, key)
+	s.mu.Unlock()
 
-	return s.cache.Remove(key)
+	return s.store.delete(key)
 }
