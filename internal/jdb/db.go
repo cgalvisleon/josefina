@@ -3,7 +3,6 @@ package jdb
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -43,39 +42,6 @@ type DB struct {
 	store       *Model             `json:"-"`      // Store
 	transaction *Model             `json:"-"`      // Transaction
 	errors      *Model             `json:"-"`      // Errors
-}
-
-/**
-* NewDb: Creates a new database
-* @param path, name string
-* @return *DB, error
-**/
-func NewDb(path, name string) (*DB, error) {
-	name = store.Normalize(name)
-	if !utility.ValidStr(name, 0, []string{""}) {
-		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	}
-
-	path = filepath.Join(path, name)
-	result := &DB{
-		Name: name,
-		Path: path,
-		Config: &Config{
-			IsStrict:            false,
-			Lang:                "en",
-			TransactionTTL:      10 * time.Second,
-			RelSegSize:          1024,
-			SyncOnWrite:         false,
-			TennantName:         "",
-			TennantPathData:     "",
-			Timezone:            "America/Bogota",
-			MinThresholdCompact: 100,
-		},
-		schemas: make(map[string]*Schema, 0),
-		mu:      &sync.RWMutex{},
-	}
-
-	return result, nil
 }
 
 /**

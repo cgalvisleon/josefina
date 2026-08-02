@@ -46,7 +46,7 @@ type Model struct {
 	Masters       map[string]*Detail          `json:"masters"`        // Masters
 	Rollups       map[string]*Detail          `json:"rollups"`        // Rollups
 	Relations     map[string]*Detail          `json:"relations"`      // Relations
-	Calcs         map[string][]byte           `json:"calcs"`          // Calculated fields
+	Calcs         map[string]string           `json:"calcs"`          // Calculated fields
 	BeforeInserts []*Trigger                  `json:"before_inserts"` // Before insert triggers
 	AfterInserts  []*Trigger                  `json:"after_inserts"`  // After insert triggers
 	BeforeUpdates []*Trigger                  `json:"before_updates"` // Before update triggers
@@ -57,11 +57,11 @@ type Model struct {
 	Version       int                         `json:"version"`        // Version
 	IsCore        bool                        `json:"is_core"`        // Is core model
 	IsChangue     bool                        `json:"is_changue"`     // Is changue
-	stores        map[string]*store.FileStore `json:"-"`              // Stores
-	btrees        map[string]*BTree           `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
 	schema        *Schema                     `json:"-"`              // Schema
 	db            *DB                         `json:"-"`              // Database
 	mu            map[string]*sync.RWMutex    `json:"-"`              // Mutex
+	stores        map[string]*store.FileStore `json:"-"`              // Stores
+	btrees        map[string]*BTree           `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
 	onPut         []TriggerFnBt               `json:"-"`              // On put
 	onRemove      []TriggerFnBt               `json:"-"`              // On remove
 	isDebug       bool                        `json:"-"`              // Is debug
@@ -94,7 +94,7 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 		Masters:       make(map[string]*Detail, 0),
 		Rollups:       make(map[string]*Detail, 0),
 		Relations:     make(map[string]*Detail, 0),
-		Calcs:         make(map[string][]byte, 0),
+		Calcs:         make(map[string]string, 0),
 		BeforeInserts: make([]*Trigger, 0),
 		BeforeUpdates: make([]*Trigger, 0),
 		BeforeDeletes: make([]*Trigger, 0),
@@ -105,11 +105,11 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 		Version:       version,
 		IsCore:        isCore,
 		IsChangue:     false,
-		stores:        make(map[string]*store.FileStore, 0),
-		btrees:        make(map[string]*BTree, 0),
 		schema:        s,
 		db:            s.db,
 		mu:            map[string]*sync.RWMutex{},
+		stores:        make(map[string]*store.FileStore, 0),
+		btrees:        make(map[string]*BTree, 0),
 		onPut:         make([]TriggerFnBt, 0),
 		onRemove:      make([]TriggerFnBt, 0),
 	}
@@ -124,21 +124,104 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 
 /**
 * loadModel: Loads a model
-* @param name string
+* @param def et.Json
 * @return *Model, error
 **/
-func (s *Schema) loadModel(name string) (*Model, error) {
-	result, exists := s.models[name]
-	if exists {
-		return result, nil
-	}
-
+func (s *Schema) loadModel(def et.Json) (*Model, error) {
 	if s.db == nil {
 		return nil, errors.New(msg.MSG_DB_IS_NIL)
 	}
 
 	if s.db.store == nil {
 		return nil, errors.New(msg.MSG_STORE_NOT_DEFINED)
+	}
+
+	id := def.Str("id")
+	var result *Model
+	exists, err := s.db.store.get(id, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	result.db = s.db
+	result.schema = s
+	result.mu = map[string]*sync.RWMutex{}
+	result.stores = make(map[string]*store.FileStore, 0)
+	result.btrees = make(map[string]*BTree, 0)
+	result.onPut = make([]TriggerFnBt, 0)
+	result.onRemove = make([]TriggerFnBt, 0)
+	result.isDebug = def.Bool("is_debug")
+
+	for _, field := range result.Fields {
+		field.from = result
+	}
+
+	foreignKeys := def.Json("foreign_keys")
+	for name, detail := range result.ForeignKeys {
+		detailDef := foreignKeys.Json(name)
+		if detailDef.IsEmpty() {
+			return nil, fmt.Errorf(msg.MSG_FOREIGN_KEY_NOT_DEFINED, name)
+		}
+
+		if err := detail.load(detailDef); err != nil {
+			return nil, err
+		}
+	}
+
+	details := def.Json("details")
+	for name, detail := range result.Details {
+		detailDef := details.Json(name)
+		if detailDef.IsEmpty() {
+			return nil, fmt.Errorf(msg.MSG_DETAIL_NOT_DEFINED, name)
+		}
+
+		if err := detail.load(detailDef); err != nil {
+			return nil, err
+		}
+	}
+
+	masters := def.Json("masters")
+	for name, detail := range result.Masters {
+		detailDef := masters.Json(name)
+		if detailDef.IsEmpty() {
+			return nil, fmt.Errorf(msg.MSG_MASTER_NOT_DEFINED, name)
+		}
+
+		if err := detail.load(detailDef); err != nil {
+			return nil, err
+		}
+	}
+
+	rollups := def.Json("rollups")
+	for name, detail := range result.Rollups {
+		detailDef := rollups.Json(name)
+		if detailDef.IsEmpty() {
+			return nil, fmt.Errorf(msg.MSG_ROLLUP_NOT_DEFINED, name)
+		}
+
+		if err := detail.load(detailDef); err != nil {
+			return nil, err
+		}
+	}
+
+	relations := def.Json("relations")
+	for name, detail := range result.Relations {
+		detailDef := relations.Json(name)
+		if detailDef.IsEmpty() {
+			return nil, fmt.Errorf(msg.MSG_RELATION_NOT_DEFINED, name)
+		}
+
+		if err := detail.load(detailDef); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := result.Init(); err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -149,14 +232,41 @@ func (s *Schema) loadModel(name string) (*Model, error) {
 * @return et.Json
 **/
 func (s *Model) ToJson() et.Json {
+	foreignKeys := et.Json{}
+	for name, detail := range s.ForeignKeys {
+		foreignKeys[name] = detail.ToJson()
+	}
+
+	details := et.Json{}
+	for name, detail := range s.Details {
+		details[name] = detail.ToJson()
+	}
+
+	masters := et.Json{}
+	for name, detail := range s.Masters {
+		masters[name] = detail.ToJson()
+	}
+
+	rollups := et.Json{}
+	for name, detail := range s.Rollups {
+		rollups[name] = detail.ToJson()
+	}
+
+	relations := et.Json{}
+	for name, detail := range s.Relations {
+		relations[name] = detail.ToJson()
+	}
+
 	return et.Json{
-		"id":       s.Key(),
-		"database": s.Database,
-		"schema":   s.Schema,
-		"name":     s.Name,
-		"path":     s.Path,
-		"version":  s.Version,
-		"is_core":  s.IsCore,
+		"id":           s.Key(),
+		"database":     s.Database,
+		"schema":       s.Schema,
+		"name":         s.Name,
+		"foreign_keys": foreignKeys,
+		"details":      details,
+		"masters":      masters,
+		"rollups":      rollups,
+		"relations":    relations,
 	}
 }
 
@@ -224,7 +334,7 @@ func (s *Model) Empty() error {
 	s.Masters = make(map[string]*Detail, 0)
 	s.Rollups = make(map[string]*Detail, 0)
 	s.Relations = make(map[string]*Detail, 0)
-	s.Calcs = make(map[string][]byte, 0)
+	s.Calcs = make(map[string]string, 0)
 	s.BeforeInserts = make([]*Trigger, 0)
 	s.AfterInserts = make([]*Trigger, 0)
 	s.BeforeUpdates = make([]*Trigger, 0)

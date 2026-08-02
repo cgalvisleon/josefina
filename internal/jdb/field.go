@@ -290,6 +290,68 @@ type Detail struct {
 }
 
 /**
+* ToJson: Returns the JSON representation of the Detail.
+* @return et.Json
+**/
+func (s *Detail) ToJson() et.Json {
+	to := et.Json{}
+	if s.to != nil {
+		to = et.Json{
+			"database": s.to.Database,
+			"schema":   s.to.Schema,
+			"name":     s.to.Name,
+		}
+	}
+
+	bridge := et.Json{}
+	if s.bridge != nil {
+		bridge = et.Json{
+			"database": s.bridge.Database,
+			"schema":   s.bridge.Schema,
+			"name":     s.bridge.Name,
+		}
+	}
+
+	return et.Json{
+		"to":                to,
+		"bridge":            bridge,
+		"keys":              s.Keys,
+		"select":            s.Selects,
+		"on_delete_cascade": s.OnDeleteCascade,
+		"on_update_cascade": s.OnUpdateCascade,
+	}
+}
+
+/**
+* load: Loads the detail from the JSON definition
+* @param def et.Json
+* @return error
+**/
+func (s *Detail) load(def et.Json) error {
+	database := def.Str("database")
+	schema := def.Str("schema")
+	name := def.Str("name")
+	db, err := GetDb(database)
+	if err != nil {
+		return err
+	}
+
+	to, err := db.GetModel(schema, name)
+	if err != nil {
+		return err
+	}
+
+	bridge, err := db.GetModel(schema, name)
+	if err != nil {
+		return err
+	}
+
+	s.to = to
+	s.bridge = bridge
+	return nil
+}
+
+/**
 * newDetail
 * @param to *Model, keys map[string]string, select []string, onDeleteCascade, onUpdateCascade bool
 * @return *Detail

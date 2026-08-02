@@ -97,6 +97,11 @@ var (
 	MSG_REQUIRED_FIELD             = "required field %s"
 	MSG_NO_CONDITIONS              = "no conditions"
 	MSG_NAME_IS_REQUIRED           = "name is required"
+	MSG_FOREIGN_KEY_NOT_DEFINED    = "foreign key not defined (%s)"
+	MSG_DETAIL_NOT_DEFINED         = "detail not defined (%s)"
+	MSG_MASTER_NOT_DEFINED         = "master not defined (%s)"
+	MSG_ROLLUP_NOT_DEFINED         = "rollup not defined (%s)"
+	MSG_RELATION_NOT_DEFINED       = "relation not defined (%s)"
 )
 
 func init() {
@@ -178,5 +183,10 @@ func init() {
 		MSG_REQUIRED_FIELD = "campo requerido (%s)"
 		MSG_NO_CONDITIONS = "no hay condiciones"
 		MSG_NAME_IS_REQUIRED = "name es requerido"
+		MSG_FOREIGN_KEY_NOT_DEFINED = "foreign key no definido (%s)"
+		MSG_DETAIL_NOT_DEFINED = "detail no definido (%s)"
+		MSG_MASTER_NOT_DEFINED = "master no definido (%s)"
+		MSG_ROLLUP_NOT_DEFINED = "rollup no definido (%s)"
+		MSG_RELATION_NOT_DEFINED = "relation no definido (%s)"
 	}
 }
