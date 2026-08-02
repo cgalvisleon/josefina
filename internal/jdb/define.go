@@ -453,7 +453,9 @@ type DForeignKeys struct {
 }
 
 type DDetail struct {
+	To      DTo               `json:"to"`
 	Keys    map[string]string `json:"keys"`
+	ToKeys  map[string]string `json:"to_keys"`
 	Version int               `json:"version"`
 }
 
@@ -475,7 +477,6 @@ type DModel struct {
 	Name          string             `json:"name"`
 	Version       int                `json:"version"`
 	IsCore        bool               `json:"is_core"`
-	IsStrict      bool               `json:"is_strict"`
 	Fields        map[string]DField  `json:"fields"`
 	Indexes       []DIndex           `json:"indexes"`
 	PrimaryKeys   []string           `json:"primary_keys"`
@@ -484,6 +485,7 @@ type DModel struct {
 	Required      []DIndex           `json:"required"`
 	Hidden        []string           `json:"hidden"`
 	Details       map[string]DDetail `json:"details"`
+	Masters       map[string]DDetail `json:"masters"`
 	Rollups       map[string]DRollup `json:"rollups"`
 	Relations     []DRelation        `json:"relations"`
 	Calcs         map[string][]byte  `json:"calcs"`

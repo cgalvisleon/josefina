@@ -20,14 +20,20 @@ type Schema struct {
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
 
-func (s *DB) newSchema(name string) *Schema {
-	return &Schema{
+func (s *DB) newSchema(name string) (*Schema, error) {
+	name = store.Normalize(name)
+	result := &Schema{
 		Database: s.Name,
 		Name:     name,
 		models:   make(map[string]*Model),
 		db:       s,
 		mu:       &sync.RWMutex{},
 	}
+	err := s.addSchema(result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 /**
@@ -35,14 +41,9 @@ func (s *DB) newSchema(name string) *Schema {
 * @return et.Json, error
 **/
 func (s *Schema) ToJson() et.Json {
-	models := et.Json{}
+	models := []et.Json{}
 	for _, model := range s.models {
-		models[model.Name] = et.Json{
-			"name":    model.Name,
-			"path":    model.Path,
-			"version": model.Version,
-			"is_core": model.IsCore,
-		}
+		models = append(models, model.ToJson())
 	}
 
 	return et.Json{

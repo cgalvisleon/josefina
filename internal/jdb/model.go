@@ -28,9 +28,9 @@ type Trigger struct {
 }
 
 type Model struct {
-	Database      string                                                         `json:"database"`       // Database name
-	Schema        string                                                         `json:"schema"`         // Schema name
-	Name          string                                                         `json:"name"`           // Model name
+	Database      string                                                         `json:"database"` // Database name
+	Schema        string                                                         `json:"schema"`   // Schema name
+	Name          string                                                         `json:"name"`
 	IsInit        bool                                                           `json:"-"`              // Is initialized
 	Path          string                                                         `json:"path"`           // Path to the model
 	Fields        map[string]*Field                                              `json:"fields"`         // Fields
@@ -121,6 +121,26 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 }
 
 /**
+* ToJson: Returns the model as a JSON object
+* @return et.Json
+**/
+func (s *Model) ToJson() et.Json {
+	return et.Json{
+		"database":     s.Database,
+		"schema":       s.Schema,
+		"name":         s.Name,
+		"path":         s.Path,
+		"fields":       s.Fields,
+		"indexes":      s.Indexes,
+		"primary_keys": s.PrimaryKeys,
+		"foreign_keys": s.ForeignKeys,
+		"unique":       s.Unique,
+		"required":     s.Required,
+		"hidden":       s.Hidden,
+	}
+}
+
+/**
 * getMutex: Returns the mutex for name
 * @param name string
 * @return *sync.RWMutex
@@ -147,11 +167,11 @@ func (s *Model) Save() error {
 		return errors.New(msg.MSG_DB_IS_NIL)
 	}
 
-	if s.db.models == nil {
-		return errors.New(msg.MSG_MODELS_IS_NIL)
+	if s.db.store == nil {
+		return errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
 
-	return s.db.models.put(s.Name, s)
+	return s.db.store.put(s.Name, s)
 }
 
 /**
@@ -203,25 +223,6 @@ func (s *Model) Key() string {
 	result := s.Database
 	result = strs.Append(result, s.Schema, ".")
 	return strs.Append(result, s.Name, ".")
-}
-
-/**
-* ToJson
-* @return et.Json, error
-**/
-func (s *Model) ToJson() (et.Json, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	result := et.Json{}
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	return result, nil
 }
 
 /**

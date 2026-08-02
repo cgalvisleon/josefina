@@ -2,8 +2,23 @@ package jdb
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 )
+
+type Cache struct {
+	cache map[string]*Ttl
+	mu    map[string]*sync.RWMutex
+	store *Model
+}
+
+func (s *DB) newCache() *Cache {
+	return &Cache{
+		cache: make(map[string]*Ttl),
+		mu:    make(map[string]*sync.RWMutex),
+		store: s.store,
+	}
+}
 
 /**
 * loadCache: Loads the cache

@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -39,11 +38,9 @@ type DB struct {
 	Path        string                   `json:"path"`   // Path to the database
 	Config      *Config                  `json:"config"` // Configuration
 	schemas     map[string]*Schema       `json:"-"`      // Schemas
-	Cache       map[string]*Ttl          `json:"-"`      // Cache
+	cache       *Cache                   `json:"-"`      // Cache
 	mu          map[string]*sync.RWMutex `json:"-"`      // Mutex
 	store       *Model                   `json:"-"`      // Store
-	models      *Model                   `json:"-"`      // Models
-	cache       *Model                   `json:"-"`      // Cache
 	transaction *Model                   `json:"-"`      // Transaction
 	errors      *Model                   `json:"-"`      // Errors
 }
@@ -74,88 +71,59 @@ func NewDb(path, name string) (*DB, error) {
 			Timezone:            "America/Bogota",
 			MinThresholdCompact: 100,
 		},
-		Schemas: make(map[string]*Schema, 0),
-		Cache:   make(map[string]*Ttl, 0),
+		schemas: make(map[string]*Schema, 0),
 		mu:      make(map[string]*sync.RWMutex, 0),
+	}
+
+	var err error
+	result.store, err = result.newModel("core", "store", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.transaction, err = result.newModel("core", "transaction", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.errors, err = result.newModel("core", "errors", 1, true)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
 }
 
 /**
-* load: Load the database
-* @param node *Node
-* @return error
+* getMutex: Returns the mutex for name
+* @param name string
+* @return *sync.RWMutex
 **/
-func (s *DB) load() error {
-	// Re-initialize unexported fields in deserialized Schema objects.
-	for _, schema := range s.Schemas {
-		if schema.mu == nil {
-			schema.mu = &sync.RWMutex{}
-		}
-		if schema.models == nil {
-			schema.models = make(map[string]*Model)
-		}
-		schema.db = s
+func (s *DB) getMutex(name string) *sync.RWMutex {
+	result, exists := s.mu[name]
+	if !exists {
+		result = &sync.RWMutex{}
+		s.mu[name] = result
 	}
-	return s.Init()
-}
-
-/**
-* Init: Initialize the database
-* @return error
-**/
-func (s *DB) Init() error {
-	err := s.loadConfig()
-	if err != nil {
-		return err
-	}
-
-	err = s.loadErrors()
-	if err != nil {
-		return err
-	}
-
-	err = s.loadTransaction()
-	if err != nil {
-		return err
-	}
-
-	err = s.loadSchemas()
-	if err != nil {
-		return err
-	}
-
-	err = s.loadModels()
-	if err != nil {
-		return err
-	}
-
-	err = s.loadCache()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.mu[name]
 }
 
 /**
 * ToJson
 * @return et.Json, error
 **/
-func (s *DB) ToJson() (et.Json, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return et.Json{}, err
+func (s *DB) ToJson() et.Json {
+	schemas := []et.Json{}
+	for _, schema := range s.schemas {
+		schemas = append(schemas, schema.ToJson())
 	}
 
-	result := et.Json{}
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return et.Json{}, err
+	return et.Json{
+		"name":    s.Name,
+		"path":    s.Path,
+		"config":  s.Config,
+		"schemas": s.schemas,
 	}
-
-	return result, nil
 }
 
 /**
@@ -164,14 +132,11 @@ func (s *DB) ToJson() (et.Json, error) {
 * @return (*Tx, error)
 **/
 func (s *DB) Save() error {
-	data, err := s.ToJson()
-	if err != nil {
-		return err
+	if s.store == nil {
+		return errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
 
-	_, err = s.node.dbs.
-		Insert(data).
-		Exec()
+	err := s.store.putObject(s.Name, s.ToJson())
 	if err != nil {
 		return err
 	}
@@ -180,32 +145,17 @@ func (s *DB) Save() error {
 }
 
 /**
-* SetStrict
-* @param strict bool
+* addSchema: Adds a schema to the database
+* @param schema *Schema
+* @return error
 **/
-func (s *DB) SetStrict(strict bool) {
-	s.IsStrict = strict
-}
+func (s *DB) addSchema(schema *Schema) error {
+	mu := s.getMutex("schemas")
+	mu.Lock()
+	defer mu.Unlock()
 
-/**
-* getSchema: Returns a schema by name
-* @param name string
-* @return *Schema
-**/
-func (s *DB) getSchema(name string) (*Schema, error) {
-	name = store.Normalize(name)
-	if name == "" {
-		name = "public"
-	}
-	s.mu.RLock()
-	result, exists := s.Schemas[name]
-	s.mu.RUnlock()
-	if exists {
-		return result, nil
-	}
-
-	result = s.newSchema(name)
-	return result, nil
+	s.schemas[schema.Name] = schema
+	return s.Save()
 }
 
 /**
@@ -216,9 +166,11 @@ func (s *DB) getSchema(name string) (*Schema, error) {
 func (s *DB) DeleteSchema(name string) error {
 	name = store.Normalize(name)
 
-	s.mu.RLock()
-	schema, exists := s.Schemas[name]
-	s.mu.RUnlock()
+	mu := s.getMutex("schemas")
+	mu.RLock()
+	defer mu.RUnlock()
+
+	schema, exists := s.schemas[name]
 	if !exists {
 		return errors.New(msg.MSG_SCHEMA_NOT_FOUND)
 	}
@@ -228,11 +180,29 @@ func (s *DB) DeleteSchema(name string) error {
 		return err
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.Schemas, name)
+	delete(s.schemas, name)
 
-	return nil
+	return s.Save()
+}
+
+/**
+* getSchema: Returns a schema by name
+* @param name string
+* @return *Schema, error
+**/
+func (s *DB) getSchema(name string) (*Schema, bool) {
+	name = store.Normalize(name)
+
+	mu := s.getMutex("schemas")
+	mu.RLock()
+	defer mu.RUnlock()
+
+	schema, exists := s.schemas[name]
+	if !exists {
+		return nil, false
+	}
+
+	return schema, true
 }
 
 /**
@@ -240,13 +210,17 @@ func (s *DB) DeleteSchema(name string) error {
 * @param schema, name	string, isCore bool, version int
 * @return *Model, error
 **/
-func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, error) {
-	sch, err := s.getSchema(schema)
-	if err != nil {
-		return nil, err
+func (s *DB) newModel(schema, name string, version int, isCore bool) (*Model, error) {
+	sch, exists := s.getSchema(schema)
+	if !exists {
+		var err error
+		sch, err = s.newSchema(schema)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	model, err := sch.newModel(name, isCore, version)
+	model, err := sch.newModel(name, s.Path, version, isCore)
 	if err != nil {
 		return nil, err
 	}
@@ -255,21 +229,36 @@ func (s *DB) newModel(schema, name string, isCore bool, version int) (*Model, er
 }
 
 /**
+* NewModel: Creates a new model
+* @param schema, name string, version int
+* @return *Model, error
+**/
+func (s *DB) NewModel(schema, name string, version int) (*Model, error) {
+	result, err := s.newModel(schema, name, version, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/**
 * GetModel: Returns a model
 * @param schema, name string
 * @return *Model, error
 **/
 func (s *DB) GetModel(schema, name string) (*Model, error) {
-	schema = store.Normalize(schema)
-
-	s.mu.RLock()
-	schemaObj, exists := s.Schemas[schema]
-	s.mu.RUnlock()
+	sch, exists := s.getSchema(schema)
 	if !exists {
 		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
 	}
 
-	return schemaObj.GetModel(name)
+	result, exists := sch.getModel(name)
+	if !exists {
+		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
+	}
+
+	return result, nil
 }
 
 /**
@@ -278,30 +267,17 @@ func (s *DB) GetModel(schema, name string) (*Model, error) {
 * @return error
 **/
 func (s *DB) DeleteModel(schema, name string) error {
-	schema = store.Normalize(schema)
-
-	s.mu.RLock()
-	schemaObj, exists := s.Schemas[schema]
-	s.mu.RUnlock()
+	sch, exists := s.getSchema(schema)
 	if !exists {
 		return errors.New(msg.MSG_SCHEMA_NOT_FOUND)
 	}
 
-	return schemaObj.DeleteModel(name)
-}
-
-/**
-* ListSchemas: Returns all schemas in this database.
-* @return []*Schema
-**/
-func (s *DB) ListSchemas() []*Schema {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make([]*Schema, 0, len(s.Schemas))
-	for _, sc := range s.Schemas {
-		result = append(result, sc)
+	err := sch.DeleteModel(name)
+	if err != nil {
+		return err
 	}
-	return result
+
+	return nil
 }
 
 /**
@@ -309,17 +285,18 @@ func (s *DB) ListSchemas() []*Schema {
 * @return error
 **/
 func (s *DB) Empty() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.getMutex("schemas")
+	mu.Lock()
+	defer mu.Unlock()
 
-	for _, schema := range s.Schemas {
+	for _, schema := range s.schemas {
 		err := schema.Empty()
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Schemas = make(map[string]*Schema, 0)
+	s.schemas = make(map[string]*Schema, 0)
 
 	return nil
 }
@@ -330,19 +307,14 @@ func (s *DB) Empty() error {
 * @return (*Model, error)
 **/
 func (s *DB) Define(define DModel) (*Model, error) {
-	schema := define.Schema
-	name := define.Name
-	if !utility.ValidStr(name, 1, []string{}) {
+	if !utility.ValidStr(define.Name, 1, []string{}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
-	isCore := define.IsCore
-	version := define.Version
-	result, err := s.newModel(schema, name, isCore, version)
+
+	result, err := s.newModel(define.Schema, define.Name, define.Version, define.IsCore)
 	if err != nil {
 		return nil, err
 	}
-	isStrict := define.IsStrict
-	result.IsStrict = isStrict
 
 	fields := define.Fields
 	for name, field := range fields {
@@ -353,6 +325,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	indexes := define.Indexes
 	for _, index := range indexes {
 		name := index.Name
@@ -365,6 +338,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	unique := define.Unique
 	for _, index := range unique {
 		name := index.Name
@@ -373,6 +347,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	required := define.Required
 	for _, index := range required {
 		name := index.Name
@@ -381,6 +356,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	hidden := define.Hidden
 	for _, name := range hidden {
 		err := result.DefineHidden(name)
@@ -388,11 +364,13 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	primaryKeys := define.PrimaryKeys
 	err = result.DefinePrimaryKeys(primaryKeys...)
 	if err != nil {
 		return nil, err
 	}
+
 	foreignKeys := define.ForeignKeys
 	for _, fk := range foreignKeys {
 		schema := fk.To.Schema
@@ -409,6 +387,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	details := define.Details
 	for name, detail := range details {
 		keys := detail.Keys
@@ -418,6 +397,21 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
+	masters := define.Masters
+	for name, master := range masters {
+		toSchema := master.To.Schema
+		toName := master.To.Name
+		to, err := s.GetModel(toSchema, toName)
+		if err != nil {
+			return nil, err
+		}
+		err = result.DefineMaster(name, master.Keys, to, master.ToKeys)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	rollups := define.Rollups
 	for name, rollup := range rollups {
 		schema := rollup.To.Schema
@@ -433,6 +427,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	relations := define.Relations
 	for _, relation := range relations {
 		schema := relation.To.Schema
@@ -449,6 +444,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	calcs := define.Calcs
 	for name, definition := range calcs {
 		err = result.DefineCalc(name, []byte(definition))
@@ -456,26 +452,32 @@ func (s *DB) Define(define DModel) (*Model, error) {
 			return nil, err
 		}
 	}
+
 	beforeInsert := define.BeforeInserts
 	for _, trigger := range beforeInsert {
 		result.AddBeforeInsert(trigger.Name, string(trigger.Definition))
 	}
+
 	beforeUpdate := define.BeforeUpdates
 	for _, trigger := range beforeUpdate {
 		result.AddBeforeUpdate(trigger.Name, string(trigger.Definition))
 	}
+
 	beforeDelete := define.BeforeDeletes
 	for _, trigger := range beforeDelete {
 		result.AddBeforeDelete(trigger.Name, string(trigger.Definition))
 	}
+
 	afterInsert := define.AfterInserts
 	for _, trigger := range afterInsert {
 		result.AddAfterInsert(trigger.Name, string(trigger.Definition))
 	}
+
 	afterUpdate := define.AfterUpdates
 	for _, trigger := range afterUpdate {
 		result.AddAfterUpdate(trigger.Name, string(trigger.Definition))
 	}
+
 	afterDelete := define.AfterDeletes
 	for _, trigger := range afterDelete {
 		result.AddAfterDelete(trigger.Name, string(trigger.Definition))
