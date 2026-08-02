@@ -123,6 +123,28 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 }
 
 /**
+* loadModel: Loads a model
+* @param name string
+* @return *Model, error
+**/
+func (s *Schema) loadModel(name string) (*Model, error) {
+	result, exists := s.models[name]
+	if exists {
+		return result, nil
+	}
+
+	if s.db == nil {
+		return nil, errors.New(msg.MSG_DB_IS_NIL)
+	}
+
+	if s.db.store == nil {
+		return nil, errors.New(msg.MSG_STORE_NOT_DEFINED)
+	}
+
+	return result, nil
+}
+
+/**
 * ToJson: Returns the model as a JSON object
 * @return et.Json
 **/
@@ -133,6 +155,8 @@ func (s *Model) ToJson() et.Json {
 		"schema":   s.Schema,
 		"name":     s.Name,
 		"path":     s.Path,
+		"version":  s.Version,
+		"is_core":  s.IsCore,
 	}
 }
 
@@ -197,6 +221,7 @@ func (s *Model) Empty() error {
 	s.Required = make([]*Index, 0)
 	s.Hidden = make([]string, 0)
 	s.Details = make(map[string]*Detail, 0)
+	s.Masters = make(map[string]*Detail, 0)
 	s.Rollups = make(map[string]*Detail, 0)
 	s.Relations = make(map[string]*Detail, 0)
 	s.Calcs = make(map[string][]byte, 0)
@@ -407,16 +432,7 @@ func (s *Model) put(idx string, value any) error {
 		return err
 	}
 
-	bt, ok := value.([]byte)
-	if !ok {
-		var err error
-		bt, err = json.Marshal(value)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = store.Put(idx, bt)
+	bt, _, err := store.Put(idx, value)
 	if err != nil {
 		return err
 	}
@@ -606,7 +622,7 @@ func (s *Model) isExists(idx string) (bool, error) {
 * Count: Counts documents in the primary store
 * @return int, error
 **/
-func (s *Model) count() (int, error) {
+func (s *Model) Count() (int, error) {
 	result, exists := s.source()
 	if !exists {
 		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)

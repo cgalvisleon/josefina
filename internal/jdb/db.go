@@ -89,13 +89,25 @@ func (s *DB) Init() error {
 		return err
 	}
 
+	if err := s.store.Init(); err != nil {
+		return err
+	}
+
 	s.transaction, err = s.newModel("", "transaction", 1, true)
 	if err != nil {
 		return err
 	}
 
+	if err := s.transaction.Init(); err != nil {
+		return err
+	}
+
 	s.errors, err = s.newModel("", "errors", 1, true)
 	if err != nil {
+		return err
+	}
+
+	if err := s.errors.Init(); err != nil {
 		return err
 	}
 
