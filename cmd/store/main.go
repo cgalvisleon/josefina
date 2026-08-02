@@ -13,14 +13,14 @@ func main() {
 		panic(err)
 	}
 
-	_, err = test.Put("1", et.Json{
+	_, _, err = test.Put("1", et.Json{
 		"name": "Uno",
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = test.Put("2", et.Json{
+	_, _, err = test.Put("2", et.Json{
 		"name": "Dos",
 	})
 	if err != nil {
