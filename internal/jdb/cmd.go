@@ -8,26 +8,26 @@ import (
 )
 
 /**
-* FnTrigger: Callback signature for before/after insert, update, and delete hooks.
+* TriggerFn: Callback signature for before/after insert, update, and delete hooks.
 **/
-type FnTrigger func(model *Model, old, new *et.Json, tx *Tx) error
+type TriggerFn func(model *Model, old, new *et.Json, tx *Tx) error
 
 /**
 * Command: Builder for DML operations; accumulates items, conditions, and trigger callbacks
 * before execution via Exec or ExecTx.
 **/
 type Command struct {
-	model        *Model
 	command      Cmd
-	tx           *Tx
+	model        *Model
 	items        []et.Json
 	where        *Where
-	beforeInsert []FnTrigger
-	beforeUpdate []FnTrigger
-	beforeDelete []FnTrigger
-	afterInsert  []FnTrigger
-	afterUpdate  []FnTrigger
-	afterDelete  []FnTrigger
+	tx           *Tx
+	beforeInsert []TriggerFn
+	beforeUpdate []TriggerFn
+	beforeDelete []TriggerFn
+	afterInsert  []TriggerFn
+	afterUpdate  []TriggerFn
+	afterDelete  []TriggerFn
 }
 
 /**
@@ -41,12 +41,12 @@ func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 		command:      cmd,
 		items:        items,
 		where:        newWhere(model),
-		beforeInsert: make([]FnTrigger, 0),
-		beforeUpdate: make([]FnTrigger, 0),
-		beforeDelete: make([]FnTrigger, 0),
-		afterInsert:  make([]FnTrigger, 0),
-		afterUpdate:  make([]FnTrigger, 0),
-		afterDelete:  make([]FnTrigger, 0),
+		beforeInsert: make([]TriggerFn, 0),
+		beforeUpdate: make([]TriggerFn, 0),
+		beforeDelete: make([]TriggerFn, 0),
+		afterInsert:  make([]TriggerFn, 0),
+		afterUpdate:  make([]TriggerFn, 0),
+		afterDelete:  make([]TriggerFn, 0),
 	}
 }
 
@@ -299,60 +299,60 @@ func (s *Command) upsertCmd(tx *Tx) (et.Items, error) {
 
 /**
 * BeforeInserts
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) BeforeInserts(fn FnTrigger) *Command {
+func (s *Command) BeforeInserts(fn TriggerFn) *Command {
 	s.beforeInsert = append(s.beforeInsert, fn)
 	return s
 }
 
 /**
 * BeforeUpdates
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) BeforeUpdates(fn FnTrigger) *Command {
+func (s *Command) BeforeUpdates(fn TriggerFn) *Command {
 	s.beforeUpdate = append(s.beforeUpdate, fn)
 	return s
 }
 
 /**
 * BeforeDeletes
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) BeforeDeletes(fn FnTrigger) *Command {
+func (s *Command) BeforeDeletes(fn TriggerFn) *Command {
 	s.beforeDelete = append(s.beforeDelete, fn)
 	return s
 }
 
 /**
 * AfterInserts
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) AfterInserts(fn FnTrigger) *Command {
+func (s *Command) AfterInserts(fn TriggerFn) *Command {
 	s.afterInsert = append(s.afterInsert, fn)
 	return s
 }
 
 /**
 * AfterUpdates
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) AfterUpdates(fn FnTrigger) *Command {
+func (s *Command) AfterUpdates(fn TriggerFn) *Command {
 	s.afterUpdate = append(s.afterUpdate, fn)
 	return s
 }
 
 /**
 * AfterDeletes
-* @param fn FnTrigger
+* @param fn TriggerFn
 * @return *Command
 **/
-func (s *Command) AfterDeletes(fn FnTrigger) *Command {
+func (s *Command) AfterDeletes(fn TriggerFn) *Command {
 	s.afterDelete = append(s.afterDelete, fn)
 	return s
 }
@@ -363,25 +363,27 @@ func (s *Command) AfterDeletes(fn FnTrigger) *Command {
 type Diud struct {
 	Schema string         `json:"schema"`
 	Name   string         `json:"name"`
-	Data   et.Json        `json:"data"`
+	Items  []et.Json      `json:"items"`
 	Where  []et.Condition `json:"where"`
 }
 
 /**
-* DBulk: Wire format for a bulk-insert command sent over the API.
+* First: Returns the first item
+* @return et.Json
 **/
-type DBulk struct {
-	Schema string    `json:"schema"`
-	Name   string    `json:"name"`
-	Data   []et.Json `json:"data"`
+func (s *Diud) First() et.Json {
+	if len(s.Items) == 0 {
+		return et.Json{}
+	}
+	return s.Items[0]
 }
 
 /**
 * DCmd: Envelope that carries exactly one of insert, update, delete, or bulk in a command batch.
 **/
 type DCmd struct {
-	Insert *Diud  `json:"insert"`
-	Update *Diud  `json:"update"`
-	Delete *Diud  `json:"delete"`
-	Bulk   *DBulk `json:"bulk"`
+	Insert *Diud `json:"insert"`
+	Update *Diud `json:"update"`
+	Delete *Diud `json:"delete"`
+	Bulk   *Diud `json:"bulk"`
 }

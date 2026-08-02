@@ -27,7 +27,7 @@ type Trigger struct {
 	Definition string `json:"definition"`
 }
 
-type Triggerfn func(model *Model, idx string, old []byte, new []byte) error
+type TriggerFnBt func(model *Model, idx string, old []byte, new []byte) error
 
 type Model struct {
 	Database      string                      `json:"database"`       // Database name
@@ -62,8 +62,8 @@ type Model struct {
 	schema        *Schema                     `json:"-"`              // Schema
 	db            *DB                         `json:"-"`              // Database
 	mu            map[string]*sync.RWMutex    `json:"-"`              // Mutex
-	onPut         []Triggerfn                 `json:"-"`              // On put
-	onRemove      []Triggerfn                 `json:"-"`              // On remove
+	onPut         []TriggerFnBt               `json:"-"`              // On put
+	onRemove      []TriggerFnBt               `json:"-"`              // On remove
 	isDebug       bool                        `json:"-"`              // Is debug
 }
 
@@ -110,8 +110,8 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 		schema:        s,
 		db:            s.db,
 		mu:            map[string]*sync.RWMutex{},
-		onPut:         make([]Triggerfn, 0),
-		onRemove:      make([]Triggerfn, 0),
+		onPut:         make([]TriggerFnBt, 0),
+		onRemove:      make([]TriggerFnBt, 0),
 	}
 	_, err := result.defineSource()
 	if err != nil {
@@ -128,17 +128,11 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 **/
 func (s *Model) ToJson() et.Json {
 	return et.Json{
-		"database":     s.Database,
-		"schema":       s.Schema,
-		"name":         s.Name,
-		"path":         s.Path,
-		"fields":       s.Fields,
-		"indexes":      s.Indexes,
-		"primary_keys": s.PrimaryKeys,
-		"foreign_keys": s.ForeignKeys,
-		"unique":       s.Unique,
-		"required":     s.Required,
-		"hidden":       s.Hidden,
+		"id":       s.Key(),
+		"database": s.Database,
+		"schema":   s.Schema,
+		"name":     s.Name,
+		"path":     s.Path,
 	}
 }
 
@@ -173,7 +167,7 @@ func (s *Model) Save() error {
 		return errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
 
-	return s.db.store.put(s.Name, s)
+	return s.db.store.put(s.Key(), s)
 }
 
 /**
@@ -279,17 +273,17 @@ func (s *Model) Init() error {
 
 /**
 * OnPut: Adds a function to be called when a document is put
-* @param fn Triggerfn
+* @param fn TriggerFnBt
 **/
-func (s *Model) OnPut(fn Triggerfn) {
+func (s *Model) OnPut(fn TriggerFnBt) {
 	s.onPut = append(s.onPut, fn)
 }
 
 /**
 * OnRemove: Adds a function to be called when a document is removed
-* @param fn Triggerfn
+* @param fn TriggerFnBt
 **/
-func (s *Model) OnRemove(fn Triggerfn) {
+func (s *Model) OnRemove(fn TriggerFnBt) {
 	s.onRemove = append(s.onRemove, fn)
 }
 
@@ -971,4 +965,47 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		}
 		return true, nil
 	}, true, 0, 0)
+}
+
+/**
+* Insert: Inserts a document
+* @param item et.Json
+* @return *Command
+**/
+func (s *Model) Insert(item et.Json) *Command {
+	return newCommand(s, INSERT, []et.Json{item})
+}
+
+/**
+* Update: Updates a document
+* @param item et.Json
+* @return *Command
+**/
+func (s *Model) Update(item et.Json) *Command {
+	return newCommand(s, UPDATE, []et.Json{item})
+}
+
+/**
+* Delete: Deletes a document
+* @return *Command
+**/
+func (s *Model) Delete() *Command {
+	return newCommand(s, DELETE, []et.Json{})
+}
+
+/**
+* Upsert: Inserts or updates a document
+* @param item et.Json
+* @return *Command
+**/
+func (s *Model) Upsert(item et.Json) *Command {
+	return newCommand(s, UPSERT, []et.Json{item})
+}
+
+/**
+* Exec: Executes the command
+* @return et.Items, error
+**/
+func (s *Model) Bulk(items []et.Json) *Command {
+	return newCommand(s, INSERT, items)
 }

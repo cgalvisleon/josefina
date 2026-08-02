@@ -20,6 +20,11 @@ type Schema struct {
 	mu       *sync.RWMutex     `json:"-"`        // Mutex
 }
 
+/**
+* newSchema: Creates a new schema
+* @param name string
+* @return *Schema, error
+**/
 func (s *DB) newSchema(name string) (*Schema, error) {
 	name = store.Normalize(name)
 	result := &Schema{

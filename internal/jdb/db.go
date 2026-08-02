@@ -34,15 +34,15 @@ type Config struct {
 * DB: Represents a database
 **/
 type DB struct {
-	Name        string                   `json:"name"`   // Database name
-	Path        string                   `json:"path"`   // Path to the database
-	Config      *Config                  `json:"config"` // Configuration
-	schemas     map[string]*Schema       `json:"-"`      // Schemas
-	cache       *Cache                   `json:"-"`      // Cache
-	mu          map[string]*sync.RWMutex `json:"-"`      // Mutex
-	store       *Model                   `json:"-"`      // Store
-	transaction *Model                   `json:"-"`      // Transaction
-	errors      *Model                   `json:"-"`      // Errors
+	Name        string             `json:"name"`   // Database name
+	Path        string             `json:"path"`   // Path to the database
+	Config      *Config            `json:"config"` // Configuration
+	schemas     map[string]*Schema `json:"-"`      // Schemas
+	cache       *Cache             `json:"-"`      // Cache
+	mu          *sync.RWMutex      `json:"-"`      // Mutex
+	store       *Model             `json:"-"`      // Store
+	transaction *Model             `json:"-"`      // Transaction
+	errors      *Model             `json:"-"`      // Errors
 }
 
 /**
@@ -72,40 +72,34 @@ func NewDb(path, name string) (*DB, error) {
 			MinThresholdCompact: 100,
 		},
 		schemas: make(map[string]*Schema, 0),
-		mu:      make(map[string]*sync.RWMutex, 0),
-	}
-
-	var err error
-	result.store, err = result.newModel("core", "store", 1, true)
-	if err != nil {
-		return nil, err
-	}
-
-	result.transaction, err = result.newModel("core", "transaction", 1, true)
-	if err != nil {
-		return nil, err
-	}
-
-	result.errors, err = result.newModel("core", "errors", 1, true)
-	if err != nil {
-		return nil, err
+		mu:      &sync.RWMutex{},
 	}
 
 	return result, nil
 }
 
 /**
-* getMutex: Returns the mutex for name
-* @param name string
-* @return *sync.RWMutex
+* Init: Initializes the database
+* @return error
 **/
-func (s *DB) getMutex(name string) *sync.RWMutex {
-	result, exists := s.mu[name]
-	if !exists {
-		result = &sync.RWMutex{}
-		s.mu[name] = result
+func (s *DB) Init() error {
+	var err error
+	s.store, err = s.newModel("", "store", 1, true)
+	if err != nil {
+		return err
 	}
-	return s.mu[name]
+
+	s.transaction, err = s.newModel("", "transaction", 1, true)
+	if err != nil {
+		return err
+	}
+
+	s.errors, err = s.newModel("", "errors", 1, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -150,9 +144,8 @@ func (s *DB) Save() error {
 * @return error
 **/
 func (s *DB) addSchema(schema *Schema) error {
-	mu := s.getMutex("schemas")
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.schemas[schema.Name] = schema
 	return s.Save()
@@ -166,9 +159,8 @@ func (s *DB) addSchema(schema *Schema) error {
 func (s *DB) DeleteSchema(name string) error {
 	name = store.Normalize(name)
 
-	mu := s.getMutex("schemas")
-	mu.RLock()
-	defer mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	schema, exists := s.schemas[name]
 	if !exists {
@@ -193,9 +185,8 @@ func (s *DB) DeleteSchema(name string) error {
 func (s *DB) getSchema(name string) (*Schema, bool) {
 	name = store.Normalize(name)
 
-	mu := s.getMutex("schemas")
-	mu.RLock()
-	defer mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	schema, exists := s.schemas[name]
 	if !exists {
@@ -285,9 +276,8 @@ func (s *DB) DeleteModel(schema, name string) error {
 * @return error
 **/
 func (s *DB) Empty() error {
-	mu := s.getMutex("schemas")
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, schema := range s.schemas {
 		err := schema.Empty()
@@ -500,14 +490,14 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 				return result, err
 			}
 			return model.
-				Insert(cmd.Insert.Data).
+				Insert(cmd.Insert.First()).
 				Exec()
 		} else if cmd.Update != nil {
 			model, err := s.GetModel(cmd.Update.Schema, cmd.Update.Name)
 			if err != nil {
 				return result, err
 			}
-			command := model.Update(cmd.Update.Data)
+			command := model.Update(cmd.Update.First())
 			for _, condition := range cmd.Update.Where {
 				command.Add(&condition)
 			}
@@ -527,7 +517,7 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 			if err != nil {
 				return result, err
 			}
-			return model.Bulk(cmd.Bulk.Data).Exec()
+			return model.Bulk(cmd.Bulk.Items).Exec()
 		}
 	}
 	return result, nil
