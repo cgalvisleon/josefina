@@ -43,6 +43,31 @@ func NewDb(path, name string) (*DB, error) {
 		schemas:             make(map[string]*Schema, 0),
 		mu:                  &sync.RWMutex{},
 	}
+	var err error
+	result.store, err = result.loadModel("", "store", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.transaction, err = result.loadModel("", "transaction", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.errors, err = result.loadModel("", "errors", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.users, err = result.loadModel("", "users", 1, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result.sessions, err = result.loadModel("", "sessions", 1, true)
+	if err != nil {
+		return nil, err
+	}
 
 	databases[name] = result
 	return result, nil

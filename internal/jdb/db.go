@@ -128,34 +128,6 @@ func (s *DB) ToJson() et.Json {
 * @return error
 **/
 func (s *DB) Init() error {
-	var err error
-	s.store, err = s.newModel("", "store", 1, true)
-	if err != nil {
-		return err
-	}
-
-	if err := s.store.Init(); err != nil {
-		return err
-	}
-
-	s.transaction, err = s.newModel("", "transaction", 1, true)
-	if err != nil {
-		return err
-	}
-
-	if err := s.transaction.Init(); err != nil {
-		return err
-	}
-
-	s.errors, err = s.newModel("", "errors", 1, true)
-	if err != nil {
-		return err
-	}
-
-	if err := s.errors.Init(); err != nil {
-		return err
-	}
-
 	for _, schema := range s.schemas {
 		if err := schema.Init(); err != nil {
 			return err
@@ -296,6 +268,24 @@ func (s *DB) newModel(schema, name string, version int, isCore bool) (*Model, er
 	}
 
 	return model, nil
+}
+
+/**
+* loadModel: Loads a model from the JSON definition
+* @param schema, name string, version int, isCore bool
+* @return *Model, error
+**/
+func (s *DB) loadModel(schema, name string, version int, isCore bool) (*Model, error) {
+	result, err := s.newModel(schema, name, version, isCore)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := result.Init(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
