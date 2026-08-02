@@ -540,6 +540,25 @@ func (s *Model) deleteObject(idx string) error {
 }
 
 /**
+* getObject: Gets an object by primary key
+* @param idx string
+* @return et.Json, error
+**/
+func (s *Model) getObject(idx string) (et.Json, error) {
+	var dest et.Json
+	exists, err := s.get(idx, &dest)
+	if err != nil {
+		return et.Json{}, err
+	}
+
+	if !exists {
+		return et.Json{}, errors.New(msg.MSG_RECORD_NOT_FOUND)
+	}
+
+	return dest, nil
+}
+
+/**
 * current: Gets the current document by primary key
 * @param idx string
 * @return et.Json, bool, error

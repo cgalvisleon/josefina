@@ -30,24 +30,47 @@ func NewDb(path, name string) (*DB, error) {
 
 	path = filepath.Join(path, name)
 	result := &DB{
-		Name: name,
-		Path: path,
-		Config: &Config{
-			IsStrict:            false,
-			Lang:                "en",
-			TransactionTTL:      10 * time.Second,
-			RelSegSize:          1024,
-			SyncOnWrite:         false,
-			TennantName:         "",
-			TennantPathData:     "",
-			Timezone:            "America/Bogota",
-			MinThresholdCompact: 100,
-		},
-		schemas: make(map[string]*Schema, 0),
-		mu:      &sync.RWMutex{},
+		Name:                name,
+		Path:                path,
+		Lang:                "en",
+		TransactionTTL:      10 * time.Second,
+		RelSegSize:          1024,
+		SyncOnWrite:         false,
+		TennantName:         "",
+		TennantPathData:     "",
+		Timezone:            "America/Bogota",
+		MinThresholdCompact: 100,
+		schemas:             make(map[string]*Schema, 0),
+		mu:                  &sync.RWMutex{},
+	}
+	
+	databases[name] = result
+	if err := result.Init(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+/**
+* LoadDb: Loads a database from the JSON definition
+* @param def et.Json
+* @return *DB, error
+**/
+func LoadDb(name string) (*DB, error) {
+	name = store.Normalize(name)
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	databases[name] = result
+	result, exists := databases[name]
+	if exists {
+		return result, nil
+	}
+
+	result, err := NewDb("./data", name)
+	if err != nil {
+		return nil, err
+	}
 
 	return result, nil
 }

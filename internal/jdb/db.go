@@ -18,7 +18,6 @@ const (
 )
 
 type Config struct {
-	IsStrict            bool          `json:"is_strict"` // Is strict mode
 	Lang                string        `json:"lang"`
 	TransactionTTL      time.Duration `json:"transaction_ttl"`
 	RelSegSize          int           `json:"rel_seg_size"`
@@ -33,15 +32,22 @@ type Config struct {
 * DB: Represents a database
 **/
 type DB struct {
-	Name        string             `json:"name"`   // Database name
-	Path        string             `json:"path"`   // Path to the database
-	Config      *Config            `json:"config"` // Configuration
-	schemas     map[string]*Schema `json:"-"`      // Schemas
-	cache       *Cache             `json:"-"`      // Cache
-	mu          *sync.RWMutex      `json:"-"`      // Mutex
-	store       *Model             `json:"-"`      // Store
-	transaction *Model             `json:"-"`      // Transaction
-	errors      *Model             `json:"-"`      // Errors
+	Name                string             `json:"name"` // Database name
+	Path                string             `json:"path"` // Path to the database
+	Lang                string             `json:"lang"`
+	TransactionTTL      time.Duration      `json:"transaction_ttl"`
+	RelSegSize          int                `json:"rel_seg_size"`
+	SyncOnWrite         bool               `json:"sync_on_write"`
+	TennantName         string             `json:"tennant_name"`
+	TennantPathData     string             `json:"tennant_path_data"`
+	Timezone            string             `json:"timezone"`
+	MinThresholdCompact int                `json:"min_threshold_compact"`
+	schemas             map[string]*Schema `json:"-"` // Schemas
+	cache               *Cache             `json:"-"` // Cache
+	mu                  *sync.RWMutex      `json:"-"` // Mutex
+	store               *Model             `json:"-"` // Store
+	transaction         *Model             `json:"-"` // Transaction
+	errors              *Model             `json:"-"` // Errors
 }
 
 /**
@@ -49,7 +55,7 @@ type DB struct {
 * @param name string
 * @return *Schema, error
 **/
-func (s *DB) newSchema(name string) (*Schema, error) {
+func (s *DB) NewSchema(name string) (*Schema, error) {
 	name = store.Normalize(name)
 	result := &Schema{
 		Database: s.Name,
@@ -72,7 +78,7 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 **/
 func (s *DB) loadSchema(def et.Json) (*Schema, error) {
 	name := def.Str("name")
-	result, err := s.newSchema(name)
+	result, err := s.NewSchema(name)
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +107,17 @@ func (s *DB) ToJson() et.Json {
 	}
 
 	return et.Json{
-		"name":    s.Name,
-		"path":    s.Path,
-		"config":  s.Config,
-		"schemas": s.schemas,
+		"name":                  s.Name,
+		"path":                  s.Path,
+		"lang":                  s.Lang,
+		"transaction_ttl":       s.TransactionTTL,
+		"rel_seg_size":          s.RelSegSize,
+		"sync_on_write":         s.SyncOnWrite,
+		"tennant_name":          s.TennantName,
+		"tennant_path_data":     s.TennantPathData,
+		"timezone":              s.Timezone,
+		"min_threshold_compact": s.MinThresholdCompact,
+		"schemas":               s.schemas,
 	}
 }
 
@@ -163,6 +176,41 @@ func (s *DB) Save() error {
 	err := s.store.putObject(s.Name, s.ToJson())
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+/**
+* Load: Loads the database
+* @return error
+**/
+func (s *DB) Load() error {
+	if s.store == nil {
+		return errors.New(msg.MSG_STORE_NOT_DEFINED)
+	}
+
+	def, err := s.store.getObject(s.Name)
+	if err != nil {
+		return err
+	}
+
+	s.Lang = def.Str("lang")
+	s.TransactionTTL = def.ValDuration(10*time.Second, "transaction_ttl")
+	s.RelSegSize = def.Int("rel_seg_size")
+	s.SyncOnWrite = def.Bool("sync_on_write")
+	s.TennantName = def.Str("tennant_name")
+	s.TennantPathData = def.Str("tennant_path_data")
+	s.Timezone = def.Str("timezone")
+	s.MinThresholdCompact = def.Int("min_threshold_compact")
+
+	schemas := def.ArrayJson("schemas")
+	for _, schema := range schemas {
+		schema, err := s.loadSchema(schema)
+		if err != nil {
+			return err
+		}
+		s.schemas[schema.Name] = schema
 	}
 
 	return nil
@@ -235,7 +283,7 @@ func (s *DB) newModel(schema, name string, version int, isCore bool) (*Model, er
 	sch, exists := s.getSchema(schema)
 	if !exists {
 		var err error
-		sch, err = s.newSchema(schema)
+		sch, err = s.NewSchema(schema)
 		if err != nil {
 			return nil, err
 		}
