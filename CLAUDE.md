@@ -45,7 +45,7 @@ gofmt -w .
 
 ### Go version
 ```bash
-goenv local 1.23.0   # project uses Go 1.23.0
+goenv local 1.25.0   # project uses Go 1.25.0 (see go.mod)
 ```
 
 ## Code style
@@ -72,6 +72,7 @@ Josefina is a custom distributed document database engine written in Go with SQL
 ### Entry points
 - `cmd/server/main.go` — starts the database server. Flags: `-port` (TCP, default 1377), `-http` (HTTP, default 3500), `-strict` (schema enforcement)
 - `cmd/client/main.go` — starts an interactive REPL; omit `-host` for local embedded mode
+- `cmd/store/main.go`, `cmd/test/main.go` — standalone scratch programs exercising `internal/store` and `internal/jdb` directly (not part of the public product surface)
 
 ### Layer breakdown
 
@@ -112,6 +113,8 @@ Josefina is a custom distributed document database engine written in Go with SQL
 
 **`pkg/websocket`** — WebSocket hub using `gorilla/websocket`
 
+**`internal/msg`** — Centralized error/message string constants (`MSG_*`), with English/Spanish variants selected by the `LANG` env var
+
 ### Configuration
 - `config.json` — cluster peer addresses and `is_strict` mode
 - `.env` — environment variables: `TENNANT_NAME`, `TENNANT_PATH_DATA`, `PORT`, `HTTP`, `RELSEG_SIZE`, `SYNC_ON_WRITE`, `DEBUG`
@@ -119,3 +122,6 @@ Josefina is a custom distributed document database engine written in Go with SQL
 
 ### Key dependency
 - `github.com/cgalvisleon/et` — shared utilities providing: `tcp` (transport), `et` (JSON type), `claim` (JWT), `logs`, `envar`, `utility`, `reg`, `ws`, `vm` (goja wrapper)
+
+### Stale docs, don't rely on them
+- `README.md` and `AGENTS.md` describe an older `internal/catalog` package and `pkg/sql` layer that no longer exist — that code was consolidated into `internal/jdb` and `internal/jsql`. Trust this file and the source over those two.

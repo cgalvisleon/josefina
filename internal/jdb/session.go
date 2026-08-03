@@ -39,11 +39,23 @@ type Session struct {
 	LastAccess time.Time     `json:"last_access"`
 	Duration   time.Duration `json:"duration"`
 	ID         string        `json:"id"`
-	UserId     string        `json:"user_id"`
-	Address    string        `json:"address"`
-	App        string        `json:"app"`
 	Type       TpConnection  `json:"type"`
 	Payload    et.Json       `json:"payload"`
+}
+
+/**
+* ToJson: Converts the session to a JSON object
+* @return et.Json
+**/
+func (s *Session) ToJson() et.Json {
+	return et.Json{
+		"created_at":  s.CreatedAt.Format(time.RFC3339),
+		"last_access": s.LastAccess.Format(time.RFC3339),
+		"duration":    s.Duration,
+		"id":          s.ID,
+		"type":        s.Type,
+		"payload":     s.Payload,
+	}
 }
 
 /**

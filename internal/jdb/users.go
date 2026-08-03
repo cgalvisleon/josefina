@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/josefina/internal/msg"
 )
 
@@ -14,15 +15,16 @@ type User struct {
 	ID        string    `json:"id"`
 	Username  string    `json:"username"`
 	Password  string    `json:"password"`
-	Name      string    `json:"name"`
-	LastName  string    `json:"last_name"`
-	Email     string    `json:"email"`
-	Phone     string    `json:"phone"`
-	Address   string    `json:"address"`
-	City      string    `json:"city"`
-	State     string    `json:"state"`
-	Zip       string    `json:"zip"`
-	Country   string    `json:"country"`
+}
+
+func (s *User) ToJson() et.Json {
+	return et.Json{
+		"created_at": s.CreatedAt.Format(time.RFC3339),
+		"updated_at": s.UpdatedAt.Format(time.RFC3339),
+		"id":         s.ID,
+		"username":   s.Username,
+		"password":   s.Password,
+	}
 }
 
 type Users struct {
