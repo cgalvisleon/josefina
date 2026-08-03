@@ -991,5 +991,5 @@ func (s *Model) Upsert(item et.Json) *Command {
 * @return et.Items, error
 **/
 func (s *Model) Bulk(items []et.Json) *Command {
-	return newCommand(s, INSERT, items)
+	return newCommand(s, BULK, items)
 }

@@ -260,7 +260,7 @@ func (s *DB) newModel(schema, name string, version int, isCore bool) (*Model, er
 		}
 	}
 
-	model, err := sch.newModel(name, s.Path, version, isCore)
+	model, err := sch.newModel(name, version, isCore)
 	if err != nil {
 		return nil, err
 	}

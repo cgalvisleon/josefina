@@ -27,7 +27,7 @@ type Schema struct {
 * @param string name, string path, int version, bool isCore
 * @return (*Model, error)
 **/
-func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, error) {
+func (s *Schema) newModel(name string, version int, isCore bool) (*Model, error) {
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, errors.New(msg.MSG_NAME_IS_REQUIRED)
 	}
@@ -37,7 +37,7 @@ func (s *Schema) newModel(name, path string, version int, isCore bool) (*Model, 
 		Database:      s.Database,
 		Schema:        s.Name,
 		Name:          name,
-		Path:          path,
+		Path:          s.db.Path,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]*Index, 0),
 		PrimaryKeys:   make([]string, 0),

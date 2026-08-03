@@ -21,6 +21,7 @@ const (
 	UPDATE Cmd = "update"
 	DELETE Cmd = "delete"
 	UPSERT Cmd = "upsert"
+	BULK   Cmd = "bulk"
 )
 
 type Status string
