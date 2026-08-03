@@ -311,7 +311,8 @@ func (s *Model) DefineDetail(name string, keys map[string]string, version int) (
 		return nil, err
 	}
 
-	to, err := s.schema.newModel(fmt.Sprintf("%s_%s", s.Name, name), version, false)
+	toName := fmt.Sprintf("%s_%s", s.Name, name)
+	to, err := s.schema.newModel(toName, version, false)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +349,8 @@ func (s *Model) DefineMaster(name string, keys map[string]string, to *Model, toK
 		return err
 	}
 
-	bridge, err := s.schema.newModel(fmt.Sprintf("%s_%s", s.Name, to.Name), false, 0)
+	bridgeName := fmt.Sprintf("%s_%s", s.Name, to.Name)
+	bridge, err := s.schema.newModel(bridgeName, 1, false)
 	if err != nil {
 		return err
 	}
@@ -420,7 +422,7 @@ func (s *Model) DefineRelation(to *Model, keys map[string]string, onDeleteCascad
 * @param name string, definition []byte
 * @return error
 **/
-func (s *Model) DefineCalc(name string, definition []byte) error {
+func (s *Model) DefineCalc(name string, definition string) error {
 	_, err := s.defineField(name, TpCalc, TpBytes, nil)
 	if err != nil {
 		return err
