@@ -111,11 +111,6 @@ func (s *Sessions) getSession(token string) (*Session, bool) {
 	session, exists := s.sessions[token]
 	s.mu.RUnlock()
 
-	if exists {
-		session.LastAccess = timezone.Now()
-		s.setSession(session)
-	}
-
 	return session, exists
 }
 
@@ -124,9 +119,9 @@ func (s *Sessions) getSession(token string) (*Session, bool) {
 * @param id string
 * @return error
 **/
-func (s *Sessions) removeSession(id string) error {
+func (s *Sessions) removeSession(token string) error {
 	s.mu.Lock()
-	delete(s.sessions, id)
+	delete(s.sessions, token)
 	s.mu.Unlock()
 	return nil
 }
@@ -161,7 +156,7 @@ func (s *Server) newSession(token string, database *DB, tp TpConnection, payload
 	result := &Session{
 		CreatedAt:  now,
 		LastAccess: now,
-		Duration:   0,
+		Duration:   clm.Duration,
 		Token:      token,
 		Name:       clm.Username,
 		Database:   database,
@@ -187,4 +182,13 @@ func (s *Server) getSession(token string) (*Session, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* removeSession: Removes a session from the server
+* @param token string
+* @return error
+**/
+func (s *Server) removeSession(token string) error {
+	return s.sessions.removeSession(token)
 }

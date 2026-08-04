@@ -104,6 +104,7 @@ var (
 	MSG_RELATION_NOT_DEFINED       = "relation not defined (%s)"
 	MSG_SERVER_NOT_LOADED          = "server not loaded"
 	MSG_INVALID_PASSWORD           = "invalid password"
+	MSG_SESSION_EXPIRED            = "session expired"
 )
 
 func init() {
@@ -192,5 +193,6 @@ func init() {
 		MSG_RELATION_NOT_DEFINED = "relation no definido (%s)"
 		MSG_SERVER_NOT_LOADED = "server no cargado"
 		MSG_INVALID_PASSWORD = "password inválido"
+		MSG_SESSION_EXPIRED = "session expirada"
 	}
 }

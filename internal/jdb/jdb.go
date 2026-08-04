@@ -143,7 +143,7 @@ func SignIn(database, username, password string) (et.Item, error) {
 	}
 
 	device := "apiRest"
-	duration := time.Hour * 0
+	duration := time.Minute * 60
 	token, err := claim.NewToken(appName, device, user.ID, user.Username, user.Password, db.Name, et.Json{}, duration)
 	if err != nil {
 		return et.Item{}, err
@@ -160,4 +160,30 @@ func SignIn(database, username, password string) (et.Item, error) {
 			"token": token,
 		},
 	}, nil
+}
+
+/**
+* GetSession: Gets a session from the server
+* @param token string
+* @return *Session, error
+**/
+func GetSession(token string) (*Session, error) {
+	if server == nil {
+		return nil, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.getSession(token)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.IsExpired() {
+		err = server.removeSession(token)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(msg.MSG_SESSION_EXPIRED)
+	}
+
+	return result, nil
 }
