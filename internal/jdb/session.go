@@ -8,7 +8,6 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/josefina/internal/msg"
-	"github.com/josefina/internal/store"
 )
 
 /**
@@ -88,7 +87,6 @@ func (s *Session) GetExpiresAt() time.Time {
 type Sessions struct {
 	sessions map[string]*Session
 	mu       *sync.RWMutex
-	store    *store.FileStore
 }
 
 /**
@@ -137,15 +135,9 @@ func (s *Sessions) removeSession(id string) error {
 * @return error
 **/
 func (s *Server) loadSessions() error {
-	store, err := store.Open(s.PathSystem, s.PathSystem, "sessions", store.ReadWrite)
-	if err != nil {
-		return err
-	}
-
 	result := &Sessions{
 		sessions: make(map[string]*Session),
 		mu:       &sync.RWMutex{},
-		store:    store,
 	}
 
 	s.sessions = result
