@@ -4,8 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/envar"
+	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
 	"github.com/josefina/internal/store"
 )
@@ -34,7 +38,7 @@ func Load() (*Server, error) {
 		return nil, err
 	}
 
- err = server.loadSessions()
+	err = server.loadSessions()
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +75,16 @@ func GetDb(name string) (*DB, error) {
 	}
 
 	db, exists := server.getDb(name)
-	if !exists {
-		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
+	if exists {
+		return db, nil
 	}
 
-	return db, nil
+	result, err := server.loadDb(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -106,4 +115,44 @@ func DeleteDb(name string) error {
 	server.removeDb(name)
 
 	return nil
+}
+
+/**
+* SignIn: Signs in a user
+* @param database, username, password string
+* @return et.Item, error
+**/
+func SignIn(database, username, password string) (et.Item, error) {
+	db, err := GetDb(database)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	user, err := db.getUser(username)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	hash, err := utility.HashSHA512(password)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	if user.Password != hash {
+		return et.Item{}, errors.New(msg.MSG_INVALID_PASSWORD)
+	}
+
+	device := "apiRest"
+	duration := time.Hour * 0
+	token, err := claim.NewToken(appName, device, user.ID, user.Username, user.Password, db.Name, et.Json{}, duration)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	return et.Item{
+		Ok: true,
+		Result: et.Json{
+			"token": token,
+		},
+	}, nil
 }

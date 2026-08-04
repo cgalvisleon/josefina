@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -14,7 +15,8 @@ import (
 )
 
 const (
-	defaultDbName = "josefina"
+	appName       = "josefina"
+	defaultDbName = appName
 	sysSchema     = "catalog"
 	sysCatalog    = sysSchema
 )
@@ -37,21 +39,7 @@ var server *Server
 * @return error
 **/
 func (s *Server) load() error {
-	s.store.ForEach(func(id string, data []byte) (bool, error) {
-		var item et.Json
-		if err := json.Unmarshal(data, &item); err != nil {
-			return false, err
-		}
-
-		err := s.loadDb(item)
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
-	}, true, 0, 0)
-
-	if len(s.dbs) == 0 {
+	if s.store.Count() == 0 {
 		db, err := s.newDb(defaultDbName)
 		if err != nil {
 			return err
@@ -162,14 +150,27 @@ func (s *Server) newDb(name string) (*DB, error) {
 * @param params et.Json
 * @return error
 **/
-func (s *Server) loadDb(params et.Json) error {
-	name := params.Str("name")
-	result, exists := s.getDb(name)
-	if exists {
-		return nil
+func (s *Server) loadDb(name string) (*DB, error) {
+	name = store.Normalize(name)
+	if !utility.ValidStr(name, 0, []string{""}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	result = &DB{
+	exists, bt, err := s.store.Get(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	var params et.Json
+	if err := json.Unmarshal(bt, &params); err != nil {
+		return nil, err
+	}
+
+	result := &DB{
 		Name:                name,
 		PathDatabases:       params.Str("path_databases"),
 		PathWal:             params.Str("path_wal"),
@@ -187,20 +188,19 @@ func (s *Server) loadDb(params et.Json) error {
 		mu:                  &sync.RWMutex{},
 	}
 
-	var err error
 	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = result.loadCache()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = result.loadUsers()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	schemas := params.ArrayJson("schemas")
@@ -211,7 +211,7 @@ func (s *Server) loadDb(params et.Json) error {
 			var err error
 			sch, err = result.newSchema(name)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -222,20 +222,20 @@ func (s *Server) loadDb(params et.Json) error {
 			if !exists {
 				_, err := sch.loadModel(modelDef)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 	}
 
-	s.addDb(result)
-
 	err = result.init()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	s.addDb(result)
+
+	return result, nil
 }
 
 /**

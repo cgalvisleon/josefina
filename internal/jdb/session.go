@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/josefina/internal/msg"
 	"github.com/josefina/internal/store"
 )
@@ -39,7 +40,7 @@ type Session struct {
 	CreatedAt  time.Time     `json:"created_at"`
 	LastAccess time.Time     `json:"last_access"`
 	Duration   time.Duration `json:"duration"`
-	ID         string        `json:"id"`
+	Token      string        `json:"token"`
 	Name       string        `json:"name"`
 	Database   *DB           `json:"database"`
 	UserId     string        `json:"user_id"`
@@ -56,7 +57,7 @@ func (s *Session) ToJson() et.Json {
 		"created_at":  s.CreatedAt.Format(time.RFC3339),
 		"last_access": s.LastAccess.Format(time.RFC3339),
 		"duration":    s.Duration,
-		"id":          s.ID,
+		"token":       s.Token,
 		"name":        s.Name,
 		"database":    s.Database.Name,
 		"user_id":     s.UserId,
@@ -91,6 +92,41 @@ type Sessions struct {
 }
 
 /**
+* addSession: Adds a session to the cache
+* @param session *Session
+* @return error
+**/
+func (s *Sessions) addSession(session *Session) {
+	s.mu.Lock()
+	s.sessions[session.Token] = session
+	s.mu.Unlock()
+}
+
+/**
+* getSession: Gets a session from the cache
+* @param id string
+* @return *Session, error
+**/
+func (s *Sessions) getSession(id string) (*Session, bool) {
+	s.mu.RLock()
+	session, exists := s.sessions[id]
+	s.mu.RUnlock()
+	return session, exists
+}
+
+/**
+* removeSession: Removes a session from the cache
+* @param id string
+* @return error
+**/
+func (s *Sessions) removeSession(id string) error {
+	s.mu.Lock()
+	delete(s.sessions, id)
+	s.mu.Unlock()
+	return nil
+}
+
+/**
 * loadSessions: Loads the sessions
 * @return error
 **/
@@ -112,41 +148,39 @@ func (s *Server) loadSessions() error {
 }
 
 /**
-* setSession: Sets a session in the cache
-* @param session *Session
-* @return error
+* newSession: Creates a new session
+* @param token string
+* @return *Session, error
 **/
-func (s *Sessions) setSession(session *Session) error {
-	s.mu.Lock()
-	s.sessions[session.ID] = session
-	s.mu.Unlock()
-	return nil
+func (s *Server) newSession(token string, database *DB, userId string, name string, tp TpConnection, payload et.Json) (*Session, error) {
+	now := timezone.Now()
+	result := &Session{
+		CreatedAt:  now,
+		LastAccess: now,
+		Duration:   0,
+		Token:      token,
+		Name:       name,
+		Database:   database,
+		UserId:     userId,
+		Type:       tp,
+		Payload:    payload,
+	}
+
+	s.sessions.addSession(result)
+
+	return result, nil
 }
 
 /**
 * getSession: Gets a session from the cache
-* @param id string
+* @param token string
 * @return *Session, error
 **/
-func (s *Sessions) getSession(id string) (*Session, error) {
-	s.mu.RLock()
-	session, exists := s.sessions[id]
-	s.mu.RUnlock()
+func (s *Server) getSession(token string) (*Session, error) {
+	result, exists := s.sessions.getSession(token)
 	if !exists {
 		return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
 	}
 
-	return session, nil
-}
-
-/**
-* removeSession: Removes a session from the cache
-* @param id string
-* @return error
-**/
-func (s *Sessions) removeSession(id string) error {
-	s.mu.Lock()
-	delete(s.sessions, id)
-	s.mu.Unlock()
-	return nil
+	return result, nil
 }

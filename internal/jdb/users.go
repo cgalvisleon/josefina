@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
 )
 
@@ -33,32 +34,6 @@ type Users struct {
 	users map[string]*User
 	mu    *sync.RWMutex
 	store *Model
-}
-
-/**
-* loadCache: Loads the cache
-* @return error
-**/
-func (s *DB) loadUsers() error {
-	store, err := s.loadModel(sysSchema, "users", 1, true)
-	if err != nil {
-		return err
-	}
-
-	result := &Users{
-		users: make(map[string]*User),
-		mu:    &sync.RWMutex{},
-		store: store,
-	}
-
-	err = result.initUser()
-	if err != nil {
-		return err
-	}
-
-	s.users = result
-
-	return nil
 }
 
 /**
@@ -91,48 +66,26 @@ func (s *Users) initUser() error {
 * @return error
 **/
 func (s *Users) newUser(username, password string) (*User, error) {
+	hash, err := utility.HashSHA512(password)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	result := &User{
 		CreatedAt: now,
 		UpdatedAt: now,
 		ID:        reg.UUID(),
 		Username:  username,
-		Password:  password,
+		Password:  hash,
 	}
 
-	err := s.saveUser(result)
+	err = s.saveUser(result)
 	if err != nil {
 		return nil, err
 	}
 
 	return result, nil
-}
-
-/**
-* addUser: Adds a user to the cache
-* @param id, username string
-* @return error
-**/
-func (s *Users) addUser(user *User) {
-	s.mu.Lock()
-	s.users[user.ID] = user
-	s.mu.Unlock()
-}
-
-/**
-* GetUser
-* @param username, password string
-* @return (*et.Item, error)
-**/
-func (s *Users) getUser(id string) (*User, error) {
-	s.mu.RLock()
-	user, exists := s.users[id]
-	s.mu.RUnlock()
-	if !exists {
-		return nil, errors.New(msg.MSG_USER_NOT_FOUND)
-	}
-
-	return user, nil
 }
 
 /**
@@ -142,5 +95,85 @@ func (s *Users) getUser(id string) (*User, error) {
 **/
 func (s *Users) saveUser(user *User) error {
 	s.addUser(user)
-	return s.store.put(user.ID, user)
+	return s.store.put(user.Username, user)
+}
+
+/**
+* addUser: Adds a user to the cache
+* @param id, username string
+* @return error
+**/
+func (s *Users) addUser(user *User) {
+	s.mu.Lock()
+	s.users[user.Username] = user
+	s.mu.Unlock()
+}
+
+/**
+* GetUser
+* @param username, password string
+* @return (*et.Item, error)
+**/
+func (s *Users) getUser(username string) (*User, error) {
+	s.mu.RLock()
+	result, exists := s.users[username]
+	s.mu.RUnlock()
+	if exists {
+		return result, nil
+	}
+
+	exists, err := s.store.get(username, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_USER_NOT_FOUND)
+	}
+
+	return result, nil
+}
+
+/**
+* loadCache: Loads the cache
+* @return error
+**/
+func (s *DB) loadUsers() error {
+	store, err := s.loadModel(sysSchema, "users", 1, true)
+	if err != nil {
+		return err
+	}
+
+	result := &Users{
+		users: make(map[string]*User),
+		mu:    &sync.RWMutex{},
+		store: store,
+	}
+
+	err = result.initUser()
+	if err != nil {
+		return err
+	}
+
+	s.users = result
+
+	return nil
+}
+
+/**
+* getUser: Gets a user from the database
+* @param username string
+* @return (*User, error)
+**/
+func (s *DB) getUser(username string) (*User, error) {
+	return s.users.getUser(username)
+}
+
+/**
+* newUser: Creates a new user
+* @param username, password string
+* @return (*User, error)
+**/
+func (s *DB) newUser(username, password string) (*User, error) {
+	return s.users.newUser(username, password)
 }
