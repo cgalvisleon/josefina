@@ -5,21 +5,21 @@ import (
 
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/jsql"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/middleware"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
+	"github.com/josefina/internal/jdb"
 )
 
 type Router struct {
 	*router.Api
-	Db *jsql.DB
+	Db *jdb.DB
 }
 
 var api *Router
 
-func Routes(name string, version string, db *jsql.DB) http.Handler {
+func Routes(name string, version string, db *jdb.DB) http.Handler {
 	if api != nil {
 		return nil
 	}

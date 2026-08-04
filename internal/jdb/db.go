@@ -42,6 +42,7 @@ type DB struct {
 	TennantPathData     string             `json:"tennant_path_data"`
 	Timezone            string             `json:"timezone"`
 	MinThresholdCompact int                `json:"min_threshold_compact"`
+	Version             string             `json:"version"`
 	schemas             map[string]*Schema `json:"-"` // Schemas
 	mu                  *sync.RWMutex      `json:"-"` // Mutex
 	store               *Model             `json:"-"` // Store

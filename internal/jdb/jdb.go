@@ -43,6 +43,7 @@ func NewDb(path, name string) (*DB, error) {
 		schemas:             make(map[string]*Schema, 0),
 		mu:                  &sync.RWMutex{},
 	}
+
 	var err error
 	result.store, err = result.loadModel("", "store", 1, true)
 	if err != nil {
@@ -69,11 +70,11 @@ func NewDb(path, name string) (*DB, error) {
 }
 
 /**
-* LoadDb: Loads a database from the JSON definition
+* loadDb: Loads a database from the JSON definition
 * @param def et.Json
 * @return *DB, error
 **/
-func LoadDb(name string) (*DB, error) {
+func loadDb(name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -100,6 +101,14 @@ func LoadDb(name string) (*DB, error) {
 
 	databases[name] = result
 	return result, nil
+}
+
+/**
+* Load: Loads the database from the JSON definition
+* @return error
+**/
+func Load() (*DB, error) {
+	return loadDb("josefina")
 }
 
 /**
