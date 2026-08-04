@@ -589,38 +589,3 @@ func (s *DB) Command(cmds []DCmd) (et.Items, error) {
 	}
 	return result, nil
 }
-
-/**
-**/
-func (s *DB) Query(querys []DQuery) (et.Items, error) {
-	result := et.NewItems([]et.Json{})
-	var tx *Tx
-	tx, _ = GetTx(s, nil)
-	for _, query := range querys {
-		model, err := s.GetModel(query.From.Schema, query.From.Name)
-		if err != nil {
-			return result, err
-		}
-		where := From(model)
-		for _, condition := range query.Where {
-			where.Add(&condition)
-		}
-		for _, selectField := range query.Selects {
-			where.Selects(selectField)
-		}
-		for _, hiddenField := range query.Hidden {
-			where.Hidden(hiddenField)
-		}
-		for _, orderBy := range query.OrderBy {
-			where.orderBy = append(where.orderBy, orderBy)
-		}
-		where.Limit(query.Limit, query.Page)
-		items, err := where.All()
-		if err != nil {
-			return result, err
-		}
-		result.Add(items.Result...)
-	}
-	tx.Commit()
-	return result, nil
-}

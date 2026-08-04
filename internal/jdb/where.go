@@ -1,6 +1,7 @@
 package jdb
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/cgalvisleon/et/et"
@@ -34,15 +35,26 @@ func (j JoinType) String() string {
 	}
 }
 
+type To struct {
+	Model *Model `json:"model"`
+	As    string `json:"as"`
+}
+
+type Fld struct {
+	To    To     `json:"to"`
+	Field any    `json:"field"`
+	As    string `json:"as"`
+}
+
 type Join struct {
-	To   *Model            `json:"to"`
+	To   To                `json:"to"`
 	Keys map[string]string `json:"keys"`
 	Type JoinType          `json:"type"`
 }
 
 type OrderField struct {
-	Field string
-	Asc   bool
+	Field string `json:"field"`
+	Asc   bool   `json:"asc"`
 }
 
 /**
@@ -50,7 +62,7 @@ type OrderField struct {
 **/
 type Query struct {
 	db      *DB             `json:"-"`
-	from    *Model          `json:"-"`
+	froms   []To            `json:"-"`
 	joins   []Join          `json:"-"`
 	selects []string        `json:"-"`
 	hidden  []string        `json:"-"`
@@ -68,10 +80,10 @@ type Query struct {
 * @param owner *Model
 * @return *Query
 **/
-func newWhere(model *Model) *Query {
+func newQuery(model *Model, as string) *Query {
 	result := &Query{
 		db:      model.db,
-		from:    model,
+		froms:   make([]To, 0),
 		joins:   make([]Join, 0),
 		selects: make([]string, 0),
 		hidden:  make([]string, 0),
@@ -83,7 +95,7 @@ func newWhere(model *Model) *Query {
 		limit:   0,
 		isDebug: false,
 	}
-
+	result.addFrom(model, as)
 	return result
 }
 
@@ -100,25 +112,162 @@ func (s *Query) IsDebug() *Query {
 * ToJson
 * @return et.Json
 **/
-func (s *Query) ToJson() []et.Json {
-	result := []et.Json{}
+func (s *Query) ToJson() et.Json {
+	wheres := []et.Json{}
 	for _, condition := range s.wheres {
-		result = append(result, condition.ToJson())
+		wheres = append(wheres, condition.ToJson())
 	}
+
+	return et.Json{
+		"froms":   s.froms,
+		"joins":   s.joins,
+		"selects": s.selects,
+		"hidden":  s.hidden,
+		"wheres":  wheres,
+		"groupBy": s.groupBy,
+		"orderBy": s.orderBy,
+		"having":  s.having,
+		"offset":  s.offset,
+		"limit":   s.limit,
+		"isDebug": s.isDebug,
+	}
+}
+
+/**
+* addFrom
+* @param model *Model, as string
+* @return *Query
+**/
+func (s *Query) addFrom(model *Model, as ...string) To {
+	if len(as) == 0 {
+		as = []string{model.Name}
+	}
+	result := To{Model: model, As: as[0]}
+	s.froms = append(s.froms, result)
 	return result
 }
 
 /**
-* From
-* @param model *Model
-* @return *Query
+* AggFld: Represents an aggregate function applied to a nested Fld, e.g. sum(amount).
 **/
-func (s *Query) From(model *Model) *Query {
-	if model == nil {
-		return s
+type AggFld struct {
+	Type TypeAggregation `json:"type"`
+	Fld  Fld             `json:"fld"`
+}
+
+/**
+* resolveTo: Looks up a From by its alias; falls back to the first From when as is empty
+* or when the alias has no match.
+* @param as string
+* @return To
+**/
+func (s *Query) resolveTo(as string) To {
+	for _, from := range s.froms {
+		if from.As == as {
+			return from
+		}
+	}
+	if as == "" && len(s.froms) > 0 {
+		return s.froms[0]
+	}
+	return To{}
+}
+
+/**
+* FindFld: Resolves a field reference to its Fld, supporting the formats
+* "<as>.<name>:<as>", "<as>.<name>", "<name>:<as>", "<name>",
+* "<agg>(<field>):<as>" and "<agg>(<field>)".
+* @param field string
+* @return Fld
+**/
+func (s *Query) FindFld(field string) Fld {
+	pattern1 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`) // from.field:as
+	pattern2 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+)$`)                 // from.field
+	pattern3 := regexp.MustCompile(`^([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`)                  // field:as
+	pattern4 := regexp.MustCompile(`^([A-Za-z0-9_>-]+)$`)                                  // field
+	pattern5 := regexp.MustCompile(`^([A-Za-z0-9_]+)\((.+)\):([A-Za-z0-9_]+)$`)            // agg(field):as
+	pattern6 := regexp.MustCompile(`^([A-Za-z0-9_]+)\((.+)\)$`)                            // agg(field)
+
+	if m := pattern5.FindStringSubmatch(field); m != nil {
+		inner := s.FindFld(m[2])
+		return Fld{
+			To:    inner.To,
+			Field: AggFld{Type: GetAggregation(strings.ToLower(m[1])), Fld: inner},
+			As:    m[3],
+		}
 	}
 
-	s.from = model
+	if m := pattern6.FindStringSubmatch(field); m != nil {
+		inner := s.FindFld(m[2])
+		agg := GetAggregation(strings.ToLower(m[1]))
+		alias := strings.ToLower(m[1]) + "_" + strings.ReplaceAll(m[2], ".", "_")
+		return Fld{
+			To:    inner.To,
+			Field: AggFld{Type: agg, Fld: inner},
+			As:    alias,
+		}
+	}
+
+	if m := pattern1.FindStringSubmatch(field); m != nil {
+		return Fld{To: s.resolveTo(m[1]), Field: m[2], As: m[3]}
+	}
+
+	if m := pattern2.FindStringSubmatch(field); m != nil {
+		return Fld{To: s.resolveTo(m[1]), Field: m[2], As: m[2]}
+	}
+
+	if m := pattern3.FindStringSubmatch(field); m != nil {
+		return Fld{To: s.resolveTo(""), Field: m[1], As: m[2]}
+	}
+
+	if m := pattern4.FindStringSubmatch(field); m != nil {
+		return Fld{To: s.resolveTo(""), Field: m[1], As: m[1]}
+	}
+
+	return Fld{To: s.resolveTo(""), Field: field, As: field}
+}
+
+/**
+* InnerJoin: Adds an inner join — only primary records with a match in to are returned.
+* @param to *Model, as string, keys map[string]string
+* @return *Query
+**/
+func (s *Query) InnerJoin(to *Model, as string, keys map[string]string) *Query {
+	t := s.addFrom(to, as)
+	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: InnerJoin})
+	return s
+}
+
+/**
+* LeftJoin: Adds a left join — all primary records are returned; joined fields empty when no match.
+* @param to *Model, as string, keys map[string]string
+* @return *Query
+**/
+func (s *Query) LeftJoin(to *Model, as string, keys map[string]string) *Query {
+	t := s.addFrom(to, as)
+	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: LeftJoin})
+	return s
+}
+
+/**
+* RightJoin: Adds a right join — all records from to are returned; primary fields empty when no match.
+* @param to *Model, as string, keys map[string]string
+* @return *Query
+**/
+func (s *Query) RightJoin(to *Model, as string, keys map[string]string) *Query {
+	t := s.addFrom(to, as)
+	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: RightJoin})
+	return s
+}
+
+/**
+* FullJoin: Adds a full join — all records from both models, matched where possible.
+* @param to *Model, as string, keys map[string]string
+* @return *Query
+**/
+func (s *Query) FullJoin(to *Model, as string, keys map[string]string) *Query {
+	t := s.addFrom(to, as)
+	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: FullJoin})
 	return s
 }
 
@@ -137,11 +286,11 @@ func (s *Query) Add(condition *et.Condition) *Query {
 }
 
 /**
-* Query
+* Where
 * @param condition *et.Condition
 * @return *Query
 **/
-func (s *Query) Query(condition *et.Condition) *Query {
+func (s *Query) Where(condition *et.Condition) *Query {
 	return s.Add(condition)
 }
 
@@ -171,10 +320,6 @@ func (s *Query) Or(condition *et.Condition) *Query {
 * @return *Query
 **/
 func (s *Query) Selects(fields ...string) *Query {
-	if len(fields) == 0 {
-		return s
-	}
-
 	for _, field := range fields {
 		s.selects = append(s.selects, field)
 	}
@@ -188,10 +333,6 @@ func (s *Query) Selects(fields ...string) *Query {
 * @return *Query
 **/
 func (s *Query) Hidden(fields ...string) *Query {
-	if len(fields) == 0 {
-		return s
-	}
-
 	for _, field := range fields {
 		s.hidden = append(s.hidden, field)
 	}
@@ -200,77 +341,16 @@ func (s *Query) Hidden(fields ...string) *Query {
 }
 
 /**
-* Asc
-* @param field string
-* @return *Query
-**/
-func (s *Query) Asc(field string) *Query {
-	s.orderBy = append(s.orderBy, OrderField{Field: strings.ToLower(field), Asc: true})
-	return s
-}
-
-/**
-* Desc
-* @param field string
-* @return *Query
-**/
-func (s *Query) Desc(field string) *Query {
-	s.orderBy = append(s.orderBy, OrderField{Field: strings.ToLower(field), Asc: false})
-	return s
-}
-
-/**
 * Order
 * @param field string
 * @return bool
 **/
-func (s *Query) Order(field string) bool {
-	field = strings.ToLower(field)
-	for _, ob := range s.orderBy {
-		if ob.Field == field {
-			return ob.Asc
-		}
+func (s *Query) OrderBy(field string, asc ...bool) *Query {
+	if len(asc) == 0 {
+		asc = []bool{true}
 	}
-	return true
-}
+	s.orderBy = append(s.orderBy, OrderField{Field: field, Asc: asc[0]})
 
-/**
-* InnerJoin: Adds an inner join — only primary records with a match in to are returned.
-* @param to *Model, keys map[string]string
-* @return *Query
-**/
-func (s *Query) InnerJoin(to *Model, keys map[string]string) *Query {
-	s.joins = append(s.joins, Join{To: to, Keys: keys, Type: InnerJoin})
-	return s
-}
-
-/**
-* LeftJoin: Adds a left join — all primary records are returned; joined fields empty when no match.
-* @param to *Model, keys map[string]string
-* @return *Query
-**/
-func (s *Query) LeftJoin(to *Model, keys map[string]string) *Query {
-	s.joins = append(s.joins, Join{To: to, Keys: keys, Type: LeftJoin})
-	return s
-}
-
-/**
-* RightJoin: Adds a right join — all records from to are returned; primary fields empty when no match.
-* @param to *Model, keys map[string]string
-* @return *Query
-**/
-func (s *Query) RightJoin(to *Model, keys map[string]string) *Query {
-	s.joins = append(s.joins, Join{To: to, Keys: keys, Type: RightJoin})
-	return s
-}
-
-/**
-* FullJoin: Adds a full join — all records from both models, matched where possible.
-* @param to *Model, keys map[string]string
-* @return *Query
-**/
-func (s *Query) FullJoin(to *Model, keys map[string]string) *Query {
-	s.joins = append(s.joins, Join{To: to, Keys: keys, Type: FullJoin})
 	return s
 }
 
@@ -299,11 +379,11 @@ func (s *Query) SetOffset(offset int, rows int) *Query {
 
 /**
 * From
-* @param model *Model
+* @param model *Model, as string
 * @return *Query
 **/
-func From(model *Model) *Query {
-	return newWhere(model)
+func From(model *Model, as string) *Query {
+	return newQuery(model, as)
 }
 
 /**
