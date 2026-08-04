@@ -5,9 +5,17 @@ import (
 )
 
 /**
-* TriggerFn: Callback signature for before/after insert, update, and delete hooks.
+* Cmd: Identifies the DML operation type for a command or transaction entry.
 **/
-type TriggerFn func(model *Model, old, new *et.Json, tx *Tx) error
+type Cmd string
+
+const (
+	INSERT Cmd = "insert"
+	UPDATE Cmd = "update"
+	DELETE Cmd = "delete"
+	UPSERT Cmd = "upsert"
+	BULK   Cmd = "bulk"
+)
 
 /**
 * Command: Builder for DML operations; accumulates items, conditions, and trigger callbacks
@@ -143,7 +151,7 @@ func (s *Command) AfterUpdates(trigger *Trigger) *Command {
 
 /**
 * AfterDeletes
-* @param fn TriggerFn
+* @param fn Trigger
 * @return *Command
 **/
 func (s *Command) AfterDeletes(trigger *Trigger) *Command {

@@ -50,26 +50,3 @@ func (s *DB) loadErrors() (*Errors, error) {
 		store:  store,
 	}, nil
 }
-
-/**
-* putError
-* @param model, tag, id string, err error
-* @return error
-**/
-func (db *DB) putError(model, tag, id string, err error) (string, error) {
-	idx := db.errors.GenKey()
-	_, er := db.errors.
-		Insert(et.Json{
-			INDEX:   idx,
-			"model": model,
-			"tag":   tag,
-			"id":    id,
-			"error": err.Error(),
-		}).
-		Exec()
-	if er != nil {
-		return "", er
-	}
-
-	return idx, nil
-}
