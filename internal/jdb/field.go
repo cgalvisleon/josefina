@@ -9,7 +9,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/msg"
+	"github.com/josefina/internal/msg"
 )
 
 /**

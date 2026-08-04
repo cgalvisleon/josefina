@@ -2,51 +2,18 @@ package server
 
 import (
 	"github.com/cgalvisleon/et/envar"
-	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/utility"
-	"github.com/cgalvisleon/josefina/internal/jsql"
+	"github.com/cgalvisleon/et/server"
+	v1 "github.com/josefina/internal/server/v1"
 )
 
-type Service struct {
-	port int
-	node *jsql.Server
-}
+func New() (*server.Ettp, error) {
+	port := envar.GetInt("PORT", 1377)
+	result := server.New(v1.AppName, port)
 
-/**
-* New
-* @return *Service
-**/
-func New(port int) *Service {
-	if port == 0 {
-		port = envar.GetInt("PORT", 1377)
-	}
-	srv, err := jsql.NewServer(port)
-	if err != nil {
-		logs.Panic(err)
-	}
-	return &Service{
-		port: port,
-		node: srv,
-	}
-}
+	latest := v1.New()
+	result.Mount("/", latest)
+	result.Mount("/v1", latest)
+	result.OnClose(v1.Close)
 
-/**
-* Start
-**/
-func (s *Service) Start() {
-	if err := s.node.Start(); err != nil {
-		logs.Error(err)
-		return
-	}
-	utility.AppWait()
-}
-
-/**
-* Stop
-**/
-func (s *Service) Stop() {
-	if err := s.node.Close(); err != nil {
-		logs.Error(err)
-		return
-	}
+	return result, nil
 }

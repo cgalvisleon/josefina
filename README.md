@@ -6,10 +6,10 @@ Custom distributed document database engine written in Go with SQL-like query sy
 
 ```bash
 goenv local 1.23.0
-go mod init github.com/cgalvisleon/josefina
+go mod init github.com/josefina
 go get github.com/cgalvisleon/et@v1.0.22
 go get github.com/gorilla/websocket
-git remote add origin https://github.com/cgalvisleon/josefina.git
+git remote add origin https://github.com/josefina.git
 ```
 
 ## Running
@@ -36,12 +36,12 @@ go run ./cmd/client -host localhost:1377 -user admin -password secret -database 
 
 Flags:
 
-| Flag | Default | Description |
-|---|---|---|
-| `-host` | `""` | Server address (`host:port`). When set, TCP mode is used. |
-| `-user` | `admin` | Username |
-| `-password` | `""` | Password |
-| `-database` | `""` | Database to connect to |
+| Flag        | Default | Description                                               |
+| ----------- | ------- | --------------------------------------------------------- |
+| `-host`     | `""`    | Server address (`host:port`). When set, TCP mode is used. |
+| `-user`     | `admin` | Username                                                  |
+| `-password` | `""`    | Password                                                  |
+| `-database` | `""`    | Database to connect to                                    |
 
 #### Interactive session example
 
@@ -94,13 +94,13 @@ Bye.
 
 #### Available meta-commands
 
-| Command | Description |
-|---|---|
-| `\c <db>` | Switch database |
-| `\timing` | Toggle query timing |
+| Command     | Description             |
+| ----------- | ----------------------- |
+| `\c <db>`   | Switch database         |
+| `\timing`   | Toggle query timing     |
 | `\i <file>` | Execute SQL from a file |
-| `\help` | Show all commands |
-| `\q` | Quit |
+| `\help`     | Show all commands       |
+| `\q`        | Quit                    |
 
 #### SET SQL STATE
 
@@ -313,7 +313,7 @@ package main
 
 import (
     "github.com/cgalvisleon/et/et"
-    "github.com/cgalvisleon/josefina/internal/catalog"
+    "github.com/josefina/internal/catalog"
 )
 
 func main() {

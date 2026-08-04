@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/josefina/internal/jdb"
+	"github.com/josefina/internal/jdb"
 )
 
 const dataPath = "./data/test"

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/josefina/internal/store"
+	"github.com/josefina/internal/store"
 )
 
 const bpDegree = 32 // minimum degree: each node holds between t-1 and 2t-1 keys

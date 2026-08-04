@@ -1,4 +1,4 @@
-module github.com/cgalvisleon/josefina
+module github.com/josefina
 
 go 1.25.0
 

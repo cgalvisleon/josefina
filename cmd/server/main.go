@@ -2,15 +2,18 @@ package main
 
 import (
 	"github.com/cgalvisleon/et/envar"
-	serv "github.com/cgalvisleon/josefina/internal/server"
+	"github.com/cgalvisleon/et/logs"
+	serv "github.com/josefina/internal/server"
 )
 
 func main() {
-	envar.SetIntByArg("-port", "PORT", 1377)
-	envar.SetIntByArg("-http", "HTTP", 3500)
-	envar.SetBoolByArg("-strict", "IS_STRICT", false)
+	envar.SetIntByArg("port", "PORT", 1377)
+	envar.SetIntByArg("rpct", "RPC_PORT", 4377)
 
-	port := envar.GetInt("PORT", 1377)
-	srv := serv.New(port)
+	srv, err := serv.New()
+	if err != nil {
+		logs.Fatal(err)
+	}
+
 	srv.Start()
 }

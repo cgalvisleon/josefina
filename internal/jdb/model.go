@@ -12,8 +12,8 @@ import (
 	"github.com/cgalvisleon/et/jrex"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/strs"
-	"github.com/cgalvisleon/josefina/internal/msg"
-	"github.com/cgalvisleon/josefina/internal/store"
+	"github.com/josefina/internal/msg"
+	"github.com/josefina/internal/store"
 )
 
 var (
