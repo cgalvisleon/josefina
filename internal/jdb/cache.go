@@ -17,7 +17,7 @@ type Cache struct {
 * @return *Cache, error
 **/
 func (s *DB) loadCache() (*Cache, error) {
-	store, err := s.loadModel("", "cache", 1, true)
+	store, err := s.loadModel(sysSchema, "cache", 1, true)
 	if err != nil {
 		return nil, err
 	}

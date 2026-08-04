@@ -88,7 +88,7 @@ type Sessions struct {
 * @return *Sessions, error
 **/
 func (s *DB) loadSessions() (*Sessions, error) {
-	store, err := s.loadModel("", "sessions", 1, true)
+	store, err := s.loadModel(sysSchema, "sessions", 1, true)
 	if err != nil {
 		return nil, err
 	}

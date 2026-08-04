@@ -3,6 +3,7 @@ package jdb
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
@@ -33,11 +34,12 @@ func (s *Schema) newModel(name string, version int, isCore bool) (*Model, error)
 	}
 
 	name = store.Normalize(name)
+	path := filepath.Join(s.db.Path, s.Name, name)
 	result := &Model{
 		Database:      s.Database,
 		Schema:        s.Name,
 		Name:          name,
-		Path:          s.db.Path,
+		Path:          path,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]*Index, 0),
 		PrimaryKeys:   make([]string, 0),

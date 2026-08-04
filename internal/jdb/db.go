@@ -12,11 +12,6 @@ import (
 	"github.com/josefina/internal/store"
 )
 
-const (
-	sysDb     = ".catalog"
-	sysSchema = ".catalog"
-)
-
 type Config struct {
 	Lang                string        `json:"lang"`
 	TransactionTTL      time.Duration `json:"transaction_ttl"`
@@ -86,7 +81,7 @@ func (s *DB) loadSchema(def et.Json) (*Schema, error) {
 	}
 
 	models := def.Json("models")
-	for name, _ := range models {
+	for name := range models {
 		modelDef := models.Json(name)
 		model, err := result.loadModel(modelDef)
 		if err != nil {

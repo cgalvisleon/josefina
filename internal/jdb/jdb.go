@@ -18,6 +18,11 @@ func init() {
 	databases = make(map[string]*DB, 0)
 }
 
+const (
+	sysSchema  = "catalog"
+	sysCatalog = sysSchema
+)
+
 /**
 * NewDb: Creates a new database
 * @param path, name string
@@ -46,7 +51,7 @@ func NewDb(path, name string) (*DB, error) {
 	}
 
 	var err error
-	result.store, err = result.loadModel("", "store", 1, true)
+	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +77,10 @@ func NewDb(path, name string) (*DB, error) {
 
 /**
 * loadDb: Loads a database from the JSON definition
-* @param def et.Json
+* @param path, name string
 * @return *DB, error
 **/
-func loadDb(name string) (*DB, error) {
+func loadDb(path, name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -86,7 +91,7 @@ func loadDb(name string) (*DB, error) {
 		return result, nil
 	}
 
-	result, err := NewDb("./data", name)
+	result, err := NewDb(path, name)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +115,8 @@ func loadDb(name string) (*DB, error) {
 **/
 func Load() (*DB, error) {
 	name := envar.GetStr("DB_NAME", "josefina")
-	return loadDb(name)
+	path := envar.GetStr("DB_PATH", "./data")
+	return loadDb(path, name)
 }
 
 /**

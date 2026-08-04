@@ -10,6 +10,7 @@ func main() {
 	envar.SetIntByArg("port", "PORT", 1370)
 	envar.SetIntByArg("rpct", "RPC_PORT", 4370)
 	envar.SetStrByArg("name", "DB_NAME", "josefina")
+	envar.SetStrByArg("path", "DB_PATH", "./data")
 
 	srv, err := srv.New()
 	if err != nil {

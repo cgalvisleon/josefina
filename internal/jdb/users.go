@@ -38,7 +38,7 @@ type Users struct {
 * @return *Cache, error
 **/
 func (s *DB) loadUsers() (*Users, error) {
-	store, err := s.loadModel("", "users", 1, true)
+	store, err := s.loadModel(sysSchema, "users", 1, true)
 	if err != nil {
 		return nil, err
 	}
