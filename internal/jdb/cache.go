@@ -14,19 +14,23 @@ type Cache struct {
 
 /**
 * loadCache: Loads the cache
-* @return *Cache, error
+* @return error
 **/
-func (s *DB) loadCache() (*Cache, error) {
+func (s *DB) loadCache() error {
 	store, err := s.loadModel(sysSchema, "cache", 1, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Cache{
+	result := &Cache{
 		cache: make(map[string]*Ttl),
 		mu:    &sync.RWMutex{},
 		store: store,
-	}, nil
+	}
+
+	s.cache = result
+
+	return nil
 }
 
 /**

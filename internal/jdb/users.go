@@ -35,19 +35,23 @@ type Users struct {
 
 /**
 * loadCache: Loads the cache
-* @return *Cache, error
+* @return error
 **/
-func (s *DB) loadUsers() (*Users, error) {
+func (s *DB) loadUsers() error {
 	store, err := s.loadModel(sysSchema, "users", 1, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Users{
+	result := &Users{
 		users: make(map[string]*User),
 		mu:    &sync.RWMutex{},
 		store: store,
-	}, nil
+	}
+
+	s.users = result
+
+	return nil
 }
 
 /**

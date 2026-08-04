@@ -137,12 +137,12 @@ func (s *Server) newDb(name string) (*DB, error) {
 		return nil, err
 	}
 
-	result.cache, err = result.loadCache()
+	err = result.loadCache()
 	if err != nil {
 		return nil, err
 	}
 
-	result.users, err = result.loadUsers()
+	err = result.loadUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -193,12 +193,12 @@ func (s *Server) loadDb(params et.Json) error {
 		return err
 	}
 
-	result.cache, err = result.loadCache()
+	err = result.loadCache()
 	if err != nil {
 		return err
 	}
 
-	result.users, err = result.loadUsers()
+	err = result.loadUsers()
 	if err != nil {
 		return err
 	}
