@@ -152,7 +152,7 @@ func (s *Query) addFrom(model *Model, as ...string) To {
 **/
 type AggFld struct {
 	Type TypeAggregation `json:"type"`
-	Fld  Fld             `json:"fld"`
+	Fld  string          `json:"fld"`
 }
 
 /**
@@ -174,13 +174,13 @@ func (s *Query) resolveTo(as string) To {
 }
 
 /**
-* FindFld: Resolves a field reference to its Fld, supporting the formats
+* findFld: Resolves a field reference to its Fld, supporting the formats
 * "<as>.<name>:<as>", "<as>.<name>", "<name>:<as>", "<name>",
 * "<agg>(<field>):<as>" and "<agg>(<field>)".
 * @param field string
 * @return Fld
 **/
-func (s *Query) FindFld(field string) Fld {
+func (s *Query) findFld(field string) Fld {
 	pattern1 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`) // from.field:as
 	pattern2 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+)$`)                 // from.field
 	pattern3 := regexp.MustCompile(`^([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`)                  // field:as
@@ -189,21 +189,21 @@ func (s *Query) FindFld(field string) Fld {
 	pattern6 := regexp.MustCompile(`^([A-Za-z0-9_]+)\((.+)\)$`)                            // agg(field)
 
 	if m := pattern5.FindStringSubmatch(field); m != nil {
-		inner := s.FindFld(m[2])
+		inner := s.findFld(m[2])
 		return Fld{
 			To:    inner.To,
-			Field: AggFld{Type: GetAggregation(strings.ToLower(m[1])), Fld: inner},
+			Field: AggFld{Type: GetAggregation(strings.ToLower(m[1])), Fld: m[2]},
 			As:    m[3],
 		}
 	}
 
 	if m := pattern6.FindStringSubmatch(field); m != nil {
-		inner := s.FindFld(m[2])
+		inner := s.findFld(m[2])
 		agg := GetAggregation(strings.ToLower(m[1]))
 		alias := strings.ToLower(m[1]) + "_" + strings.ReplaceAll(m[2], ".", "_")
 		return Fld{
 			To:    inner.To,
-			Field: AggFld{Type: agg, Fld: inner},
+			Field: AggFld{Type: agg, Fld: m[2]},
 			As:    alias,
 		}
 	}
@@ -375,6 +375,10 @@ func (s *Query) SetOffset(offset int, rows int) *Query {
 	s.offset = offset
 	s.limit = rows
 	return s
+}
+
+func (s *Query) Exec() (et.Items, error) {
+
 }
 
 /**

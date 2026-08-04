@@ -881,11 +881,11 @@ func (s *Model) AddAfterDelete(name string, definition string) {
 }
 
 /**
-* ForEach: Iterates over all documents in the primary store
+* ForEachOfBytes: Iterates over all documents in the primary store
 * @param next func(idx string, src []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
-func (s *Model) ForEachBt(next func(idx string, src []byte) (bool, error), asc bool, offset, limit int) error {
+func (s *Model) ForEachOfBytes(next func(idx string, src []byte) (bool, error), asc bool, offset, limit int) error {
 	st, exists := s.source()
 	if !exists {
 		return errors.New(msg.MSG_STORE_NOT_FOUND)
