@@ -252,11 +252,11 @@ func (s *Server) saveDb(db *DB) error {
 }
 
 /**
-* NewDb: Creates a new database
+* CreateDb: Creates a new database
 * @param name string
 * @return *DB, error
 **/
-func NewDb(name string) (*DB, error) {
+func CreateDb(name string) (*DB, error) {
 	if server == nil {
 		return nil, errors.New(msg.MSG_SERVER_NOT_LOADED)
 	}
@@ -282,6 +282,11 @@ func GetDb(name string) (*DB, error) {
 	return db, nil
 }
 
+/**
+* DeleteDb: Deletes a database
+* @param name string
+* @return error
+**/
 func DeleteDb(name string) error {
 	if server == nil {
 		return errors.New(msg.MSG_SERVER_NOT_LOADED)
