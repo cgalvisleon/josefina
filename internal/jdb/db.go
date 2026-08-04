@@ -40,6 +40,7 @@ type DB struct {
 	MinThresholdCompact int                `json:"min_threshold_compact"`
 	Version             string             `json:"version"`
 	isInit              bool               `json:"-"` // Is initialized
+	server              *Server            `json:"-"` // Server
 	schemas             map[string]*Schema `json:"-"` // Schemas
 	mu                  *sync.RWMutex      `json:"-"` // Mutex
 	store               *Model             `json:"-"` // Store
@@ -121,6 +122,18 @@ func (s *DB) ToJson() et.Json {
 }
 
 /**
+* save: Saves the database
+* @return error
+**/
+func (s *DB) save() error {
+	err := s.server.saveDb(s)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/**
 * load: Loads the database
 * @return error
 **/
@@ -133,15 +146,6 @@ func (s *DB) load() error {
 	if err != nil {
 		return err
 	}
-
-	s.Lang = def.Str("lang")
-	s.TransactionTTL = def.ValDuration(10*time.Second, "transaction_ttl")
-	s.RelSegSize = def.Int("rel_seg_size")
-	s.SyncOnWrite = def.Bool("sync_on_write")
-	s.TennantName = def.Str("tennant_name")
-	s.TennantPathData = def.Str("tennant_path_data")
-	s.Timezone = def.Str("timezone")
-	s.MinThresholdCompact = def.Int("min_threshold_compact")
 
 	schemas := def.ArrayJson("schemas")
 	for _, schema := range schemas {
@@ -158,7 +162,7 @@ func (s *DB) load() error {
 * Init: Initializes the database
 * @return error
 **/
-func (s *DB) Init() error {
+func (s *DB) init() error {
 	for _, schema := range s.schemas {
 		if err := schema.Init(); err != nil {
 			return err
