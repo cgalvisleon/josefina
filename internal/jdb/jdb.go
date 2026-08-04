@@ -258,9 +258,9 @@ func (s *Server) loadDb(params et.Json) error {
 			}
 		}
 
-		models := schemaDef.ArrayJson("models")
-		for _, modelDef := range models {
-			name := modelDef.Str("name")
+		models := schemaDef.Json("models")
+		for name := range models {
+			modelDef := models.Json(name)
 			_, exists := sch.getModel(name)
 			if !exists {
 				_, err := sch.loadModel(modelDef)
