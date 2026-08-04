@@ -884,19 +884,19 @@ func (s *FileStore) Prune() error {
 
 /**
 * Open
-* @param path, name string, isDebug bool, mode Mode
+* @param pathData, pathWald, name string, isDebug bool, mode Mode
 * @return *FileStore, error
 **/
-func Open(path, name string, mode Mode) (*FileStore, error) {
+func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
 	maxSegmentMG = maxSegmentMG * 1024 * 1024
 	minThreshold := envar.GetInt("MIN_THRESHOLD_COMPACT", 1000)
 	name = Normalize(name)
 	fs := &FileStore{
 		Name:                name,
-		Path:                filepath.Join(path, "segments", name),
-		PathSnapshot:        filepath.Join(path, "snapshot", name),
-		PathCompact:         filepath.Join(path, "compact", name),
+		Path:                filepath.Join(pathData, "segments", name),
+		PathSnapshot:        filepath.Join(pathWald, "snapshot", name),
+		PathCompact:         filepath.Join(pathWald, "compact", name),
 		MaxSegment:          maxSegmentMG,
 		MinThresholdCompact: minThreshold,
 		mode:                mode,

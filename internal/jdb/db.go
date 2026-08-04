@@ -27,8 +27,9 @@ type Config struct {
 * DB: Represents a database
 **/
 type DB struct {
-	Name                string             `json:"name"` // Database name
-	Path                string             `json:"path"` // Path to the database
+	Name                string             `json:"name"`      // Database name
+	PathData            string             `json:"path_data"` // Path to the model
+	PathWald            string             `json:"path_wald"` // Path to the wald
 	Lang                string             `json:"lang"`
 	TransactionTTL      time.Duration      `json:"transaction_ttl"`
 	RelSegSize          int                `json:"rel_seg_size"`
@@ -105,7 +106,8 @@ func (s *DB) ToJson() et.Json {
 
 	return et.Json{
 		"name":                  s.Name,
-		"path":                  s.Path,
+		"path_data":             s.PathData,
+		"path_wald":             s.PathWald,
 		"lang":                  s.Lang,
 		"transaction_ttl":       s.TransactionTTL,
 		"rel_seg_size":          s.RelSegSize,

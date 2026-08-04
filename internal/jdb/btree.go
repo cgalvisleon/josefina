@@ -287,8 +287,8 @@ func NewBTree() *BTree {
 * @param path, name string
 * @return *BTree, error
 **/
-func OpenBTree(path, name string) (*BTree, error) {
-	st, err := store.Open(path, "btidx_"+name, store.ReadWrite)
+func OpenBTree(pathData, pathWald, name string) (*BTree, error) {
+	st, err := store.Open(pathData, pathWald, "btidx_"+name, store.ReadWrite)
 	if err != nil {
 		return nil, err
 	}

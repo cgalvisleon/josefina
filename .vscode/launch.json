@@ -13,6 +13,15 @@
       "env": {
         "GOTOOLCHAIN": "auto"
       }
+    },
+    {
+      "name": "store",
+      "type": "go",
+      "request": "launch",
+      "program": "${workspaceFolder}/cmd/store",
+      "args": ["-name", "test"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
     }
   ],
   "compounds": [

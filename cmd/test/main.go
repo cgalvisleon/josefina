@@ -18,7 +18,7 @@ func main() {
 }
 
 func run() error {
-	db, err := jdb.NewDb("./data", "test")
+	db, err := jdb.NewDb(dataPath, dataPath, "test")
 	if err != nil {
 		return err
 	}

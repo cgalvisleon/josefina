@@ -2,7 +2,6 @@ package jdb
 
 import (
 	"fmt"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -25,19 +24,25 @@ const (
 
 /**
 * NewDb: Creates a new database
-* @param path, name string
+* @param pathData, pathWald, name string
 * @return *DB, error
 **/
-func NewDb(path, name string) (*DB, error) {
+func NewDb(pathData, pathWald, name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	path = filepath.Join(path, name)
+	if pathData == "" {
+		pathData = "./data"
+	}
+	if pathWald == "" {
+		pathWald = pathData
+	}
 	result := &DB{
 		Name:                name,
-		Path:                path,
+		PathData:            pathData,
+		PathWald:            pathWald,
 		Lang:                "en",
 		TransactionTTL:      10 * time.Second,
 		RelSegSize:          1024,
@@ -77,10 +82,10 @@ func NewDb(path, name string) (*DB, error) {
 
 /**
 * loadDb: Loads a database from the JSON definition
-* @param path, name string
+* @param pathData, pathWald, name string
 * @return *DB, error
 **/
-func loadDb(path, name string) (*DB, error) {
+func loadDb(pathData, pathWald, name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -91,7 +96,7 @@ func loadDb(path, name string) (*DB, error) {
 		return result, nil
 	}
 
-	result, err := NewDb(path, name)
+	result, err := NewDb(pathData, pathWald, name)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +120,9 @@ func loadDb(path, name string) (*DB, error) {
 **/
 func Load() (*DB, error) {
 	name := envar.GetStr("DB_NAME", "josefina")
-	path := envar.GetStr("DB_PATH", "./data")
-	return loadDb(path, name)
+	pathData := envar.GetStr("DB_PATH_DATA", "./data")
+	pathWald := envar.GetStr("DB_PATH_WALD", "./data")
+	return loadDb(pathData, pathWald, name)
 }
 
 /**
