@@ -36,6 +36,9 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 		Server: srv,
 	}
 	api.Public(router.GET, "/version", api.version)
+	api.Authentication(router.GET, "/routes", api.routes)
+	// JDB
+	api.Public(router.GET, "/signin", api.jdbSignin)
 
 	api.init()
 
@@ -75,9 +78,9 @@ func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func (s *Router) routes(w http.ResponseWriter, r *http.Request) {
-	_routes := router.GetRoutes()
+	rutas := router.GetRoutes()
 	routes := []et.Json{}
-	for _, route := range _routes {
+	for _, route := range rutas {
 		routes = append(routes, et.Json{
 			"method": route.Str("method"),
 			"path":   route.Str("path"),
@@ -91,4 +94,28 @@ func (s *Router) routes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
+* jdbSignin
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	database := body.Str("database")
+	username := body.Str("username")
+	password := body.Str("password")
+	item, err := signin(database, username, password)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEM(w, r, http.StatusOK, item)
 }

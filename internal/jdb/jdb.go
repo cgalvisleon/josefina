@@ -167,7 +167,7 @@ func SignIn(database, username, password string) (et.Item, error) {
 * @param token string
 * @return *Session, error
 **/
-func GetSession(token string) (*Session, error) {
+func getSession(token string) (*Session, error) {
 	if server == nil {
 		return nil, errors.New(msg.MSG_SERVER_NOT_LOADED)
 	}
