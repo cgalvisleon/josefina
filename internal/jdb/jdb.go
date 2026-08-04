@@ -187,3 +187,21 @@ func getSession(token string) (*Session, error) {
 
 	return result, nil
 }
+
+/**
+* JQuery: Executes a query
+* @param database string, query et.Json
+* @return et.Items, error
+**/
+func JQuery(database string, query et.Json) (et.Items, error) {
+	db, err := GetDb(database)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result, err := db.JQuery(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+	return result, nil
+}

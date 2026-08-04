@@ -7,6 +7,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/cgalvisleon/et/middleware"
+	"github.com/cgalvisleon/et/request"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
 	"github.com/josefina/internal/jdb"
@@ -27,7 +28,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	host := envar.GetStr("HOST", "localhost")
 	port := envar.GetInt("PORT", 2000)
 	pathUrl := envar.GetStr("PATH_URL", "/josephine")
-	rpc := envar.GetInt("RPC", 4200)
+	rpc := envar.GetInt("RPC_PORT", 4200)
 	r := router.NewApi(name, pathUrl, host, port, rpc, version)
 	r.UseAuthentication(middleware.Authentication)
 
@@ -38,7 +39,8 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Public(router.GET, "/version", api.version)
 	api.Authentication(router.GET, "/routes", api.routes)
 	// JDB
-	api.Public(router.GET, "/signin", api.jdbSignin)
+	api.Public(router.POST, "/signin", api.jdbSignin)
+	api.Authentication(router.POST, "/query", api.query)
 
 	api.init()
 
@@ -64,7 +66,7 @@ func (s *Router) version(w http.ResponseWriter, r *http.Request) {
 		"version": s.Version,
 		"service": s.Name,
 		"host":    s.Host,
-		"company": "Qdra",
+		"company": s.Api.Name,
 		"web":     envar.GetStr("WEB", "https://company.com"),
 		"help":    envar.GetStr("HELP", "https://company.com/help"),
 	}
@@ -118,4 +120,27 @@ func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.ITEM(w, r, http.StatusOK, item)
+}
+
+/**
+* query
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) query(w http.ResponseWriter, r *http.Request) {
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	payload := request.Payload(r)
+	database := payload.Str("database")
+	result, err := jquery(database, body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
 }

@@ -500,3 +500,13 @@ func (s *DB) Define(define DModel) (*Model, error) {
 
 	return result, nil
 }
+
+/**
+* JQuery: Executes a query
+* @param query string
+* @return et.Items, error
+**/
+func (s *DB) JQuery(query et.Json) (et.Items, error) {
+
+	return et.Items{}, nil
+}

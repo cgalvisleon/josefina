@@ -15,6 +15,18 @@ func signin(database, username, password string) (et.Item, error) {
 	if err != nil {
 		return et.Item{}, err
 	}
+	return result, nil
+}
 
+/**
+* query
+* @param database, query string
+* @return et.Item, error
+**/
+func jquery(database string, query et.Json) (et.Items, error) {
+	result, err := jdb.JQuery(database, query)
+	if err != nil {
+		return et.Items{}, err
+	}
 	return result, nil
 }
