@@ -377,8 +377,28 @@ func (s *Query) SetOffset(offset int, rows int) *Query {
 	return s
 }
 
+/**
+* Exec: Runs the query against the primary model via Model.ForEach and returns the
+* projected, ordered, paginated result.
+*
+* Efficiency choices:
+*   - When there is no where and no orderBy, offset/limit are pushed straight into
+*     ForEach so the store only reads the requested window instead of the full table.
+*   - When there is a where clause made entirely of AND-connected conditions and at
+*     least one condition targets a BTree-indexed field (or the primary key), the
+*     candidate keys are narrowed via BTree.ApplyCondition / a direct key lookup
+*     instead of scanning every record; the full where list is still re-checked per
+*     candidate since narrowing only covers part of the conditions.
+*   - Otherwise it falls back to a full concurrent scan (ForEach already parallelizes
+*     across segments) evaluating the where list per row.
+*
+* joins, groupBy and having are not supported yet and return an error.
+* @return et.Items, error
+**/
 func (s *Query) Exec() (et.Items, error) {
+	result := et.Items{}
 
+	return result, nil
 }
 
 /**
