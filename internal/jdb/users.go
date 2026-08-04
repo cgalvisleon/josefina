@@ -5,7 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/josefina/internal/msg"
 )
 
@@ -49,22 +51,72 @@ func (s *DB) loadUsers() error {
 		store: store,
 	}
 
+	err = result.initUser()
+	if err != nil {
+		return err
+	}
+
 	s.users = result
 
 	return nil
 }
 
 /**
-* setUser: Sets a user in the cache
+* initUser: Initializes the user
+* @return error
+**/
+func (s *Users) initUser() error {
+	count, err := s.store.Count()
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	userAdmin := envar.GetStr("USER_ADMIN", "admin")
+	passwordAdmin := envar.GetStr("PASSWORD_ADMIN", "admin")
+	_, err = s.newUser(userAdmin, passwordAdmin)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* newUser: Creates a new user
+* @param username, password string
+* @return error
+**/
+func (s *Users) newUser(username, password string) (*User, error) {
+	now := time.Now()
+	result := &User{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        reg.UUID(),
+		Username:  username,
+		Password:  password,
+	}
+
+	err := s.saveUser(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/**
+* addUser: Adds a user to the cache
 * @param id, username string
 * @return error
 **/
-func (s *Users) setUser(user *User) error {
+func (s *Users) addUser(user *User) {
 	s.mu.Lock()
 	s.users[user.ID] = user
 	s.mu.Unlock()
-
-	return nil
 }
 
 /**
@@ -81,4 +133,14 @@ func (s *Users) getUser(id string) (*User, error) {
 	}
 
 	return user, nil
+}
+
+/**
+* saveUser: Saves a user to the database
+* @param user *User
+* @return error
+**/
+func (s *Users) saveUser(user *User) error {
+	s.addUser(user)
+	return s.store.put(user.ID, user)
 }
