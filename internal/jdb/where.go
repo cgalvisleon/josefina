@@ -35,8 +35,12 @@ func (j JoinType) String() string {
 	}
 }
 
+type Source interface {
+	ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error
+}
+
 type To struct {
-	Model *Model `json:"model"`
+	Model Source `json:"model"`
 	As    string `json:"as"`
 }
 
@@ -61,7 +65,6 @@ type OrderField struct {
 * Query
 **/
 type Query struct {
-	db      *DB             `json:"-"`
 	froms   []To            `json:"-"`
 	joins   []Join          `json:"-"`
 	selects []string        `json:"-"`
@@ -77,12 +80,11 @@ type Query struct {
 
 /**
 * newWhere
-* @param owner *Model
+* @param owner Source
 * @return *Query
 **/
-func newQuery(model *Model, as string) *Query {
+func newQuery(model Source, as string) *Query {
 	result := &Query{
-		db:      model.db,
 		froms:   make([]To, 0),
 		joins:   make([]Join, 0),
 		selects: make([]string, 0),
@@ -135,12 +137,12 @@ func (s *Query) ToJson() et.Json {
 
 /**
 * addFrom
-* @param model *Model, as string
+* @param model Source, as string
 * @return *Query
 **/
-func (s *Query) addFrom(model *Model, as ...string) To {
+func (s *Query) addFrom(model Source, as ...string) To {
 	if len(as) == 0 {
-		as = []string{model.Name}
+		as = []string{""}
 	}
 	result := To{Model: model, As: as[0]}
 	s.froms = append(s.froms, result)
@@ -229,10 +231,10 @@ func (s *Query) findFld(field string) Fld {
 
 /**
 * InnerJoin: Adds an inner join — only primary records with a match in to are returned.
-* @param to *Model, as string, keys map[string]string
+* @param to Source, as string, keys map[string]string
 * @return *Query
 **/
-func (s *Query) InnerJoin(to *Model, as string, keys map[string]string) *Query {
+func (s *Query) InnerJoin(to Source, as string, keys map[string]string) *Query {
 	t := s.addFrom(to, as)
 	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: InnerJoin})
 	return s
@@ -240,10 +242,10 @@ func (s *Query) InnerJoin(to *Model, as string, keys map[string]string) *Query {
 
 /**
 * LeftJoin: Adds a left join — all primary records are returned; joined fields empty when no match.
-* @param to *Model, as string, keys map[string]string
+* @param to Source, as string, keys map[string]string
 * @return *Query
 **/
-func (s *Query) LeftJoin(to *Model, as string, keys map[string]string) *Query {
+func (s *Query) LeftJoin(to Source, as string, keys map[string]string) *Query {
 	t := s.addFrom(to, as)
 	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: LeftJoin})
 	return s
@@ -251,10 +253,10 @@ func (s *Query) LeftJoin(to *Model, as string, keys map[string]string) *Query {
 
 /**
 * RightJoin: Adds a right join — all records from to are returned; primary fields empty when no match.
-* @param to *Model, as string, keys map[string]string
+* @param to Source, as string, keys map[string]string
 * @return *Query
 **/
-func (s *Query) RightJoin(to *Model, as string, keys map[string]string) *Query {
+func (s *Query) RightJoin(to Source, as string, keys map[string]string) *Query {
 	t := s.addFrom(to, as)
 	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: RightJoin})
 	return s
@@ -262,10 +264,10 @@ func (s *Query) RightJoin(to *Model, as string, keys map[string]string) *Query {
 
 /**
 * FullJoin: Adds a full join — all records from both models, matched where possible.
-* @param to *Model, as string, keys map[string]string
+* @param to Source, as string, keys map[string]string
 * @return *Query
 **/
-func (s *Query) FullJoin(to *Model, as string, keys map[string]string) *Query {
+func (s *Query) FullJoin(to Source, as string, keys map[string]string) *Query {
 	t := s.addFrom(to, as)
 	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: FullJoin})
 	return s
@@ -378,21 +380,8 @@ func (s *Query) SetOffset(offset int, rows int) *Query {
 }
 
 /**
-* Exec: Runs the query against the primary model via Model.ForEach and returns the
-* projected, ordered, paginated result.
-*
-* Efficiency choices:
-*   - When there is no where and no orderBy, offset/limit are pushed straight into
-*     ForEach so the store only reads the requested window instead of the full table.
-*   - When there is a where clause made entirely of AND-connected conditions and at
-*     least one condition targets a BTree-indexed field (or the primary key), the
-*     candidate keys are narrowed via BTree.ApplyCondition / a direct key lookup
-*     instead of scanning every record; the full where list is still re-checked per
-*     candidate since narrowing only covers part of the conditions.
-*   - Otherwise it falls back to a full concurrent scan (ForEach already parallelizes
-*     across segments) evaluating the where list per row.
-*
-* joins, groupBy and having are not supported yet and return an error.
+* Exec: Runs the query against the primary model via Model.ForEach and returns there result.
+* @param model Source, offset int, limit int
 * @return et.Items, error
 **/
 func (s *Query) Exec() (et.Items, error) {
@@ -429,10 +418,10 @@ func (s *Query) Last() (et.Item, error) {
 
 /**
 * From
-* @param model *Model, as string
+* @param model Source, as string
 * @return *Query
 **/
-func From(model *Model, as string) *Query {
+func From(model Source, as string) *Query {
 	return newQuery(model, as)
 }
 
