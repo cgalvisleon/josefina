@@ -46,7 +46,6 @@ type DB struct {
 	store               *Model             `json:"-"`                     // Store
 	cache               *Cache             `json:"-"`                     // Cache
 	users               *Users             `json:"-"`                     // Users
-	sessions            *Sessions          `json:"-"`                     // Sessions
 }
 
 /**
@@ -67,31 +66,6 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
-}
-
-/**
-* loadSchema: Loads a schema from the JSON definition
-* @param def et.Json
-* @return *Schema, error
-**/
-func (s *DB) loadSchema(def et.Json) (*Schema, error) {
-	name := def.Str("name")
-	result, err := s.newSchema(name)
-	if err != nil {
-		return nil, err
-	}
-
-	models := def.Json("models")
-	for name := range models {
-		modelDef := models.Json(name)
-		model, err := result.loadModel(modelDef)
-		if err != nil {
-			return nil, err
-		}
-		result.addModel(model)
-	}
-
 	return result, nil
 }
 

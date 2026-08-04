@@ -7,6 +7,7 @@ import (
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/josefina/internal/msg"
+	"github.com/josefina/internal/store"
 )
 
 /**
@@ -39,6 +40,9 @@ type Session struct {
 	LastAccess time.Time     `json:"last_access"`
 	Duration   time.Duration `json:"duration"`
 	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	Database   *DB           `json:"database"`
+	UserId     string        `json:"user_id"`
 	Type       TpConnection  `json:"type"`
 	Payload    et.Json       `json:"payload"`
 }
@@ -53,6 +57,9 @@ func (s *Session) ToJson() et.Json {
 		"last_access": s.LastAccess.Format(time.RFC3339),
 		"duration":    s.Duration,
 		"id":          s.ID,
+		"name":        s.Name,
+		"database":    s.Database.Name,
+		"user_id":     s.UserId,
 		"type":        s.Type,
 		"payload":     s.Payload,
 	}
@@ -80,24 +87,28 @@ func (s *Session) GetExpiresAt() time.Time {
 type Sessions struct {
 	sessions map[string]*Session
 	mu       *sync.RWMutex
-	store    *Model
+	store    *store.FileStore
 }
 
 /**
 * loadSessions: Loads the sessions
-* @return *Sessions, error
+* @return error
 **/
-func (s *DB) loadSessions() (*Sessions, error) {
-	store, err := s.loadModel(sysSchema, "sessions", 1, true)
+func (s *Server) loadSessions() error {
+	store, err := store.Open(s.PathSystem, s.PathSystem, "sessions", store.ReadWrite)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Sessions{
+	result := &Sessions{
 		sessions: make(map[string]*Session),
 		mu:       &sync.RWMutex{},
 		store:    store,
-	}, nil
+	}
+
+	s.sessions = result
+
+	return nil
 }
 
 /**
@@ -126,4 +137,16 @@ func (s *Sessions) getSession(id string) (*Session, error) {
 	}
 
 	return session, nil
+}
+
+/**
+* removeSession: Removes a session from the cache
+* @param id string
+* @return error
+**/
+func (s *Sessions) removeSession(id string) error {
+	s.mu.Lock()
+	delete(s.sessions, id)
+	s.mu.Unlock()
+	return nil
 }
