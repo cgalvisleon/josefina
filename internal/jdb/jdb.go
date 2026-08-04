@@ -144,7 +144,9 @@ func SignIn(database, username, password string) (et.Item, error) {
 
 	device := "apiRest"
 	duration := time.Minute * 60
-	token, err := claim.NewToken(appName, device, user.ID, user.Username, user.Password, db.Name, et.Json{}, duration)
+	token, err := claim.NewToken(appName, device, user.ID, user.Username, et.Json{
+		"database": db.Name,
+	}, duration)
 	if err != nil {
 		return et.Item{}, err
 	}
@@ -163,11 +165,11 @@ func SignIn(database, username, password string) (et.Item, error) {
 }
 
 /**
-* GetSession: Gets a session from the server
+* Authenticate: Authenticates a session from the server
 * @param token string
 * @return *Session, error
 **/
-func getSession(token string) (*Session, error) {
+func Authenticate(token string) (*Session, error) {
 	if server == nil {
 		return nil, errors.New(msg.MSG_SERVER_NOT_LOADED)
 	}

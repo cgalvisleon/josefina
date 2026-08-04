@@ -6,7 +6,6 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/middleware"
 	"github.com/cgalvisleon/et/request"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
@@ -30,7 +29,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	pathUrl := envar.GetStr("PATH_URL", "/josephine")
 	rpc := envar.GetInt("RPC_PORT", 4200)
 	r := router.NewApi(name, pathUrl, host, port, rpc, version)
-	r.UseAuthentication(middleware.Authentication)
+	r.UseAuthentication(Authentication)
 
 	api = &Router{
 		Api:    r,
