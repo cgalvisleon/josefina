@@ -1,97 +1,13 @@
 {
   "version": "0.2.0",
   "configurations": [
-    // ── Servers ───────────────────────────────────────────────────────────────
     {
-      "name": "node1",
+      "name": "server",
       "type": "go",
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "1377", "-http", "3500"],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    {
-      "name": "node2",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "1378", "-http", "3501"],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    {
-      "name": "node3",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/server",
-      "args": ["-port", "1379", "-http", "3502"],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    // ── Clients ───────────────────────────────────────────────────────────────
-    {
-      // TCP remote client — connects to a running node over the wire
-      "name": "tcp-client",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/client",
-      "args": [
-        "-host",
-        "localhost:1377",
-        "-user",
-        "admin",
-        "-database",
-        "test"
-      ],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    {
-      // Local client — loads the jdb engine in-process (no server needed)
-      "name": "local-client",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/client",
-      "args": ["-user", "admin", "-password", "admin", "-database", "test"],
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    // ── Test runner ───────────────────────────────────────────────────────────
-    {
-      "name": "test",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/test",
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "env": { "GOTOOLCHAIN": "auto" },
-      "dlvFlags": ["--check-go-version=false"]
-    },
-    // ── Store ───────────────────────────────────────────────────────────────
-    {
-      "name": "store",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/store",
-      "args": [],
+      "args": ["-port", "1377", "-_port", "4377"],
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
       "env": {
@@ -102,20 +18,8 @@
   "compounds": [
     {
       // Start all three server nodes as a cluster
-      "name": "cluster",
-      "configurations": ["node1", "node2", "node3"],
-      "stopAll": true
-    },
-    {
-      // Start node1 + TCP client together (main development flow)
-      "name": "server + tcp-client",
-      "configurations": ["node1", "tcp-client"],
-      "stopAll": true
-    },
-    {
-      // Start node1 + local client (no network, fast iteration)
-      "name": "server + local-client",
-      "configurations": ["node1", "local-client"],
+      "name": "server",
+      "configurations": ["server"],
       "stopAll": true
     }
   ]
