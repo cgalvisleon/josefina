@@ -402,6 +402,32 @@ func (s *Query) Exec() (et.Items, error) {
 }
 
 /**
+* First
+* @return et.Item, error
+**/
+func (s *Query) First() (et.Item, error) {
+	result, err := s.Exec()
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	return result.First()
+}
+
+/**
+* Last
+* @return et.Item, error
+**/
+func (s *Query) Last() (et.Item, error) {
+	result, err := s.Exec()
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	return result.Last()
+}
+
+/**
 * From
 * @param model *Model, as string
 * @return *Query
