@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/josefina/internal/msg"
@@ -150,16 +151,21 @@ func (s *Server) loadSessions() error {
 * @param token string
 * @return *Session, error
 **/
-func (s *Server) newSession(token string, database *DB, userId string, name string, tp TpConnection, payload et.Json) (*Session, error) {
+func (s *Server) newSession(token string, database *DB, tp TpConnection, payload et.Json) (*Session, error) {
+	clm, err := claim.ParceToken(token)
+	if err != nil {
+		return nil, err
+	}
+
 	now := timezone.Now()
 	result := &Session{
 		CreatedAt:  now,
 		LastAccess: now,
 		Duration:   0,
 		Token:      token,
-		Name:       name,
+		Name:       clm.Username,
 		Database:   database,
-		UserId:     userId,
+		UserId:     clm.UserId,
 		Type:       tp,
 		Payload:    payload,
 	}

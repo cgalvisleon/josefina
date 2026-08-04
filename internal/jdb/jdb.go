@@ -149,7 +149,7 @@ func SignIn(database, username, password string) (et.Item, error) {
 		return et.Item{}, err
 	}
 
-	_, err = server.newSession(token, db, user.ID, user.Username, HTTP, et.Json{})
+	_, err = server.newSession(token, db, HTTP, et.Json{})
 	if err != nil {
 		return et.Item{}, err
 	}
