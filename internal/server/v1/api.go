@@ -3,12 +3,12 @@ package v1
 import (
 	"net/http"
 
-	"github.com/api/pkg/apps"
 	"github.com/cgalvisleon/et/cache"
 	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/jsql"
 	"github.com/cgalvisleon/et/logs"
+	"github.com/josefina/pkg/server"
 )
 
 var (
@@ -31,7 +31,7 @@ func New() http.Handler {
 		logs.Panic(err)
 	}
 
-	api := apps.Routes(AppName, "v1.0.0", db)
+	api := server.Routes(AppName, "v1.0.0", db)
 	return api
 }
 
