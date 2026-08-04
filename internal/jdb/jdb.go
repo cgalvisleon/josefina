@@ -22,13 +22,13 @@ const (
 )
 
 type Server struct {
-	Version    string           `json:"version"`
-	PathData   string           `json:"path_data"`
-	PathWal    string           `json:"path_wal"`
-	PathSystem string           `json:"path_system"`
-	dbs        map[string]*DB   `json:"-"`
-	mu         *sync.RWMutex    `json:"-"`
-	store      *store.FileStore `json:"-"`
+	Version       string           `json:"version"`
+	PathDatabases string           `json:"path_databases"`
+	PathWal       string           `json:"path_wal"`
+	PathSystem    string           `json:"path_system"`
+	dbs           map[string]*DB   `json:"-"`
+	mu            *sync.RWMutex    `json:"-"`
+	store         *store.FileStore `json:"-"`
 }
 
 var server *Server
@@ -43,12 +43,12 @@ func Load() (*Server, error) {
 	}
 
 	server = &Server{
-		Version:    "1.0.0",
-		PathData:   envar.GetStr("DB_PATH_DATA", "./data/collection"),
-		PathWal:    envar.GetStr("DB_PATH_WAL", "./data/wal"),
-		PathSystem: envar.GetStr("DB_PATH_SYSTEM", "./data/system"),
-		dbs:        make(map[string]*DB),
-		mu:         &sync.RWMutex{},
+		Version:       "1.0.0",
+		PathDatabases: envar.GetStr("DB_PATH_DATA", "./data/databases"),
+		PathWal:       envar.GetStr("DB_PATH_WAL", "./data/wal"),
+		PathSystem:    envar.GetStr("DB_PATH_SYSTEM", "./data/system"),
+		dbs:           make(map[string]*DB),
+		mu:            &sync.RWMutex{},
 	}
 
 	var err error
@@ -144,11 +144,11 @@ func (s *Server) newDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	pathData := filepath.Join(s.PathData, name)
+	pathDatabases := filepath.Join(s.PathDatabases, name)
 	pathWal := filepath.Join(s.PathWal, name)
 	result := &DB{
 		Name:                name,
-		PathData:            pathData,
+		PathDatabases:       pathDatabases,
 		PathWal:             pathWal,
 		Lang:                "en",
 		TransactionTTL:      10 * time.Second,
@@ -209,7 +209,7 @@ func (s *Server) loadDb(params et.Json) error {
 
 	result = &DB{
 		Name:                name,
-		PathData:            params.Str("path_data"),
+		PathDatabases:       params.Str("path_databases"),
 		PathWal:             params.Str("path_wal"),
 		Lang:                params.Str("lang"),
 		TransactionTTL:      params.ValDuration(10*time.Second, "transaction_ttl"),

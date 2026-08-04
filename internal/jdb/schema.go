@@ -34,7 +34,7 @@ func (s *Schema) newModel(name string, version int, isCore bool) (*Model, error)
 	}
 
 	name = store.Normalize(name)
-	pathData := filepath.Join(s.db.PathData, s.Name, name)
+	pathData := filepath.Join(s.db.PathDatabases, s.Name, name)
 	pathWal := filepath.Join(s.db.PathWal, s.Name, name)
 	result := &Model{
 		Database:      s.Database,

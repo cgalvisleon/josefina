@@ -27,26 +27,26 @@ type Config struct {
 * DB: Represents a database
 **/
 type DB struct {
-	Name                string             `json:"name"`      // Database name
-	PathData            string             `json:"path_data"` // Path to the model
-	PathWal             string             `json:"path_wal"`  // Path to the wal
-	Lang                string             `json:"lang"`
-	TransactionTTL      time.Duration      `json:"transaction_ttl"`
-	RelSegSize          int                `json:"rel_seg_size"`
-	SyncOnWrite         bool               `json:"sync_on_write"`
-	TennantName         string             `json:"tennant_name"`
-	TennantPathData     string             `json:"tennant_path_data"`
-	Timezone            string             `json:"timezone"`
-	MinThresholdCompact int                `json:"min_threshold_compact"`
-	Version             string             `json:"version"`
-	isInit              bool               `json:"-"` // Is initialized
-	server              *Server            `json:"-"` // Server
-	schemas             map[string]*Schema `json:"-"` // Schemas
-	mu                  *sync.RWMutex      `json:"-"` // Mutex
-	store               *Model             `json:"-"` // Store
-	cache               *Cache             `json:"-"` // Cache
-	users               *Users             `json:"-"` // Users
-	sessions            *Sessions          `json:"-"` // Sessions
+	Name                string             `json:"name"`                  // Database name
+	PathDatabases       string             `json:"path_databases"`        // Path to the databases
+	PathWal             string             `json:"path_wal"`              // Path to the wal
+	Lang                string             `json:"lang"`                  // Language
+	TransactionTTL      time.Duration      `json:"transaction_ttl"`       // Transaction TTL
+	RelSegSize          int                `json:"rel_seg_size"`          // Relational segment size
+	SyncOnWrite         bool               `json:"sync_on_write"`         // Sync on write
+	TennantName         string             `json:"tennant_name"`          // Tennant name
+	TennantPathData     string             `json:"tennant_path_data"`     // Tennant path data
+	Timezone            string             `json:"timezone"`              // Timezone
+	MinThresholdCompact int                `json:"min_threshold_compact"` // Min threshold compact
+	Version             string             `json:"version"`               // Version
+	isInit              bool               `json:"-"`                     // Is initialized
+	server              *Server            `json:"-"`                     // Server
+	schemas             map[string]*Schema `json:"-"`                     // Schemas
+	mu                  *sync.RWMutex      `json:"-"`                     // Mutex
+	store               *Model             `json:"-"`                     // Store
+	cache               *Cache             `json:"-"`                     // Cache
+	users               *Users             `json:"-"`                     // Users
+	sessions            *Sessions          `json:"-"`                     // Sessions
 }
 
 /**
@@ -107,7 +107,7 @@ func (s *DB) ToJson() et.Json {
 
 	return et.Json{
 		"name":                  s.Name,
-		"path_data":             s.PathData,
+		"path_databases":        s.PathDatabases,
 		"path_wal":              s.PathWal,
 		"lang":                  s.Lang,
 		"transaction_ttl":       s.TransactionTTL,
