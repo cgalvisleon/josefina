@@ -1,0 +1,49 @@
+version: "3"
+
+networks:
+  proxy:
+    external: true
+
+services:
+  assets:
+    image: assets:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "2"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.assets.rule=PathPrefix(`/assets`)"
+      - "traefik.http.services.assets.loadbalancer.server.port=3300"
+    deploy:
+      replicas: 1
+    environment:
+      - "APP=Celsia Internet - Event Stack"
+      - "PORT=3300"
+      - "VERSION=1.0.1"
+      - "COMPANY=Celsia Internet"
+      - "WEB=https://www.home.com"
+      - "PATH_URL=/api/assets"
+      - "PRODUCTION=true"
+      - "HOST=stack"
+      # DB
+      - "DB_DRIVER=postgres"
+      - "DB_HOST="
+      - "DB_PORT=5432"
+      - "DB_NAME=internet"
+      - "DB_USER=internet"
+      - "DB_PASSWORD="
+      - "DB_APPLICATION_NAME=assets"
+      # REDIS
+      - "REDIS_HOST="
+      - "REDIS_PASSWORD="
+      - "REDIS_DB=0"
+      # NATS
+      - "NATS_HOST=nats:4222"
+      # CALM
+      - "SECRET="
+      # RPC
+      - "PORT_RPC=4200"
