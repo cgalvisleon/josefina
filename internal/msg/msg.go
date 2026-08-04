@@ -102,6 +102,7 @@ var (
 	MSG_MASTER_NOT_DEFINED         = "master not defined (%s)"
 	MSG_ROLLUP_NOT_DEFINED         = "rollup not defined (%s)"
 	MSG_RELATION_NOT_DEFINED       = "relation not defined (%s)"
+	MSG_SERVER_NOT_LOADED          = "server not loaded"
 )
 
 func init() {
@@ -188,5 +189,6 @@ func init() {
 		MSG_MASTER_NOT_DEFINED = "master no definido (%s)"
 		MSG_ROLLUP_NOT_DEFINED = "rollup no definido (%s)"
 		MSG_RELATION_NOT_DEFINED = "relation no definido (%s)"
+		MSG_SERVER_NOT_LOADED = "server no cargado"
 	}
 }

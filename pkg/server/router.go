@@ -14,12 +14,12 @@ import (
 
 type Router struct {
 	*router.Api
-	Db *jdb.DB
+	Server *jdb.Server
 }
 
 var api *Router
 
-func Routes(name string, version string, db *jdb.DB) http.Handler {
+func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	if api != nil {
 		return nil
 	}
@@ -32,8 +32,8 @@ func Routes(name string, version string, db *jdb.DB) http.Handler {
 	r.UseAuthentication(middleware.Authentication)
 
 	api = &Router{
-		Api: r,
-		Db:  db,
+		Api:    r,
+		Server: srv,
 	}
 	api.Public(router.GET, "/version", api.version)
 

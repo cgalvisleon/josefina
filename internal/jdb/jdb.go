@@ -1,7 +1,9 @@
 package jdb
 
 import (
+	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -11,23 +13,83 @@ import (
 	"github.com/josefina/internal/store"
 )
 
-var databases map[string]*DB
-
-func init() {
-	databases = make(map[string]*DB, 0)
-}
-
 const (
 	sysSchema  = "catalog"
 	sysCatalog = sysSchema
 )
+
+type Server struct {
+	Version string           `json:"version"`
+	dbs     map[string]*DB   `json:"-"`
+	mu      *sync.RWMutex    `json:"-"`
+	store   *store.FileStore `json:"-"`
+}
+
+var server *Server
+
+/**
+* Load: Loads the server
+* @return *Server
+**/
+func Load() (*Server, error) {
+	if server != nil {
+		return server, nil
+	}
+
+	server = &Server{
+		Version: "1.0.0",
+		dbs:     make(map[string]*DB),
+		mu:      &sync.RWMutex{},
+	}
+
+	var err error
+	path := envar.GetStr("DB_PATH_SYSTEM", "./data/system")
+	server.store, err = store.Open(path, path, "system", store.ReadWrite)
+	if err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
+/**
+* AddDb: Adds a database to the server
+* @param db *DB
+**/
+func (s *Server) addDb(db *DB) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.dbs[db.Name] = db
+}
+
+/**
+* getDb: Gets a database from the server
+* @param name string
+* @return *DB, error
+**/
+func (s *Server) getDb(name string) (*DB, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	db, exists := s.dbs[name]
+	return db, exists
+}
+
+/**
+* removeDb: Removes a database from the server
+* @param name string
+**/
+func (s *Server) removeDb(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.dbs, name)
+}
 
 /**
 * NewDb: Creates a new database
 * @param pathData, pathWald, name string
 * @return *DB, error
 **/
-func NewDb(pathData, pathWald, name string) (*DB, error) {
+func (s *Server) NewDb(pathData, pathWald, name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -39,6 +101,8 @@ func NewDb(pathData, pathWald, name string) (*DB, error) {
 	if pathWald == "" {
 		pathWald = pathData
 	}
+	pathData = filepath.Join(pathData, name)
+	pathWald = filepath.Join(pathWald, name)
 	result := &DB{
 		Name:                name,
 		PathData:            pathData,
@@ -51,6 +115,7 @@ func NewDb(pathData, pathWald, name string) (*DB, error) {
 		TennantPathData:     "",
 		Timezone:            "America/Bogota",
 		MinThresholdCompact: 100,
+		Version:             s.Version,
 		schemas:             make(map[string]*Schema, 0),
 		mu:                  &sync.RWMutex{},
 	}
@@ -76,7 +141,7 @@ func NewDb(pathData, pathWald, name string) (*DB, error) {
 		return nil, err
 	}
 
-	databases[name] = result
+	s.addDb(result)
 	return result, nil
 }
 
@@ -85,18 +150,18 @@ func NewDb(pathData, pathWald, name string) (*DB, error) {
 * @param pathData, pathWald, name string
 * @return *DB, error
 **/
-func loadDb(pathData, pathWald, name string) (*DB, error) {
+func (s *Server) loadDb(pathData, pathWald, name string) (*DB, error) {
 	name = store.Normalize(name)
 	if !utility.ValidStr(name, 0, []string{""}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	result, exists := databases[name]
+	result, exists := s.getDb(name)
 	if exists {
 		return result, nil
 	}
 
-	result, err := NewDb(pathData, pathWald, name)
+	result, err := s.NewDb(pathData, pathWald, name)
 	if err != nil {
 		return nil, err
 	}
@@ -105,24 +170,12 @@ func loadDb(pathData, pathWald, name string) (*DB, error) {
 		return nil, err
 	}
 
-	err = result.Load()
+	err = result.load()
 	if err != nil {
 		return nil, err
 	}
 
-	databases[name] = result
 	return result, nil
-}
-
-/**
-* Load: Loads the database from the JSON definition
-* @return error
-**/
-func Load() (*DB, error) {
-	name := envar.GetStr("DB_NAME", "josefina")
-	pathData := envar.GetStr("DB_PATH_DATA", "./data")
-	pathWald := envar.GetStr("DB_PATH_WALD", "./data")
-	return loadDb(pathData, pathWald, name)
 }
 
 /**
@@ -131,7 +184,11 @@ func Load() (*DB, error) {
 * @return *DB, error
 **/
 func GetDb(name string) (*DB, error) {
-	db, exists := databases[name]
+	if server == nil {
+		return nil, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	db, exists := server.getDb(name)
 	if !exists {
 		return nil, fmt.Errorf(msg.MSG_DB_NOT_FOUND, name)
 	}

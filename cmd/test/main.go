@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cgalvisleon/et/logs"
@@ -18,13 +19,11 @@ func main() {
 }
 
 func run() error {
-	db, err := jdb.NewDb(dataPath, dataPath, "test")
+	server, err := jdb.Load()
 	if err != nil {
 		return err
 	}
-	if err := db.Init(); err != nil {
-		return err
-	}
 
+	fmt.Println(server.Version)
 	return nil
 }

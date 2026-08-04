@@ -121,6 +121,40 @@ func (s *DB) ToJson() et.Json {
 }
 
 /**
+* load: Loads the database
+* @return error
+**/
+func (s *DB) load() error {
+	if s.store == nil {
+		return errors.New(msg.MSG_STORE_NOT_DEFINED)
+	}
+
+	def, err := s.store.getObject(s.Name)
+	if err != nil {
+		return err
+	}
+
+	s.Lang = def.Str("lang")
+	s.TransactionTTL = def.ValDuration(10*time.Second, "transaction_ttl")
+	s.RelSegSize = def.Int("rel_seg_size")
+	s.SyncOnWrite = def.Bool("sync_on_write")
+	s.TennantName = def.Str("tennant_name")
+	s.TennantPathData = def.Str("tennant_path_data")
+	s.Timezone = def.Str("timezone")
+	s.MinThresholdCompact = def.Int("min_threshold_compact")
+
+	schemas := def.ArrayJson("schemas")
+	for _, schema := range schemas {
+		_, err := s.loadSchema(schema)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/**
 * Init: Initializes the database
 * @return error
 **/
@@ -152,40 +186,6 @@ func (s *DB) Save() error {
 	err := s.store.putObject(s.Name, s.ToJson())
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-/**
-* Load: Loads the database
-* @return error
-**/
-func (s *DB) Load() error {
-	if s.store == nil {
-		return errors.New(msg.MSG_STORE_NOT_DEFINED)
-	}
-
-	def, err := s.store.getObject(s.Name)
-	if err != nil {
-		return err
-	}
-
-	s.Lang = def.Str("lang")
-	s.TransactionTTL = def.ValDuration(10*time.Second, "transaction_ttl")
-	s.RelSegSize = def.Int("rel_seg_size")
-	s.SyncOnWrite = def.Bool("sync_on_write")
-	s.TennantName = def.Str("tennant_name")
-	s.TennantPathData = def.Str("tennant_path_data")
-	s.Timezone = def.Str("timezone")
-	s.MinThresholdCompact = def.Int("min_threshold_compact")
-
-	schemas := def.ArrayJson("schemas")
-	for _, schema := range schemas {
-		_, err := s.loadSchema(schema)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

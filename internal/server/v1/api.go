@@ -6,7 +6,7 @@ import (
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/josefina/internal/jdb"
-	"github.com/josefina/pkg/server"
+	srv "github.com/josefina/pkg/server"
 )
 
 var (
@@ -14,12 +14,12 @@ var (
 )
 
 func New() http.Handler {
-	db, err := jdb.Load()
+	server, err := jdb.Load()
 	if err != nil {
 		logs.Panic(err)
 	}
 
-	api := server.Routes(AppName, db.Version, db)
+	api := srv.Routes(AppName, server.Version, server)
 	return api
 }
 
