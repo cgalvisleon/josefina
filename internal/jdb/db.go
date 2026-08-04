@@ -504,7 +504,7 @@ func (s *DB) Define(define DModel) (*Model, error) {
 
 	calcs := define.Calcs
 	for name, definition := range calcs {
-		err = result.DefineCalc(name, []byte(definition))
+		err = result.DefineCalc(name, definition)
 		if err != nil {
 			return nil, err
 		}

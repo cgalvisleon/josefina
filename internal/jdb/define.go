@@ -490,7 +490,7 @@ type DModel struct {
 	Masters       map[string]DDetail `json:"masters"`
 	Rollups       map[string]DRollup `json:"rollups"`
 	Relations     []DRelation        `json:"relations"`
-	Calcs         map[string][]byte  `json:"calcs"`
+	Calcs         map[string]string  `json:"calcs"`
 	BeforeInserts []Trigger          `json:"before_inserts"`
 	AfterInserts  []Trigger          `json:"after_inserts"`
 	BeforeUpdates []Trigger          `json:"before_updates"`
