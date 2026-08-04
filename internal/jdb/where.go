@@ -391,29 +391,16 @@ func (s *Query) Exec() (et.Items, error) {
 }
 
 /**
-* First
+* One
 * @return et.Item, error
 **/
-func (s *Query) First() (et.Item, error) {
+func (s *Query) One() (et.Item, error) {
 	result, err := s.Exec()
 	if err != nil {
 		return et.Item{}, err
 	}
 
 	return result.First()
-}
-
-/**
-* Last
-* @return et.Item, error
-**/
-func (s *Query) Last() (et.Item, error) {
-	result, err := s.Exec()
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	return result.Last()
 }
 
 /**
