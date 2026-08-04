@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
 	"github.com/josefina/internal/store"
@@ -108,7 +109,8 @@ func loadDb(name string) (*DB, error) {
 * @return error
 **/
 func Load() (*DB, error) {
-	return loadDb("josefina")
+	name := envar.GetStr("DB_NAME", "josefina")
+	return loadDb(name)
 }
 
 /**

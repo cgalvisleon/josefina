@@ -32,7 +32,6 @@ type Model struct {
 	Database      string                      `json:"database"`       // Database name
 	Schema        string                      `json:"schema"`         // Schema name
 	Name          string                      `json:"name"`           // Model name
-	IsInit        bool                        `json:"-"`              // Is initialized
 	Path          string                      `json:"path"`           // Path to the model
 	Fields        map[string]*Field           `json:"fields"`         // Fields
 	Indexes       []*Index                    `json:"indexes"`        // Indexes
@@ -56,6 +55,7 @@ type Model struct {
 	Version       int                         `json:"version"`        // Version
 	IsCore        bool                        `json:"is_core"`        // Is core model
 	IsChangue     bool                        `json:"is_changue"`     // Is changue
+	IsInit        bool                        `json:"-"`              // Is initialized
 	schema        *Schema                     `json:"-"`              // Schema
 	db            *DB                         `json:"-"`              // Database
 	mu            map[string]*sync.RWMutex    `json:"-"`              // Mutex

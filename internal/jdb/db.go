@@ -43,6 +43,7 @@ type DB struct {
 	Timezone            string             `json:"timezone"`
 	MinThresholdCompact int                `json:"min_threshold_compact"`
 	Version             string             `json:"version"`
+	isInit              bool               `json:"-"` // Is initialized
 	schemas             map[string]*Schema `json:"-"` // Schemas
 	mu                  *sync.RWMutex      `json:"-"` // Mutex
 	store               *Model             `json:"-"` // Store
@@ -133,6 +134,7 @@ func (s *DB) Init() error {
 		}
 	}
 
+	s.isInit = true
 	return nil
 }
 
@@ -142,6 +144,10 @@ func (s *DB) Init() error {
 * @return (*Tx, error)
 **/
 func (s *DB) Save() error {
+	if !s.isInit {
+		return nil
+	}
+
 	if s.store == nil {
 		return errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
