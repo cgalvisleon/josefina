@@ -247,18 +247,26 @@ func (s *Server) loadDb(params et.Json) error {
 	}
 
 	schemas := params.ArrayJson("schemas")
-	for _, schema := range schemas {
-		name := schema.Str("name")
-		sch, err := result.newSchema(name)
-		if err != nil {
-			return err
-		}
-
-		models := schema.ArrayJson("models")
-		for _, model := range models {
-			_, err := sch.loadModel(model)
+	for _, schemaDef := range schemas {
+		name := schemaDef.Str("name")
+		sch, exists := result.getSchema(name)
+		if !exists {
+			var err error
+			sch, err = result.newSchema(name)
 			if err != nil {
 				return err
+			}
+		}
+
+		models := schemaDef.ArrayJson("models")
+		for _, modelDef := range models {
+			name := modelDef.Str("name")
+			_, exists := sch.getModel(name)
+			if !exists {
+				_, err := sch.loadModel(modelDef)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

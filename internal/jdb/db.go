@@ -118,7 +118,7 @@ func (s *DB) ToJson() et.Json {
 		"timezone":              s.Timezone,
 		"min_threshold_compact": s.MinThresholdCompact,
 		"version":               s.Version,
-		"schemas":               s.schemas,
+		"schemas":               schemas,
 	}
 }
 
@@ -131,31 +131,6 @@ func (s *DB) save() error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-/**
-* load: Loads the database
-* @return error
-**/
-func (s *DB) load() error {
-	if s.store == nil {
-		return errors.New(msg.MSG_STORE_NOT_DEFINED)
-	}
-
-	def, err := s.store.getObject(s.Name)
-	if err != nil {
-		return err
-	}
-
-	schemas := def.ArrayJson("schemas")
-	for _, schema := range schemas {
-		_, err := s.loadSchema(schema)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
