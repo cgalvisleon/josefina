@@ -677,7 +677,7 @@ func (s *Model) update(idx string, new et.Json) error {
 	}
 
 	if !exists {
-		return fmt.Errorf(msg.MSG_RECORD_NOT_FOUND)
+		return errors.New(msg.MSG_RECORD_NOT_FOUND)
 	}
 
 	for _, index := range s.Required {
