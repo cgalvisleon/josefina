@@ -106,7 +106,7 @@ func (s *Server) newDb(name string) (*DB, error) {
 		PathDatabases:       pathDatabases,
 		PathWal:             pathWal,
 		Lang:                "en",
-		TransactionTTL:      10 * time.Second,
+		TransactionTTL:      60 * time.Minute,
 		RelSegSize:          1024,
 		SyncOnWrite:         false,
 		TennantName:         "",

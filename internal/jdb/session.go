@@ -96,7 +96,7 @@ type Sessions struct {
 * @param session *Session
 * @return error
 **/
-func (s *Sessions) addSession(session *Session) {
+func (s *Sessions) setSession(session *Session) {
 	s.mu.Lock()
 	s.sessions[session.Token] = session
 	s.mu.Unlock()
@@ -104,13 +104,19 @@ func (s *Sessions) addSession(session *Session) {
 
 /**
 * getSession: Gets a session from the cache
-* @param id string
+* @param token string
 * @return *Session, error
 **/
-func (s *Sessions) getSession(id string) (*Session, bool) {
+func (s *Sessions) getSession(token string) (*Session, bool) {
 	s.mu.RLock()
-	session, exists := s.sessions[id]
+	session, exists := s.sessions[token]
 	s.mu.RUnlock()
+
+	if exists {
+		session.LastAccess = timezone.Now()
+		s.setSession(session)
+	}
+
 	return session, exists
 }
 
@@ -166,7 +172,7 @@ func (s *Server) newSession(token string, database *DB, userId string, name stri
 		Payload:    payload,
 	}
 
-	s.sessions.addSession(result)
+	s.sessions.setSession(result)
 
 	return result, nil
 }
