@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	test, err := store.Open("./data/collections", "./data/wald", "test", store.ReadWrite)
+	test, err := store.Open("./data/collections", "./data/wal", "test", store.ReadWrite)
 	if err != nil {
 		panic(err)
 	}

@@ -29,7 +29,7 @@ type Config struct {
 type DB struct {
 	Name                string             `json:"name"`      // Database name
 	PathData            string             `json:"path_data"` // Path to the model
-	PathWald            string             `json:"path_wald"` // Path to the wald
+	PathWal             string             `json:"path_wal"`  // Path to the wal
 	Lang                string             `json:"lang"`
 	TransactionTTL      time.Duration      `json:"transaction_ttl"`
 	RelSegSize          int                `json:"rel_seg_size"`
@@ -54,7 +54,7 @@ type DB struct {
 * @param name string
 * @return *Schema, error
 **/
-func (s *DB) NewSchema(name string) (*Schema, error) {
+func (s *DB) newSchema(name string) (*Schema, error) {
 	name = store.Normalize(name)
 	result := &Schema{
 		Database: s.Name,
@@ -77,7 +77,7 @@ func (s *DB) NewSchema(name string) (*Schema, error) {
 **/
 func (s *DB) loadSchema(def et.Json) (*Schema, error) {
 	name := def.Str("name")
-	result, err := s.NewSchema(name)
+	result, err := s.newSchema(name)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (s *DB) ToJson() et.Json {
 	return et.Json{
 		"name":                  s.Name,
 		"path_data":             s.PathData,
-		"path_wald":             s.PathWald,
+		"path_wal":              s.PathWal,
 		"lang":                  s.Lang,
 		"transaction_ttl":       s.TransactionTTL,
 		"rel_seg_size":          s.RelSegSize,
@@ -117,6 +117,7 @@ func (s *DB) ToJson() et.Json {
 		"tennant_path_data":     s.TennantPathData,
 		"timezone":              s.Timezone,
 		"min_threshold_compact": s.MinThresholdCompact,
+		"version":               s.Version,
 		"schemas":               s.schemas,
 	}
 }
@@ -262,7 +263,7 @@ func (s *DB) newModel(schema, name string, version int, isCore bool) (*Model, er
 	sch, exists := s.getSchema(schema)
 	if !exists {
 		var err error
-		sch, err = s.NewSchema(schema)
+		sch, err = s.newSchema(schema)
 		if err != nil {
 			return nil, err
 		}

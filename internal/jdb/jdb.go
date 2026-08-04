@@ -24,7 +24,7 @@ const (
 type Server struct {
 	Version    string           `json:"version"`
 	PathData   string           `json:"path_data"`
-	PathWald   string           `json:"path_wald"`
+	PathWal    string           `json:"path_wal"`
 	PathSystem string           `json:"path_system"`
 	dbs        map[string]*DB   `json:"-"`
 	mu         *sync.RWMutex    `json:"-"`
@@ -45,7 +45,7 @@ func Load() (*Server, error) {
 	server = &Server{
 		Version:    "1.0.0",
 		PathData:   envar.GetStr("DB_PATH_DATA", "./data/collection"),
-		PathWald:   envar.GetStr("DB_PATH_WALD", "./data/wald"),
+		PathWal:    envar.GetStr("DB_PATH_WAL", "./data/wal"),
 		PathSystem: envar.GetStr("DB_PATH_SYSTEM", "./data/system"),
 		dbs:        make(map[string]*DB),
 		mu:         &sync.RWMutex{},
@@ -145,11 +145,11 @@ func (s *Server) newDb(name string) (*DB, error) {
 	}
 
 	pathData := filepath.Join(s.PathData, name)
-	pathWald := filepath.Join(s.PathWald, name)
+	pathWal := filepath.Join(s.PathWal, name)
 	result := &DB{
 		Name:                name,
 		PathData:            pathData,
-		PathWald:            pathWald,
+		PathWal:             pathWal,
 		Lang:                "en",
 		TransactionTTL:      10 * time.Second,
 		RelSegSize:          1024,
@@ -201,38 +201,74 @@ func (s *Server) newDb(name string) (*DB, error) {
 * @return error
 **/
 func (s *Server) loadDb(params et.Json) error {
-	// name = store.Normalize(name)
-	// if !utility.ValidStr(name, 0, []string{""}) {
-	// 	return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
-	// }
+	name := params.Str("name")
+	result, exists := s.getDb(name)
+	if exists {
+		return nil
+	}
 
-	// result, exists := s.getDb(name)
-	// if exists {
-	// 	return result, nil
-	// }
+	result = &DB{
+		Name:                name,
+		PathData:            params.Str("path_data"),
+		PathWal:             params.Str("path_wal"),
+		Lang:                params.Str("lang"),
+		TransactionTTL:      params.ValDuration(10*time.Second, "transaction_ttl"),
+		RelSegSize:          params.Int("rel_seg_size"),
+		SyncOnWrite:         params.Bool("sync_on_write"),
+		TennantName:         params.Str("tennant_name"),
+		TennantPathData:     params.Str("tennant_path_data"),
+		Timezone:            params.Str("timezone"),
+		MinThresholdCompact: params.Int("min_threshold_compact"),
+		Version:             params.Str("version"),
+		server:              s,
+		schemas:             make(map[string]*Schema, 0),
+		mu:                  &sync.RWMutex{},
+	}
 
-	// s.Lang = def.Str("lang")
-	// s.TransactionTTL = def.ValDuration(10*time.Second, "transaction_ttl")
-	// s.RelSegSize = def.Int("rel_seg_size")
-	// s.SyncOnWrite = def.Bool("sync_on_write")
-	// s.TennantName = def.Str("tennant_name")
-	// s.TennantPathData = def.Str("tennant_path_data")
-	// s.Timezone = def.Str("timezone")
-	// s.MinThresholdCompact = def.Int("min_threshold_compact")
+	var err error
+	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)
+	if err != nil {
+		return err
+	}
 
-	// result, err := s.NewDb(pathData, pathWald, name)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	result.cache, err = result.loadCache()
+	if err != nil {
+		return err
+	}
 
-	// if err := result.init(); err != nil {
-	// 	return nil, err
-	// }
+	result.users, err = result.loadUsers()
+	if err != nil {
+		return err
+	}
 
-	// err = result.load()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	result.sessions, err = result.loadSessions()
+	if err != nil {
+		return err
+	}
+
+	schemas := params.ArrayJson("schemas")
+	for _, schema := range schemas {
+		name := schema.Str("name")
+		sch, err := result.newSchema(name)
+		if err != nil {
+			return err
+		}
+
+		models := schema.ArrayJson("models")
+		for _, model := range models {
+			_, err := sch.loadModel(model)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	s.addDb(result)
+
+	err = result.init()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

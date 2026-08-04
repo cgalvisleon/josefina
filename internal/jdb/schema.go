@@ -35,13 +35,13 @@ func (s *Schema) newModel(name string, version int, isCore bool) (*Model, error)
 
 	name = store.Normalize(name)
 	pathData := filepath.Join(s.db.PathData, s.Name, name)
-	pathWald := filepath.Join(s.db.PathWald, s.Name, name)
+	pathWal := filepath.Join(s.db.PathWal, s.Name, name)
 	result := &Model{
 		Database:      s.Database,
 		Schema:        s.Name,
 		Name:          name,
 		PathData:      pathData,
-		PathWald:      pathWald,
+		PathWal:       pathWal,
 		Fields:        make(map[string]*Field, 0),
 		Indexes:       make([]*Index, 0),
 		PrimaryKeys:   make([]string, 0),
@@ -178,6 +178,8 @@ func (s *Schema) loadModel(def et.Json) (*Model, error) {
 			return nil, err
 		}
 	}
+
+	s.addModel(result)
 
 	return result, nil
 }

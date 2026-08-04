@@ -33,7 +33,7 @@ type Model struct {
 	Schema        string                      `json:"schema"`         // Schema name
 	Name          string                      `json:"name"`           // Model name
 	PathData      string                      `json:"path_data"`      // Path to the model
-	PathWald      string                      `json:"path_wald"`      // Path to the wald
+	PathWal       string                      `json:"path_wal"`       // Path to the wal
 	Fields        map[string]*Field           `json:"fields"`         // Fields
 	Indexes       []*Index                    `json:"indexes"`        // Indexes
 	PrimaryKeys   []string                    `json:"primary_keys"`   // Primary keys
@@ -287,7 +287,7 @@ func (s *Model) loadStore(name string) error {
 		return nil
 	}
 
-	result, err := store.Open(s.PathData, s.PathWald, name, s.Mode)
+	result, err := store.Open(s.PathData, s.PathWal, name, s.Mode)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func (s *Model) loadBTree(field string) error {
 		return nil
 	}
 
-	bt, err := OpenBTree(s.PathData, s.PathWald, field)
+	bt, err := OpenBTree(s.PathData, s.PathWal, field)
 	if err != nil {
 		return err
 	}
