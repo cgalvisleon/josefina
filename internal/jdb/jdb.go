@@ -21,7 +21,10 @@ func Load() (*Server, error) {
 		return server, nil
 	}
 
-	pool := runtime.NumCPU()*2 + 1
+	pool := envar.GetInt("DB_POOL", 0)
+	if pool == 0 {
+		pool = runtime.NumCPU()*2 + 1
+	}
 	server = &Server{
 		Version:       "1.0.0",
 		PathDatabases: envar.GetStr("DB_PATH_DATA", "./data/databases"),
