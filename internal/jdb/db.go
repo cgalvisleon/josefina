@@ -106,6 +106,10 @@ func (s *DB) init() error {
 		}
 	}
 
+	if err := s.initEvents(); err != nil {
+		return err
+	}
+
 	s.isInit = true
 	return nil
 }
