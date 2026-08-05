@@ -358,11 +358,11 @@ func (s *Server) signin(params et.Json) (et.Items, error) {
 }
 
 /**
-* system: Executes a system command
+* jSystem: Executes a system command
 * @param params et.Json
 * @return et.Items, error
 **/
-func (s *Server) system(params et.Json) (et.Items, error) {
+func (s *Server) jSystem(params et.Json) (et.Items, error) {
 	token := params.Str("token")
 	if token == "" {
 		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
@@ -416,7 +416,7 @@ func (s *Server) jQuery(query et.Json) (et.Items, error) {
 * @param params et.Json
 * @return et.Items, error
 **/
-func (s *Server) jcommand(command et.Json) (et.Items, error) {
+func (s *Server) jCommand(command et.Json) (et.Items, error) {
 	token := command.Str("token")
 	if token == "" {
 		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))

@@ -212,7 +212,7 @@ func System(params et.Json) (et.Items, error) {
 		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
 	}
 
-	result, err := server.Exec(params, server.system)
+	result, err := server.Exec(params, server.jSystem)
 	if err != nil {
 		return et.Items{}, err
 	}
@@ -238,12 +238,17 @@ func JQuery(query et.Json) (et.Items, error) {
 	return result, nil
 }
 
-func JCommand(params et.Json) (et.Items, error) {
+/**
+* JCommand: Executes a command
+* @param command et.Json
+* @return et.Items, error
+**/
+func JCommand(command et.Json) (et.Items, error) {
 	if server == nil {
 		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
 	}
 
-	result, err := server.Exec(params, server.jcommand)
+	result, err := server.Exec(command, server.jCommand)
 	if err != nil {
 		return et.Items{}, err
 	}
