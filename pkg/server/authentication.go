@@ -56,6 +56,7 @@ func Authentication(next http.Handler) http.Handler {
 		clm, err := claim.ParceToken(token)
 		if err != nil {
 			response.Unauthorized(w, r)
+			return
 		}
 
 		if clm == nil {

@@ -508,5 +508,5 @@ func (s *DB) Define(define DModel) (*Model, error) {
 **/
 func (s *DB) JQuery(query et.Json) (et.Items, error) {
 
-	return et.Items{}, nil
+	return et.Items{Result: []et.Json{}}, nil
 }
