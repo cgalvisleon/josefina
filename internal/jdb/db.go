@@ -507,7 +507,20 @@ func (s *DB) Define(define DModel) (*Model, error) {
 * @return et.Items, error
 **/
 func (s *DB) jSystem(params et.Json) (et.Items, error) {
-	return et.Items{}, nil
+	define := params.ArrayJson("define")
+	describe := params.ArrayJson("describe")
+
+	jobs := []queryJob{
+		{defineQuery, define},
+		{describeQuery, describe},
+	}
+
+	result, err := runQueryJobs(s, jobs)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
 }
 
 /**
@@ -516,57 +529,16 @@ func (s *DB) jSystem(params et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *DB) jQuery(params et.Json) (et.Items, error) {
-	define := params.ArrayJson("define")
-	describe := params.ArrayJson("describe")
-	insert := params.ArrayJson("insert")
-	update := params.ArrayJson("update")
-	delete := params.ArrayJson("delete")
-	bulk := params.ArrayJson("bulk")
 	query := params.ArrayJson("query")
 
-	jobs := []struct {
-		fn     func(*DB, []et.Json) ([]et.Json, error)
-		params []et.Json
-	}{
-		{DefineQuery, define},
-		{DescribeQuery, describe},
-		{InsertQuery, insert},
-		{UpdateQuery, update},
-		{DeleteQuery, delete},
-		{BulkQuery, bulk},
-		{ExecQuery, query},
+	jobs := []queryJob{
+		{execQuery, query},
 	}
 
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	var resErr error
-	result := et.Items{Result: []et.Json{}}
-
-	for _, job := range jobs {
-		wg.Add(1)
-		go func(fn func(*DB, []et.Json) ([]et.Json, error), params []et.Json) {
-			defer wg.Done()
-
-			items, err := fn(s, params)
-			mu.Lock()
-			defer mu.Unlock()
-			if err != nil {
-				if resErr == nil {
-					resErr = err
-				}
-				return
-			}
-			result.Add(items...)
-		}(job.fn, job.params)
+	result, err := runQueryJobs(s, jobs)
+	if err != nil {
+		return et.Items{}, err
 	}
-	wg.Wait()
-
-	if resErr != nil {
-		return et.Items{}, resErr
-	}
-
-	result.Ok = true
-	result.Count = len(result.Result)
 
 	return result, nil
 }
@@ -577,5 +549,22 @@ func (s *DB) jQuery(params et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *DB) jCommand(params et.Json) (et.Items, error) {
-	return et.Items{}, nil
+	insert := params.ArrayJson("insert")
+	update := params.ArrayJson("update")
+	delete := params.ArrayJson("delete")
+	bulk := params.ArrayJson("bulk")
+
+	jobs := []queryJob{
+		{insertQuery, insert},
+		{updateQuery, update},
+		{deleteQuery, delete},
+		{bulkQuery, bulk},
+	}
+
+	result, err := runQueryJobs(s, jobs)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
 }
