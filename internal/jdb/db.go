@@ -12,17 +12,6 @@ import (
 	"github.com/josefina/internal/store"
 )
 
-type Config struct {
-	Lang                string        `json:"lang"`
-	TransactionTTL      time.Duration `json:"transaction_ttl"`
-	RelSegSize          int           `json:"rel_seg_size"`
-	SyncOnWrite         bool          `json:"sync_on_write"`
-	TennantName         string        `json:"tennant_name"`
-	TennantPathData     string        `json:"tennant_path_data"`
-	Timezone            string        `json:"timezone"`
-	MinThresholdCompact int           `json:"min_threshold_compact"`
-}
-
 /**
 * DB: Represents a database
 **/
@@ -34,8 +23,6 @@ type DB struct {
 	TransactionTTL      time.Duration      `json:"transaction_ttl"`       // Transaction TTL
 	RelSegSize          int                `json:"rel_seg_size"`          // Relational segment size
 	SyncOnWrite         bool               `json:"sync_on_write"`         // Sync on write
-	TennantName         string             `json:"tennant_name"`          // Tennant name
-	TennantPathData     string             `json:"tennant_path_data"`     // Tennant path data
 	Timezone            string             `json:"timezone"`              // Timezone
 	MinThresholdCompact int                `json:"min_threshold_compact"` // Min threshold compact
 	IsStrict            bool               `json:"is_strict"`             // Is strict
@@ -88,8 +75,6 @@ func (s *DB) ToJson() et.Json {
 		"transaction_ttl":       s.TransactionTTL,
 		"rel_seg_size":          s.RelSegSize,
 		"sync_on_write":         s.SyncOnWrite,
-		"tennant_name":          s.TennantName,
-		"tennant_path_data":     s.TennantPathData,
 		"timezone":              s.Timezone,
 		"min_threshold_compact": s.MinThresholdCompact,
 		"is_strict":             s.IsStrict,

@@ -155,8 +155,6 @@ func (s *Server) newDb(name string) (*DB, error) {
 		TransactionTTL:      60 * time.Minute,
 		RelSegSize:          1024,
 		SyncOnWrite:         false,
-		TennantName:         "",
-		TennantPathData:     "",
 		Timezone:            "America/Bogota",
 		MinThresholdCompact: 100,
 		IsStrict:            false,
@@ -203,6 +201,11 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
+	result, exists := s.getDb(name)
+	if exists {
+		return result, nil
+	}
+
 	exists, params, err := s.store.GetObject(name)
 	if err != nil {
 		return nil, err
@@ -212,7 +215,7 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
 	}
 
-	result := &DB{
+	result = &DB{
 		Name:                name,
 		PathDatabases:       params.Str("path_databases"),
 		PathWal:             params.Str("path_wal"),
@@ -220,8 +223,6 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		TransactionTTL:      params.ValDuration(10*time.Second, "transaction_ttl"),
 		RelSegSize:          params.Int("rel_seg_size"),
 		SyncOnWrite:         params.Bool("sync_on_write"),
-		TennantName:         params.Str("tennant_name"),
-		TennantPathData:     params.Str("tennant_path_data"),
 		Timezone:            params.Str("timezone"),
 		MinThresholdCompact: params.Int("min_threshold_compact"),
 		Version:             params.Str("version"),
@@ -305,9 +306,28 @@ func (s *Server) defineDatabase(define et.Json) (et.Json, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	db, err := s.newDb(name)
-	if err != nil {
-		return nil, err
+	db, exists := s.getDb(name)
+	if !exists {
+		var err error
+		db, err = s.newDb(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lang := define.ValStr(db.Lang, "lang")
+	if lang != "" && lang != db.Lang {
+		db.Lang = lang
+	}
+
+	is_strict := define.ValBool(db.IsStrict, "is_strict")
+	if is_strict != db.IsStrict {
+		db.IsStrict = is_strict
+	}
+
+	timezone := define.ValStr(db.Timezone, "timezone")
+	if timezone != "" && timezone != db.Timezone {
+		db.Timezone = timezone
 	}
 
 	return db.ToJson(), nil

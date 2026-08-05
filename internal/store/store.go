@@ -662,18 +662,12 @@ func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
 * @return et.Json, bool, error
 **/
 func (s *FileStore) PutObject(id string, object et.Json) (et.Json, bool, error) {
-	bt, exists, err := s.Put(id, object)
+	_, exists, err := s.Put(id, object)
 	if err != nil {
 		return nil, false, err
 	}
 
-	var result et.Json
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return result, exists, nil
+	return object, exists, nil
 }
 
 /**
