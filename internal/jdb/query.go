@@ -52,34 +52,74 @@ func runQueryJobs(db *DB, jobs []queryJob) (et.Items, error) {
 	return result, nil
 }
 
+/**
+* defineQuery: Executes a define query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func defineQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* describeQuery: Executes a describe query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func describeQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* insertQuery: Executes a insert query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func insertQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* updateQuery: Executes a update query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func updateQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* deleteQuery: Executes a delete query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func deleteQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* upsertQuery: Executes a upsert query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func upsertQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* bulkQuery: Executes a bulk query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func bulkQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 
+/**
+* execQuery: Executes a exec query
+* @param db *DB, params []et.Json
+* @return []et.Json, error
+**/
 func execQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }

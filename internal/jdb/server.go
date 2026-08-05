@@ -159,6 +159,7 @@ func (s *Server) newDb(name string) (*DB, error) {
 		TennantPathData:     "",
 		Timezone:            "America/Bogota",
 		MinThresholdCompact: 100,
+		IsStrict:            false,
 		Version:             s.Version,
 		server:              s,
 		schemas:             make(map[string]*Schema, 0),

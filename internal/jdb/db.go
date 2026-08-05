@@ -38,6 +38,7 @@ type DB struct {
 	TennantPathData     string             `json:"tennant_path_data"`     // Tennant path data
 	Timezone            string             `json:"timezone"`              // Timezone
 	MinThresholdCompact int                `json:"min_threshold_compact"` // Min threshold compact
+	IsStrict            bool               `json:"is_strict"`             // Is strict
 	Version             string             `json:"version"`               // Version
 	isInit              bool               `json:"-"`                     // Is initialized
 	server              *Server            `json:"-"`                     // Server
@@ -91,6 +92,7 @@ func (s *DB) ToJson() et.Json {
 		"tennant_path_data":     s.TennantPathData,
 		"timezone":              s.Timezone,
 		"min_threshold_compact": s.MinThresholdCompact,
+		"is_strict":             s.IsStrict,
 		"version":               s.Version,
 		"schemas":               schemas,
 	}
@@ -124,28 +126,6 @@ func (s *DB) init() error {
 }
 
 /**
-* Save: Save the database
-* @param tx *Tx
-* @return (*Tx, error)
-**/
-func (s *DB) Save() error {
-	if !s.isInit {
-		return nil
-	}
-
-	if s.store == nil {
-		return errors.New(msg.MSG_STORE_NOT_DEFINED)
-	}
-
-	err := s.store.putObject(s.Name, s.ToJson())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-/**
 * addSchema: Adds a schema to the database
 * @param schema *Schema
 * @return error
@@ -155,7 +135,7 @@ func (s *DB) addSchema(schema *Schema) error {
 	defer s.mu.Unlock()
 
 	s.schemas[schema.Name] = schema
-	return s.Save()
+	return s.save()
 }
 
 /**
@@ -181,7 +161,7 @@ func (s *DB) DeleteSchema(name string) error {
 
 	delete(s.schemas, name)
 
-	return s.Save()
+	return s.save()
 }
 
 /**
@@ -270,11 +250,22 @@ func (s *DB) GetModel(schema, name string) (*Model, error) {
 	}
 
 	result, exists := sch.getModel(name)
-	if !exists {
+	if exists {
+		return result, nil
+	}
+
+	if s.IsStrict {
 		return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 	}
 
+	result, err := sch.newModel(name, 1, false)
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
+
+	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 }
 
 /**

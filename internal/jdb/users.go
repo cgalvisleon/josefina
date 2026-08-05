@@ -41,7 +41,7 @@ type Users struct {
 * @return error
 **/
 func (s *Users) initUser() error {
-	count, err := s.store.Count()
+	count, err := s.store.count()
 	if err != nil {
 		return err
 	}

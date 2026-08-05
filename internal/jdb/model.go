@@ -591,7 +591,7 @@ func (s *Model) isExists(idx string) (bool, error) {
 * Count: Counts documents in the primary store
 * @return int, error
 **/
-func (s *Model) Count() (int, error) {
+func (s *Model) count() (int, error) {
 	result, exists := s.source()
 	if !exists {
 		return 0, errors.New(msg.MSG_STORE_NOT_FOUND)
