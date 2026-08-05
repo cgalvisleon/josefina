@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
@@ -21,6 +22,23 @@ const (
 	sysCatalog    = sysSchema
 )
 
+/**
+* Request: A queued execution awaiting a worker from the pool.
+**/
+type Request struct {
+	query  et.Json
+	fn     func(query et.Json) (et.Items, error)
+	result chan Response
+}
+
+/**
+* Response: The outcome of a queued Request.
+**/
+type Response struct {
+	Items et.Items
+	Err   error
+}
+
 type Server struct {
 	Version       string           `json:"version"`
 	PathDatabases string           `json:"path_databases"`
@@ -30,9 +48,37 @@ type Server struct {
 	mu            *sync.RWMutex    `json:"-"`
 	store         *store.FileStore `json:"-"`
 	sessions      *Sessions        `json:"-"` // Sessions
+	request       chan *Request    `json:"-"` // Queue where all executions arrive
+	pool          int              `json:"-"` // Worker pool size: cores*2 + 1
 }
 
 var server *Server
+
+/**
+* runWorkers: Starts the pool of workers consuming the request queue.
+**/
+func (s *Server) runWorkers() {
+	for i := 0; i < s.pool; i++ {
+		go func() {
+			for req := range s.request {
+				items, err := req.fn(req.query)
+				req.result <- Response{Items: items, Err: err}
+			}
+		}()
+	}
+}
+
+/**
+* Exec: Queues fn with query on the request queue and blocks until a worker executes it.
+* @param query et.Json, fn func(query et.Json) (et.Items, error)
+* @return et.Items, error
+**/
+func (s *Server) Exec(query et.Json, fn func(query et.Json) (et.Items, error)) (et.Items, error) {
+	req := &Request{query: query, fn: fn, result: make(chan Response, 1)}
+	s.request <- req
+	res := <-req.result
+	return res.Items, res.Err
+}
 
 /**
 * load: Loads the server
@@ -69,7 +115,7 @@ func (s *Server) addDb(db *DB) {
 /**
 * getDb: Gets a database from the server
 * @param name string
-* @return *DB, error
+* @return *DB, bool
 **/
 func (s *Server) getDb(name string) (*DB, bool) {
 	s.mu.RLock()
@@ -250,4 +296,91 @@ func (s *Server) saveDb(db *DB) error {
 	}
 
 	return nil
+}
+
+/**
+* signin: Signs in a user
+* @param database, username, password string
+* @return et.Items, error
+**/
+func (s *Server) signin(params et.Json) (et.Items, error) {
+	database := params.Str("database")
+	username := params.Str("username")
+	password := params.Str("password")
+
+	if database == "" {
+		return et.Items{}, errors.New(msg.MSG_DATABASE_IS_REQUIRED)
+	}
+
+	if username == "" {
+		return et.Items{}, errors.New(msg.MSG_USERNAME_IS_REQUIRED)
+	}
+
+	if password == "" {
+		return et.Items{}, errors.New(msg.MSG_PASSWORD_IS_REQUIRED)
+	}
+
+	db, err := s.loadDb(database)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	user, err := db.getUser(username)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	hash, err := utility.HashSHA512(password)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	if user.Password != hash {
+		return et.Items{}, errors.New(msg.MSG_INVALID_PASSWORD)
+	}
+
+	device := "apiRest"
+	duration := time.Minute * 60
+	token, err := claim.NewToken(appName, device, user.ID, user.Username, et.Json{
+		"database": db.Name,
+	}, duration)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	_, err = server.newSession(token, db, HTTP, et.Json{})
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result := et.Items{}
+	result.Add(et.Json{
+		"token": token,
+	})
+
+	return result, nil
+}
+
+/**
+* JQuery: Executes a query
+* @param query et.Json
+* @return et.Items, error
+**/
+func (s *Server) jQuery(query et.Json) (et.Items, error) {
+	database := query.Str("database")
+	if database == "" {
+		return et.Items{}, errors.New(msg.MSG_DATABASE_NOT_FOUND)
+	}
+
+	db, err := s.loadDb(database)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	result, err := db.JQuery(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
 }

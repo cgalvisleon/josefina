@@ -105,6 +105,10 @@ var (
 	MSG_SERVER_NOT_LOADED          = "server not loaded"
 	MSG_INVALID_PASSWORD           = "invalid password"
 	MSG_SESSION_EXPIRED            = "session expired"
+	MSG_DATABASE_NOT_FOUND         = "database not found"
+	MSG_DATABASE_IS_REQUIRED       = "database is required"
+	MSG_USERNAME_IS_REQUIRED       = "username is required"
+	MSG_PASSWORD_IS_REQUIRED       = "password is required"
 )
 
 func init() {
@@ -194,5 +198,9 @@ func init() {
 		MSG_SERVER_NOT_LOADED = "server no cargado"
 		MSG_INVALID_PASSWORD = "password inválido"
 		MSG_SESSION_EXPIRED = "session expirada"
+		MSG_DATABASE_NOT_FOUND = "database no encontrado"
+		MSG_DATABASE_IS_REQUIRED = "database es requerido"
+		MSG_USERNAME_IS_REQUIRED = "username es requerido"
+		MSG_PASSWORD_IS_REQUIRED = "password es requerido"
 	}
 }

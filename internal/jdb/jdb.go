@@ -3,13 +3,11 @@ package jdb
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
-	"time"
 
-	"github.com/cgalvisleon/et/claim"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
-	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
 	"github.com/josefina/internal/store"
 )
@@ -23,6 +21,7 @@ func Load() (*Server, error) {
 		return server, nil
 	}
 
+	pool := runtime.NumCPU()*2 + 1
 	server = &Server{
 		Version:       "1.0.0",
 		PathDatabases: envar.GetStr("DB_PATH_DATA", "./data/databases"),
@@ -30,7 +29,10 @@ func Load() (*Server, error) {
 		PathSystem:    envar.GetStr("DB_PATH_SYSTEM", "./data/system"),
 		dbs:           make(map[string]*DB),
 		mu:            &sync.RWMutex{},
+		request:       make(chan *Request, pool*4),
+		pool:          pool,
 	}
+	server.runWorkers()
 
 	var err error
 	server.store, err = store.Open(server.PathSystem, server.PathSystem, "system", store.ReadWrite)
@@ -118,53 +120,6 @@ func DeleteDb(name string) error {
 }
 
 /**
-* SignIn: Signs in a user
-* @param database, username, password string
-* @return et.Item, error
-**/
-func SignIn(database, username, password string) (et.Item, error) {
-	db, err := GetDb(database)
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	user, err := db.getUser(username)
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	hash, err := utility.HashSHA512(password)
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	if user.Password != hash {
-		return et.Item{}, errors.New(msg.MSG_INVALID_PASSWORD)
-	}
-
-	device := "apiRest"
-	duration := time.Minute * 60
-	token, err := claim.NewToken(appName, device, user.ID, user.Username, et.Json{
-		"database": db.Name,
-	}, duration)
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	_, err = server.newSession(token, db, HTTP, et.Json{})
-	if err != nil {
-		return et.Item{}, err
-	}
-
-	return et.Item{
-		Ok: true,
-		Result: et.Json{
-			"token": token,
-		},
-	}, nil
-}
-
-/**
 * Authenticate: Authenticates a session from the server
 * @param token string
 * @return *Session, error
@@ -191,19 +146,41 @@ func Authenticate(token string) (*Session, error) {
 }
 
 /**
+* SignIn: Signs in a user
+* @param database, username, password string
+* @return et.Item, error
+**/
+func SignIn(database, username, password string) (et.Item, error) {
+	if server == nil {
+		return et.Item{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(et.Json{
+		"database": database,
+		"username": username,
+		"password": password,
+	}, server.signin)
+	if err != nil {
+		return et.Item{}, err
+	}
+
+	return result.First()
+}
+
+/**
 * JQuery: Executes a query
 * @param database string, query et.Json
 * @return et.Items, error
 **/
-func JQuery(database string, query et.Json) (et.Items, error) {
-	db, err := GetDb(database)
+func JQuery(query et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(query, server.jQuery)
 	if err != nil {
 		return et.Items{}, err
 	}
 
-	result, err := db.JQuery(query)
-	if err != nil {
-		return et.Items{}, err
-	}
 	return result, nil
 }

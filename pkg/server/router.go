@@ -135,7 +135,8 @@ func (s *Router) query(w http.ResponseWriter, r *http.Request) {
 
 	payload := request.Payload(r)
 	database := payload.Str("database")
-	result, err := jquery(database, body)
+	body.Set("database", database)
+	result, err := jquery(body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
