@@ -1,7 +1,6 @@
 package jdb
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -430,90 +429,4 @@ func (s *Model) DefineCalc(name string, definition string) error {
 
 	s.Calcs[name] = definition
 	return nil
-}
-
-type DField struct {
-	Type    TypeData    `json:"type"`
-	Default interface{} `json:"default"`
-}
-
-type DIndex struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-type DTo struct {
-	Schema string `json:"schema"`
-	Name   string `json:"name"`
-}
-
-type DForeignKeys struct {
-	To              DTo               `json:"to"`
-	Keys            map[string]string `json:"keys"`
-	OnDeleteCascade bool              `json:"on_delete_cascade"`
-	OnUpdateCascade bool              `json:"on_update_cascade"`
-}
-
-type DDetail struct {
-	To      DTo               `json:"to"`
-	Keys    map[string]string `json:"keys"`
-	ToKeys  map[string]string `json:"to_keys"`
-	Version int               `json:"version"`
-}
-
-type DRollup struct {
-	To      DTo               `json:"to"`
-	Keys    map[string]string `json:"keys"`
-	Selects []string          `json:"selects"`
-}
-
-type DRelation struct {
-	To              DTo               `json:"to"`
-	Keys            map[string]string `json:"keys"`
-	OnDeleteCascade bool              `json:"on_delete_cascade"`
-	OnUpdateCascade bool              `json:"on_update_cascade"`
-}
-
-type DModel struct {
-	Schema        string             `json:"schema"`
-	Name          string             `json:"name"`
-	Version       int                `json:"version"`
-	IsCore        bool               `json:"is_core"`
-	Fields        map[string]DField  `json:"fields"`
-	Indexes       []DIndex           `json:"indexes"`
-	PrimaryKeys   []string           `json:"primary_keys"`
-	ForeignKeys   []DForeignKeys     `json:"foreign_keys"`
-	Unique        []DIndex           `json:"unique"`
-	Required      []DIndex           `json:"required"`
-	Hidden        []string           `json:"hidden"`
-	Details       map[string]DDetail `json:"details"`
-	Masters       map[string]DDetail `json:"masters"`
-	Rollups       map[string]DRollup `json:"rollups"`
-	Relations     []DRelation        `json:"relations"`
-	Calcs         map[string]string  `json:"calcs"`
-	BeforeInserts []Trigger          `json:"before_inserts"`
-	AfterInserts  []Trigger          `json:"after_inserts"`
-	BeforeUpdates []Trigger          `json:"before_updates"`
-	AfterUpdates  []Trigger          `json:"after_updates"`
-	BeforeDeletes []Trigger          `json:"before_deletes"`
-	AfterDeletes  []Trigger          `json:"after_deletes"`
-}
-
-/**
-* ToJson
-* @return et.Json, error
-**/
-func (s *DModel) ToJson() (et.Json, error) {
-	bt, err := json.Marshal(s)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	result := et.Json{}
-	err = json.Unmarshal(bt, &result)
-	if err != nil {
-		return et.Json{}, err
-	}
-
-	return result, nil
 }
