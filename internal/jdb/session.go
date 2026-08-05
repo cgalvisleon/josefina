@@ -12,6 +12,10 @@ import (
 	"github.com/josefina/internal/store"
 )
 
+var (
+	ErrorSessionNotFound = errors.New(msg.MSG_SESSION_NOT_FOUND)
+)
+
 /**
 * TpConnection: Identifies the transport protocol used by a client session.
 **/
@@ -42,6 +46,7 @@ type Session struct {
 	LastAccess time.Time     `json:"last_access"`
 	Duration   time.Duration `json:"duration"`
 	Token      string        `json:"token"`
+	ID         string        `json:"id"`
 	Name       string        `json:"name"`
 	DB         *DB           `json:"db"`
 	Type       TpConnection  `json:"type"`
@@ -58,6 +63,7 @@ func (s *Session) ToJson() et.Json {
 		"last_access": s.LastAccess.Format(time.RFC3339),
 		"duration":    s.Duration,
 		"token":       s.Token,
+		"id":          s.ID,
 		"name":        s.Name,
 		"database":    s.DB.Name,
 		"type":        s.Type,
@@ -154,7 +160,7 @@ func (s *Sessions) load(token string) (*Session, error) {
 		}
 
 		if !exists {
-			return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+			return nil, ErrorSessionNotFound
 		}
 
 		database := object.Str("database")
@@ -170,6 +176,7 @@ func (s *Sessions) load(token string) (*Session, error) {
 			LastAccess: object.Time("last_access"),
 			Duration:   object.ValDuration(0, "duration"),
 			Token:      token,
+			ID:         object.Str("id"),
 			Name:       object.Str("name"),
 			DB:         db,
 			Type:       tp,
@@ -231,7 +238,8 @@ func (s *Server) newSession(token string, db *DB, tp TpConnection, payload et.Js
 		LastAccess: now,
 		Duration:   clm.Duration,
 		Token:      token,
-		Name:       clm.Username,
+		ID:         clm.SessionID,
+		Name:       clm.Name,
 		DB:         db,
 		Type:       tp,
 		Payload:    payload,

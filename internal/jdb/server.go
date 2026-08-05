@@ -26,8 +26,8 @@ const (
 * Request: A queued execution awaiting a worker from the pool.
 **/
 type Request struct {
-	query  et.Json
-	fn     func(query et.Json) (et.Items, error)
+	params et.Json
+	fn     func(params et.Json) (et.Items, error)
 	result chan Response
 }
 
@@ -61,7 +61,7 @@ func (s *Server) runWorkers() {
 	for i := 0; i < s.pool; i++ {
 		go func() {
 			for req := range s.request {
-				items, err := req.fn(req.query)
+				items, err := req.fn(req.params)
 				req.result <- Response{Items: items, Err: err}
 			}
 		}()
@@ -73,8 +73,8 @@ func (s *Server) runWorkers() {
 * @param query et.Json, fn func(query et.Json) (et.Items, error)
 * @return et.Items, error
 **/
-func (s *Server) Exec(query et.Json, fn func(query et.Json) (et.Items, error)) (et.Items, error) {
-	req := &Request{query: query, fn: fn, result: make(chan Response, 1)}
+func (s *Server) Exec(params et.Json, fn func(params et.Json) (et.Items, error)) (et.Items, error) {
+	req := &Request{params: params, fn: fn, result: make(chan Response, 1)}
 	s.request <- req
 	res := <-req.result
 	return res.Items, res.Err
@@ -369,7 +369,9 @@ func (s *Server) jQuery(query et.Json) (et.Items, error) {
 	}
 
 	session, err := s.getSession(token)
-	if err != nil {
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
 		return et.Items{}, err
 	}
 
