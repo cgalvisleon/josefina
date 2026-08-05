@@ -264,8 +264,6 @@ func (s *DB) GetModel(schema, name string) (*Model, error) {
 	}
 
 	return result, nil
-
-	return nil, errors.New(msg.MSG_MODEL_NOT_FOUND)
 }
 
 /**

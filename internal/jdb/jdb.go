@@ -6,8 +6,10 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/cgalvisleon/et/cache"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/event"
 	"github.com/josefina/internal/msg"
 	"github.com/josefina/internal/store"
 )
@@ -19,6 +21,16 @@ import (
 func Load() (*Server, error) {
 	if server != nil {
 		return server, nil
+	}
+
+	err := event.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	err = cache.Load()
+	if err != nil {
+		return nil, err
 	}
 
 	pool := envar.GetInt("DB_POOL", 0)
@@ -37,7 +49,6 @@ func Load() (*Server, error) {
 	}
 	server.runWorkers()
 
-	var err error
 	server.store, err = store.Open(server.PathSystem, server.PathSystem, "system", store.ReadWrite)
 	if err != nil {
 		return nil, err

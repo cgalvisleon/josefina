@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	"github.com/cgalvisleon/et/event"
 	"github.com/cgalvisleon/et/jrpc"
 	"github.com/cgalvisleon/et/logs"
 	"github.com/josefina/internal/jdb"
@@ -15,11 +14,6 @@ var (
 )
 
 func New() http.Handler {
-	err := event.Load()
-	if err != nil {
-		logs.Panic(err)
-	}
-
 	server, err := jdb.Load()
 	if err != nil {
 		logs.Panic(err)
