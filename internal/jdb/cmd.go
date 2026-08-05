@@ -42,7 +42,7 @@ type Command struct {
 * @return *Command
 **/
 func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
-	return &Command{
+	result := &Command{
 		command:       cmd,
 		model:         model,
 		items:         items,
@@ -55,6 +55,25 @@ func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 		beforeDeletes: make([]*Trigger, 0),
 		afterDeletes:  make([]*Trigger, 0),
 	}
+	for _, trigger := range model.BeforeInserts {
+		result.beforeInserts = append(result.beforeInserts, trigger)
+	}
+	for _, trigger := range model.AfterInserts {
+		result.afterInserts = append(result.afterInserts, trigger)
+	}
+	for _, trigger := range model.BeforeUpdates {
+		result.beforeUpdates = append(result.beforeUpdates, trigger)
+	}
+	for _, trigger := range model.AfterUpdates {
+		result.afterUpdates = append(result.afterUpdates, trigger)
+	}
+	for _, trigger := range model.BeforeDeletes {
+		result.beforeDeletes = append(result.beforeDeletes, trigger)
+	}
+	for _, trigger := range model.AfterDeletes {
+		result.afterDeletes = append(result.afterDeletes, trigger)
+	}
+	return result
 }
 
 /**
@@ -162,10 +181,10 @@ func (s *Command) AfterDeletes(trigger *Trigger) *Command {
 
 /**
 * Exec
-* @return (et.Item, error)
+* @return []et.Json, error
 **/
-func (s *Command) Exec() (et.Items, error) {
-	result := et.Items{}
+func (s *Command) Exec() ([]et.Json, error) {
+	result := []et.Json{}
 	return result, nil
 }
 
@@ -173,10 +192,15 @@ func (s *Command) Exec() (et.Items, error) {
 * One
 * @return (et.Item, error)
 **/
-func (s *Command) One() (et.Item, error) {
+func (s *Command) One() (et.Json, error) {
 	result, err := s.Exec()
 	if err != nil {
-		return et.Item{}, err
+		return et.Json{}, err
 	}
-	return result.First()
+
+	if len(result) == 0 {
+		return et.Json{}, nil
+	}
+
+	return result[0], nil
 }

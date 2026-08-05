@@ -140,7 +140,15 @@ func describeQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func insertQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		items, err := db.insertQuery(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, items...)
+	}
+	return result, nil
 }
 
 /**
@@ -149,7 +157,15 @@ func insertQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func updateQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		items, err := db.updateQuery(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, items...)
+	}
+	return result, nil
 }
 
 /**
@@ -158,7 +174,15 @@ func updateQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func deleteQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		items, err := db.deleteQuery(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, items...)
+	}
+	return result, nil
 }
 
 /**
@@ -167,7 +191,15 @@ func deleteQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func upsertQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		items, err := db.upsertQuery(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, items...)
+	}
+	return result, nil
 }
 
 /**
@@ -176,7 +208,15 @@ func upsertQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func bulkQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		items, err := db.bulkQuery(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, items...)
+	}
+	return result, nil
 }
 
 /**

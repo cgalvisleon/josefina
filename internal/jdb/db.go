@@ -311,7 +311,22 @@ func (s *DB) Empty() error {
 * @return et.Json, error
 **/
 func (s *DB) defineUser(define et.Json) (et.Json, error) {
-	return et.Json{}, nil
+	username := define.Str("username")
+	if !utility.ValidStr(username, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "username")
+	}
+
+	password := define.Str("password")
+	if !utility.ValidStr(password, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "password")
+	}
+
+	user, err := s.newUser(username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return user.ToJson(), nil
 }
 
 /**
@@ -320,7 +335,17 @@ func (s *DB) defineUser(define et.Json) (et.Json, error) {
 * @return et.Json, error
 **/
 func (s *DB) defineSchema(define et.Json) (et.Json, error) {
-	return et.Json{}, nil
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	schema, err := s.newSchema(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return schema.ToJson(), nil
 }
 
 /**
@@ -563,7 +588,17 @@ func (s *DB) describeUser(describe et.Json) (et.Json, error) {
 * @return et.Json, error
 **/
 func (s *DB) describeSchema(describe et.Json) (et.Json, error) {
-	return et.Json{}, nil
+	name := describe.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	schema, exists := s.getSchema(name)
+	if !exists {
+		return nil, errors.New(msg.MSG_SCHEMA_NOT_FOUND)
+	}
+
+	return schema.ToJson(), nil
 }
 
 /**
@@ -588,6 +623,189 @@ func (s *DB) describeModel(describe et.Json) (et.Json, error) {
 	}
 
 	return model.ToJson(), nil
+}
+
+/**
+* insertQuery: Inserts a record
+* @param define et.Json
+* @return et.Json, error
+**/
+func (s *DB) insertQuery(define et.Json) ([]et.Json, error) {
+	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	data := define.Json("data")
+	cmd := model.Insert(data)
+	result, err := cmd.
+		Exec()
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* updateQuery: Updates a record
+* @param define et.Json
+* @return []et.Json, error
+**/
+func (s *DB) updateQuery(define et.Json) ([]et.Json, error) {
+	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	data := define.Json("data")
+	cmd := model.Update(data)
+	wheres := define.ArrayJson("where")
+	for _, where := range wheres {
+		condition := et.ToCondition(where)
+		for _, cond := range condition {
+			cmd.Add(cond)
+		}
+	}
+
+	result, err := cmd.
+		Exec()
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* deleteQuery: Deletes a record
+* @param define et.Json
+* @return []et.Json, error
+**/
+func (s *DB) deleteQuery(define et.Json) ([]et.Json, error) {
+	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	cmd := model.Delete()
+	wheres := define.ArrayJson("where")
+	for _, where := range wheres {
+		condition := et.ToCondition(where)
+		for _, cond := range condition {
+			cmd.Add(cond)
+		}
+	}
+
+	result, err := cmd.
+		Exec()
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* upsertQuery: Upserts a record
+* @param define et.Json
+* @return []et.Json, error
+**/
+func (s *DB) upsertQuery(define et.Json) ([]et.Json, error) {
+	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	data := define.Json("data")
+	cmd := model.Upsert(data)
+	wheres := define.ArrayJson("where")
+	for _, where := range wheres {
+		condition := et.ToCondition(where)
+		for _, cond := range condition {
+			cmd.Add(cond)
+		}
+	}
+
+	result, err := cmd.
+		Exec()
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* bulkQuery: Bulk inserts a record
+* @param define et.Json
+* @return []et.Json, error
+**/
+func (s *DB) bulkQuery(define et.Json) ([]et.Json, error) {
+	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return []et.Json{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	data := define.ArrayJson("data")
+	cmd := model.Bulk(data)
+	result, err := cmd.
+		Exec()
+	if err != nil {
+		return []et.Json{}, err
+	}
+
+	return result, nil
 }
 
 /**
