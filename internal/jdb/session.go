@@ -44,7 +44,6 @@ type Session struct {
 	Token      string        `json:"token"`
 	Name       string        `json:"name"`
 	DB         *DB           `json:"db"`
-	UserId     string        `json:"user_id"`
 	Type       TpConnection  `json:"type"`
 	Payload    et.Json       `json:"payload"`
 }
@@ -61,7 +60,6 @@ func (s *Session) ToJson() et.Json {
 		"token":       s.Token,
 		"name":        s.Name,
 		"database":    s.DB.Name,
-		"user_id":     s.UserId,
 		"type":        s.Type,
 		"payload":     s.Payload,
 	}
@@ -159,12 +157,14 @@ func (s *Sessions) load(token string) (*Session, error) {
 			return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
 		}
 
-		dbName := object.Str("db")
-		db, err := GetDb(dbName)
+		database := object.Str("database")
+		db, err := GetDb(database)
 		if err != nil {
 			return nil, err
 		}
 
+		tp := TpConnection(object.Str("type"))
+		payload := object.Json("payload")
 		result = &Session{
 			CreatedAt:  object.Time("created_at"),
 			LastAccess: object.Time("last_access"),
@@ -172,9 +172,8 @@ func (s *Sessions) load(token string) (*Session, error) {
 			Token:      token,
 			Name:       object.Str("name"),
 			DB:         db,
-			UserId:     object.Str("user_id"),
-			Type:       TpConnection(object.Str("type")),
-			Payload:    object.Json("payload"),
+			Type:       tp,
+			Payload:    payload,
 		}
 	}
 
@@ -221,7 +220,6 @@ func (s *Server) newSession(token string, db *DB, tp TpConnection, payload et.Js
 		Token:      token,
 		Name:       clm.Username,
 		DB:         db,
-		UserId:     clm.UserId,
 		Type:       tp,
 		Payload:    payload,
 	}
