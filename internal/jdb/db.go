@@ -506,7 +506,56 @@ func (s *DB) Define(define DModel) (*Model, error) {
 * @param query string
 * @return et.Items, error
 **/
-func (s *DB) JQuery(query et.Json) (et.Items, error) {
+func (s *DB) JQuery(params et.Json) (et.Items, error) {
+	create := params.ArrayJson("create")
+	insert := params.ArrayJson("insert")
+	update := params.ArrayJson("update")
+	delete := params.ArrayJson("delete")
+	bulk := params.ArrayJson("bulk")
+	query := params.ArrayJson("query")
 
-	return et.Items{Result: []et.Json{}}, nil
+	jobs := []struct {
+		fn     func(*DB, []et.Json) ([]et.Json, error)
+		params []et.Json
+	}{
+		{CreateQuery, create},
+		{InsertQuery, insert},
+		{UpdateQuery, update},
+		{DeleteQuery, delete},
+		{BulkQuery, bulk},
+		{ExecQuery, query},
+	}
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	var resErr error
+	result := et.Items{Result: []et.Json{}}
+
+	for _, job := range jobs {
+		wg.Add(1)
+		go func(fn func(*DB, []et.Json) ([]et.Json, error), params []et.Json) {
+			defer wg.Done()
+
+			items, err := fn(s, params)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				if resErr == nil {
+					resErr = err
+				}
+				return
+			}
+			result.Add(items...)
+		}(job.fn, job.params)
+	}
+	wg.Wait()
+
+	if resErr != nil {
+		return et.Items{}, resErr
+	}
+
+	result.Ok = true
+	result.Count = len(result.Result)
+
+	return result, nil
 }

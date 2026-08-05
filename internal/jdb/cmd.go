@@ -10,6 +10,7 @@ import (
 type Cmd string
 
 const (
+	QUERY  Cmd = "query"
 	INSERT Cmd = "insert"
 	UPDATE Cmd = "update"
 	DELETE Cmd = "delete"

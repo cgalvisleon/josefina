@@ -42,15 +42,16 @@ const (
 * Session: Represents an authenticated client connection with its JWT token cached for the duration.
 **/
 type Session struct {
-	CreatedAt  time.Time     `json:"created_at"`
-	LastAccess time.Time     `json:"last_access"`
-	Duration   time.Duration `json:"duration"`
-	Token      string        `json:"token"`
-	ID         string        `json:"id"`
-	Name       string        `json:"name"`
-	DB         *DB           `json:"db"`
-	Type       TpConnection  `json:"type"`
-	Payload    et.Json       `json:"payload"`
+	CreatedAt   time.Time     `json:"created_at"`
+	LastAccess  time.Time     `json:"last_access"`
+	Duration    time.Duration `json:"duration"`
+	Token       string        `json:"token"`
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	DB          *DB           `json:"db"`
+	Type        TpConnection  `json:"type"`
+	Permissions []Cmd         `json:"permissions"`
+	Payload     et.Json       `json:"payload"`
 }
 
 /**
@@ -67,6 +68,7 @@ func (s *Session) ToJson() et.Json {
 		"name":        s.Name,
 		"database":    s.DB.Name,
 		"type":        s.Type,
+		"permissions": s.Permissions,
 		"payload":     s.Payload,
 	}
 }
@@ -171,16 +173,21 @@ func (s *Sessions) load(token string) (*Session, error) {
 
 		tp := TpConnection(object.Str("type"))
 		payload := object.Json("payload")
+		permissions := make([]Cmd, len(object.Array("permissions")))
+		for i, v := range object.Array("permissions") {
+			permissions[i] = Cmd(v.(string))
+		}
 		result = &Session{
-			CreatedAt:  object.Time("created_at"),
-			LastAccess: object.Time("last_access"),
-			Duration:   object.ValDuration(0, "duration"),
-			Token:      token,
-			ID:         object.Str("id"),
-			Name:       object.Str("name"),
-			DB:         db,
-			Type:       tp,
-			Payload:    payload,
+			CreatedAt:   object.Time("created_at"),
+			LastAccess:  object.Time("last_access"),
+			Duration:    object.ValDuration(0, "duration"),
+			Token:       token,
+			ID:          object.Str("id"),
+			Name:        object.Str("name"),
+			DB:          db,
+			Type:        tp,
+			Permissions: permissions,
+			Payload:     payload,
 		}
 	}
 
@@ -234,15 +241,16 @@ func (s *Server) newSession(token string, db *DB, tp TpConnection, payload et.Js
 
 	now := timezone.Now()
 	result := &Session{
-		CreatedAt:  now,
-		LastAccess: now,
-		Duration:   clm.Duration,
-		Token:      token,
-		ID:         clm.SessionID,
-		Name:       clm.Name,
-		DB:         db,
-		Type:       tp,
-		Payload:    payload,
+		CreatedAt:   now,
+		LastAccess:  now,
+		Duration:    clm.Duration,
+		Token:       token,
+		ID:          clm.SessionID,
+		Name:        clm.Name,
+		DB:          db,
+		Type:        tp,
+		Permissions: []Cmd{QUERY, INSERT, UPDATE, DELETE, UPSERT, BULK},
+		Payload:     payload,
 	}
 
 	s.sessions.set(result)
