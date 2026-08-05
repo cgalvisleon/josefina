@@ -128,19 +128,34 @@ func describeQuery(db *DB, params []et.Json) ([]et.Json, error) {
 				}
 				result = append(result, model)
 			case "user":
-				model, err := db.describeUser(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.describeUser(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
 				result = append(result, model)
 			case "schema":
-				model, err := db.describeSchema(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.describeSchema(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
 				result = append(result, model)
 			case "model":
-				model, err := db.describeModel(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.describeModel(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
