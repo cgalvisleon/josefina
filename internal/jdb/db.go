@@ -513,7 +513,35 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 		result.AddAfterDelete(name, definition)
 	}
 
+	if err := result.Init(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
+}
+
+/**
+* Describe: Describes the model
+* @param describe et.Json
+* @return et.Json, error
+**/
+func (s *DB) Describe(describe et.Json) (et.Json, error) {
+	schema := describe.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	name := describe.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	model, err := s.GetModel(schema, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return model.ToJson(), nil
 }
 
 /**

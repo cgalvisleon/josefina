@@ -58,7 +58,15 @@ func runQueryJobs(db *DB, jobs []queryJob) (et.Items, error) {
 * @return []et.Json, error
 **/
 func defineQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		model, err := db.Define(param)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, model.ToJson())
+	}
+	return result, nil
 }
 
 /**
