@@ -1,9 +1,11 @@
 package jdb
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/josefina/internal/msg"
 )
 
 type queryJob struct {
@@ -70,19 +72,34 @@ func defineQuery(db *DB, params []et.Json) ([]et.Json, error) {
 				}
 				result = append(result, model)
 			case "user":
-				model, err := db.defineUser(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.defineUser(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
 				result = append(result, model)
 			case "schema":
-				model, err := db.defineSchema(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.defineSchema(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
 				result = append(result, model)
 			case "model":
-				model, err := db.defineModel(define)
+				database := define.Str("database")
+				dbp, exists := db.server.getDb(database)
+				if !exists {
+					return []et.Json{}, errors.New(msg.MSG_DB_NOT_FOUND)
+				}
+				model, err := dbp.defineModel(define)
 				if err != nil {
 					return []et.Json{}, err
 				}
