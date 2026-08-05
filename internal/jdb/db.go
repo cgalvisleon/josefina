@@ -317,6 +317,10 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 	}
 
 	schema := define.Str("schema")
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
 	version := define.ValInt(1, "version")
 	result, err := s.newModel(schema, name, version, false)
 	if err != nil {
