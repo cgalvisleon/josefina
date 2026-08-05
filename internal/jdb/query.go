@@ -2,7 +2,11 @@ package jdb
 
 import "github.com/cgalvisleon/et/et"
 
-func CreateQuery(db *DB, params []et.Json) ([]et.Json, error) {
+func DefineQuery(db *DB, params []et.Json) ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+func DescribeQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	return []et.Json{}, nil
 }
 

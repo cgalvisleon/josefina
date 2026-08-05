@@ -37,9 +37,11 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Public(router.GET, "/version", api.version)
 	api.Authentication(router.GET, "/routes", api.routes)
 	// JDB
-	api.Public(router.POST, "/signin", api.jdbSignin)
-	api.Public(router.POST, "/signout", api.jdbSignout)
+	api.Public(router.POST, "/signin", api.signin)
+	api.Public(router.POST, "/signout", api.signout)
+	api.Public(router.POST, "/system", api.system)
 	api.Public(router.POST, "/query", api.query)
+	api.Public(router.POST, "/command", api.command)
 
 	api.init()
 
@@ -98,11 +100,11 @@ func (s *Router) routes(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
-* jdbSignin
+* signin
 * @param w http.ResponseWriter
 * @param r *http.Request
 **/
-func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
+func (s *Router) signin(w http.ResponseWriter, r *http.Request) {
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
@@ -126,7 +128,7 @@ func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
 * @param w http.ResponseWriter
 * @param r *http.Request
 **/
-func (s *Router) jdbSignout(w http.ResponseWriter, r *http.Request) {
+func (s *Router) signout(w http.ResponseWriter, r *http.Request) {
 	token, err := GetBearerToken(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
@@ -149,6 +151,34 @@ func (s *Router) jdbSignout(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
+* system
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) system(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	body.Set("token", token)
+	result, err := jdb.System(body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
 * query
 * @param w http.ResponseWriter
 * @param r *http.Request
@@ -168,6 +198,34 @@ func (s *Router) query(w http.ResponseWriter, r *http.Request) {
 
 	body.Set("token", token)
 	result, err := jdb.JQuery(body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
+* command
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) command(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	body.Set("token", token)
+	result, err := jdb.JCommand(body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return

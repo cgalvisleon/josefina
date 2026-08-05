@@ -502,12 +502,22 @@ func (s *DB) Define(define DModel) (*Model, error) {
 }
 
 /**
-* JQuery: Executes a query
+* jSystem: Executes a system command
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *DB) jSystem(params et.Json) (et.Items, error) {
+	return et.Items{}, nil
+}
+
+/**
+* jQuery: Executes a query
 * @param query string
 * @return et.Items, error
 **/
-func (s *DB) JQuery(params et.Json) (et.Items, error) {
-	create := params.ArrayJson("create")
+func (s *DB) jQuery(params et.Json) (et.Items, error) {
+	define := params.ArrayJson("define")
+	describe := params.ArrayJson("describe")
 	insert := params.ArrayJson("insert")
 	update := params.ArrayJson("update")
 	delete := params.ArrayJson("delete")
@@ -518,7 +528,8 @@ func (s *DB) JQuery(params et.Json) (et.Items, error) {
 		fn     func(*DB, []et.Json) ([]et.Json, error)
 		params []et.Json
 	}{
-		{CreateQuery, create},
+		{DefineQuery, define},
+		{DescribeQuery, describe},
 		{InsertQuery, insert},
 		{UpdateQuery, update},
 		{DeleteQuery, delete},
@@ -558,4 +569,13 @@ func (s *DB) JQuery(params et.Json) (et.Items, error) {
 	result.Count = len(result.Result)
 
 	return result, nil
+}
+
+/**
+* jCommand: Executes a command
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *DB) jCommand(params et.Json) (et.Items, error) {
+	return et.Items{}, nil
 }

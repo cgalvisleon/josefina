@@ -358,6 +358,33 @@ func (s *Server) signin(params et.Json) (et.Items, error) {
 }
 
 /**
+* system: Executes a system command
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *Server) system(params et.Json) (et.Items, error) {
+	token := params.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	session, err := s.getSession(token)
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
+		return et.Items{}, err
+	}
+
+	db := session.DB
+	result, err := db.jSystem(params)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+/**
 * JQuery: Executes a query
 * @param query et.Json
 * @return et.Items, error
@@ -376,7 +403,34 @@ func (s *Server) jQuery(query et.Json) (et.Items, error) {
 	}
 
 	db := session.DB
-	result, err := db.JQuery(query)
+	result, err := db.jQuery(query)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* JCommand: Executes a command
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *Server) jcommand(command et.Json) (et.Items, error) {
+	token := command.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	session, err := s.getSession(token)
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
+		return et.Items{}, err
+	}
+
+	db := session.DB
+	result, err := db.jCommand(command)
 	if err != nil {
 		return et.Items{}, err
 	}

@@ -203,6 +203,24 @@ func SignOut(token string) (et.Items, error) {
 }
 
 /**
+* System: Executes a system command
+* @param query []et.Json
+* @return et.Items, error
+**/
+func System(params et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(params, server.system)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+/**
 * JQuery: Executes a query
 * @param database string, query et.Json
 * @return et.Items, error
@@ -213,6 +231,19 @@ func JQuery(query et.Json) (et.Items, error) {
 	}
 
 	result, err := server.Exec(query, server.jQuery)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+func JCommand(params et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(params, server.jcommand)
 	if err != nil {
 		return et.Items{}, err
 	}
