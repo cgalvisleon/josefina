@@ -138,7 +138,7 @@ func Authenticate(token string) (*Session, error) {
 	}
 
 	if result.IsExpired() {
-		err = server.removeSession(token)
+		err = server.deleteSession(token)
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +168,38 @@ func SignIn(database, username, password string) (et.Item, error) {
 	}
 
 	return result.First()
+}
+
+/**
+* SignOut: Signs out a session
+* @param token string
+* @return error
+**/
+func SignOut(token string) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(et.Json{
+		"token": token,
+	}, func(query et.Json) (et.Items, error) {
+		token := query.Str("token")
+		err := server.deleteSession(token)
+		if err != nil {
+			return et.Items{}, err
+		}
+		return et.Items{
+			Ok:    true,
+			Count: 1,
+			Result: []et.Json{
+				{
+					"message": "Signed out successfully",
+				},
+			},
+		}, nil
+	})
+
+	return result, err
 }
 
 /**

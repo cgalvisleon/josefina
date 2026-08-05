@@ -181,6 +181,19 @@ func (s *Sessions) load(token string) (*Session, error) {
 }
 
 /**
+* delete: Deletes a session from the store
+* @param token string
+* @return error
+**/
+func (s *Sessions) delete(token string) error {
+	_, err := s.store.Delete(token)
+	if err != nil {
+		return err
+	}
+	return s.remove(token)
+}
+
+/**
 * loadSessions: Loads the sessions
 * @return error
 **/
@@ -244,10 +257,10 @@ func (s *Server) getSession(token string) (*Session, error) {
 }
 
 /**
-* removeSession: Removes a session from the server
+* deleteSession: Deletes a session from the server
 * @param token string
 * @return error
 **/
-func (s *Server) removeSession(token string) error {
-	return s.sessions.remove(token)
+func (s *Server) deleteSession(token string) error {
+	return s.sessions.delete(token)
 }

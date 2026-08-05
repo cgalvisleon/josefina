@@ -38,6 +38,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Authentication(router.GET, "/routes", api.routes)
 	// JDB
 	api.Public(router.POST, "/signin", api.jdbSignin)
+	api.Public(router.POST, "/signout", api.jdbSignout)
 	api.Public(router.POST, "/query", api.query)
 
 	api.init()
@@ -118,6 +119,33 @@ func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.ITEM(w, r, http.StatusOK, item)
+}
+
+/**
+* jdbSignout
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) jdbSignout(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	result, err := jdb.SignOut(token)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	first, err := result.First()
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEM(w, r, http.StatusOK, first)
 }
 
 /**
