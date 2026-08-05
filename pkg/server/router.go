@@ -6,7 +6,6 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/logs"
-	"github.com/cgalvisleon/et/request"
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
 	"github.com/josefina/internal/jdb"
@@ -39,7 +38,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Authentication(router.GET, "/routes", api.routes)
 	// JDB
 	api.Public(router.POST, "/signin", api.jdbSignin)
-	api.Authentication(router.POST, "/query", api.query)
+	api.Public(router.POST, "/query", api.query)
 
 	api.init()
 
@@ -112,7 +111,7 @@ func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
 	database := body.Str("database")
 	username := body.Str("username")
 	password := body.Str("password")
-	item, err := signin(database, username, password)
+	item, err := jdb.SignIn(database, username, password)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -127,16 +126,20 @@ func (s *Router) jdbSignin(w http.ResponseWriter, r *http.Request) {
 * @param r *http.Request
 **/
 func (s *Router) query(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	body, err := response.GetBody(r)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	payload := request.Payload(r)
-	database := payload.Str("database")
-	body.Set("database", database)
-	result, err := jquery(body)
+	body.Set("token", token)
+	result, err := jdb.JQuery(body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return

@@ -1,9 +1,9 @@
 package jdb
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"sync"
 	"time"
@@ -202,18 +202,13 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
 	}
 
-	exists, bt, err := s.store.Get(name)
+	exists, params, err := s.store.GetObject(name)
 	if err != nil {
 		return nil, err
 	}
 
 	if !exists {
 		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
-	}
-
-	var params et.Json
-	if err := json.Unmarshal(bt, &params); err != nil {
-		return nil, err
 	}
 
 	result := &DB{
@@ -290,7 +285,7 @@ func (s *Server) loadDb(name string) (*DB, error) {
 * @return error
 **/
 func (s *Server) saveDb(db *DB) error {
-	_, _, err := s.store.Put(db.Name, db.ToJson())
+	_, _, err := s.store.PutObject(db.Name, db.ToJson())
 	if err != nil {
 		return err
 	}
@@ -367,16 +362,17 @@ func (s *Server) signin(params et.Json) (et.Items, error) {
 * @return et.Items, error
 **/
 func (s *Server) jQuery(query et.Json) (et.Items, error) {
-	database := query.Str("database")
-	if database == "" {
-		return et.Items{}, errors.New(msg.MSG_DATABASE_NOT_FOUND)
+	token := query.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	db, err := s.loadDb(database)
+	session, err := s.getSession(token)
 	if err != nil {
 		return et.Items{}, err
 	}
 
+	db := session.DB
 	result, err := db.JQuery(query)
 	if err != nil {
 		return et.Items{}, err

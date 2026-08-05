@@ -657,6 +657,26 @@ func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
 }
 
 /**
+* PutObject
+* @param id string, object et.Json
+* @return et.Json, bool, error
+**/
+func (s *FileStore) PutObject(id string, object et.Json) (et.Json, bool, error) {
+	bt, exists, err := s.Put(id, object)
+	if err != nil {
+		return nil, false, err
+	}
+
+	var result et.Json
+	err = json.Unmarshal(bt, &result)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return result, exists, nil
+}
+
+/**
 * Delete
 * @param id string
 * @return bool, error
@@ -755,6 +775,30 @@ func (s *FileStore) Get(id string) (bool, []byte, error) {
 	result, err := s.Read(ref)
 	if err != nil {
 		return false, nil, err
+	}
+
+	return true, result, nil
+}
+
+/**
+* GetObject
+* @param id string
+* @return bool, et.Json, error
+**/
+func (s *FileStore) GetObject(id string) (bool, et.Json, error) {
+	exists, bt, err := s.Get(id)
+	if err != nil {
+		return false, et.Json{}, err
+	}
+
+	if !exists {
+		return false, et.Json{}, nil
+	}
+
+	var result et.Json
+	err = json.Unmarshal(bt, &result)
+	if err != nil {
+		return false, et.Json{}, err
 	}
 
 	return true, result, nil

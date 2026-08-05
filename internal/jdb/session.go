@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/timezone"
 	"github.com/josefina/internal/msg"
+	"github.com/josefina/internal/store"
 )
 
 /**
@@ -42,7 +43,7 @@ type Session struct {
 	Duration   time.Duration `json:"duration"`
 	Token      string        `json:"token"`
 	Name       string        `json:"name"`
-	Database   *DB           `json:"database"`
+	DB         *DB           `json:"db"`
 	UserId     string        `json:"user_id"`
 	Type       TpConnection  `json:"type"`
 	Payload    et.Json       `json:"payload"`
@@ -59,7 +60,7 @@ func (s *Session) ToJson() et.Json {
 		"duration":    s.Duration,
 		"token":       s.Token,
 		"name":        s.Name,
-		"database":    s.Database.Name,
+		"database":    s.DB.Name,
 		"user_id":     s.UserId,
 		"type":        s.Type,
 		"payload":     s.Payload,
@@ -88,25 +89,26 @@ func (s *Session) GetExpiresAt() time.Time {
 type Sessions struct {
 	sessions map[string]*Session
 	mu       *sync.RWMutex
+	store    *store.FileStore
 }
 
 /**
-* addSession: Adds a session to the cache
+* add: Adds a session to the cache
 * @param session *Session
 * @return error
 **/
-func (s *Sessions) setSession(session *Session) {
+func (s *Sessions) add(session *Session) {
 	s.mu.Lock()
 	s.sessions[session.Token] = session
 	s.mu.Unlock()
 }
 
 /**
-* getSession: Gets a session from the cache
+* get: Gets a session from the cache
 * @param token string
-* @return *Session, error
+* @return *Session, bool
 **/
-func (s *Sessions) getSession(token string) (*Session, bool) {
+func (s *Sessions) get(token string) (*Session, bool) {
 	s.mu.RLock()
 	session, exists := s.sessions[token]
 	s.mu.RUnlock()
@@ -115,11 +117,11 @@ func (s *Sessions) getSession(token string) (*Session, bool) {
 }
 
 /**
-* removeSession: Removes a session from the cache
+* remove: Removes a session from the cache
 * @param id string
 * @return error
 **/
-func (s *Sessions) removeSession(token string) error {
+func (s *Sessions) remove(token string) error {
 	s.mu.Lock()
 	delete(s.sessions, token)
 	s.mu.Unlock()
@@ -127,13 +129,72 @@ func (s *Sessions) removeSession(token string) error {
 }
 
 /**
+* set: Sets a session in the cache and the store
+* @param session *Session
+* @return error
+**/
+func (s *Sessions) set(session *Session) error {
+	_, _, err := s.store.PutObject(session.Token, session.ToJson())
+	if err != nil {
+		return err
+	}
+	s.add(session)
+	return nil
+}
+
+/**
+* load: Loads a session from the store
+* @param token string
+* @return *Session, error
+**/
+func (s *Sessions) load(token string) (*Session, error) {
+	result, exists := s.get(token)
+	if !exists {
+		exists, object, err := s.store.GetObject(token)
+		if err != nil {
+			return nil, err
+		}
+
+		if !exists {
+			return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+		}
+
+		dbName := object.Str("db")
+		db, err := GetDb(dbName)
+		if err != nil {
+			return nil, err
+		}
+
+		result = &Session{
+			CreatedAt:  object.Time("created_at"),
+			LastAccess: object.Time("last_access"),
+			Duration:   object.ValDuration(0, "duration"),
+			Token:      token,
+			Name:       object.Str("name"),
+			DB:         db,
+			UserId:     object.Str("user_id"),
+			Type:       TpConnection(object.Str("type")),
+			Payload:    object.Json("payload"),
+		}
+	}
+
+	return result, nil
+}
+
+/**
 * loadSessions: Loads the sessions
 * @return error
 **/
 func (s *Server) loadSessions() error {
+	store, err := store.Open(s.PathSystem, s.PathSystem, "sessions", store.ReadWrite)
+	if err != nil {
+		return err
+	}
+
 	result := &Sessions{
 		sessions: make(map[string]*Session),
 		mu:       &sync.RWMutex{},
+		store:    store,
 	}
 
 	s.sessions = result
@@ -146,7 +207,7 @@ func (s *Server) loadSessions() error {
 * @param token string
 * @return *Session, error
 **/
-func (s *Server) newSession(token string, database *DB, tp TpConnection, payload et.Json) (*Session, error) {
+func (s *Server) newSession(token string, db *DB, tp TpConnection, payload et.Json) (*Session, error) {
 	clm, err := claim.ParceToken(token)
 	if err != nil {
 		return nil, err
@@ -159,13 +220,13 @@ func (s *Server) newSession(token string, database *DB, tp TpConnection, payload
 		Duration:   clm.Duration,
 		Token:      token,
 		Name:       clm.Username,
-		Database:   database,
+		DB:         db,
 		UserId:     clm.UserId,
 		Type:       tp,
 		Payload:    payload,
 	}
 
-	s.sessions.setSession(result)
+	s.sessions.set(result)
 
 	return result, nil
 }
@@ -176,9 +237,9 @@ func (s *Server) newSession(token string, database *DB, tp TpConnection, payload
 * @return *Session, error
 **/
 func (s *Server) getSession(token string) (*Session, error) {
-	result, exists := s.sessions.getSession(token)
-	if !exists {
-		return nil, errors.New(msg.MSG_SESSION_NOT_FOUND)
+	result, err := s.sessions.load(token)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -190,5 +251,5 @@ func (s *Server) getSession(token string) (*Session, error) {
 * @return error
 **/
 func (s *Server) removeSession(token string) error {
-	return s.sessions.removeSession(token)
+	return s.sessions.remove(token)
 }

@@ -22,7 +22,7 @@ const (
 * @param r *http.Request
 * @return string, error
 **/
-func getBearerToken(r *http.Request) (string, error) {
+func GetBearerToken(r *http.Request) (string, error) {
 	_, ok := r.Header["Authorization"]
 	if !ok {
 		return "", logs.Alertm("Autorization is required")
@@ -47,7 +47,7 @@ func getBearerToken(r *http.Request) (string, error) {
 **/
 func Authentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, err := getBearerToken(r)
+		token, err := GetBearerToken(r)
 		if err != nil {
 			response.Unauthorized(w, r)
 			return
