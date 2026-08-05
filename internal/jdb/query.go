@@ -60,11 +60,35 @@ func runQueryJobs(db *DB, jobs []queryJob) (et.Items, error) {
 func defineQuery(db *DB, params []et.Json) ([]et.Json, error) {
 	result := []et.Json{}
 	for _, param := range params {
-		model, err := db.Define(param)
-		if err != nil {
-			return []et.Json{}, err
+		for name := range param {
+			define := param.Json(name)
+			switch name {
+			case "database":
+				model, err := db.server.defineDatabase(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "user":
+				model, err := db.defineUser(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "schema":
+				model, err := db.defineSchema(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "model":
+				model, err := db.defineModel(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			}
 		}
-		result = append(result, model.ToJson())
 	}
 	return result, nil
 }
@@ -75,7 +99,39 @@ func defineQuery(db *DB, params []et.Json) ([]et.Json, error) {
 * @return []et.Json, error
 **/
 func describeQuery(db *DB, params []et.Json) ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, param := range params {
+		for name := range param {
+			define := param.Json(name)
+			switch name {
+			case "database":
+				model, err := db.server.describeDatabase(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "user":
+				model, err := db.describeUser(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "schema":
+				model, err := db.describeSchema(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			case "model":
+				model, err := db.describeModel(define)
+				if err != nil {
+					return []et.Json{}, err
+				}
+				result = append(result, model)
+			}
+		}
+	}
+	return result, nil
 }
 
 /**

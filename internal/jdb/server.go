@@ -295,6 +295,44 @@ func (s *Server) saveDb(db *DB) error {
 }
 
 /**
+* DefineDatabase: Defines the database
+* @param define et.Json
+* @return et.Json, error
+**/
+func (s *Server) defineDatabase(define et.Json) (et.Json, error) {
+	name := define.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	db, err := s.newDb(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.ToJson(), nil
+}
+
+/**
+* describeDatabase: Describes the database
+* @param describe et.Json
+* @return et.Json, error
+**/
+func (s *Server) describeDatabase(describe et.Json) (et.Json, error) {
+	name := describe.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	db, exists := s.getDb(name)
+	if !exists {
+		return nil, errors.New(msg.MSG_DB_NOT_FOUND)
+	}
+
+	return db.ToJson(), nil
+}
+
+/**
 * signin: Signs in a user
 * @param database, username, password string
 * @return et.Items, error

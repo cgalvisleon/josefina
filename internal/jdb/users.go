@@ -26,7 +26,6 @@ func (s *User) ToJson() et.Json {
 		"updated_at": s.UpdatedAt.Format(time.RFC3339),
 		"id":         s.ID,
 		"username":   s.Username,
-		"password":   s.Password,
 	}
 }
 

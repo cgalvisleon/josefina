@@ -306,11 +306,29 @@ func (s *DB) Empty() error {
 }
 
 /**
-* Define: Defines the model
+* defineUser: Defines the user
 * @param define et.Json
-* @return (*Model, error)
+* @return et.Json, error
 **/
-func (s *DB) Define(define et.Json) (*Model, error) {
+func (s *DB) defineUser(define et.Json) (et.Json, error) {
+	return et.Json{}, nil
+}
+
+/**
+* DefineSchema: Defines the schema
+* @param define et.Json
+* @return et.Json, error
+**/
+func (s *DB) defineSchema(define et.Json) (et.Json, error) {
+	return et.Json{}, nil
+}
+
+/**
+* defineModel: Defines the model
+* @param define et.Json
+* @return et.Json, error
+**/
+func (s *DB) defineModel(define et.Json) (et.Json, error) {
 	name := define.Str("name")
 	if !utility.ValidStr(name, 1, []string{}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
@@ -517,15 +535,43 @@ func (s *DB) Define(define et.Json) (*Model, error) {
 		return nil, err
 	}
 
-	return result, nil
+	return result.ToJson(), nil
 }
 
 /**
-* Describe: Describes the model
+* describeUser: Describes the user
 * @param describe et.Json
 * @return et.Json, error
 **/
-func (s *DB) Describe(describe et.Json) (et.Json, error) {
+func (s *DB) describeUser(describe et.Json) (et.Json, error) {
+	name := describe.Str("name")
+	if !utility.ValidStr(name, 1, []string{}) {
+		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "name")
+	}
+
+	user, err := s.getUser(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return user.ToJson(), nil
+}
+
+/**
+* describeSchema: Describes the schema
+* @param describe et.Json
+* @return et.Json, error
+**/
+func (s *DB) describeSchema(describe et.Json) (et.Json, error) {
+	return et.Json{}, nil
+}
+
+/**
+* describeModel: Describes the model
+* @param describe et.Json
+* @return et.Json, error
+**/
+func (s *DB) describeModel(describe et.Json) (et.Json, error) {
 	schema := describe.Str("schema")
 	if !utility.ValidStr(schema, 1, []string{}) {
 		return nil, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
