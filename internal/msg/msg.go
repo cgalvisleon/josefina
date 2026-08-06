@@ -109,6 +109,9 @@ var (
 	MSG_DATABASE_IS_REQUIRED       = "database is required"
 	MSG_USERNAME_IS_REQUIRED       = "username is required"
 	MSG_PASSWORD_IS_REQUIRED       = "password is required"
+	MSG_FILE_NOT_FOUND             = "file not found"
+	MSG_LIMIT_SIZE_EXCEEDED        = "limit size exceeded"
+	MSG_NOT_UPLOAD_FILE            = "not upload file (%s)"
 )
 
 func init() {
@@ -202,5 +205,8 @@ func init() {
 		MSG_DATABASE_IS_REQUIRED = "database es requerido"
 		MSG_USERNAME_IS_REQUIRED = "username es requerido"
 		MSG_PASSWORD_IS_REQUIRED = "password es requerido"
+		MSG_FILE_NOT_FOUND = "file no encontrado"
+		MSG_LIMIT_SIZE_EXCEEDED = "limite de tamaño excedido"
+		MSG_NOT_UPLOAD_FILE = "no se pudo subir el archivo (%s)"
 	}
 }

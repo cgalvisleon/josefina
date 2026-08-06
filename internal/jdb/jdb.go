@@ -266,3 +266,21 @@ func JCommand(command et.Json) (et.Items, error) {
 
 	return result, nil
 }
+
+/**
+* JUploadXls: Uploads an XLS file
+* @param params et.Json
+* @return et.Items, error
+**/
+func JUploadXls(params et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(params, server.jUploadXls)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}

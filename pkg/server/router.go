@@ -9,6 +9,7 @@ import (
 	"github.com/cgalvisleon/et/response"
 	"github.com/cgalvisleon/et/router"
 	"github.com/josefina/internal/jdb"
+	"github.com/josefina/internal/msg"
 )
 
 type Router struct {
@@ -42,6 +43,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Public(router.POST, "/system", api.system)
 	api.Public(router.POST, "/query", api.query)
 	api.Public(router.POST, "/command", api.command)
+	api.Public(router.POST, "/uploadXls", api.uploadXls)
 
 	api.init()
 
@@ -226,6 +228,51 @@ func (s *Router) command(w http.ResponseWriter, r *http.Request) {
 
 	body.Set("token", token)
 	result, err := jdb.JCommand(body)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
+* uploadXls
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) uploadXls(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	msxLimitSize := envar.GetInt64("MSX_LIMIT_SIZE", 128<<20)
+	err = r.ParseMultipartForm(msxLimitSize) // Limitar el tamaño a 64 MB
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, "Unable to parse form")
+		return
+	}
+
+	fileData, _, err := r.FormFile("file")
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, msg.MSG_FILE_NOT_FOUND)
+		return
+	}
+	defer fileData.Close()
+
+	params := et.Json{
+		"token":   token,
+		"file":    fileData,
+		"sheet":   r.FormValue("sheet"),
+		"idField": r.FormValue("idField"),
+		"schema":  r.FormValue("schema"),
+		"model":   r.FormValue("model"),
+		"atribs":  r.FormValue("atribs"),
+	}
+
+	result, err := jdb.JUploadXls(params)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
