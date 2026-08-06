@@ -534,3 +534,43 @@ func (s *Server) jUploadXls(params et.Json) (et.Items, error) {
 
 	return result, nil
 }
+
+/**
+* jUploadCsv: Uploads a CSV file
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *Server) jUploadCsv(params et.Json) (et.Items, error) {
+	token := params.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	session, err := s.getSession(token)
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
+		return et.Items{}, err
+	}
+
+	reader, ok := params["reader"].(io.Reader)
+	if !ok {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "reader")
+	}
+
+	idField := params.Str("idField")
+	schema := params.Str("schema")
+	nameModel := params.Str("model")
+	atribs := params.MapStr("atribs")
+	comma := rune(0)
+	if s := params.Str("comma"); s != "" {
+		comma = rune(s[0])
+	}
+	db := session.DB
+	result, err := db.jUploadCsv(reader, idField, schema, nameModel, comma, atribs)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}

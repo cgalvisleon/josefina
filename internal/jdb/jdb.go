@@ -284,3 +284,21 @@ func JUploadXls(params et.Json) (et.Items, error) {
 
 	return result, nil
 }
+
+/**
+* JUploadCsv: Uploads a CSV file
+* @param params et.Json
+* @return et.Items, error
+**/
+func JUploadCsv(params et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(params, server.jUploadCsv)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}

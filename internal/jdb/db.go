@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/csv"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/xls"
@@ -867,6 +868,11 @@ func (s *DB) jCommand(params et.Json) (et.Items, error) {
 	return result, nil
 }
 
+/**
+* jUploadXls: Uploads a XLS file, inserting one document per row into the target model.
+* @param reader io.Reader, nameSheet string, idField string, schema string, nameModel string, atribs map[string]string
+* @return et.Items, error
+**/
 func (s *DB) jUploadXls(reader io.Reader, nameSheet, idField, schema, nameModel string, atribs map[string]string) (et.Items, error) {
 	if !utility.ValidStr(nameSheet, 1, []string{}) {
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameSheet")
@@ -925,6 +931,99 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, idField, schema, nameModel 
 		item := et.Json{}
 		for _, col := range selected {
 			idx := xls.IndexOf(headers, col)
+			if idx == -1 || idx >= len(row) {
+				continue
+			}
+			if tf == 0 {
+				item[col] = row[idx]
+			} else {
+				atrb, exists := atribs[col]
+				if exists {
+					item[atrb] = row[idx]
+				}
+			}
+		}
+
+		_, err = model.
+			Insert(item).
+			Exec()
+		if err != nil {
+			return et.Items{}, err
+		}
+
+		n++
+	}
+
+	return et.Items{
+		Ok:    true,
+		Count: 1,
+		Result: []et.Json{
+			{
+				"message": fmt.Sprintf("Uploaded %d rows", n),
+			},
+		},
+	}, nil
+}
+
+/**
+* jUploadCsv: Uploads a CSV file, inserting one document per row into the target model.
+* @param reader io.Reader, idField string, schema string, nameModel string, comma rune, atribs map[string]string
+* @return et.Items, error
+**/
+func (s *DB) jUploadCsv(reader io.Reader, idField, schema, nameModel string, comma rune, atribs map[string]string) (et.Items, error) {
+	if !utility.ValidStr(idField, 1, []string{}) {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "idField")
+	}
+
+	if !utility.ValidStr(schema, 1, []string{}) {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "schema")
+	}
+
+	if !utility.ValidStr(nameModel, 1, []string{}) {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameModel")
+	}
+
+	model, err := s.GetModel(schema, nameModel)
+	if err != nil {
+		return et.Items{}, err
+	}
+	err = model.DefinePrimaryKeys(idField)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	bt, err := io.ReadAll(reader)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	csvFile, err := csv.ReadCsv(bt, comma)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	rows, err := csvFile.GetRows()
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	columns := []string{}
+	for column := range atribs {
+		columns = append(columns, column)
+	}
+
+	headers := rows[0]
+	selected := columns
+	if len(selected) == 0 {
+		selected = headers
+	}
+
+	n := 0
+	tf := len(atribs)
+	for _, row := range rows[1:] {
+		item := et.Json{}
+		for _, col := range selected {
+			idx := csv.IndexOf(headers, col)
 			if idx == -1 || idx >= len(row) {
 				continue
 			}
