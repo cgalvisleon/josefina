@@ -3,6 +3,7 @@ package jdb
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -490,6 +491,43 @@ func (s *Server) jCommand(command et.Json) (et.Items, error) {
 
 	db := session.DB
 	result, err := db.jCommand(command)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}
+
+/**
+* jUploadXls: Uploads an XLS file
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *Server) jUploadXls(params et.Json) (et.Items, error) {
+	token := params.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	session, err := s.getSession(token)
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
+		return et.Items{}, err
+	}
+
+	reader, ok := params["reader"].(io.Reader)
+	if !ok {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "reader")
+	}
+
+	nameSheet := params.Str("sheet")
+	idField := params.Str("idField")
+	schema := params.Str("schema")
+	nameModel := params.Str("model")
+	atribs := params.MapStr("atribs")
+	db := session.DB
+	result, err := db.jUploadXls(reader, nameSheet, idField, schema, nameModel, atribs)
 	if err != nil {
 		return et.Items{}, err
 	}
