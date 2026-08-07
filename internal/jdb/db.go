@@ -271,6 +271,34 @@ func (s *DB) GetModel(schema, name string) (*Model, error) {
 }
 
 /**
+* LoadModel: Loads a model
+* @param schema, name string
+* @return *Model, error
+**/
+func (s *DB) LoadModel(schema, name string) (*Model, error) {
+	sch, exists := s.getSchema(schema)
+	if !exists {
+		var err error
+		sch, err = s.newSchema(schema)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	result, exists := sch.getModel(name)
+	if exists {
+		return result, nil
+	}
+
+	result, err := sch.newModel(name, 1, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/**
 * DeleteModel: Deletes a model
 * @param schema, name string
 * @return error
@@ -902,13 +930,20 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField, schema, nameModel
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameModel")
 	}
 
-	model, err := s.GetModel(schema, nameModel)
+	model, err := s.LoadModel(schema, nameModel)
 	if err != nil {
 		return et.Items{}, err
 	}
 	err = model.DefinePrimaryKeys(keyField)
 	if err != nil {
 		return et.Items{}, err
+	}
+
+	if model.isChangue {
+		err = model.Save()
+		if err != nil {
+			return et.Items{}, err
+		}
 	}
 
 	bt, err := io.ReadAll(reader)

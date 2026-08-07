@@ -65,6 +65,7 @@ type Model struct {
 	onPut         []TriggerFnBt               `json:"-"`              // On put
 	onRemove      []TriggerFnBt               `json:"-"`              // On remove
 	isDebug       bool                        `json:"-"`              // Is debug
+	isChangue     bool                        `json:"-"`              // Is changue
 }
 
 /**

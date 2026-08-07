@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/josefina/internal/msg"
 )
 
@@ -187,7 +188,20 @@ func (s *Command) AfterDeletes(trigger *Trigger) *Command {
 * @return []et.Json, error
 **/
 func (s *Command) insert() ([]et.Json, error) {
-	return []et.Json{}, nil
+	result := []et.Json{}
+	for _, item := range s.items {
+		jid, ok := item[INDEX].(string)
+		if !ok {
+			jid = reg.ULID()
+		}
+		item[INDEX] = jid
+		err := s.model.insert(jid, item)
+		if err != nil {
+			return []et.Json{}, err
+		}
+		result = append(result, item)
+	}
+	return result, nil
 }
 
 /**

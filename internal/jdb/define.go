@@ -268,6 +268,7 @@ func (s *Model) DefinePrimaryKeys(fields ...string) error {
 			s.PrimaryKeys = append(s.PrimaryKeys, field)
 			s.DefineRequired(field)
 			s.DefineUnique(field)
+			s.isChangue = true
 		}
 	}
 	return nil
