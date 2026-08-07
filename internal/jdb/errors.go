@@ -29,7 +29,7 @@ func (s *Error) ToJson() et.Json {
 
 type Errors struct {
 	errors map[string]*Error
-	mu     *sync.RWMutex
+	mu     sync.RWMutex
 	store  *Model
 }
 
@@ -46,7 +46,6 @@ func (s *DB) loadErrors() (*Errors, error) {
 
 	return &Errors{
 		errors: make(map[string]*Error),
-		mu:     &sync.RWMutex{},
 		store:  store,
 	}, nil
 }

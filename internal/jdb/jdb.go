@@ -4,14 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"sync"
 
 	"github.com/cgalvisleon/et/cache"
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/event"
 	"github.com/josefina/internal/msg"
-	"github.com/josefina/internal/store"
 )
 
 /**
@@ -43,13 +41,12 @@ func Load() (*Server, error) {
 		PathWal:       envar.GetStr("DB_PATH_WAL", "./data/wal"),
 		PathSystem:    envar.GetStr("DB_PATH_SYSTEM", "./data/system"),
 		dbs:           make(map[string]*DB),
-		mu:            &sync.RWMutex{},
 		request:       make(chan *Request, pool*4),
 		pool:          pool,
 	}
 	server.runWorkers()
 
-	server.store, err = store.Open(server.PathSystem, server.PathSystem, "system", store.ReadWrite)
+	err = server.loadStore()
 	if err != nil {
 		return nil, err
 	}

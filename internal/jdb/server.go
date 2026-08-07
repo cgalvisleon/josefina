@@ -46,7 +46,7 @@ type Server struct {
 	PathWal       string           `json:"path_wal"`
 	PathSystem    string           `json:"path_system"`
 	dbs           map[string]*DB   `json:"-"`
-	mu            *sync.RWMutex    `json:"-"`
+	mu            sync.RWMutex     `json:"-"`
 	store         *store.FileStore `json:"-"`
 	sessions      *Sessions        `json:"-"` // Sessions
 	request       chan *Request    `json:"-"` // Queue where all executions arrive
@@ -79,6 +79,20 @@ func (s *Server) Exec(params et.Json, fn func(params et.Json) (et.Items, error))
 	s.request <- req
 	res := <-req.result
 	return res.Items, res.Err
+}
+
+/**
+* loadStore: Loads the store
+* @return error
+**/
+func (s *Server) loadStore() error {
+	var err error
+	s.store, err = store.Open(s.PathSystem, s.PathSystem, "system", store.ReadWrite)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -162,11 +176,9 @@ func (s *Server) newDb(name string) (*DB, error) {
 		Version:             s.Version,
 		server:              s,
 		schemas:             make(map[string]*Schema, 0),
-		mu:                  &sync.RWMutex{},
 	}
 
-	var err error
-	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)
+	err := result.loadStore()
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +241,6 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		Version:             params.Str("version"),
 		server:              s,
 		schemas:             make(map[string]*Schema, 0),
-		mu:                  &sync.RWMutex{},
 	}
 
 	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)

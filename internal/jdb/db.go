@@ -33,7 +33,7 @@ type DB struct {
 	isInit              bool               `json:"-"`                     // Is initialized
 	server              *Server            `json:"-"`                     // Server
 	schemas             map[string]*Schema `json:"-"`                     // Schemas
-	mu                  *sync.RWMutex      `json:"-"`                     // Mutex
+	mu                  sync.RWMutex       `json:"-"`                     // Mutex
 	store               *Model             `json:"-"`                     // Store
 	cache               *Cache             `json:"-"`                     // Cache
 	users               *Users             `json:"-"`                     // Users
@@ -51,7 +51,6 @@ func (s *DB) newSchema(name string) (*Schema, error) {
 		Name:     name,
 		models:   make(map[string]*Model),
 		db:       s,
-		mu:       &sync.RWMutex{},
 	}
 	err := s.addSchema(result)
 	if err != nil {
@@ -84,6 +83,19 @@ func (s *DB) ToJson() et.Json {
 		"version":               s.Version,
 		"schemas":               schemas,
 	}
+}
+
+/**
+* loadStore: Loads the store
+* @return error
+**/
+func (s *DB) loadStore() error {
+	var err error
+	s.store, err = s.loadModel(sysSchema, sysCatalog, 1, true)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /**

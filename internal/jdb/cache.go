@@ -8,7 +8,7 @@ import (
 
 type Cache struct {
 	cache map[string]*Ttl
-	mu    *sync.RWMutex
+	mu    sync.RWMutex
 	store *Model
 }
 
@@ -24,7 +24,6 @@ func (s *DB) loadCache() error {
 
 	result := &Cache{
 		cache: make(map[string]*Ttl),
-		mu:    &sync.RWMutex{},
 		store: store,
 	}
 

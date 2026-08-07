@@ -94,7 +94,7 @@ func (s *Session) GetExpiresAt() time.Time {
 
 type Sessions struct {
 	sessions map[string]*Session
-	mu       *sync.RWMutex
+	mu       sync.RWMutex
 	store    *store.FileStore
 }
 
@@ -219,7 +219,6 @@ func (s *Server) loadSessions() error {
 
 	result := &Sessions{
 		sessions: make(map[string]*Session),
-		mu:       &sync.RWMutex{},
 		store:    store,
 	}
 

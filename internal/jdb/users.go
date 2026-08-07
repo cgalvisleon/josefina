@@ -31,7 +31,7 @@ func (s *User) ToJson() et.Json {
 
 type Users struct {
 	users map[string]*User
-	mu    *sync.RWMutex
+	mu    sync.RWMutex
 	store *Model
 }
 
@@ -145,7 +145,6 @@ func (s *DB) loadUsers() error {
 
 	result := &Users{
 		users: make(map[string]*User),
-		mu:    &sync.RWMutex{},
 		store: store,
 	}
 
