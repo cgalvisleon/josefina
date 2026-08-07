@@ -59,7 +59,7 @@ type Model struct {
 	IsInit        bool                        `json:"-"`              // Is initialized
 	schema        *Schema                     `json:"-"`              // Schema
 	db            *DB                         `json:"-"`              // Database
-	mu            map[string]sync.RWMutex     `json:"-"`              // Mutex
+	mu            map[string]*sync.RWMutex    `json:"-"`              // Mutex
 	stores        map[string]*store.FileStore `json:"-"`              // Stores
 	btrees        map[string]*BTree           `json:"-"`              // Secondary indexes (B+ tree, self-persisting)
 	onPut         []TriggerFnBt               `json:"-"`              // On put
@@ -113,15 +113,15 @@ func (s *Model) ToJson() et.Json {
 /**
 * getMutex: Returns the mutex for name
 * @param name string
-* @return sync.RWMutex
+* @return *sync.RWMutex
 **/
-func (s *Model) getMutex(name string) sync.RWMutex {
+func (s *Model) getMutex(name string) *sync.RWMutex {
 	result, exists := s.mu[name]
 	if !exists {
-		result = sync.RWMutex{}
+		result = &sync.RWMutex{}
 		s.mu[name] = result
 	}
-	return s.mu[name]
+	return result
 }
 
 /*

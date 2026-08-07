@@ -66,7 +66,7 @@ func (s *Schema) newModel(name string, version int, isCore bool) (*Model, error)
 		IsChangue:     false,
 		schema:        s,
 		db:            s.db,
-		mu:            map[string]sync.RWMutex{},
+		mu:            make(map[string]*sync.RWMutex, 0),
 		stores:        make(map[string]*store.FileStore, 0),
 		btrees:        make(map[string]*BTree, 0),
 		onPut:         make([]TriggerFnBt, 0),
@@ -108,7 +108,7 @@ func (s *Schema) loadModel(def et.Json) (*Model, error) {
 
 	result.db = s.db
 	result.schema = s
-	result.mu = map[string]sync.RWMutex{}
+	result.mu = make(map[string]*sync.RWMutex, 0)
 	result.stores = make(map[string]*store.FileStore, 0)
 	result.btrees = make(map[string]*BTree, 0)
 	result.onPut = make([]TriggerFnBt, 0)
