@@ -113,6 +113,7 @@ var (
 	MSG_LIMIT_SIZE_EXCEEDED        = "limit size exceeded"
 	MSG_NOT_UPLOAD_FILE            = "not upload file (%s)"
 	MSG_DRIVER_NOT_SUPPORTED       = "driver not supported (%s)"
+	MSG_INVALID_COMMAND            = "invalid command (%s)"
 )
 
 func init() {
@@ -210,5 +211,6 @@ func init() {
 		MSG_LIMIT_SIZE_EXCEEDED = "limite de tamaño excedido"
 		MSG_NOT_UPLOAD_FILE = "no se pudo subir el archivo (%s)"
 		MSG_DRIVER_NOT_SUPPORTED = "driver no soportado (%s)"
+		MSG_INVALID_COMMAND = "command inválido (%s)"
 	}
 }

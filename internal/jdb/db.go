@@ -882,16 +882,16 @@ func (s *DB) jCommand(params et.Json) (et.Items, error) {
 
 /**
 * jUploadXls: Uploads a XLS file, inserting one document per row into the target model.
-* @param reader io.Reader, nameSheet string, idField string, schema string, nameModel string, atribs map[string]string
+* @param reader io.Reader, nameSheet , keyField, schema string, nameModel string, atribs map[string]string
 * @return et.Items, error
 **/
-func (s *DB) jUploadXls(reader io.Reader, nameSheet, idField, schema, nameModel string, atribs map[string]string) (et.Items, error) {
+func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField, schema, nameModel string, atribs map[string]string) (et.Items, error) {
 	if !utility.ValidStr(nameSheet, 1, []string{}) {
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameSheet")
 	}
 
-	if !utility.ValidStr(idField, 1, []string{}) {
-		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "idField")
+	if !utility.ValidStr(keyField, 1, []string{}) {
+		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "keyField")
 	}
 
 	if !utility.ValidStr(schema, 1, []string{}) {
@@ -906,7 +906,7 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, idField, schema, nameModel 
 	if err != nil {
 		return et.Items{}, err
 	}
-	err = model.DefinePrimaryKeys(idField)
+	err = model.DefinePrimaryKeys(keyField)
 	if err != nil {
 		return et.Items{}, err
 	}

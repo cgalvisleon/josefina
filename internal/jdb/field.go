@@ -101,7 +101,7 @@ func (s *Ttl) GetExpiresAt() time.Time {
 
 const (
 	ID         string = "id"
-	INDEX      string = "idx"
+	INDEX      string = "jid"
 	STATUS     string = "status"
 	VERSION    string = "version"
 	CREATED_AT string = "created_at"

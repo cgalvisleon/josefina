@@ -1,7 +1,10 @@
 package jdb
 
 import (
+	"fmt"
+
 	"github.com/cgalvisleon/et/et"
+	"github.com/josefina/internal/msg"
 )
 
 /**
@@ -180,12 +183,63 @@ func (s *Command) AfterDeletes(trigger *Trigger) *Command {
 }
 
 /**
+* insert
+* @return []et.Json, error
+**/
+func (s *Command) insert() ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+/**
+* update
+* @return []et.Json, error
+**/
+func (s *Command) update() ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+/**
+* delete
+* @return []et.Json, error
+**/
+func (s *Command) delete() ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+/**
+* upsert
+* @return []et.Json, error
+**/
+func (s *Command) upsert() ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+/**
+* bulk
+* @return []et.Json, error
+**/
+func (s *Command) bulk() ([]et.Json, error) {
+	return []et.Json{}, nil
+}
+
+/**
 * Exec
 * @return []et.Json, error
 **/
 func (s *Command) Exec() ([]et.Json, error) {
-	result := []et.Json{}
-	return result, nil
+	switch s.command {
+	case INSERT:
+		return s.insert()
+	case UPDATE:
+		return s.update()
+	case DELETE:
+		return s.delete()
+	case UPSERT:
+		return s.upsert()
+	case BULK:
+		return s.bulk()
+	}
+	return []et.Json{}, fmt.Errorf(msg.MSG_INVALID_COMMAND, s.command)
 }
 
 /**

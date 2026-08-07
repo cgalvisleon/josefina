@@ -265,13 +265,13 @@ func (s *Router) uploadXls(w http.ResponseWriter, r *http.Request) {
 	defer fileData.Close()
 
 	params := et.Json{
-		"token":   token,
-		"file":    fileData,
-		"sheet":   r.FormValue("sheet"),
-		"idField": r.FormValue("idField"),
-		"schema":  r.FormValue("schema"),
-		"model":   r.FormValue("model"),
-		"atribs":  r.FormValue("atribs"),
+		"token":    token,
+		"reader":   fileData,
+		"sheet":    r.FormValue("sheet"),
+		"keyField": r.FormValue("keyField"),
+		"schema":   r.FormValue("schema"),
+		"model":    r.FormValue("model"),
+		"atribs":   r.FormValue("atribs"),
 	}
 
 	result, err := jdb.JUploadXls(params)
