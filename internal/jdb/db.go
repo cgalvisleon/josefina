@@ -40,26 +40,6 @@ type DB struct {
 }
 
 /**
-* newSchema: Creates a new schema
-* @param name string
-* @return *Schema, error
-**/
-func (s *DB) newSchema(name string) (*Schema, error) {
-	name = store.Normalize(name)
-	result := &Schema{
-		Database: s.Name,
-		Name:     name,
-		models:   make(map[string]*Model),
-		db:       s,
-	}
-	err := s.addSchema(result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-/**
 * ToJson
 * @return et.Json, error
 **/
@@ -127,6 +107,26 @@ func (s *DB) init() error {
 
 	s.isInit = true
 	return nil
+}
+
+/**
+* newSchema: Creates a new schema
+* @param name string
+* @return *Schema, error
+**/
+func (s *DB) newSchema(name string) (*Schema, error) {
+	name = store.Normalize(name)
+	result := &Schema{
+		Database: s.Name,
+		Name:     name,
+		models:   make(map[string]*Model),
+		db:       s,
+	}
+	err := s.addSchema(result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 /**

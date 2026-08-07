@@ -243,7 +243,7 @@ func (s *Server) loadDb(name string) (*DB, error) {
 		schemas:             make(map[string]*Schema, 0),
 	}
 
-	result.store, err = result.loadModel(sysSchema, sysCatalog, 1, true)
+	err = result.loadStore()
 	if err != nil {
 		return nil, err
 	}
