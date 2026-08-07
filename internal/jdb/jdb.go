@@ -302,3 +302,21 @@ func JUploadCsv(params et.Json) (et.Items, error) {
 
 	return result, nil
 }
+
+/**
+* JUploadDb: Imports a table from an external Postgres, MySQL, SQLite, Oracle or SQL Server data source
+* @param params et.Json
+* @return et.Items, error
+**/
+func JUploadDb(params et.Json) (et.Items, error) {
+	if server == nil {
+		return et.Items{}, errors.New(msg.MSG_SERVER_NOT_LOADED)
+	}
+
+	result, err := server.Exec(params, server.jUploadDb)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}

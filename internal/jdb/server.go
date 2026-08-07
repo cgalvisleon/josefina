@@ -574,3 +574,43 @@ func (s *Server) jUploadCsv(params et.Json) (et.Items, error) {
 
 	return result, nil
 }
+
+/**
+* jUploadDb: Imports a table from an external Postgres, MySQL, SQLite, Oracle or SQL Server data source
+* @param params et.Json
+* @return et.Items, error
+**/
+func (s *Server) jUploadDb(params et.Json) (et.Items, error) {
+	token := params.Str("token")
+	if token == "" {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	session, err := s.getSession(token)
+	if errors.Is(err, ErrorSessionNotFound) {
+		return et.Items{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	} else if err != nil {
+		return et.Items{}, err
+	}
+
+	driver := params.Str("driver")
+	host := params.Str("host")
+	port := params.Int("port")
+	user := params.Str("user")
+	password := params.Str("password")
+	database := params.Str("database")
+	sslmode := params.Str("sslmode")
+	table := params.Str("table")
+	fields := params.ArrayStr("fields")
+	idField := params.Str("idField")
+	schema := params.Str("schema")
+	nameModel := params.Str("model")
+	atribs := params.MapStr("atribs")
+	db := session.DB
+	result, err := db.jUploadDb(driver, host, port, user, password, database, sslmode, table, fields, idField, schema, nameModel, atribs)
+	if err != nil {
+		return et.Items{}, err
+	}
+
+	return result, nil
+}

@@ -112,6 +112,7 @@ var (
 	MSG_FILE_NOT_FOUND             = "file not found"
 	MSG_LIMIT_SIZE_EXCEEDED        = "limit size exceeded"
 	MSG_NOT_UPLOAD_FILE            = "not upload file (%s)"
+	MSG_DRIVER_NOT_SUPPORTED       = "driver not supported (%s)"
 )
 
 func init() {
@@ -208,5 +209,6 @@ func init() {
 		MSG_FILE_NOT_FOUND = "file no encontrado"
 		MSG_LIMIT_SIZE_EXCEEDED = "limite de tamaño excedido"
 		MSG_NOT_UPLOAD_FILE = "no se pudo subir el archivo (%s)"
+		MSG_DRIVER_NOT_SUPPORTED = "driver no soportado (%s)"
 	}
 }

@@ -45,6 +45,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 	api.Public(router.POST, "/command", api.command)
 	api.Public(router.POST, "/uploadXls", api.uploadXls)
 	api.Public(router.POST, "/uploadCsv", api.uploadCsv)
+	api.Public(router.POST, "/uploadDb", api.uploadDb)
 
 	api.init()
 
@@ -319,6 +320,34 @@ func (s *Router) uploadCsv(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := jdb.JUploadCsv(params)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEMS(w, r, http.StatusOK, result)
+}
+
+/**
+* uploadDb
+* @param w http.ResponseWriter
+* @param r *http.Request
+**/
+func (s *Router) uploadDb(w http.ResponseWriter, r *http.Request) {
+	token, err := GetBearerToken(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	body, err := response.GetBody(r)
+	if err != nil {
+		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	body.Set("token", token)
+	result, err := jdb.JUploadDb(body)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
 		return
