@@ -910,10 +910,10 @@ func (s *DB) jCommand(params et.Json) (et.Items, error) {
 
 /**
 * jUploadXls: Uploads a XLS file, inserting one document per row into the target model.
-* @param reader io.Reader, nameSheet , keyField, schema string, nameModel string, atribs map[string]string
+* @param reader io.Reader, nameSheet , keyField string, typeData TypeData, schema string, nameModel string, atribs map[string]string
 * @return et.Items, error
 **/
-func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField, schema, nameModel string, atribs map[string]string) (et.Items, error) {
+func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField string, typeData TypeData, schema, nameModel string, atribs map[string]string) (et.Items, error) {
 	if !utility.ValidStr(nameSheet, 1, []string{}) {
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameSheet")
 	}
@@ -934,6 +934,12 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField, schema, nameModel
 	if err != nil {
 		return et.Items{}, err
 	}
+
+	_, err = model.DefineField(keyField, typeData, typeData.Default())
+	if err != nil {
+		return et.Items{}, err
+	}
+
 	err = model.DefinePrimaryKeys(keyField)
 	if err != nil {
 		return et.Items{}, err

@@ -269,6 +269,7 @@ func (s *Router) uploadXls(w http.ResponseWriter, r *http.Request) {
 		"reader":   fileData,
 		"sheet":    r.FormValue("sheet"),
 		"keyField": r.FormValue("keyField"),
+		"typeData": r.FormValue("typeData"),
 		"schema":   r.FormValue("schema"),
 		"model":    r.FormValue("model"),
 		"atribs":   r.FormValue("atribs"),

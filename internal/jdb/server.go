@@ -534,11 +534,17 @@ func (s *Server) jUploadXls(params et.Json) (et.Items, error) {
 
 	nameSheet := params.Str("sheet")
 	keyField := params.Str("keyField")
+	tpData := params.Str("typeData")
+	typeData, ok := GetTypeData(tpData)
+	if !ok {
+		return et.Items{}, fmt.Errorf(msg.MSG_INVALID_TYPE_DATA, tpData)
+	}
+
 	schema := params.Str("schema")
 	nameModel := params.Str("model")
 	atribs := params.MapStr("atribs")
 	db := session.DB
-	result, err := db.jUploadXls(reader, nameSheet, keyField, schema, nameModel, atribs)
+	result, err := db.jUploadXls(reader, nameSheet, keyField, typeData, schema, nameModel, atribs)
 	if err != nil {
 		return et.Items{}, err
 	}

@@ -114,6 +114,7 @@ var (
 	MSG_NOT_UPLOAD_FILE            = "not upload file (%s)"
 	MSG_DRIVER_NOT_SUPPORTED       = "driver not supported (%s)"
 	MSG_INVALID_COMMAND            = "invalid command (%s)"
+	MSG_INVALID_TYPE_DATA          = "invalid type data (%s)"
 )
 
 func init() {
@@ -212,5 +213,6 @@ func init() {
 		MSG_NOT_UPLOAD_FILE = "no se pudo subir el archivo (%s)"
 		MSG_DRIVER_NOT_SUPPORTED = "driver no soportado (%s)"
 		MSG_INVALID_COMMAND = "command inválido (%s)"
+		MSG_INVALID_TYPE_DATA = "tipo de data inválido (%s)"
 	}
 }

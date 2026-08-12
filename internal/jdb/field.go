@@ -143,6 +143,42 @@ func (s TypeData) Str() string {
 	return string(s)
 }
 
+/**
+* Default: Returns the default value of the TypeData.
+* @return interface{}
+**/
+func (s TypeData) Default() interface{} {
+	switch s {
+	case TpAny:
+		return "	"
+	case TpBytes:
+		return []byte{}
+	case TpInt:
+		return 0
+	case TpFloat:
+		return 0.0
+	case TpAutoIncrement:
+		return 0
+	case TpKey:
+		return ""
+	case TpText:
+		return ""
+	case TpMemo:
+		return ""
+	case TpDateTime:
+		return time.Now()
+	case TpBoolean:
+		return false
+	case TpJson:
+		return et.Json{}
+	case TpArrayJson:
+		return []et.Json{}
+	case TpReference:
+		return ""
+	}
+	return nil
+}
+
 const (
 	TpAny           TypeData = "any"
 	TpBytes         TypeData = "bytes"
@@ -158,6 +194,34 @@ const (
 	TpArrayJson     TypeData = "array_json"
 	TpReference     TypeData = "reference"
 )
+
+/**
+* GetTypeData: Returns the TypeData for the given string.
+* @param tp string
+* @return TypeData, bool
+**/
+func GetTypeData(tp string) (TypeData, bool) {
+	types := map[string]TypeData{
+		"any":            TpAny,
+		"bytes":          TpBytes,
+		"int":            TpInt,
+		"float":          TpFloat,
+		"auto_increment": TpAutoIncrement,
+		"key":            TpKey,
+		"text":           TpText,
+		"memo":           TpMemo,
+		"datetime":       TpDateTime,
+		"boolean":        TpBoolean,
+		"json":           TpJson,
+		"array_json":     TpArrayJson,
+		"reference":      TpReference,
+	}
+	result, ok := types[tp]
+	if !ok {
+		return TpAny, false
+	}
+	return result, true
+}
 
 /**
 * TpIndex: Identifies the index implementation (hash or btree).
