@@ -116,6 +116,7 @@ var (
 	MSG_INVALID_COMMAND            = "invalid command (%s)"
 	MSG_INVALID_TYPE_DATA          = "invalid type data (%s)"
 	MSG_BTREE_ALREADY_EXISTS       = "btree already exists"
+	MSG_SERIE_NOT_FOUND            = "serie not found"
 )
 
 func init() {
@@ -216,5 +217,6 @@ func init() {
 		MSG_INVALID_COMMAND = "command inválido (%s)"
 		MSG_INVALID_TYPE_DATA = "tipo de data inválido (%s)"
 		MSG_BTREE_ALREADY_EXISTS = "btree ya existe"
+		MSG_SERIE_NOT_FOUND = "serie no encontrada"
 	}
 }

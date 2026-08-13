@@ -88,7 +88,7 @@ func (s *Ttl) IsExpired() bool {
 	if s.Duration == 0 {
 		return false
 	}
-	return time.Now().After(s.CreatedAt.Add(s.Duration))
+	return timezone.Now().After(s.CreatedAt.Add(s.Duration))
 }
 
 /**
@@ -166,7 +166,7 @@ func (s TypeData) Default() interface{} {
 	case TpMemo:
 		return ""
 	case TpDateTime:
-		return time.Now()
+		return timezone.Now()
 	case TpBoolean:
 		return false
 	case TpJson:

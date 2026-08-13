@@ -8,6 +8,7 @@ import (
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
+	"github.com/cgalvisleon/et/timezone"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/josefina/internal/msg"
 )
@@ -70,7 +71,7 @@ func (s *Users) newUser(username, password string) (*User, error) {
 		return nil, err
 	}
 
-	now := time.Now()
+	now := timezone.Now()
 	result := &User{
 		CreatedAt: now,
 		UpdatedAt: now,

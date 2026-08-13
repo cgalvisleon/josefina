@@ -81,7 +81,7 @@ func (s *Session) IsExpired() bool {
 	if s.Duration == 0 {
 		return false
 	}
-	return time.Now().After(s.CreatedAt.Add(s.Duration))
+	return timezone.Now().After(s.CreatedAt.Add(s.Duration))
 }
 
 /**
