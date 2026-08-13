@@ -338,6 +338,29 @@ func (s *Model) getBtree(field string) (*BTree, bool) {
 }
 
 /**
+* newBtree: Creates a new BTree
+* @param field string
+* @return *BTree, error
+**/
+func (s *Model) newBtree(field string) (*BTree, error) {
+	result, exists := s.getBtree(field)
+	if exists {
+		return nil, errors.New(msg.MSG_BTREE_ALREADY_EXISTS)
+	}
+
+	result, err := OpenBTree(s.PathData, s.PathWal, field)
+	if err != nil {
+		return nil, err
+	}
+
+	mu := s.getMutex("btrees")
+	mu.Lock()
+	s.btrees[field] = result
+	mu.Unlock()
+	return result, nil
+}
+
+/**
 * loadBTree returns the BTree for field, opening and loading it on first access.
 * @param field string
 * @return error
@@ -951,9 +974,9 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		return nil
 	}
 
-	bt, exists := s.getBtree(name)
-	if !exists {
-		return nil
+	bt, err := s.newBtree(name)
+	if err != nil {
+		return err
 	}
 
 	return s.ForEach(func(idx string, item et.Json) (bool, error) {

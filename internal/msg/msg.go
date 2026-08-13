@@ -115,6 +115,7 @@ var (
 	MSG_DRIVER_NOT_SUPPORTED       = "driver not supported (%s)"
 	MSG_INVALID_COMMAND            = "invalid command (%s)"
 	MSG_INVALID_TYPE_DATA          = "invalid type data (%s)"
+	MSG_BTREE_ALREADY_EXISTS       = "btree already exists"
 )
 
 func init() {
@@ -214,5 +215,6 @@ func init() {
 		MSG_DRIVER_NOT_SUPPORTED = "driver no soportado (%s)"
 		MSG_INVALID_COMMAND = "command inválido (%s)"
 		MSG_INVALID_TYPE_DATA = "tipo de data inválido (%s)"
+		MSG_BTREE_ALREADY_EXISTS = "btree ya existe"
 	}
 }
