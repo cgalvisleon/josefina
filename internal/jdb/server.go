@@ -574,7 +574,7 @@ func (s *Server) jUploadXls(params et.Json) (et.Items, error) {
 	nameModel := params.Str("model")
 	atribs := params.MapStr("atribs")
 	db := session.DB
-	result, err := db.jUploadXls(reader, nameSheet, keyField, typeData, schema, nameModel, atribs)
+	result, err := db.jUploadXls(reader, nameSheet, keyField, typeData, schema, nameModel, atribs, session.Name)
 	if err != nil {
 		return et.Items{}, err
 	}

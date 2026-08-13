@@ -281,7 +281,13 @@ func (s *Router) uploadXls(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.ITEMS(w, r, http.StatusOK, result)
+	item, err := result.First()
+	if err != nil {
+		response.HTTPError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.ITEM(w, r, http.StatusOK, item)
 }
 
 /**

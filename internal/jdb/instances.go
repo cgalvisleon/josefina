@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
@@ -30,7 +31,12 @@ type Instance struct {
 	Description string         `json:"description"`
 	Ctx         et.Json        `json:"ctx"`
 	Params      et.Json        `json:"params"`
+	Error       string         `json:"error"`
+	Result      et.Json        `json:"result"`
 	Status      InstanceStatus `json:"status"`
+	AuditLog    []et.Json      `json:"audit_log"`
+	isChanged   bool           `json:"-"`
+	owner       *Instances     `json:"-"`
 }
 
 func (s *Instance) ToJson() et.Json {
@@ -44,8 +50,88 @@ func (s *Instance) ToJson() et.Json {
 		"description": s.Description,
 		"ctx":         s.Ctx,
 		"params":      s.Params,
+		"error":       s.Error,
+		"result":      s.Result,
 		"status":      s.Status,
+		"audit_log":   s.AuditLog,
 	}
+}
+
+/**
+* addAuditLog
+* @param sessionName string, action string
+**/
+func (s *Instance) addAuditLog(sessionName string, action string) {
+	if s.AuditLog == nil {
+		s.AuditLog = make([]et.Json, 0)
+	}
+
+	now := timezone.Now()
+	s.UpdatedAt = now
+	s.AuditLog = append(s.AuditLog, et.Json{
+		"created_at":   now,
+		"session_name": sessionName,
+		"action":       action,
+	})
+	maxAuditLog := envar.GetInt("MAX_AUDIT_LOG", 1000)
+	if len(s.AuditLog) > maxAuditLog {
+		s.AuditLog = s.AuditLog[len(s.AuditLog)-maxAuditLog:]
+	}
+	s.isChanged = true
+}
+
+/**
+* setStatus
+* @param status InstanceStatus
+**/
+func (s *Instance) setStatus(sessionName string, status InstanceStatus) {
+	s.Status = status
+	s.addAuditLog(sessionName, "set status to "+string(status))
+}
+
+/**
+* setParams
+* @param params et.Json
+**/
+func (s *Instance) setParams(sessionName string, params et.Json) {
+	for key, value := range params {
+		s.Params[key] = value
+	}
+	s.addAuditLog(sessionName, "set params to "+params.String())
+}
+
+/**
+* setError
+* @param error string
+**/
+func (s *Instance) setError(sessionName string, err error) {
+	s.Error = err.Error()
+	s.addAuditLog(sessionName, "set error to "+s.Error)
+}
+
+/**
+* setResult
+* @param result et.Json
+**/
+func (s *Instance) setResult(sessionName string, result et.Json) {
+	s.Result = result
+	s.addAuditLog(sessionName, "set result to "+result.String())
+}
+
+/**
+* save: Saves the instance to the database
+* @return error
+**/
+func (s *Instance) save() error {
+	if !s.isChanged {
+		return nil
+	}
+
+	if s.owner == nil {
+		return errors.New(msg.MSG_INSTANCE_DONT_HAVE_OWNER)
+	}
+
+	return s.owner.saveInstance(s)
 }
 
 type Instances struct {
@@ -60,23 +146,31 @@ type Instances struct {
 * @param title, description string, ctx et.Json
 * @return (*Instance, error)
 **/
-func (s *Instances) newInstance(title, description string, ctx et.Json) (*Instance, error) {
+func (s *Instances) newInstance(id, title, description string, ctx et.Json) (*Instance, error) {
 	now := timezone.Now()
 	code, err := s.db.incSerie("instance", "code")
 	if err != nil {
 		return nil, err
 	}
+
+	if id == "" {
+		id = reg.UUID()
+	}
+
 	result := &Instance{
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		DoneAt:      time.Time{},
-		ID:          reg.UUID(),
+		ID:          id,
 		Code:        code,
 		Title:       title,
 		Description: description,
 		Ctx:         ctx,
 		Params:      et.Json{},
+		Result:      et.Json{},
 		Status:      InstanceStatusPending,
+		AuditLog:    []et.Json{},
+		owner:       s,
 	}
 
 	err = s.saveInstance(result)
@@ -125,6 +219,8 @@ func (s *Instances) getInstance(id string) (*Instance, error) {
 		return nil, err
 	}
 
+	result.owner = s
+
 	if !exists {
 		return nil, errors.New(msg.MSG_INSTANCE_NOT_FOUND)
 	}
@@ -137,8 +233,12 @@ func (s *Instances) getInstance(id string) (*Instance, error) {
 * @return error
 **/
 func (s *DB) loadInstances() error {
-	store, err := s.loadModel(sysSchema, "instances", 1, true)
+	store, err := s.newModel(sysSchema, "instances", 1, true)
 	if err != nil {
+		return err
+	}
+
+	if err := store.Init(); err != nil {
 		return err
 	}
 
@@ -155,11 +255,11 @@ func (s *DB) loadInstances() error {
 
 /**
 * newInstance: Creates a new instance
-* @param title, description string, ctx et.Json
+* @param id, title, description string, ctx et.Json
 * @return (*Instance, error)
 **/
-func (s *DB) newInstance(title, description string, ctx et.Json) (*Instance, error) {
-	return s.instances.newInstance(title, description, ctx)
+func (s *DB) newInstance(id, title, description string, ctx et.Json) (*Instance, error) {
+	return s.instances.newInstance(id, title, description, ctx)
 }
 
 /**

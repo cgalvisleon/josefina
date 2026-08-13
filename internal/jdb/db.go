@@ -9,6 +9,7 @@ import (
 
 	"github.com/cgalvisleon/et/csv"
 	"github.com/cgalvisleon/et/et"
+	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/utility"
 	"github.com/cgalvisleon/et/xls"
 	"github.com/josefina/internal/msg"
@@ -912,10 +913,12 @@ func (s *DB) jCommand(params et.Json) (et.Items, error) {
 
 /**
 * jUploadXls: Uploads a XLS file, inserting one document per row into the target model.
-* @param reader io.Reader, nameSheet , keyField string, typeData TypeData, schema string, nameModel string, atribs map[string]string
+* @param reader io.Reader, nameSheet, keyField string, typeData TypeData, schema, nameModel string, atribs map[string]string, sessionName string
 * @return et.Items, error
 **/
-func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField string, typeData TypeData, schema, nameModel string, atribs map[string]string) (et.Items, error) {
+func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField string, typeData TypeData, schema, nameModel string, atribs map[string]string, sessionName string) (et.Items, error) {
+	serviceId := reg.UUID()
+
 	if !utility.ValidStr(nameSheet, 1, []string{}) {
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameSheet")
 	}
@@ -932,94 +935,131 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField string, typeData T
 		return et.Items{}, fmt.Errorf(msg.MSG_ARG_REQUIRED, "nameModel")
 	}
 
-	model, err := s.LoadModel(schema, nameModel)
-	if err != nil {
-		return et.Items{}, err
-	}
-
-	_, err = model.DefineField(keyField, typeData, typeData.Default())
-	if err != nil {
-		return et.Items{}, err
-	}
-
-	err = model.DefinePrimaryKeys(keyField)
-	if err != nil {
-		return et.Items{}, err
-	}
-
-	err = model.Init()
-	if err != nil {
-		return et.Items{}, err
-	}
-
-	if model.isChangue {
-		err = model.Save()
+	go func() {
+		instance, err := s.newInstance(serviceId, "Upload XLS", "Uploading XLS file", et.Json{
+			"nameSheet":   nameSheet,
+			"keyField":    keyField,
+			"typeData":    typeData,
+			"schema":      schema,
+			"model":       nameModel,
+			"atribs":      atribs,
+			"sessionName": sessionName,
+		})
 		if err != nil {
-			return et.Items{}, err
+			return
 		}
-	}
 
-	bt, err := io.ReadAll(reader)
-	if err != nil {
-		return et.Items{}, err
-	}
+		model, err := s.LoadModel(schema, nameModel)
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
 
-	xlFile, err := xls.ReadXls(bt)
-	if err != nil {
-		return et.Items{}, err
-	}
+		_, err = model.DefineField(keyField, typeData, typeData.Default())
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
 
-	rows, err := xlFile.GetRows(nameSheet)
-	if err != nil {
-		return et.Items{}, err
-	}
+		err = model.DefinePrimaryKeys(keyField)
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
 
-	columns := []string{}
-	for column := range atribs {
-		columns = append(columns, column)
-	}
+		err = model.Init()
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
 
-	headers := rows[0]
-	selected := columns
-	if len(selected) == 0 {
-		selected = headers
-	}
-
-	n := 0
-	tf := len(atribs)
-	for _, row := range rows[1:] {
-		item := et.Json{}
-		for _, col := range selected {
-			idx := xls.IndexOf(headers, col)
-			if idx == -1 || idx >= len(row) {
-				continue
+		if model.isChangue {
+			err = model.Save()
+			if err != nil {
+				instance.setError(sessionName, err)
+				return
 			}
-			if tf == 0 {
-				item[col] = row[idx]
-			} else {
-				atrb, exists := atribs[col]
-				if exists {
-					item[atrb] = row[idx]
+		}
+
+		bt, err := io.ReadAll(reader)
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
+
+		xlFile, err := xls.ReadXls(bt)
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
+
+		rows, err := xlFile.GetRows(nameSheet)
+		if err != nil {
+			instance.setError(sessionName, err)
+			return
+		}
+
+		columns := []string{}
+		for column := range atribs {
+			columns = append(columns, column)
+		}
+
+		headers := rows[0]
+		selected := columns
+		if len(selected) == 0 {
+			selected = headers
+		}
+
+		n := 0
+		tf := len(atribs)
+		for _, row := range rows[1:] {
+			item := et.Json{}
+			for _, col := range selected {
+				idx := xls.IndexOf(headers, col)
+				if idx == -1 || idx >= len(row) {
+					continue
+				}
+				if tf == 0 {
+					item[col] = row[idx]
+				} else {
+					atrb, exists := atribs[col]
+					if exists {
+						item[atrb] = row[idx]
+					}
 				}
 			}
+
+			_, err = model.
+				Insert(item).
+				Exec()
+			if err != nil {
+				instance.setError(sessionName, err)
+				return
+			}
+
+			n++
 		}
 
-		_, err = model.
-			Insert(item).
-			Exec()
+		instance.setStatus(sessionName, InstanceStatusDone)
+		err = instance.save()
 		if err != nil {
-			return et.Items{}, err
+			instance.setError(sessionName, err)
+			return
 		}
 
-		n++
-	}
+		instance.setResult(sessionName, et.Json{
+			"count":   n,
+			"message": fmt.Sprintf("Uploaded %d rows", n),
+		})
+
+	}()
 
 	return et.Items{
 		Ok:    true,
 		Count: 1,
 		Result: []et.Json{
 			{
-				"message": fmt.Sprintf("Uploaded %d rows", n),
+				"service_id": serviceId,
 			},
 		},
 	}, nil
