@@ -1035,3 +1035,14 @@ func (s *Model) Upsert(item et.Json) *Command {
 func (s *Model) Bulk(items []et.Json) *Command {
 	return newCommand(s, BULK, items)
 }
+
+/**
+* Where: Creates a new query
+* @param cond *et.Condition
+* @return *Query
+**/
+func (s *Model) Where(cond *et.Condition) *Query {
+	result := newQuery(s, s.Name)
+	result.Where(cond)
+	return result
+}

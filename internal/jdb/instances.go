@@ -188,7 +188,17 @@ func (s *Instances) newInstance(id, title, description string, ctx et.Json) (*In
 **/
 func (s *Instances) saveInstance(instance *Instance) error {
 	s.addInstance(instance)
-	return s.store.put(instance.ID, instance)
+	id := instance.ID
+	item := instance.ToJson()
+	_, err := s.store.
+		Upsert(item).
+		Where(et.Eq("id", id)).
+		Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -214,17 +224,23 @@ func (s *Instances) getInstance(id string) (*Instance, error) {
 		return result, nil
 	}
 
-	exists, err := s.store.get(id, &result)
+	item, err := s.store.
+		Where(et.Eq("id", id)).
+		One()
+	if err != nil {
+		return nil, err
+	}
+
+	if !item.Ok {
+		return nil, errors.New(msg.MSG_INSTANCE_NOT_FOUND)
+	}
+
+	err = item.ToObject(&result)
 	if err != nil {
 		return nil, err
 	}
 
 	result.owner = s
-
-	if !exists {
-		return nil, errors.New(msg.MSG_INSTANCE_NOT_FOUND)
-	}
-
 	return result, nil
 }
 
@@ -234,6 +250,23 @@ func (s *Instances) getInstance(id string) (*Instance, error) {
 **/
 func (s *DB) loadInstances() error {
 	store, err := s.newModel(sysSchema, "instances", 1, true)
+	if err != nil {
+		return err
+	}
+
+	_, err = store.DefineField("id", TpKey, "")
+	if err != nil {
+		return err
+	}
+
+	store.DefinePrimaryKeys("id")
+
+	_, err = store.DefineField("code", TpText, "")
+	if err != nil {
+		return err
+	}
+
+	_, err = store.DefineField("title", TpText, "")
 	if err != nil {
 		return err
 	}
