@@ -2,6 +2,7 @@ package jdb
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -21,13 +22,14 @@ const (
 )
 
 type Serie struct {
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Status    Status    `json:"status"`
-	ID        string    `json:"id"`
-	Tag       string    `json:"tag"`
-	Format    string    `json:"format"`
-	Value     int64     `json:"value"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+	Status    Status       `json:"status"`
+	ID        string       `json:"id"`
+	Tag       string       `json:"tag"`
+	Format    string       `json:"format"`
+	Value     int64        `json:"value"`
+	mu        sync.RWMutex `json:"-"`
 }
 
 func (s *Serie) ToJson() et.Json {
@@ -42,19 +44,51 @@ func (s *Serie) ToJson() et.Json {
 	}
 }
 
+/**
+* inc: Increments the value of the serie
+* @return int64, string
+**/
+func (s *Serie) inc() (int64, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Value++
+	return s.Value, fmt.Sprintf(s.Format, s.Value)
+}
+
+/**
+* dec: Decrements the value of the serie
+* @return int64, string
+**/
+func (s *Serie) dec() (int64, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Value--
+	return s.Value, fmt.Sprintf(s.Format, s.Value)
+}
+
 type Series struct {
 	Series map[string]*Serie
 	mu     sync.RWMutex
 	store  *Model
 }
 
+/**
+* newSerie: Creates a new serie
+* @param key, tag, format string, value int64
+* @return (*Serie, error)
+**/
 func (s *Series) newSerie(key, tag, format string, value int64) (*Serie, error) {
 	now := timezone.Now()
+
+	if format == "" {
+		format = "%08d"
+	}
+
 	result := &Serie{
 		CreatedAt: now,
 		UpdatedAt: now,
 		Status:    ACTIVE,
-		ID:        key,
+		ID:        fmt.Sprintf("%s-%s", key, tag),
 		Tag:       tag,
 		Format:    format,
 		Value:     value,
@@ -68,9 +102,14 @@ func (s *Series) newSerie(key, tag, format string, value int64) (*Serie, error) 
 	return result, nil
 }
 
+/**
+* saveSerie: Saves a serie to the database
+* @param serie *Serie
+* @return error
+**/
 func (s *Series) saveSerie(serie *Serie) error {
-
-	return nil
+	s.addSerie(serie)
+	return s.store.put(serie.ID, serie)
 }
 
 /**
@@ -108,4 +147,161 @@ func (s *Series) getSerie(id string) (*Serie, error) {
 	}
 
 	return s.Series[id], nil
+}
+
+/**
+* setSerieFormat: Sets the format of a serie
+* @param key, tag, format string
+* @return error
+**/
+func (s *Series) setSerieFormat(key, tag, format string) error {
+	id := fmt.Sprintf("%s-%s", key, tag)
+	serie, err := s.getSerie(id)
+	if err != nil {
+		return err
+	}
+
+	serie.Format = format
+	err = s.saveSerie(serie)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* setSerieValue: Sets the value of a serie
+* @param key, tag string, value int64
+* @return error
+**/
+func (s *Series) setSerieValue(key, tag string, value int64) error {
+	id := fmt.Sprintf("%s-%s", key, tag)
+	serie, err := s.getSerie(id)
+	if err != nil {
+		return err
+	}
+
+	serie.Value = value
+	err = s.saveSerie(serie)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/**
+* incSerie: Increments the value of a serie
+* @param key, tag string
+* @return string, error
+**/
+func (s *Series) incSerie(key, tag string) (string, error) {
+	id := fmt.Sprintf("%s-%s", key, tag)
+	serie, err := s.getSerie(id)
+	if err != nil {
+		return "", err
+	}
+
+	_, result := serie.inc()
+	err = s.saveSerie(serie)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+/**
+* decSerie: Decrements the value of a serie
+* @param id string
+* @return string, error
+**/
+func (s *Series) decSerie(id string) (string, error) {
+	serie, err := s.getSerie(id)
+	if err != nil {
+		return "", err
+	}
+
+	_, result := serie.dec()
+	err = s.saveSerie(serie)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+/**
+* loadSeries: Loads the series from the database
+* @return error
+**/
+func (s *DB) loadSeries() error {
+	store, err := s.loadModel(sysSchema, "series", 1, true)
+	if err != nil {
+		return err
+	}
+
+	result := &Series{
+		Series: make(map[string]*Serie),
+		store:  store,
+	}
+
+	s.series = result
+
+	return nil
+}
+
+/**
+* getSerie: Gets a serie from the cache
+* @param id string
+* @return (*Serie, error)
+**/
+func (s *DB) getSerie(id string) (*Serie, error) {
+	return s.series.getSerie(id)
+}
+
+/**
+* newSerie: Creates a new serie
+* @param key, tag, format string, value int64
+* @return (*Serie, error)
+**/
+func (s *DB) newSerie(key, tag, format string, value int64) (*Serie, error) {
+	return s.series.newSerie(key, tag, format, value)
+}
+
+/**
+* setSerieFormat: Sets the format of a serie
+* @param key, tag, format string
+* @return error
+**/
+func (s *DB) setSerieFormat(key, tag, format string) error {
+	return s.series.setSerieFormat(key, tag, format)
+}
+
+/**
+* setSerieValue: Sets the value of a serie
+* @param key, tag string, value int64
+* @return error
+**/
+func (s *DB) setSerieValue(key, tag string, value int64) error {
+	return s.series.setSerieValue(key, tag, value)
+}
+
+/**
+* incSerie: Increments the value of a serie
+* @param key, tag string
+* @return string, error
+**/
+func (s *DB) incSerie(key, tag string) (string, error) {
+	return s.series.incSerie(key, tag)
+}
+
+/**
+* decSerie: Decrements the value of a serie
+* @param id string
+* @return string, error
+**/
+func (s *DB) decSerie(id string) (string, error) {
+	return s.series.decSerie(id)
 }

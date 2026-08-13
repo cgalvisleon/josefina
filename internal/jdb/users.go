@@ -160,19 +160,19 @@ func (s *DB) loadUsers() error {
 }
 
 /**
-* getUser: Gets a user from the database
-* @param username string
-* @return (*User, error)
-**/
-func (s *DB) getUser(username string) (*User, error) {
-	return s.users.getUser(username)
-}
-
-/**
 * newUser: Creates a new user
 * @param username, password string
 * @return (*User, error)
 **/
 func (s *DB) newUser(username, password string) (*User, error) {
 	return s.users.newUser(username, password)
+}
+
+/**
+* getUser: Gets a user from the database
+* @param username string
+* @return (*User, error)
+**/
+func (s *DB) getUser(username string) (*User, error) {
+	return s.users.getUser(username)
 }

@@ -37,6 +37,8 @@ type DB struct {
 	store               *Model             `json:"-"`                     // Store
 	cache               *Cache             `json:"-"`                     // Cache
 	users               *Users             `json:"-"`                     // Users
+	series              *Series            `json:"-"`                     // Series
+	instances           *Instances         `json:"-"`                     // Instances
 }
 
 /**

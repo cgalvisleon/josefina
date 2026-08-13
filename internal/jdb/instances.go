@@ -1,13 +1,14 @@
 package jdb
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/cgalvisleon/et/reg"
 	"github.com/cgalvisleon/et/timezone"
-	"github.com/google/uuid"
+	"github.com/josefina/internal/msg"
 )
 
 type InstanceStatus string
@@ -51,16 +52,26 @@ type Instances struct {
 	instances map[string]*Instance
 	mu        sync.RWMutex
 	store     *Model
+	db        *DB
 }
 
+/**
+* newInstance: Creates a new instance
+* @param title, description string, ctx et.Json
+* @return (*Instance, error)
+**/
 func (s *Instances) newInstance(title, description string, ctx et.Json) (*Instance, error) {
 	now := timezone.Now()
+	code, err := s.db.incSerie("instance", "code")
+	if err != nil {
+		return nil, err
+	}
 	result := &Instance{
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		DoneAt:      time.Time{},
 		ID:          reg.UUID(),
-		Code:        uuid.New().String(),
+		Code:        code,
 		Title:       title,
 		Description: description,
 		Ctx:         ctx,
@@ -68,10 +79,94 @@ func (s *Instances) newInstance(title, description string, ctx et.Json) (*Instan
 		Status:      InstanceStatusPending,
 	}
 
-	err := s.saveInstance(result)
+	err = s.saveInstance(result)
 	if err != nil {
 		return nil, err
 	}
 
 	return result, nil
+}
+
+/**
+* saveInstance: Saves an instance to the database
+* @param instance *Instance
+* @return error
+**/
+func (s *Instances) saveInstance(instance *Instance) error {
+	s.addInstance(instance)
+	return s.store.put(instance.ID, instance)
+}
+
+/**
+* addInstance: Adds an instance to the cache
+* @param instance *Instance
+**/
+func (s *Instances) addInstance(instance *Instance) {
+	s.mu.Lock()
+	s.instances[instance.ID] = instance
+	s.mu.Unlock()
+}
+
+/**
+* getInstance: Gets an instance from the cache
+* @param id string
+* @return (*Instance, error)
+**/
+func (s *Instances) getInstance(id string) (*Instance, error) {
+	s.mu.RLock()
+	result, exists := s.instances[id]
+	s.mu.RUnlock()
+	if exists {
+		return result, nil
+	}
+
+	exists, err := s.store.get(id, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.New(msg.MSG_INSTANCE_NOT_FOUND)
+	}
+
+	return result, nil
+}
+
+/**
+* loadInstances: Loads the instances
+* @return error
+**/
+func (s *DB) loadInstances() error {
+	store, err := s.loadModel(sysSchema, "instances", 1, true)
+	if err != nil {
+		return err
+	}
+
+	result := &Instances{
+		instances: make(map[string]*Instance),
+		store:     store,
+		db:        s,
+	}
+
+	s.instances = result
+
+	return nil
+}
+
+/**
+* newInstance: Creates a new instance
+* @param title, description string, ctx et.Json
+* @return (*Instance, error)
+**/
+func (s *DB) newInstance(title, description string, ctx et.Json) (*Instance, error) {
+	return s.instances.newInstance(title, description, ctx)
+}
+
+/**
+* getInstance: Gets an instance from the database
+* @param id string
+* @return (*Instance, error)
+**/
+func (s *DB) getInstance(id string) (*Instance, error) {
+	return s.instances.getInstance(id)
 }

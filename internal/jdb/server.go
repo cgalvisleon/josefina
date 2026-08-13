@@ -203,6 +203,16 @@ func (s *Server) newDb(name string) (*DB, error) {
 		return nil, err
 	}
 
+	err = result.loadSeries()
+	if err != nil {
+		return nil, err
+	}
+
+	err = result.loadInstances()
+	if err != nil {
+		return nil, err
+	}
+
 	s.addDb(result)
 
 	err = result.init()
@@ -264,6 +274,16 @@ func (s *Server) loadDb(name string) (*DB, error) {
 	}
 
 	err = result.loadUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	err = result.loadSeries()
+	if err != nil {
+		return nil, err
+	}
+
+	err = result.loadInstances()
 	if err != nil {
 		return nil, err
 	}
