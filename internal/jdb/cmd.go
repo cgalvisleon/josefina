@@ -229,14 +229,6 @@ func (s *Command) upsert() ([]et.Json, error) {
 }
 
 /**
-* bulk
-* @return []et.Json, error
-**/
-func (s *Command) bulk() ([]et.Json, error) {
-	return []et.Json{}, nil
-}
-
-/**
 * Exec
 * @return []et.Json, error
 **/
@@ -251,7 +243,7 @@ func (s *Command) Exec() ([]et.Json, error) {
 	case UPSERT:
 		return s.upsert()
 	case BULK:
-		return s.bulk()
+		return s.insert()
 	}
 	return []et.Json{}, fmt.Errorf(msg.MSG_INVALID_COMMAND, s.command)
 }

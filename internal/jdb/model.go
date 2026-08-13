@@ -142,7 +142,18 @@ func (s *Model) Save() error {
 		return errors.New(msg.MSG_STORE_NOT_DEFINED)
 	}
 
-	return s.db.store.put(s.Key(), s)
+	key := s.Key()
+	err := s.db.store.put(key, s)
+	if err != nil {
+		return err
+	}
+
+	err = s.db.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -632,7 +643,8 @@ func (s *Model) insert(idx string, new et.Json) error {
 		if index.Type == TpIndexBTree {
 			btree, exists := s.getBtree(index.Name)
 			if exists {
-				_, ok := btree.Get(KeyFromAny(value))
+				key := KeyFromAny(value)
+				_, ok := btree.Get(key)
 				if ok {
 					return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 				}
@@ -698,7 +710,8 @@ func (s *Model) update(idx string, new et.Json) error {
 		if index.Type == TpIndexBTree {
 			btree, exists := s.getBtree(index.Name)
 			if exists {
-				_, ok := btree.Get(KeyFromAny(value))
+				key := KeyFromAny(value)
+				_, ok := btree.Get(key)
 				if ok {
 					return fmt.Errorf(msg.MSG_DUPLICATE_KEY_UNIQUE, index.Tag)
 				}
@@ -934,19 +947,23 @@ func (s *Model) CreateIndex(name string, tp TpIndex) error {
 		return err
 	}
 
+	if tp != TpIndexBTree {
+		return nil
+	}
+
+	bt, exists := s.getBtree(name)
+	if !exists {
+		return nil
+	}
+
 	return s.ForEach(func(idx string, item et.Json) (bool, error) {
 		v := item[name]
 		if v == nil {
 			return true, nil
 		}
-		if tp != TpIndexBTree {
-			return true, nil
-		}
-		bt, exists := s.getBtree(name)
-		if !exists {
-			return true, nil
-		}
-		if err := bt.Insert(KeyFromAny(v), idx); err != nil {
+
+		key := KeyFromAny(v)
+		if err := bt.Insert(key, idx); err != nil {
 			return true, err
 		}
 		return true, nil

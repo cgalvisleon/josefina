@@ -1092,19 +1092,26 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 	value := condition.Value.Value
 	switch condition.Operator {
 	case et.EQ:
-		return bt.Equal(KeyFromAny(value))
+		key := KeyFromAny(value)
+		return bt.Equal(key)
 	case et.NEG:
-		return bt.NotEqual(KeyFromAny(value))
+		key := KeyFromAny(value)
+		return bt.NotEqual(key)
 	case et.LESS:
-		return bt.Less(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.Less(key, true)
 	case et.LESS_EQ:
-		return bt.LessEq(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.LessEq(key, true)
 	case et.MORE:
-		return bt.More(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.More(key, true)
 	case et.MORE_EQ:
-		return bt.MoreEq(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.MoreEq(key, true)
 	case et.LIKE:
-		return bt.Like(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.Like(key, true)
 	case et.IN:
 		if vals, ok := value.([]any); ok {
 			keys := make([]IndexKey, len(vals))
@@ -1124,22 +1131,30 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 		}
 		return bt.NotIn([]IndexKey{KeyFromAny(value)}, true)
 	case et.IS:
-		return bt.Is(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.Is(key, true)
 	case et.IS_NOT:
-		return bt.IsNot(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.IsNot(key, true)
 	case et.NULL:
-		return bt.Null(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.Null(key, true)
 	case et.NOT_NULL:
-		return bt.NotNull(KeyFromAny(value), true)
+		key := KeyFromAny(value)
+		return bt.NotNull(key, true)
 	case et.BETWEEN:
 		btValues, ok := value.(et.BetweenValue)
 		if ok {
-			return bt.Between(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
+			keyMin := KeyFromAny(btValues.Min)
+			keyMax := KeyFromAny(btValues.Max)
+			return bt.Between(keyMin, keyMax, true)
 		}
 	case et.NOT_BETWEEN:
 		btValues, ok := value.(et.BetweenValue)
 		if ok {
-			return bt.NotBetween(KeyFromAny(btValues.Min), KeyFromAny(btValues.Max), true)
+			keyMin := KeyFromAny(btValues.Min)
+			keyMax := KeyFromAny(btValues.Max)
+			return bt.NotBetween(keyMin, keyMax, true)
 		}
 	}
 

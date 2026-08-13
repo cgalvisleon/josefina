@@ -945,6 +945,11 @@ func (s *DB) jUploadXls(reader io.Reader, nameSheet, keyField string, typeData T
 		return et.Items{}, err
 	}
 
+	err = model.Init()
+	if err != nil {
+		return et.Items{}, err
+	}
+
 	if model.isChangue {
 		err = model.Save()
 		if err != nil {

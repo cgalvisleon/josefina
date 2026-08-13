@@ -114,6 +114,16 @@ func (s *Server) load() error {
 		return nil
 	}
 
+	db, err := s.loadDb(defaultDbName)
+	if err != nil {
+		return err
+	}
+
+	err = db.init()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
