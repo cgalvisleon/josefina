@@ -1042,7 +1042,7 @@ func (s *Model) Bulk(items []et.Json) *Command {
 * @return *Query
 **/
 func (s *Model) Where(cond *et.Condition) *Query {
-	result := newQuery(s, s.Name)
+	result := newQuery(s)
 	result.Where(cond)
 	return result
 }

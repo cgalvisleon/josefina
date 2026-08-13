@@ -4,8 +4,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
+
+type Source interface {
+	ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error
+}
 
 type JoinType int
 
@@ -35,10 +40,6 @@ func (j JoinType) String() string {
 	}
 }
 
-type Source interface {
-	ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error
-}
-
 type To struct {
 	Model Source `json:"model"`
 	As    string `json:"as"`
@@ -61,18 +62,12 @@ type OrderField struct {
 	Asc   bool   `json:"asc"`
 }
 
-/**
-* Query
-**/
-type Query struct {
-	froms   []To            `json:"-"`
-	joins   []Join          `json:"-"`
+type Where struct {
+	model   Source          `json:"-"`
 	selects []string        `json:"-"`
 	hidden  []string        `json:"-"`
 	wheres  []*et.Condition `json:"-"`
-	groupBy []string        `json:"-"`
 	orderBy []OrderField    `json:"-"`
-	having  []*et.Condition `json:"-"`
 	offset  int             `json:"-"`
 	limit   int             `json:"-"`
 	isDebug bool            `json:"-"`
@@ -83,21 +78,64 @@ type Query struct {
 * @param owner Source
 * @return *Query
 **/
-func newQuery(model Source, as string) *Query {
-	result := &Query{
-		froms:   make([]To, 0),
-		joins:   make([]Join, 0),
+func newWhere(model Source) *Where {
+	result := &Where{
+		model:   model,
 		selects: make([]string, 0),
 		hidden:  make([]string, 0),
 		wheres:  make([]*et.Condition, 0),
-		groupBy: make([]string, 0),
-		orderBy: make([]OrderField, 0, 2),
-		having:  make([]*et.Condition, 0),
+		orderBy: make([]OrderField, 0),
 		offset:  0,
 		limit:   0,
 		isDebug: false,
 	}
-	result.addFrom(model, as)
+	return result
+}
+
+/**
+* ToJson
+* @return et.Json
+**/
+func (s *Where) ToJson() et.Json {
+	return et.Json{
+		"model":   s.model,
+		"selects": s.selects,
+		"hidden":  s.hidden,
+		"wheres":  s.wheres,
+		"orderBy": s.orderBy,
+		"offset":  s.offset,
+		"limit":   s.limit,
+	}
+}
+
+/**
+* Query
+**/
+type Query struct {
+	wheres  []*Where        `json:"-"`
+	groupBy []string        `json:"-"`
+	having  []*et.Condition `json:"-"`
+	offset  int             `json:"-"`
+	limit   int             `json:"-"`
+	isDebug bool            `json:"-"`
+}
+
+/**
+* newQuery
+* @param wheres []Where
+* @return *Query
+**/
+func newQuery(model Source) *Query {
+	where := newWhere(model)
+	limit := envar.GetInt("JDB_LIMIT", 100)
+	result := &Query{
+		wheres:  []*Where{where},
+		groupBy: make([]string, 0),
+		having:  make([]*et.Condition, 0),
+		offset:  0,
+		limit:   limit,
+		isDebug: false,
+	}
 	return result
 }
 
