@@ -1,61 +1,9 @@
 package jdb
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
-
-type Source interface {
-	ForEach(next func(idx string, item et.Json) (bool, error), asc bool, offset, limit int) error
-}
-
-type JoinType int
-
-const (
-	InnerJoin JoinType = iota
-	LeftJoin
-	RightJoin
-	FullJoin
-)
-
-/**
-* String
-* @return string
-**/
-func (j JoinType) String() string {
-	switch j {
-	case InnerJoin:
-		return "inner"
-	case LeftJoin:
-		return "left"
-	case RightJoin:
-		return "right"
-	case FullJoin:
-		return "full"
-	default:
-		return ""
-	}
-}
-
-type To struct {
-	Model Source `json:"model"`
-	As    string `json:"as"`
-}
-
-type Fld struct {
-	To    To     `json:"to"`
-	Field any    `json:"field"`
-	As    string `json:"as"`
-}
-
-type Join struct {
-	To   To                `json:"to"`
-	Keys map[string]string `json:"keys"`
-	Type JoinType          `json:"type"`
-}
 
 type OrderField struct {
 	Field string `json:"field"`
@@ -63,31 +11,32 @@ type OrderField struct {
 }
 
 type Where struct {
-	model   Source          `json:"-"`
-	selects []string        `json:"-"`
-	hidden  []string        `json:"-"`
-	wheres  []*et.Condition `json:"-"`
-	orderBy []OrderField    `json:"-"`
-	offset  int             `json:"-"`
-	limit   int             `json:"-"`
-	isDebug bool            `json:"-"`
+	model      *Model                     `json:"-"`
+	selects    []string                   `json:"-"`
+	hidden     []string                   `json:"-"`
+	conditions map[string][]*et.Condition `json:"-"`
+	orderBy    []OrderField               `json:"-"`
+	offset     int                        `json:"-"`
+	limit      int                        `json:"-"`
+	isDebug    bool                       `json:"-"`
 }
 
 /**
 * newWhere
-* @param owner Source
-* @return *Query
+* @param model *Model
+* @return *Where
 **/
-func newWhere(model Source) *Where {
+func newWhere(model *Model) *Where {
+	limit := envar.GetInt("JDB_LIMIT", 100)
 	result := &Where{
-		model:   model,
-		selects: make([]string, 0),
-		hidden:  make([]string, 0),
-		wheres:  make([]*et.Condition, 0),
-		orderBy: make([]OrderField, 0),
-		offset:  0,
-		limit:   0,
-		isDebug: false,
+		model:      model,
+		selects:    make([]string, 0),
+		hidden:     make([]string, 0),
+		conditions: make(map[string][]*et.Condition),
+		orderBy:    make([]OrderField, 0),
+		offset:     0,
+		limit:      limit,
+		isDebug:    false,
 	}
 	return result
 }
@@ -98,44 +47,131 @@ func newWhere(model Source) *Where {
 **/
 func (s *Where) ToJson() et.Json {
 	return et.Json{
-		"model":   s.model,
-		"selects": s.selects,
-		"hidden":  s.hidden,
-		"wheres":  s.wheres,
-		"orderBy": s.orderBy,
-		"offset":  s.offset,
-		"limit":   s.limit,
+		"model":      s.model,
+		"selects":    s.selects,
+		"hidden":     s.hidden,
+		"conditions": s.conditions,
+		"orderBy":    s.orderBy,
+		"offset":     s.offset,
+		"limit":      s.limit,
 	}
 }
 
 /**
-* Query
+* IsDebug
+* @return *Where
 **/
+func (s *Where) IsDebug() *Where {
+	s.isDebug = true
+	return s
+}
+
+/**
+* Add
+* @param condition *et.Condition
+* @return *Where
+**/
+func (s *Where) Add(condition *et.Condition) *Where {
+	if len(s.conditions) > 0 && condition.Connector == et.NaC {
+		condition.Connector = et.And
+	}
+
+	key := condition.Key()
+	s.conditions[key] = append(s.conditions[key], condition)
+	return s
+}
+
+/**
+* And
+* @param condition *et.Condition
+* @return *Where
+**/
+func (s *Where) And(condition *et.Condition) *Where {
+	condition.Connector = et.And
+	return s.Add(condition)
+}
+
+/**
+* Or
+* @param condition *et.Condition
+* @return *Where
+**/
+func (s *Where) Or(condition *et.Condition) *Where {
+	condition.Connector = et.Or
+	return s.Add(condition)
+}
+
+/**
+* Selects
+* @param fields ...string
+* @return *Where
+**/
+func (s *Where) Selects(fields ...string) *Where {
+	for _, field := range fields {
+		s.selects = append(s.selects, field)
+	}
+	return s
+}
+
+/**
+* Hidden
+* @param fields ...string
+* @return *Where
+**/
+func (s *Where) Hidden(fields ...string) *Where {
+	for _, field := range fields {
+		s.hidden = append(s.hidden, field)
+	}
+	return s
+}
+
+/**
+* OrderBy
+* @param field string
+* @return *Where
+**/
+func (s *Where) OrderBy(field string, asc ...bool) *Where {
+	if len(asc) == 0 {
+		asc = []bool{true}
+	}
+	s.orderBy = append(s.orderBy, OrderField{Field: field, Asc: asc[0]})
+	return s
+}
+
+/**
+* Limit
+* @param page int, rows int
+* @return *Where
+**/
+func (s *Where) Limit(page int, rows int) *Where {
+	offset := (page - 1) * rows
+	s.offset = offset
+	s.limit = rows
+	return s
+}
+
 type Query struct {
 	wheres  []*Where        `json:"-"`
 	groupBy []string        `json:"-"`
 	having  []*et.Condition `json:"-"`
-	offset  int             `json:"-"`
-	limit   int             `json:"-"`
+	active  *Where          `json:"-"`
 	isDebug bool            `json:"-"`
 }
 
 /**
 * newQuery
-* @param wheres []Where
+* @param model *Model
 * @return *Query
 **/
-func newQuery(model Source) *Query {
-	where := newWhere(model)
-	limit := envar.GetInt("JDB_LIMIT", 100)
+func newQuery(model *Model) *Query {
 	result := &Query{
-		wheres:  []*Where{where},
+		wheres:  make([]*Where, 0),
 		groupBy: make([]string, 0),
 		having:  make([]*et.Condition, 0),
-		offset:  0,
-		limit:   limit,
 		isDebug: false,
 	}
+	where := newWhere(model)
+	result.addWhere(where)
 	return result
 }
 
@@ -154,174 +190,39 @@ func (s *Query) IsDebug() *Query {
 **/
 func (s *Query) ToJson() et.Json {
 	wheres := []et.Json{}
-	for _, condition := range s.wheres {
-		wheres = append(wheres, condition.ToJson())
+	for _, where := range s.wheres {
+		wheres = append(wheres, where.ToJson())
 	}
 
 	return et.Json{
-		"froms":   s.froms,
-		"joins":   s.joins,
-		"selects": s.selects,
-		"hidden":  s.hidden,
-		"wheres":  wheres,
+		"wheres":  s.wheres,
 		"groupBy": s.groupBy,
-		"orderBy": s.orderBy,
 		"having":  s.having,
-		"offset":  s.offset,
-		"limit":   s.limit,
-		"isDebug": s.isDebug,
 	}
 }
 
 /**
 * addFrom
-* @param model Source, as string
+* @param where *Where
 * @return *Query
 **/
-func (s *Query) addFrom(model Source, as ...string) To {
-	if len(as) == 0 {
-		as = []string{""}
-	}
-	result := To{Model: model, As: as[0]}
-	s.froms = append(s.froms, result)
-	return result
-}
-
-/**
-* AggFld: Represents an aggregate function applied to a nested Fld, e.g. sum(amount).
-**/
-type AggFld struct {
-	Type TypeAggregation `json:"type"`
-	Fld  string          `json:"fld"`
-}
-
-/**
-* resolveTo: Looks up a From by its alias; falls back to the first From when as is empty
-* or when the alias has no match.
-* @param as string
-* @return To
-**/
-func (s *Query) resolveTo(as string) To {
-	for _, from := range s.froms {
-		if from.As == as {
-			return from
-		}
-	}
-	if as == "" && len(s.froms) > 0 {
-		return s.froms[0]
-	}
-	return To{}
-}
-
-/**
-* findFld: Resolves a field reference to its Fld, supporting the formats
-* "<as>.<name>:<as>", "<as>.<name>", "<name>:<as>", "<name>",
-* "<agg>(<field>):<as>" and "<agg>(<field>)".
-* @param field string
-* @return Fld
-**/
-func (s *Query) findFld(field string) Fld {
-	pattern1 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`) // from.field:as
-	pattern2 := regexp.MustCompile(`^([A-Za-z0-9_]+)\.([A-Za-z0-9_>-]+)$`)                 // from.field
-	pattern3 := regexp.MustCompile(`^([A-Za-z0-9_>-]+):([A-Za-z0-9_]+)$`)                  // field:as
-	pattern4 := regexp.MustCompile(`^([A-Za-z0-9_>-]+)$`)                                  // field
-	pattern5 := regexp.MustCompile(`^([A-Za-z0-9_]+)\((.+)\):([A-Za-z0-9_]+)$`)            // agg(field):as
-	pattern6 := regexp.MustCompile(`^([A-Za-z0-9_]+)\((.+)\)$`)                            // agg(field)
-
-	if m := pattern5.FindStringSubmatch(field); m != nil {
-		inner := s.findFld(m[2])
-		return Fld{
-			To:    inner.To,
-			Field: AggFld{Type: GetAggregation(strings.ToLower(m[1])), Fld: m[2]},
-			As:    m[3],
-		}
-	}
-
-	if m := pattern6.FindStringSubmatch(field); m != nil {
-		inner := s.findFld(m[2])
-		agg := GetAggregation(strings.ToLower(m[1]))
-		alias := strings.ToLower(m[1]) + "_" + strings.ReplaceAll(m[2], ".", "_")
-		return Fld{
-			To:    inner.To,
-			Field: AggFld{Type: agg, Fld: m[2]},
-			As:    alias,
-		}
-	}
-
-	if m := pattern1.FindStringSubmatch(field); m != nil {
-		return Fld{To: s.resolveTo(m[1]), Field: m[2], As: m[3]}
-	}
-
-	if m := pattern2.FindStringSubmatch(field); m != nil {
-		return Fld{To: s.resolveTo(m[1]), Field: m[2], As: m[2]}
-	}
-
-	if m := pattern3.FindStringSubmatch(field); m != nil {
-		return Fld{To: s.resolveTo(""), Field: m[1], As: m[2]}
-	}
-
-	if m := pattern4.FindStringSubmatch(field); m != nil {
-		return Fld{To: s.resolveTo(""), Field: m[1], As: m[1]}
-	}
-
-	return Fld{To: s.resolveTo(""), Field: field, As: field}
-}
-
-/**
-* InnerJoin: Adds an inner join — only primary records with a match in to are returned.
-* @param to Source, as string, keys map[string]string
-* @return *Query
-**/
-func (s *Query) InnerJoin(to Source, as string, keys map[string]string) *Query {
-	t := s.addFrom(to, as)
-	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: InnerJoin})
+func (s *Query) addWhere(where *Where) *Query {
+	s.active = where
+	s.wheres = append(s.wheres, s.active)
 	return s
 }
 
 /**
-* LeftJoin: Adds a left join — all primary records are returned; joined fields empty when no match.
-* @param to Source, as string, keys map[string]string
-* @return *Query
-**/
-func (s *Query) LeftJoin(to Source, as string, keys map[string]string) *Query {
-	t := s.addFrom(to, as)
-	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: LeftJoin})
-	return s
-}
-
-/**
-* RightJoin: Adds a right join — all records from to are returned; primary fields empty when no match.
-* @param to Source, as string, keys map[string]string
-* @return *Query
-**/
-func (s *Query) RightJoin(to Source, as string, keys map[string]string) *Query {
-	t := s.addFrom(to, as)
-	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: RightJoin})
-	return s
-}
-
-/**
-* FullJoin: Adds a full join — all records from both models, matched where possible.
-* @param to Source, as string, keys map[string]string
-* @return *Query
-**/
-func (s *Query) FullJoin(to Source, as string, keys map[string]string) *Query {
-	t := s.addFrom(to, as)
-	s.joins = append(s.joins, Join{To: t, Keys: keys, Type: FullJoin})
-	return s
-}
-
-/**
-* Add
+* add
 * @param condition *et.Condition
 * @return *Query
 **/
-func (s *Query) Add(condition *et.Condition) *Query {
+func (s *Query) add(condition *et.Condition) *Query {
 	if len(s.wheres) > 0 && condition.Connector == et.NaC {
 		condition.Connector = et.And
 	}
 
-	s.wheres = append(s.wheres, condition)
+	s.active.Add(condition)
 	return s
 }
 
@@ -331,7 +232,7 @@ func (s *Query) Add(condition *et.Condition) *Query {
 * @return *Query
 **/
 func (s *Query) Where(condition *et.Condition) *Query {
-	return s.Add(condition)
+	return s.add(condition)
 }
 
 /**
@@ -341,7 +242,7 @@ func (s *Query) Where(condition *et.Condition) *Query {
 **/
 func (s *Query) And(condition *et.Condition) *Query {
 	condition.Connector = et.And
-	return s.Add(condition)
+	return s.add(condition)
 }
 
 /**
@@ -351,7 +252,7 @@ func (s *Query) And(condition *et.Condition) *Query {
 **/
 func (s *Query) Or(condition *et.Condition) *Query {
 	condition.Connector = et.Or
-	return s.Add(condition)
+	return s.add(condition)
 }
 
 /**
@@ -360,10 +261,7 @@ func (s *Query) Or(condition *et.Condition) *Query {
 * @return *Query
 **/
 func (s *Query) Selects(fields ...string) *Query {
-	for _, field := range fields {
-		s.selects = append(s.selects, field)
-	}
-
+	s.active.Selects(fields...)
 	return s
 }
 
@@ -373,24 +271,17 @@ func (s *Query) Selects(fields ...string) *Query {
 * @return *Query
 **/
 func (s *Query) Hidden(fields ...string) *Query {
-	for _, field := range fields {
-		s.hidden = append(s.hidden, field)
-	}
-
+	s.active.Hidden(fields...)
 	return s
 }
 
 /**
 * Order
-* @param field string
+* @param field string, asc ...bool
 * @return bool
 **/
 func (s *Query) OrderBy(field string, asc ...bool) *Query {
-	if len(asc) == 0 {
-		asc = []bool{true}
-	}
-	s.orderBy = append(s.orderBy, OrderField{Field: field, Asc: asc[0]})
-
+	s.active.OrderBy(field, asc...)
 	return s
 }
 
@@ -400,20 +291,7 @@ func (s *Query) OrderBy(field string, asc ...bool) *Query {
 * @return *Query
 **/
 func (s *Query) Limit(page int, rows int) *Query {
-	offset := (page - 1) * rows
-	s.offset = offset
-	s.limit = rows
-	return s
-}
-
-/**
-* SetOffset: Sets raw offset and row limit without page arithmetic.
-* @param offset int, rows int
-* @return *Query
-**/
-func (s *Query) SetOffset(offset int, rows int) *Query {
-	s.offset = offset
-	s.limit = rows
+	s.active.Limit(page, rows)
 	return s
 }
 
@@ -424,6 +302,50 @@ func (s *Query) SetOffset(offset int, rows int) *Query {
 **/
 func (s *Query) Exec() (et.Items, error) {
 	result := et.Items{}
+	otherConditions := []*et.Condition{}
+	for _, where := range s.wheres {
+		model := where.model
+		for name, conditions := range where.conditions {
+			if name == INDEX {
+				store, exists := model.source()
+				if exists {
+					var err error
+					result, err = store.EvaluateValue(conditions, result)
+					if err != nil {
+						return result, err
+					}
+					continue
+				}
+			}
+
+			bTree, exists := model.getBtree(name)
+			if exists {
+				var err error
+				keys := bTree.ApplyConditions(conditions)
+				if err != nil {
+					return result, err
+				}
+				for _, key := range keys {
+					item, err := model.getObject(key)
+					if err != nil {
+						return result, err
+					}
+					result.Add(item)
+				}
+				continue
+			}
+
+			otherConditions = append(otherConditions, conditions...)
+		}
+
+		model.ForEach(func(idx string, item et.Json) (bool, error) {
+			ok := et.EvaluateObject(item, otherConditions)
+			if ok {
+				result.Add(item)
+			}
+			return ok, nil
+		}, true, where.offset, where.limit)
+	}
 
 	return result, nil
 }
@@ -439,157 +361,4 @@ func (s *Query) One() (et.Item, error) {
 	}
 
 	return result.First()
-}
-
-/**
-* From
-* @param model Source, as string
-* @return *Query
-**/
-func From(model Source, as string) *Query {
-	return newQuery(model, as)
-}
-
-/**
-* Eq
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func Eq(field string, value interface{}) *et.Condition {
-	return et.Eq(field, value)
-}
-
-/**
-* Neg
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func Neg(field string, value interface{}) *et.Condition {
-	return et.Neg(field, value)
-}
-
-/**
-* Less
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func Less(field string, value interface{}) *et.Condition {
-	return et.Less(field, value)
-}
-
-/**
-* LessEq
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func LessEq(field string, value interface{}) *et.Condition {
-	return et.LessEq(field, value)
-}
-
-/**
-* More
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func More(field string, value interface{}) *et.Condition {
-	return et.More(field, value)
-}
-
-/**
-* MoreEq
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func MoreEq(field string, value interface{}) *et.Condition {
-	return et.MoreEq(field, value)
-}
-
-/**
-* Like
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func Like(field string, value interface{}) *et.Condition {
-	return et.Like(field, value)
-}
-
-/**
-* In
-* @param field string, value []interface{}
-* @return *et.Condition
-**/
-func In(field string, value []interface{}) *et.Condition {
-	return et.In(field, value)
-}
-
-/**
-* NotIn
-* @param field string, value []interface{}
-* @return *et.Condition
-**/
-func NotIn(field string, value []interface{}) *et.Condition {
-	return et.NotIn(field, value)
-}
-
-/**
-* Is
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func Is(field string, value interface{}) *et.Condition {
-	return et.Is(field, value)
-}
-
-/**
-* IsNot
-* @param field string, value interface{}
-* @return *et.Condition
-**/
-func IsNot(field string, value interface{}) *et.Condition {
-	return et.IsNot(field, value)
-}
-
-/**
-* Null
-* @param field string
-* @return *et.Condition
-**/
-func Null(field string) *et.Condition {
-	return et.Null(field)
-}
-
-/**
-* NotNull
-* @param field string
-* @return *et.Condition
-**/
-func NotNull(field string) *et.Condition {
-	return et.NotNull(field)
-}
-
-/**
-* Between
-* @param field string, min any, max any
-* @return *et.Condition
-**/
-func Between(field string, min, max any) *et.Condition {
-	return et.Between(field, min, max)
-}
-
-/**
-* NotBetween
-* @param field string, min any, max any
-* @return *et.Condition
-**/
-func NotBetween(field string, min, max any) *et.Condition {
-	return et.NotBetween(field, min, max)
-}
-
-/**
-* Evaluate
-* @param item et.Json, wheres []*et.Condition
-* @return bool
-**/
-func Evaluate(item et.Json, conditions []*et.Condition) bool {
-	return et.Evaluate(item, conditions)
 }

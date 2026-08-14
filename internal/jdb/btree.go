@@ -929,6 +929,74 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 }
 
 /**
+* ApplyConditions: Applies a set of conditions to all keys and returns the matching ones,
+* combining each condition's result with the accumulated result according to its Connector
+* (et.And intersects, et.Or unions; the first condition's connector is ignored).
+* @param conditions []*et.Condition
+* @return []string
+**/
+func (bt *BTree) ApplyConditions(conditions []*et.Condition) []string {
+	if len(conditions) == 0 {
+		return []string{}
+	}
+
+	result := bt.ApplyCondition(conditions[0])
+	for _, condition := range conditions[1:] {
+		keys := bt.ApplyCondition(condition)
+		if condition.Connector == et.Or {
+			result = bpUnion(result, keys)
+		} else {
+			result = bpIntersect(result, keys)
+		}
+	}
+
+	return result
+}
+
+/**
+* bpIntersect: Returns the values present in both a and b, preserving a's order.
+* @param a, b []string
+* @return []string
+**/
+func bpIntersect(a, b []string) []string {
+	set := make(map[string]bool, len(b))
+	for _, v := range b {
+		set[v] = true
+	}
+
+	var result []string
+	for _, v := range a {
+		if set[v] {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+/**
+* bpUnion: Returns the deduplicated values present in a or b, preserving order (a first).
+* @param a, b []string
+* @return []string
+**/
+func bpUnion(a, b []string) []string {
+	seen := make(map[string]bool, len(a)+len(b))
+	var result []string
+	for _, v := range a {
+		if !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+		}
+	}
+	for _, v := range b {
+		if !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+/**
 * bpReverse: Reverses a string slice in place.
 * @param s []string
 **/

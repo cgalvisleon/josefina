@@ -242,13 +242,14 @@ func (s *Model) Init() error {
 	// Open each secondary BTree (Init loads persisted data from its own store).
 	for _, index := range s.Indexes {
 		if strings.EqualFold(INDEX, index.Name) {
-			if err := s.loadStore(index.Name); err != nil {
+			if err := s.loadStore(INDEX); err != nil {
 				return err
 			}
 			continue
 		}
 		if index.Type == TpIndexBTree {
-			if err := s.loadBTree(index.Name); err != nil {
+			name := strings.ToLower(index.Name)
+			if err := s.loadBTree(name); err != nil {
 				return err
 			}
 		}
