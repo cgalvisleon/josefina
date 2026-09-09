@@ -35,9 +35,12 @@ func (s *FileStore) CreateSnapshot() error {
 	buf := bytes.NewBuffer(nil)
 
 	// ---- Header ----
+	// Version 2 adds the WAL field right after count; tryLoadSnapshot() branches
+	// on version so snapshots written by older builds (version 1, no WAL) still load.
 	buf.WriteString("SNAP")
-	binary.Write(buf, binary.BigEndian, uint16(1))
+	binary.Write(buf, binary.BigEndian, uint16(2))
 	binary.Write(buf, binary.BigEndian, uint64(len(s.index)))
+	binary.Write(buf, binary.BigEndian, s.WAL)
 
 	// ---- Entries ----
 	currentSegment := len(s.segments) - 1
@@ -111,10 +114,22 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	if err := binary.Read(buf, binary.BigEndian, &version); err != nil {
 		return false, err
 	}
+	if version != 1 && version != 2 {
+		return false, errors.New(msg.MSG_INVALID_SNAPSHOT)
+	}
 
 	var count uint64
 	if err := binary.Read(buf, binary.BigEndian, &count); err != nil {
 		return false, err
+	}
+
+	// version 1 snapshots predate the WAL field: fall back to 0 and let the
+	// caller's rebuild of the active segment recover whatever LSN it can see.
+	var wal uint64
+	if version >= 2 {
+		if err := binary.Read(buf, binary.BigEndian, &wal); err != nil {
+			return false, err
+		}
 	}
 
 	// ---- Entries ----
@@ -141,6 +156,13 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 
 		id := string(idBytes)
 		s.setIndex(id, int(segIndex), offset, dataLen)
+	}
+
+	// buildIndex() replays only the active segment right after this returns, so
+	// restore WAL here or a fresh/near-empty active segment would make the LSN
+	// counter regress below records already folded into this snapshot.
+	if wal > s.WAL {
+		s.WAL = wal
 	}
 
 	return true, nil

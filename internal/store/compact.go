@@ -104,15 +104,22 @@ func (s *FileStore) Compact() error {
 		n++
 	}
 
-	// Swap atómico
+	// Swap atómico. indexMu.Lock() se toma ANTES de cerrar los segmentos viejos:
+	// Read/Get/ForEach mantienen indexMu.RLock() durante toda la lectura, así que
+	// este Lock() espera a que terminen antes de cerrar sus fds por debajo.
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
+
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
 
 	for _, seg := range s.segments {
 		seg.Close()
 	}
 
-	oldDir := filepath.Join(s.Path, "segments.old")
+	// oldDir must be a sibling of s.Path, not a child of it — renaming a directory
+	// into its own subtree fails with EINVAL ("invalid argument").
+	oldDir := filepath.Join(filepath.Dir(s.Path), s.Name+".segments.old")
 	os.RemoveAll(oldDir)
 
 	if err := os.Rename(s.Path, oldDir); err != nil {
@@ -123,13 +130,11 @@ func (s *FileStore) Compact() error {
 	}
 
 	// Activar nuevos segmentos
-	s.indexMu.Lock()
 	s.index = newIndex
 	s.keys = keys
 	s.segments = newSegments
 	s.active = newSegments[len(newSegments)-1]
 	s.TombStones = 0
-	s.indexMu.Unlock()
 
 	return nil
 }

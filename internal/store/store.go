@@ -503,6 +503,17 @@ func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordR
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
+	return s.getRecordsLocked(asc, offset, limit)
+}
+
+/**
+* getRecordsLocked: Same as getRecords but assumes the caller already holds indexMu
+* (read or write). ForEach uses this to keep the lock held across the whole scan,
+* including the segment reads, so Compact() cannot close/swap segments underneath it.
+* @param asc bool, offset int, limit int
+* @return map[string]*RecordRef, []string, []*segment
+**/
+func (s *FileStore) getRecordsLocked(asc bool, offset, limit int) (map[string]*RecordRef, []string, []*segment) {
 	segs := s.segments
 
 	n := len(s.index)
@@ -642,7 +653,7 @@ func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
 	}
 
 	s.indexMu.Lock()
-	ref, exists := s.index[id]
+	_, exists := s.index[id]
 	if exists {
 		s.TombStones++
 	}
@@ -723,16 +734,27 @@ func (s *FileStore) IsExist(id string) bool {
 }
 
 /**
+* readSegment: Reads ref from its segment. Caller must hold indexMu (read or write)
+* for the whole call — Compact() takes indexMu.Lock() before closing old segments,
+* so holding the lock here prevents reading from a segment mid-close/after-swap.
+* @param ref *RecordRef
+* @return []byte, error
+**/
+func (s *FileStore) readSegment(ref *RecordRef) ([]byte, error) {
+	seg := s.segments[ref.segment]
+	return seg.Read(ref)
+}
+
+/**
 * Read
 * @param ref *RecordRef
 * @return bool, error
 **/
 func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
 	s.indexMu.RLock()
-	seg := s.segments[ref.segment]
-	s.indexMu.RUnlock()
+	defer s.indexMu.RUnlock()
 
-	result, err := seg.Read(ref)
+	result, err := s.readSegment(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -746,9 +768,9 @@ func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
 **/
 func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	s.indexMu.RLock()
-	seg := s.segments[ref.segment]
-	s.indexMu.RUnlock()
+	defer s.indexMu.RUnlock()
 
+	seg := s.segments[ref.segment]
 	return seg.ReadHeader(ref)
 }
 
@@ -759,14 +781,14 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 **/
 func (s *FileStore) Get(id string) (bool, []byte, error) {
 	s.indexMu.RLock()
-	ref, existed := s.index[id]
-	s.indexMu.RUnlock()
+	defer s.indexMu.RUnlock()
 
+	ref, existed := s.index[id]
 	if !existed {
 		return false, nil, nil
 	}
 
-	result, err := s.Read(ref)
+	result, err := s.readSegment(ref)
 	if err != nil {
 		return false, nil, err
 	}
@@ -799,12 +821,18 @@ func (s *FileStore) GetObject(id string) (bool, et.Json, error) {
 }
 
 /**
-* ForEach
+* ForEach: Iterates over records, holding indexMu.RLock() for the whole scan
+* (including fn and the segment reads) so Compact() cannot close/swap segments
+* underneath it. fn must not call back into this same FileStore (Get/Put/Delete/
+* Read/ForEach), or it can deadlock against a concurrent Compact().
 * @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
 func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
-	index, keys, segs := s.getRecords(asc, offset, limit)
+	s.indexMu.RLock()
+	defer s.indexMu.RUnlock()
+
+	index, keys, segs := s.getRecordsLocked(asc, offset, limit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
