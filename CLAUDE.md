@@ -4,40 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Run server (single node)
+### Run server
 ```bash
-gofmt -w . && go run ./cmd/server -port 1377 -http 3500
+gofmt -w . && go run ./cmd/server -port 1377 -rpct 4377 -name josefina
 ```
+Flags (see `cmd/server/main.go`): `-port` (HTTP, env `PORT`, default 1377), `-rpct` (RPC port, env `RPC_PORT`, default 4370), `-name` (env `DB_NAME`, default `josefina` — currently unused past this point, no code reads it back), `-path_data`/`-path_wald`/`-path_system` (env `DB_PATH_DATA`/`DB_PATH_WAL`/`DB_PATH_SYSTEM`).
 
-### Run multiple server nodes (cluster)
-```bash
-go run ./cmd/server -port 1377 -http 3500
-go run ./cmd/server -port 1378 -http 3501
-go run ./cmd/server -port 1379 -http 3502
-```
-Each instance is an independent node (`config.json`'s `nodes` list documents intended peer addresses but isn't wired up yet — see the `internal/jdb`/`internal/jsql` note below).
-
-### Run client (REPL)
-```bash
-# Remote (TCP) mode — requires a running server
-go run ./cmd/client -host 127.0.0.1:1377 -user <username> -password <password>
-
-# Local (embedded) mode — boots jdb in-process, no server needed
-go run ./cmd/client -user admin -password secret -database mydb
-```
+There is no `cmd/client` and no REPL — Josefina is driven entirely over its HTTP API (`pkg/server`); see Architecture below.
 
 ### Test
 ```bash
-go test ./internal/stmt/...          # parser + dialect tests (fast, no server needed)
-go test ./...                        # all packages
-go test -run TestName ./internal/stmt/  # single test
+go test ./...
 ```
+There are currently **no `_test.go` files anywhere in this repo** — this is not a "run the suite" codebase yet. If you add tests, `go test ./path/to/pkg/...` and `go test -run TestName ./path/to/pkg/` work as usual.
 
 ### Build
 ```bash
 go build ./cmd/server
-go build ./cmd/client
 ```
+`cmd/store` and `cmd/test` are standalone scratch programs exercising `internal/store` and `internal/jdb` directly (not part of the product surface, but still `go build`-able).
 
 ### Format
 ```bash
@@ -46,8 +31,10 @@ gofmt -w .
 
 ### Go version
 ```bash
-goenv local 1.25.0   # project uses Go 1.25.0 (see go.mod)
+goenv local 1.25.0   # project uses Go 1.25.0 (see go.mod, .go-version)
 ```
+
+This repo also participates in the sibling `go.work` at the `cgalvisleon/` workspace root (alongside `et`, `core-studio/api`, `tick`), so local edits to `github.com/cgalvisleon/et` are picked up live without a published release — run `go env GOWORK` to confirm it's active.
 
 ## Code style
 
@@ -68,62 +55,58 @@ All doc comments for functions, methods, and types must use this block style:
 
 ## Architecture
 
-Josefina is a custom distributed document database engine written in Go with SQL-like query syntax. It has no external database dependency — all data is stored locally in its own file-based storage engine.
+Josefina is a custom document database engine written in Go, exposed only over an **HTTP + JSON API** (module `github.com/josefina`). There is no SQL text parser, no TCP client protocol, and no REPL in the current codebase — a prior iteration had those (see "Stale docs" below), but that layer has been removed. Queries and commands are JSON documents dispatched to a fluent Go query/command builder underneath.
 
-### Entry points
-- `cmd/server/main.go` — starts the database server. Flags: `-port` (TCP, default 1377), `-http` (HTTP, default 3500), `-strict` (schema enforcement)
-- `cmd/client/main.go` — starts an interactive REPL; omit `-host` for local embedded mode
-- `cmd/store/main.go`, `cmd/test/main.go` — standalone scratch programs exercising `internal/store` and `internal/jdb` directly (not part of the public product surface)
+### Entry point
+- `cmd/server/main.go` — the only product entry point. Wires env vars/flags, calls `internal/server.New()`, then `.Start()`.
+- `cmd/store/main.go`, `cmd/test/main.go` — scratch programs exercising `internal/store` and `internal/jdb.Load()` directly.
+
+### Request flow
+```
+cmd/server → internal/server.New() → internal/server/v1.New()
+    → jdb.Load()                         (boots the singleton *jdb.Server)
+    → pkg/server.Routes(name, version, server)  (mounts HTTP routes on it)
+    → github.com/cgalvisleon/et/server.Ettp     (actual HTTP listener, mounted at "/" and "/v1")
+```
+`pkg/server` (package `server`, not to be confused with `internal/server`) defines the REST surface using `github.com/cgalvisleon/et/router`:
+- `POST /signin`, `POST /signout` — issue/revoke a JWT (`github.com/cgalvisleon/et/claim`) tied to a `jdb.Session`
+- `POST /system` — batches `define`/`describe` JSON ops (create/inspect database, schema, model, user)
+- `POST /query` — batches `query` JSON ops (currently a no-op stub, `execQuery` in `internal/jdb/query.go`)
+- `POST /command` — batches `insert`/`update`/`delete`/`bulk` JSON ops
+- `POST /uploadXls`, `POST /uploadCsv`, `POST /uploadDb` — multipart/JSON bulk-load endpoints (XLS, CSV, or a live import from Postgres/MySQL/SQLite/Oracle/SQL Server via `internal/jdb/datasource.go`)
+
+Every authenticated route reads a `Bearer` token, validated by `pkg/server.Authentication` (checks the JWT via `claim.ParceToken`, then looks up the session via `jdb.Authenticate`) before the handler runs. `POST /system`, `/query`, `/command`, and the uploads are wired as `Public` routes in the router but still require and check the bearer token by hand inside `internal/jdb/server.go` (`jSystem`/`jQuery`/`jCommand`/`jUpload*`) — don't assume the router's own `Authentication` middleware is what's gating them.
+
+Inside `internal/jdb`, each of `jSystem`/`jQuery`/`jCommand` fans its JSON array fields out into `queryJob`s (`internal/jdb/query.go`) and runs them concurrently via `runQueryJobs`, merging results into one `et.Items`. All top-level DB work — including simple reads — is additionally serialized through a worker-pool queue: `Server.Exec(params, fn)` pushes a `Request` onto a buffered channel and blocks on its `Response`; `Server.runWorkers()` starts `cores*2+1` (or `DB_POOL`) goroutines consuming that queue. Any new server-level operation should go through `Server.Exec`, not call its handler directly.
 
 ### Layer breakdown
 
-**`internal/store`** — Low-level WAL file storage engine
-- `FileStore`: append-only segmented file store with an in-memory index (`map[string]*RecordRef`)
-- Records are written to segment files (`segment-XXXXXX.dat`) and indexed by string key
-- Tombstone-based deletions; automatic compaction when tombstones exceed 10% of index size
-- Snapshots created on each segment roll-over
-- Config: `RELSEG_SIZE` (segment size in MB, default 128), `SYNC_ON_WRITE` (default true)
+**`internal/store`** — Low-level WAL file storage engine, unchanged in spirit from earlier versions
+- `FileStore`: append-only segmented file store (`segment-XXXXXX.dat`) with an in-memory index (`map[string]*RecordRef`)
+- Tombstone-based deletes; automatic compaction (`compact.go`) once tombstones exceed a threshold; snapshots on segment roll-over (`snapshot.go`)
+- `wal.go` adds `WalEntry`/`ApplyWalEntry`/`WalSince` — a replication log primitive not yet wired to any clustering code (see `config.json` note below)
 
-**`internal/jdb`** — Schema, catalog, and database engine
-- `DB` → `Schema` → `Model` → `Field` hierarchy. `DB`s are held in a package-level registry (`NewDb`, `LoadDb`, `GetDb` in `jdb.go`)
-- Every `DB` auto-loads a set of core models on creation: `store`, `cache`, `users`, `sessions` (schema `""`) and `errors` (schema `.catalog`, the `sysSchema` constant in `db.go`) — these live inside the same database, not a separate global catalog DB
-- `Model` owns a primary `FileStore` (key → document) plus one `FileStore` per secondary index and one in-memory B+ tree (`btree.go`, degree 32, `bpDegree`) per index — each `BTree` self-persists and reloads on `Model.Init()`
-- `BTree` secondary indexes return `[]string` (primary keys) and support `Get`, `Insert`, `Delete`, `Equal`, `NotEqual`, `Between`, `NotBetween`, `More`, `MoreEq`, `Less`, `LessEq`, `Like`, `In`, `NotIn`, `Is`, `IsNot`, `Null`, `NotNull`, `ApplyCondition` (takes an `et.Condition` directly)
-- JavaScript triggers (`Model` before/after insert/update/delete hooks, see `AddBeforeInsert` etc. and `fireTriggers` in `model.go`) run through `github.com/cgalvisleon/et/jrex` (`jrex.NewInstance()`), not an in-package VM wrapper
-- Note: `internal/jsql/server.go` currently references `jdb.Node`, `jdb.NodeParams`, and `jdb.Load` for a clustered/TCP-owning node type — as of this writing that type does not exist in `internal/jdb` (only `DB`/`NewDb`/`LoadDb`/`GetDb` do), so that file will not compile until the node abstraction lands. Verify with `go build ./...` before relying on the jsql server layer
+**`internal/jdb`** — Server, schema, catalog, and query/command engine (the bulk of the codebase, ~8k lines)
+- Hierarchy: package-level singleton `*Server` (`jdb.go`/`server.go`) → `DB` (`db.go`) → `Schema` (`schema.go`) → `Model` (`model.go`) → `Field`/`Index`/`Detail` (`field.go`, `define.go`)
+- `Server` also owns cross-database concerns: `Users`/`Session`s (`users.go`, `session.go` — JWT-backed, admin bootstrap via `USER_ADMIN`/`PASSWORD_ADMIN` env, default `admin`/`admin`), `Series` (`series.go`, named auto-increment/format counters), `Cache` (`cache.go`), and `Instances` (`instances.go` — async job/audit tracking used by the upload endpoints)
+- `Model` owns a primary `FileStore` (key → document) plus one `FileStore` + one in-memory `BTree` (`btree.go`, B+ tree, degree 32) per secondary index; each `BTree` self-persists and rebuilds from its `FileStore` on `Model.Init()`
+- Query DSL: `Model.Where(cond)` → `*Query`, `Model.Insert/Update/Delete/Upsert/Bulk(...)` → `*Command` (`cmd.go`, `where.go`), both fluent (`.And`, `.Or`, `.Selects`, `.Hidden`, `.OrderBy`, `.Limit`, `.Exec()`/`.One()`). Conditions are built with helpers in `condition.go` (`Eq`, `Neg`, `Less`, `More`, `Like`, `In`, `Between`, `Null`, ...) which produce `*et.Condition`, matched against `BTree` indexes using typed `IndexKey`s (`key.go` — numeric vs. lexicographic ordering is type-aware, `KeyFromAny` auto-detects from decoded JSON)
+- JavaScript triggers (`Model.AddBeforeInsert`/`AddAfterInsert`/... and `fireTriggers` in `model.go`) run through `github.com/cgalvisleon/et/jrex` (`jrex.NewInstance()`)
+- `datasource.go` builds DSNs and imports an external table (Postgres/MySQL/SQLite/Oracle/SQL Server via `lib/pq`, `go-sql-driver/mysql`, `modernc.org/sqlite`, `sijms/go-ora`, `microsoft/go-mssqldb`) row-by-row into a `Model`
 
-**`internal/stmt`** — Query language parser and SQL dialect translators
-- Custom lexer (`lexer.go`) and per-statement parsers: `parser_ddl.go`, `parser_dml.go`, `parser_db.go`, `parser_user.go`, `parser_serie.go`, `parser_cache.go`, `parser_tx.go`, `parser_cmd.go`, `parser_json.go`, `parser_text.go`
-- Statement types defined in `stmt_*.go` files; execution entry point is `ExecSQL(db, sql) (et.Items, error)` in `executor.go`
-- Dialect subdirs: `internal/stmt/mysql`, `internal/stmt/oracle`, `internal/stmt/sqlserver` — each implement DDL/DML/TX translators and have their own tests
-- SQL state can be switched per session: `SET SQL STATE MYSQL|POSTGRESQL|ORACLE|SQLSERVER|JOSEFINA`
+**`internal/server` / `internal/server/v1`** — Thin wiring layer: builds the `et/server.Ettp` HTTP server, loads `jdb`, mounts `pkg/server`'s routes at `/` and `/v1`, registers the close hook (`jrpc.Close()`)
 
-**`internal/jsql`** — Public server/client/auth layer wrapping `internal/jdb` and `internal/stmt`
-- `server.go`: singleton `Server` (embeds `*jdb.Node` — see the note above; this file is currently ahead of `internal/jdb`), created with `NewServer(port)`, mounts a `QueryService` (`query.go`) and starts the TCP transport
-- `client.go`: TCP client (`github.com/cgalvisleon/et/tcp`) connecting to a running node, used by `cmd/client` in remote mode
-- `auth.go`, `session.go`: authentication middleware, backed by `github.com/cgalvisleon/et/claim` (JWT)
-- `dialect.go`: translates parsed `stmt.Stmt` values to a target SQL dialect (currently Postgres-flavored rendering; used together with `internal/stmt`'s `SET SQL STATE` dialects)
-- `render.go`: REPL-facing output formatting (table printing, banners, colored messages) used by `cmd/client`
-
-**`internal/server`** — Top-level server wiring (HTTP + WebSocket + TCP started from here)
-
-**`internal/cli`** — Terminal rendering for the REPL (table formatting, output)
-
-**`internal/client`** — REPL input loop and meta-commands (`\c`, `\timing`, `\i`, `\q`)
-
-**`pkg/http`** — HTTP API layer using `go-chi/chi`
-
-**`pkg/websocket`** — WebSocket hub using `gorilla/websocket`
+**`pkg/server`** — The public REST API: routing (`router.go`), bearer-token auth middleware (`authentication.go`), event subscription wiring (`events.go`) via `github.com/cgalvisleon/et/event`
 
 **`internal/msg`** — Centralized error/message string constants (`MSG_*`), with English/Spanish variants selected by the `LANG` env var
 
 ### Configuration
-- `config.json` — a `nodes` list of `host:port` cluster peer addresses; not currently read by any Go code (`cmd/server` takes `-port`/`-http`/`-strict` flags directly instead)
-- `.env` — environment variables read via `envar`, including `LANG` (`en`/`es`, selects `internal/msg` message language), `RELSEG_SIZE`, `SYNC_ON_WRITE`, `TENNANT_NAME`, `TENNANT_PATH_DATA`, `TIMEZONE`, `MIN_THRESHOLD_COMPACT`, `TTL_TRANSACCION`, `HOST`, `PORT`, `RPC_PORT`, `TCP_PORT`, `PATH_URL`, `DEBUG`
-- Data is persisted under `./data/<TENNANT_NAME>/dbs/<database>/`
+- `config.json` — a `nodes` list of `host:port` cluster peer addresses; still not read by any Go code. Combined with the unused `internal/store/wal.go` replication primitives, this documents an intended-but-unbuilt clustering feature — don't assume nodes coordinate with each other.
+- `.env` — read via `envar`; besides the server flags above, includes `RELSEG_SIZE`, `SYNC_ON_WRITE`, `TIMEZONE`, `MIN_THRESHOLD_COMPACT`, `TTL_TRANSACCION`, `DB_POOL`, `PATH_URL`, plus `REDIS_*`/`NATS_*` used by `et`'s `cache`/`event` packages
+- Data is persisted under `DB_PATH_DATA` / `DB_PATH_WAL` / `DB_PATH_SYSTEM` (defaults under `./data/`)
 
 ### Key dependency
-- `github.com/cgalvisleon/et` — shared utilities providing: `tcp` (transport), `ws` (websocket), `et` (JSON type/`Condition`), `claim` (JWT), `jrex` (JS trigger runtime), `logs`, `envar`, `utility`, `reg`, `strs`, `middleware`, `router`, `response`, `stdrout`, `timezone`
+- `github.com/cgalvisleon/et` — shared utilities: `server` (HTTP host, `Ettp`), `router` (chi-based REST routing), `response` (JSON response helpers), `claim` (JWT), `event` (pub/sub), `cache`, `jrex` (JS trigger runtime), `csv`/`xls` (bulk import parsing), `logs`, `envar`, `utility`, `reg`
 
 ### Stale docs, don't rely on them
-- `README.md` and `AGENTS.md` describe an older `internal/catalog` package and `pkg/sql` layer that no longer exist — that code was consolidated into `internal/jdb` and `internal/jsql`. Trust this file and the source over those two.
+- `README.md` and `AGENTS.md` describe an even older architecture than either of those files' own history suggests: a `cmd/client` REPL, TCP remote/embedded modes, SQL-text syntax (`CREATE TABLE`, `SELECT ... WHERE`, `SET SQL STATE`), and an `internal/catalog` package. **None of that exists in the current tree** — `cmd/client`, `internal/catalog`, `internal/stmt`, `internal/jsql`, `internal/cli`, `internal/client`, `pkg/http`, and `pkg/websocket` are all gone. The current query/command surface is the JSON-based `internal/jdb` DSL described above, driven only over HTTP. Trust this file and the source over those two.
