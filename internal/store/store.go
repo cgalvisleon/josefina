@@ -2,11 +2,11 @@ package store
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -118,7 +118,6 @@ type FileStore struct {
 	segments            []*segment            `json:"-"` // segmentos de datos
 	active              *segment              `json:"-"` // segmento activo para escritura
 	index               map[string]*RecordRef `json:"-"` // índice en memoria
-	keys                []string              `json:"-"` // claves en memoria
 	mode                Mode                  `json:"-"` // modo de operación
 	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
@@ -363,9 +362,6 @@ func (s *FileStore) setIndex(id string, ref *RecordRef) bool {
 **/
 func (s *FileStore) setIndexLocked(id string, ref *RecordRef) bool {
 	_, exists := s.index[id]
-	if !exists {
-		s.keys = append(s.keys, id)
-	}
 	s.index[id] = ref
 	if s.isDebug {
 		logs.Debug("put:", s.Path, ":lsn:", s.WAL.count(), ":ID:", id, ":ref:", ref.ToString())
@@ -394,10 +390,6 @@ func (s *FileStore) deleteIndexLocked(id string) bool {
 		return false
 	}
 	delete(s.index, id)
-	idx := slices.Index(s.keys, id)
-	if idx != -1 {
-		s.keys = append(s.keys[:idx], s.keys[idx+1:]...)
-	}
 	return true
 }
 
@@ -407,9 +399,8 @@ func (s *FileStore) deleteIndexLocked(id string) bool {
 * @return error
 **/
 func (s *FileStore) rebuildIndex(segIndex int) error {
-	if len(s.index) == 0 {
+	if s.index == nil {
 		s.index = make(map[string]*RecordRef)
-		s.keys = make([]string, 0)
 	}
 
 	return s.segments[segIndex].scan(0, func(offset int64, h recordHeader, data []byte) error {
@@ -438,66 +429,45 @@ func (s *FileStore) buildIndex() error {
 }
 
 /**
-* getRecords
+* sortedKeysLocked: Returns the ids of the index sorted asc/desc, windowed by
+* offset and limit (limit <= 0 means no limit). Caller must hold indexMu.
 * @param asc bool, offset int, limit int
-* @return map[string]*RecordRef, []string, []*segment
+* @return []string
 **/
-func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string, []*segment) {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+func (s *FileStore) sortedKeysLocked(asc bool, offset, limit int) []string {
+	offset = max(offset, 0)
+	if offset >= len(s.index) {
+		return []string{}
+	}
 
-	return s.getRecordsLocked(asc, offset, limit)
+	keys := slices.Sorted(maps.Keys(s.index))
+	if !asc {
+		slices.Reverse(keys)
+	}
+
+	end := len(keys)
+	if limit > 0 {
+		end = min(offset+limit, end)
+	}
+
+	return keys[offset:end]
 }
 
 /**
-* getRecordsLocked: Same as getRecords but assumes the caller already holds indexMu
-* (read or write). ForEach uses this to keep the lock held across the whole scan,
-* including the segment reads, so Compact() cannot close/swap segments underneath it.
-* @param asc bool, offset int, limit int
-* @return map[string]*RecordRef, []string, []*segment
+* pinLocked: Returns the segment ref points at, registered as being read so a
+* concurrent Compact()/Close() retires it without closing the file underneath.
+* Caller must hold indexMu (read) and must call release() on the result.
+* @param ref *RecordRef
+* @return *segment, error
 **/
-func (s *FileStore) getRecordsLocked(asc bool, offset, limit int) (map[string]*RecordRef, []string, []*segment) {
-	segs := s.segments
-
-	n := len(s.index)
-	keys := make([]string, 0)
-	indexResult := make(map[string]*RecordRef, 0)
-	if offset >= n {
-		return indexResult, keys, segs
+func (s *FileStore) pinLocked(ref *RecordRef) (*segment, error) {
+	if ref == nil || ref.segment < 0 || ref.segment >= len(s.segments) {
+		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
 	}
 
-	if limit <= 0 {
-		limit = n
-	}
-
-	keysCopy := make([]string, len(s.keys))
-	copy(keysCopy, s.keys)
-
-	if asc {
-		sort.Strings(keysCopy)
-	} else {
-		sort.Sort(sort.Reverse(sort.StringSlice(keysCopy)))
-	}
-
-	i := 0
-	for {
-		if offset >= len(keysCopy) {
-			break
-		}
-		k := keysCopy[offset]
-		v, ok := s.index[k]
-		if ok {
-			indexResult[k] = v
-			keys = append(keys, k)
-		}
-		offset++
-		i++
-		if i >= limit {
-			break
-		}
-	}
-
-	return indexResult, keys, segs
+	seg := s.segments[ref.segment]
+	seg.acquire()
+	return seg, nil
 }
 
 /**
@@ -509,7 +479,6 @@ func (s *FileStore) rebuildIndexes() error {
 	defer s.indexMu.Unlock()
 
 	s.index = make(map[string]*RecordRef)
-	s.keys = make([]string, 0)
 	for i := range s.segments {
 		if err := s.rebuildIndex(i); err != nil {
 			return err
@@ -526,19 +495,24 @@ func (s *FileStore) rebuildIndexes() error {
 func (s *FileStore) Close() error {
 	s.compactWg.Wait()
 
+	// compactMu also waits for a Compact() started by Prune.
+	s.compactMu.Lock()
+	defer s.compactMu.Unlock()
+
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
-	// Close every segment, not just the active one: sealed segments keep their
-	// file open for reads, and segments loaded read-write run a writer goroutine.
+	// Flush every segment and retire it: files nobody is reading close now, the
+	// rest close when their last in-flight reader (Get/ForEach) releases them.
 	var closeErr error
 	for _, seg := range s.segments {
-		if err := seg.Close(); err != nil && closeErr == nil {
+		if err := seg.Seal(); err != nil && closeErr == nil {
 			closeErr = err
 		}
+		seg.retire()
 	}
 
 	return closeErr
@@ -556,7 +530,6 @@ func (s *FileStore) Empty() error {
 
 	s.indexMu.Lock()
 	s.index = make(map[string]*RecordRef)
-	s.keys = make([]string, 0)
 	s.indexMu.Unlock()
 	s.WAL.set(0)
 	s.TombStones.set(0)
@@ -657,7 +630,7 @@ func (s *FileStore) Update(id string, data []byte) (bool, error) {
 		return false, nil
 	}
 
-	old, err := s.Read(ref)
+	old, err := s.readPinned(ref, id)
 	if err != nil {
 		s.writeMu.Unlock()
 		return false, err
@@ -729,43 +702,50 @@ func (s *FileStore) IsExist(id string) bool {
 }
 
 /**
-* readSegment: Reads ref from its segment. Caller must hold indexMu (read or write)
-* for the whole call — Compact() takes indexMu.Lock() before closing old segments,
-* so holding the lock here prevents reading from a segment mid-close/after-swap.
-* @param ref *RecordRef
+* readPinned: Reads the record of id at ref without holding indexMu during the
+* disk read; the segment is pinned so Compact() cannot close it meanwhile.
+* An empty id reads the id from disk.
+* @param ref *RecordRef, id string
 * @return []byte, error
 **/
-func (s *FileStore) readSegment(ref *RecordRef) ([]byte, error) {
-	seg := s.segments[ref.segment]
-	return seg.Read(ref)
-}
-
-/**
-* Read
-* @param ref *RecordRef
-* @return bool, error
-**/
-func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
+func (s *FileStore) readPinned(ref *RecordRef, id string) ([]byte, error) {
 	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
-
-	result, err := s.readSegment(ref)
+	seg, err := s.pinLocked(ref)
+	s.indexMu.RUnlock()
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	defer seg.release()
+
+	if id == "" {
+		return seg.read(ref)
+	}
+	return seg.readRecord(ref, id)
 }
 
 /**
-* ReadHeader
+* Read: Reads the record at ref
+* @param ref *RecordRef
+* @return []byte, error
+**/
+func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
+	return s.readPinned(ref, "")
+}
+
+/**
+* ReadHeader: Reads the header of the record at ref
 * @param ref *RecordRef
 * @return recordHeader, error
 **/
 func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	seg, err := s.pinLocked(ref)
+	s.indexMu.RUnlock()
+	if err != nil {
+		return recordHeader{}, err
+	}
+	defer seg.release()
 
-	seg := s.segments[ref.segment]
 	return seg.ReadHeader(ref)
 }
 
@@ -775,130 +755,172 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 * @return []byte, bool (true if id exists), error
 **/
 func (s *FileStore) Get(id string) ([]byte, bool, error) {
+	// Lookup and pin under one RLock so the ref and its segment belong to the
+	// same layout; the disk read runs after releasing it.
 	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
-
 	ref, exists := s.index[id]
 	if !exists {
+		s.indexMu.RUnlock()
 		return nil, false, nil
 	}
+	seg, err := s.pinLocked(ref)
+	s.indexMu.RUnlock()
+	if err != nil {
+		return nil, false, err
+	}
+	defer seg.release()
 
-	result, err := s.readSegment(ref)
+	data, err := seg.readRecord(ref, id)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return result, true, nil
+	return data, true, nil
 }
 
 /**
-* ForEach: Iterates over records, holding indexMu.RLock() for the whole scan
-* (including fn and the segment reads) so Compact() cannot close/swap segments
-* underneath it. fn must not call back into this same FileStore (Get/Put/Delete/
-* Read/ForEach), or it can deadlock against a concurrent Compact().
+* forEachItem: One record selected by ForEach, with its segment pinned
+**/
+type forEachItem struct {
+	id  string
+	ref *RecordRef
+	seg *segment
+}
+
+/**
+* forEachResult: Result of reading one forEachItem
+**/
+type forEachResult struct {
+	data []byte
+	err  error
+}
+
+/**
+* ForEach: Calls fn for each record, in key order (asc/desc), windowed by offset
+* and limit (limit <= 0 means no limit). Disk reads run concurrently on up to
+* runtime.NumCPU() goroutines, but fn is always called sequentially, in order,
+* from the calling goroutine, so it needs no locking of its own and returning
+* false stops exactly after the current record.
+* The set of records is fixed when the call starts: no lock is held while
+* reading or while fn runs, so writes are not blocked and fn may call back into
+* this FileStore (a concurrent Compact() defers closing files until the scan ends).
 * @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
 func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
+	// ---- Selección: claves y segmentos fijados bajo un solo RLock ----
 	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
-
-	index, keys, segs := s.getRecordsLocked(asc, offset, limit)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	jobs := make(chan string)
-
-	var (
-		wg      sync.WaitGroup
-		errOnce sync.Once
-		mErr    error
-	)
-
-	setErr := func(err error) {
-		if err == nil {
-			return
+	keys := s.sortedKeysLocked(asc, offset, limit)
+	items := make([]forEachItem, len(keys))
+	pinned := make(map[*segment]bool)
+	for i, id := range keys {
+		ref := s.index[id]
+		seg, err := s.pinLocked(ref)
+		if err != nil {
+			s.indexMu.RUnlock()
+			for seg := range pinned {
+				seg.release()
+			}
+			return err
 		}
-		errOnce.Do(func() {
-			mErr = err
-			cancel()
+		if pinned[seg] {
+			seg.release() // one pin per segment is enough
+		}
+		pinned[seg] = true
+		items[i] = forEachItem{id: id, ref: ref, seg: seg}
+	}
+	s.indexMu.RUnlock()
+	defer func() {
+		for seg := range pinned {
+			seg.release()
+		}
+	}()
+
+	n := len(items)
+	if n == 0 {
+		return nil
+	}
+
+	// ---- Lectura concurrente con entrega ordenada ----
+	// Workers read items in parallel; each result goes to slot i%window. The
+	// consumer (this goroutine) takes slots in order 0..n-1 and calls fn. sem
+	// caps dispatched-but-unconsumed items at window, so memory stays bounded
+	// and a slot is never reused before its previous result was consumed.
+	workers := min(runtime.NumCPU(), n)
+	window := workers * 4
+	slots := make([]chan forEachResult, window)
+	for i := range slots {
+		slots[i] = make(chan forEachResult, 1)
+	}
+	jobs := make(chan int, window)
+	sem := make(chan struct{}, window)
+	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Go(func() {
+			for i := range jobs {
+				select {
+				case <-done:
+					slots[i%window] <- forEachResult{}
+					continue
+				default:
+				}
+				data, err := items[i].seg.readRecord(items[i].ref, items[i].id)
+				slots[i%window] <- forEachResult{data: data, err: err}
+			}
 		})
 	}
 
-	workers := runtime.NumCPU()
-
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			for {
-				select {
-
-				case <-ctx.Done():
-					return
-
-				case id, ok := <-jobs:
-					if !ok {
-						return
-					}
-
-					ref, ok := index[id]
-					if !ok {
-						continue
-					}
-
-					data, err := segs[ref.segment].read(ref)
-					if err != nil {
-						setErr(err)
-						return
-					}
-
-					cont, err := fn(id, data)
-					if err != nil {
-						setErr(err)
-						return
-					}
-
-					if !cont {
-						cancel()
-						return
-					}
-				}
+	wg.Go(func() {
+		defer close(jobs)
+		for i := range n {
+			select {
+			case sem <- struct{}{}:
+			case <-done:
+				return
 			}
-		}()
-	}
+			jobs <- i
+		}
+	})
 
-Producer:
-	for _, id := range keys {
+	// Stop the producer and wait for every goroutine before the deferred
+	// release() of the pinned segments runs (also if fn panics).
+	defer func() {
+		close(done)
+		wg.Wait()
+	}()
 
-		select {
+	for i := range n {
+		r := <-slots[i%window]
+		<-sem
+		if r.err != nil {
+			return r.err
+		}
 
-		case <-ctx.Done():
-			break Producer
-
-		case jobs <- id:
+		cont, err := fn(items[i].id, r.data)
+		if err != nil {
+			return err
+		}
+		if !cont {
+			return nil
 		}
 	}
 
-	close(jobs)
-
-	wg.Wait()
-
-	return mErr
+	return nil
 }
 
 /**
-* Keys: Returns a sorted key snapshot without spawning a worker pool.
-* Suitable for cursor creation; cheaper than ForEach when only IDs are needed.
+* Keys: Returns the ids sorted asc/desc, windowed by offset and limit, without
+* reading any record. Cheaper than ForEach when only ids are needed.
 * @param asc bool, offset int, limit int
 * @return []string
 **/
 func (s *FileStore) Keys(asc bool, offset, limit int) []string {
-	_, keys, _ := s.getRecords(asc, offset, limit)
-	return keys
+	s.indexMu.RLock()
+	defer s.indexMu.RUnlock()
+
+	return s.sortedKeysLocked(asc, offset, limit)
 }
 
 /**
@@ -941,7 +963,6 @@ func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
 	fs.index = make(map[string]*RecordRef)
-	fs.keys = make([]string, 0)
 	fs.SyncOnWrite = syncOnWrite
 
 	if mode == ReadOnly {

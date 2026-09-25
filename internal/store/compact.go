@@ -168,9 +168,8 @@ func (s *FileStore) Compact() error {
 	}
 
 	// ---- Fase 3: ponerse al día y hacer el swap ----
-	// indexMu.Lock() se toma ANTES de cerrar los segmentos viejos: Read/Get/ForEach
-	// mantienen indexMu.RLock() durante toda la lectura, así que este Lock() espera
-	// a que terminen antes de cerrar sus fds por debajo.
+	// Readers never hold indexMu while reading from disk: they pin the segment
+	// (acquire/release) and the old segments are retired below, not closed.
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -258,14 +257,15 @@ func (s *FileStore) Compact() error {
 	}
 	swapped = true
 
+	// Retire instead of Close: a ForEach/Get that pinned an old segment keeps
+	// reading it; its file closes when the last of those readers releases it.
 	for _, seg := range s.segments {
-		seg.Close()
+		seg.retire()
 	}
 	os.RemoveAll(oldDir)
 
 	// Activar nuevos segmentos
 	s.index = newIndex
-	s.keys = slices.Sorted(maps.Keys(newIndex))
 	s.segments = w.segments
 	s.active = w.current
 	s.TombStones.set(tombStones)

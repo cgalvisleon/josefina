@@ -161,7 +161,6 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	defer s.indexMu.Unlock()
 
 	s.index = make(map[string]*RecordRef, count)
-	s.keys = make([]string, 0, count)
 	for i := uint64(0); i < count; i++ {
 		var idLen uint16
 		binary.Read(buf, binary.BigEndian, &idLen)

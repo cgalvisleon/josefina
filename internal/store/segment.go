@@ -1,13 +1,12 @@
 package store
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/cgalvisleon/et/et"
 	"github.com/josefina/internal/msg"
@@ -72,6 +71,37 @@ type segment struct {
 	writeErr  error
 	errMu     sync.Mutex
 	closeOnce sync.Once
+	readers   atomic.Int32 // lectores en curso (Get/Read/ForEach) que no sostienen indexMu
+	retired   atomic.Bool  // fuera del store (compaction/close): se cierra con el último lector
+}
+
+/**
+* acquire: Registers a reader. Only call it while the segment is still part of
+* the store (under indexMu), so it can never race with retire().
+**/
+func (s *segment) acquire() {
+	s.readers.Add(1)
+}
+
+/**
+* release: Unregisters a reader and closes the file if the segment was retired
+* and this was the last reader.
+**/
+func (s *segment) release() {
+	if s.readers.Add(-1) == 0 && s.retired.Load() {
+		s.Close()
+	}
+}
+
+/**
+* retire: Marks the segment as no longer part of the store. The file is closed
+* now if nobody is reading it, otherwise by the last reader's release().
+**/
+func (s *segment) retire() {
+	s.retired.Store(true)
+	if s.readers.Load() == 0 {
+		s.Close()
+	}
 }
 
 /**
@@ -286,67 +316,39 @@ func (s *segment) WriteRecord(lsn uint64, id string, data []byte, status byte) (
 }
 
 /**
-* ReadHeader
-* @param ref *RecordRef
-* @return recordHeader, error
+* decodeFixedHeader: Decodes the fixed part of a record header.
+* Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1][Data]
+* @param b []byte (at least 18 bytes)
+* @return recordHeader
 **/
-func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
-	var header recordHeader
-	buf := make([]byte, fixedHeaderSize)
-	_, err := s.ReadAt(buf, ref.offset)
-	if err != nil {
-		return header, err
+func decodeFixedHeader(b []byte) recordHeader {
+	return recordHeader{
+		LSN:     binary.BigEndian.Uint64(b[0:8]),
+		DataLen: getUint32(b[8:12]),
+		CRC:     getUint32(b[12:16]),
+		IDLen:   getUint16(b[16:18]),
 	}
-
-	// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
-	reader := bytes.NewReader(buf)
-	if err := binary.Read(reader, binary.BigEndian, &header.LSN); err != nil {
-		return header, fmt.Errorf("read LSN: %w", err)
-	}
-	if err := binary.Read(reader, binary.BigEndian, &header.DataLen); err != nil {
-		return header, fmt.Errorf("read DataLen: %w", err)
-	}
-	if err := binary.Read(reader, binary.BigEndian, &header.CRC); err != nil {
-		return header, fmt.Errorf("read CRC: %w", err)
-	}
-	if err := binary.Read(reader, binary.BigEndian, &header.IDLen); err != nil {
-		return header, fmt.Errorf("read IDLen: %w", err)
-	}
-
-	idBytes := make([]byte, header.IDLen)
-	if _, err := s.ReadAt(idBytes, ref.offset+18); err != nil {
-		return header, err
-	}
-	header.ID = string(idBytes)
-
-	statusByte := make([]byte, 1)
-	if _, err := s.ReadAt(statusByte, ref.offset+18+int64(header.IDLen)); err != nil {
-		return header, err
-	}
-	header.Status = statusByte[0]
-
-	return header, nil
 }
 
 /**
-* Read
-* @param ref *RecordRef
+* decodeRecord: Validates a whole record read into buf and returns its data.
+* Checks that it is the live record ref points at (same id, length and Active
+* status) and that the payload matches its CRC.
+* @param buf []byte, ref *RecordRef, id string
 * @return []byte, error
 **/
-func (s *segment) read(ref *RecordRef) ([]byte, error) {
-	header, err := s.ReadHeader(ref)
-	if err != nil {
-		return nil, err
+func decodeRecord(buf []byte, ref *RecordRef, id string) ([]byte, error) {
+	h := decodeFixedHeader(buf)
+	idLen := int(h.IDLen)
+	if idLen != len(id) || h.DataLen != ref.length || len(buf) != int(fixedHeaderSize)+idLen+int(h.DataLen) {
+		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
+	}
+	if string(buf[18:18+idLen]) != id || buf[18+idLen] != Active {
+		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
 	}
 
-	headerLen := fixedHeaderSize + int64(header.IDLen)
-	data := make([]byte, header.DataLen)
-	_, err = s.ReadAt(data, ref.offset+headerLen)
-	if err != nil {
-		return nil, err
-	}
-
-	if checksum(data) != header.CRC {
+	data := buf[int(fixedHeaderSize)+idLen:]
+	if checksum(data) != h.CRC {
 		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
 	}
 
@@ -354,17 +356,61 @@ func (s *segment) read(ref *RecordRef) ([]byte, error) {
 }
 
 /**
-* Read
-* @param ref *RecordRef, dest any
-* @return error
+* readRecord: Reads the record of id in a single ReadAt (header, id and data are
+* contiguous and their sizes are known from id and ref).
+* @param ref *RecordRef, id string
+* @return []byte, error
 **/
-func (s *segment) Read(ref *RecordRef) ([]byte, error) {
-	result, err := s.read(ref)
-	if err != nil {
+func (s *segment) readRecord(ref *RecordRef, id string) ([]byte, error) {
+	buf := make([]byte, int(fixedHeaderSize)+len(id)+int(ref.length))
+	if _, err := s.ReadAt(buf, ref.offset); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return decodeRecord(buf, ref, id)
+}
+
+/**
+* read: Reads the record at ref when its id is not known: one ReadAt for the
+* fixed header (to learn the id length) and one for the whole record.
+* @param ref *RecordRef
+* @return []byte, error
+**/
+func (s *segment) read(ref *RecordRef) ([]byte, error) {
+	head := make([]byte, 18)
+	if _, err := s.ReadAt(head, ref.offset); err != nil {
+		return nil, err
+	}
+
+	idLen := int(getUint16(head[16:18]))
+	buf := make([]byte, int(fixedHeaderSize)+idLen+int(ref.length))
+	if _, err := s.ReadAt(buf, ref.offset); err != nil {
+		return nil, err
+	}
+
+	return decodeRecord(buf, ref, string(buf[18:18+idLen]))
+}
+
+/**
+* ReadHeader: Reads the header (including id and status) of the record at ref
+* @param ref *RecordRef
+* @return recordHeader, error
+**/
+func (s *segment) ReadHeader(ref *RecordRef) (recordHeader, error) {
+	head := make([]byte, 18)
+	if _, err := s.ReadAt(head, ref.offset); err != nil {
+		return recordHeader{}, err
+	}
+
+	h := decodeFixedHeader(head)
+	rest := make([]byte, int(h.IDLen)+1)
+	if _, err := s.ReadAt(rest, ref.offset+18); err != nil {
+		return recordHeader{}, err
+	}
+	h.ID = string(rest[:h.IDLen])
+	h.Status = rest[h.IDLen]
+
+	return h, nil
 }
 
 /**
@@ -387,12 +433,7 @@ func (s *segment) scan(offset int64, fn func(offset int64, h recordHeader, data 
 			return err
 		}
 
-		h := recordHeader{
-			LSN:     binary.BigEndian.Uint64(fixed[0:8]),
-			DataLen: getUint32(fixed[8:12]),
-			CRC:     getUint32(fixed[12:16]),
-			IDLen:   getUint16(fixed[16:18]),
-		}
+		h := decodeFixedHeader(fixed)
 		if h.IDLen == 0 || h.IDLen > maxIdLen {
 			return nil // corrupción → parar seguro
 		}
