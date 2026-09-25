@@ -113,6 +113,9 @@ A **single-node**, concurrency-safe, append-only (WAL-style) store of `id → []
 | `Delete(id) (bool, error)` | Writes a tombstone only if `id` exists. |
 | `Get(id) ([]byte, bool, error)`, `IsExist`, `Count`, `Keys(asc, offset, limit)` | Reads. `limit <= 0` = no limit. |
 | `ForEach(fn, asc, offset, limit)` | Disk reads run concurrently on `min(NumCPU, n)` goroutines, but `fn` is called **sequentially, in key order, on the caller's goroutine** — it needs no locking, and returning `false` stops exactly there. The record set is fixed at call start; no lock is held, so `fn` may call back into the store. |
+| `Stats() et.Json` | `count`, `size`, `wal`, `tomb_stones` plus operations in flight: `reading` (Get/ForEach), `inserting`, `updating`, `deleting` (writes waiting for `writeMu` count as in flight). |
+| `OnStats(fn func(et.Json))` | Hooks `fn` to receive `Stats` whenever in-flight counts change. Called from one background goroutine, coalesced to the latest state; never slows operations. Stops on `Close`. |
+| `Sync(fn func(Change))` | Hooks `fn` to receive every applied `Insert`/`Update`/`Delete` (also those arriving via `ApplyWalEntry`) as `Change{Op, ID, Data, LSN}` with `Op` = `OpInsert`/`OpUpdate`/`OpDelete`. Called **under `writeMu`** right after log + index are written, so changes arrive in exact LSN order with no gaps — the outbound side of a multi-node setup (`ApplyWalEntry` is the inbound side). `fn` must be fast, must not write to the same store (deadlock), and must copy `Data` if it keeps it. No-op writes (Update with identical bytes, Delete of a missing id) emit nothing. |
 | `Compact()` | Manual compaction (also automatic when tombstones > max(10% of keys, `MIN_THRESHOLD_COMPACT`)). |
 | `WalSince(lsn)`, `ApplyWalEntry(e)`, `WalEntry` | Replication primitives (log shipping by LSN). Not wired to anything yet. |
 | `Recover(pathData, pathWald, name) (et.Json, error)` | Offline repair; the store must be closed everywhere. Restores/cleans an interrupted compaction, drops the snapshot, and truncates each segment at its last valid record after copying the bad tail to `pathWald/recover/<name>/`. Returns a report. |
@@ -132,6 +135,7 @@ There is deliberately **no upsert**: callers compose it as `Update`, then `Inser
 - Readers **never hold `indexMu` during disk I/O**: they look up the ref and `acquire()` its segment under `RLock`, release the lock, read, then `release()`. Compaction and `Close` call `retire()` on old segments instead of closing them; the file closes when the last reader releases it. Never close a segment that might still have readers.
 - Segment writes are synchronous (`os.File.Write`), so a ref published in the index is always readable. The first write error is sticky.
 - Shared counters `WAL`, `TombStones` and `Size` are `counter[T]`; use `inc`/`dec`/`add`/`count`/`set`/`setMax`, never the fields. The index goes through `getIndex`/`setIndex`/`deleteIndex`/`countIndex`; `...Locked` variants are for callers already holding `indexMu`.
+- In-flight counters use `defer s.track(&s.<counter>)()` at the top of each public operation; `Insert`/`Update`/`Delete` release `writeMu` with `defer`, so a panicking `Sync` hook cannot leave the lock held.
 - `Compact` runs in 3 phases: (1) under `writeMu`, copy the index and record the cut point (segment + offset); (2) without locks, copy live records to a temp dir; (3) under `writeMu` + `indexMu`, replay everything written after the cut (Puts copied, Deletes written as tombstones), delete the snapshot, swap directories, retire the old segments, rebuild the snapshot. It keeps the newest tombstone so the WAL counter never regresses on rebuild.
 
 ### Known limitations (accepted, not bugs to "fix" unasked)
@@ -157,5 +161,7 @@ There are no committed tests. For ad-hoc tests: after `Open`, set `fs.MaxSegment
 ## Framework: `github.com/cgalvisleon/et`
 Everything outside storage and indexing comes from `et`: `server` (`Ettp`), `router` (chi-based), `response`, `claim` (JWT), `request` (context keys), `event` (pub/sub), `cache`, `jrpc`, `jrex` (JS triggers), `csv`/`xls`, `logs`, `envar`, `utility`, `reg` (ids), and `et` itself (`Json`, `Items`, `Condition`). Before writing a helper, check whether `et` already has it.
 
-## Stale docs, don't rely on them
-`README.md` and `AGENTS.md` describe an older architecture: a `cmd/client` REPL, TCP remote/embedded modes, SQL-text syntax (`CREATE TABLE`, `SELECT ... WHERE`), and packages `internal/catalog`, `internal/stmt`, `internal/jsql`, `internal/cli`, `internal/client`, `pkg/http`, `pkg/websocket`. **None of that exists anymore.** Trust this file and the source over those two.
+## Docs
+`README.md` (Spanish) is current: setup, structure and the full public API of `internal/store` with usage examples — keep it in sync when the store API changes.
+
+`AGENTS.md` is stale: it describes an older architecture (a `cmd/client` REPL, TCP remote/embedded modes, SQL-text syntax like `CREATE TABLE`/`SELECT ... WHERE`, and packages `internal/catalog`, `internal/stmt`, `internal/jsql`, `internal/cli`, `internal/client`, `pkg/http`, `pkg/websocket`). **None of that exists anymore.** Trust this file, `README.md` and the source over it.

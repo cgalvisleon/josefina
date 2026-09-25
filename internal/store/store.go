@@ -120,6 +120,17 @@ type FileStore struct {
 	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
 	compactMu           sync.Mutex            `json:"-"` // una sola compaction a la vez (automática o Prune)
 	isDebug             bool                  `json:"-"`
+	reading             counter[int]          `json:"-"` // Get/ForEach en ejecución
+	inserting           counter[int]          `json:"-"` // Insert en ejecución (incluye los que esperan writeMu)
+	updating            counter[int]          `json:"-"` // Update en ejecución (incluye los que esperan writeMu)
+	deleting            counter[int]          `json:"-"` // Delete en ejecución (incluye los que esperan writeMu)
+	syncFns             []func(Change)        `json:"-"` // funciones ancladas con Sync (bajo writeMu)
+	statsFns            []func(et.Json)       `json:"-"` // funciones ancladas con OnStats
+	statsMu             sync.Mutex            `json:"-"` // protege statsFns
+	statsCh             chan struct{}         `json:"-"` // aviso de cambio de Stats (buffer 1)
+	statsDone           chan struct{}         `json:"-"` // detiene statsLoop
+	statsStart          sync.Once             `json:"-"`
+	statsStop           sync.Once             `json:"-"`
 }
 
 /**
@@ -260,17 +271,17 @@ func (s *FileStore) newSegment() error {
 * appendRecordLocked: Agrega un registro al segmento activo, rotándolo si está lleno (requiere writeMu).
 * lsn 0 asigna el siguiente LSN local; lsn > 0 conserva el LSN recibido (replicación).
 * @param lsn uint64, id string, data []byte, status byte
-* @return *recordRef, error
+* @return *recordRef, uint64, error
 **/
-func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, status byte) (*recordRef, error) {
+func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, status byte) (*recordRef, uint64, error) {
 	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	if s.active.size+recordSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		if err := s.createSnapshot(); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 
@@ -282,17 +293,17 @@ func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, statu
 
 	ref, err := s.active.writeRecord(lsn, id, data, status)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	ref.segment = len(s.segments) - 1
 	s.Size.add(recordSize)
 	if s.SyncOnWrite {
 		if err := s.active.flush(); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 
-	return ref, nil
+	return ref, lsn, nil
 }
 
 /**
@@ -486,6 +497,7 @@ func (s *FileStore) rebuildIndexes() error {
 * @return error
 **/
 func (s *FileStore) Close() error {
+	s.stopStats()
 	s.compactWg.Wait()
 
 	// compactMu también espera una Compact() lanzada por Prune.
@@ -562,12 +574,12 @@ func (s *FileStore) checkWrite(id string) error {
 /**
 * put: Escribe data en el log y actualiza el índice (requiere writeMu); retorna true si id ya existía.
 * @param id string, data []byte
-* @return bool (true if id already existed), error
+* @return bool (true if id already existed), uint64 (LSN), error
 **/
-func (s *FileStore) put(id string, data []byte) (bool, error) {
-	ref, err := s.appendRecordLocked(0, id, data, Active)
+func (s *FileStore) put(id string, data []byte) (bool, uint64, error) {
+	ref, lsn, err := s.appendRecordLocked(0, id, data, Active)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	exists := s.setIndex(id, ref)
@@ -575,7 +587,7 @@ func (s *FileStore) put(id string, data []byte) (bool, error) {
 		s.TombStones.inc()
 	}
 
-	return exists, nil
+	return exists, lsn, nil
 }
 
 /**
@@ -588,17 +600,20 @@ func (s *FileStore) Insert(id string, data []byte) (bool, error) {
 		return false, err
 	}
 
+	defer s.track(&s.inserting)()
+
 	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	if _, exists := s.getIndex(id); exists {
-		s.writeMu.Unlock()
 		return false, nil
 	}
 
-	_, err := s.put(id, data)
-	s.writeMu.Unlock()
+	_, lsn, err := s.put(id, data)
 	if err != nil {
 		return false, err
 	}
+
+	s.emitLocked(Change{Op: OpInsert, ID: id, Data: data, LSN: lsn})
 
 	return true, nil
 }
@@ -613,29 +628,29 @@ func (s *FileStore) Update(id string, data []byte) (bool, error) {
 		return false, err
 	}
 
+	defer s.track(&s.updating)()
+
 	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	ref, exists := s.getIndex(id)
 	if !exists {
-		s.writeMu.Unlock()
 		return false, nil
 	}
 
 	old, err := s.readPinned(ref, id)
 	if err != nil {
-		s.writeMu.Unlock()
 		return false, err
 	}
 	if bytes.Equal(old, data) {
-		s.writeMu.Unlock()
 		return false, nil
 	}
 
-	_, err = s.put(id, data)
-	s.writeMu.Unlock()
+	_, lsn, err := s.put(id, data)
 	if err != nil {
 		return false, err
 	}
 
+	s.emitLocked(Change{Op: OpUpdate, ID: id, Data: data, LSN: lsn})
 	s.compactIfNeeded()
 
 	return true, nil
@@ -651,26 +666,28 @@ func (s *FileStore) Delete(id string) (bool, error) {
 		return false, err
 	}
 
+	defer s.track(&s.deleting)()
+
 	// Verificación, tombstone e índice bajo writeMu: nada se cuela entre ellos.
 	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	if _, exists := s.getIndex(id); !exists {
-		s.writeMu.Unlock()
 		return false, nil
 	}
 
-	if _, err := s.appendRecordLocked(0, id, nil, Deleted); err != nil {
-		s.writeMu.Unlock()
+	_, lsn, err := s.appendRecordLocked(0, id, nil, Deleted)
+	if err != nil {
 		return false, err
 	}
 
 	s.deleteIndex(id)
 	s.TombStones.inc()
-	s.writeMu.Unlock()
 
 	if s.isDebug {
 		logs.Debug("deleted:", s.Path, ":total:", s.countIndex(), ":ID:", id)
 	}
 
+	s.emitLocked(Change{Op: OpDelete, ID: id, LSN: lsn})
 	s.compactIfNeeded()
 
 	return true, nil
@@ -742,6 +759,8 @@ func (s *FileStore) readHeader(ref *recordRef) (recordHeader, error) {
 * @return []byte, bool (true if id exists), error
 **/
 func (s *FileStore) Get(id string) ([]byte, bool, error) {
+	defer s.track(&s.reading)()
+
 	// Búsqueda y fijado bajo un mismo RLock; la lectura a disco va después.
 	s.indexMu.RLock()
 	ref, exists := s.index[id]
@@ -790,6 +809,8 @@ type forEachResult struct {
 * @return error
 **/
 func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
+	defer s.track(&s.reading)()
+
 	// ---- Selección: claves y segmentos fijados bajo un solo RLock ----
 	s.indexMu.RLock()
 	keys := s.sortedKeysLocked(asc, offset, limit)
@@ -937,6 +958,8 @@ func newFileStore(pathData, pathWald, name string, mode Mode) *FileStore {
 		SyncOnWrite:         envar.GetBool("SYNC_ON_WRITE", true),
 		index:               make(map[string]*recordRef),
 		mode:                mode,
+		statsCh:             make(chan struct{}, 1),
+		statsDone:           make(chan struct{}),
 	}
 }
 

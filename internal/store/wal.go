@@ -34,7 +34,7 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
-	ref, err := s.appendRecordLocked(entry.LSN, entry.ID, entry.Data, entry.Status)
+	ref, lsn, err := s.appendRecordLocked(entry.LSN, entry.ID, entry.Data, entry.Status)
 	if err != nil {
 		return err
 	}
@@ -47,6 +47,16 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 	}
 	if existed {
 		s.TombStones.inc()
+	}
+
+	// Avisar a Sync con la operación que el cambio representa en este nodo.
+	switch {
+	case entry.Status == Active && existed:
+		s.emitLocked(Change{Op: OpUpdate, ID: entry.ID, Data: entry.Data, LSN: lsn})
+	case entry.Status == Active:
+		s.emitLocked(Change{Op: OpInsert, ID: entry.ID, Data: entry.Data, LSN: lsn})
+	case existed:
+		s.emitLocked(Change{Op: OpDelete, ID: entry.ID, LSN: lsn})
 	}
 
 	return nil

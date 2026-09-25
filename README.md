@@ -1,347 +1,211 @@
 # Josefina
 
-Custom distributed document database engine written in Go with SQL-like query syntax.
+Motor de base de datos documental escrito en Go (módulo `github.com/josefina`). Se usa únicamente a través de una API **HTTP + JSON**: las consultas y comandos son documentos JSON que se traducen a un constructor fluido de consultas en Go. Debajo, cada colección se guarda en `internal/store`, un store tipo WAL (log de solo agregado) de un nodo, concurrente, que es la base sobre la que se construirá la configuración multinodo.
 
-## Setup
+## Requisitos
 
-```bash
-goenv local 1.23.0
-go mod init github.com/josefina
-go get github.com/cgalvisleon/et@v1.0.22
-go get github.com/gorilla/websocket
-git remote add origin https://github.com/josefina.git
-```
+- Go 1.25.0 (`goenv local 1.25.0`).
+- El repo forma parte del `go.work` del workspace `cgalvisleon/`, así que los cambios locales en `github.com/cgalvisleon/et` se usan sin publicar una versión.
 
-## Running
-
-### Server
+## Ejecución
 
 ```bash
-# Single node
-go run ./cmd/server -port 1377 -http 3500
-
-# Three-node cluster (separate terminals)
-go run ./cmd/server -port 1377 -http 3500
-go run ./cmd/server -port 1378 -http 3501
-go run ./cmd/server -port 1379 -http 3502
+gofmt -w . && go run ./cmd/server -port 1377 -rpct 4377 -name josefina
 ```
 
-### Client — TCP mode (remote)
+| Flag | Variable de entorno | Por defecto | Uso |
+|---|---|---|---|
+| `-port` | `PORT` | `1370` | Puerto HTTP |
+| `-rpct` | `RPC_PORT` | `4370` | Puerto RPC |
+| `-name` | `DB_NAME` | `josefina` | Nombre del servicio |
+| `-path_data` | `DB_PATH_DATA` | `./data/collections` | Datos (segmentos) |
+| `-path_wald` | `DB_PATH_WALD` | `./data/wal` | Snapshot, compactación y recuperación (ver nota) |
+| `-path_system` | `DB_PATH_SYSTEM` | `./data/system` | Catálogo del servidor |
 
-Connects to a running server over TCP. Requires the server to be started first.
+> Nota: `internal/jdb` lee la ruta del WAL desde `DB_PATH_WAL`, no `DB_PATH_WALD`; mientras no se unifique, configúrala en el `.env` como `DB_PATH_WAL`.
+
+Otros comandos:
 
 ```bash
-go run ./cmd/client -host localhost:1377 -user admin -password secret -database mydb
+go build ./cmd/server   # binario del servidor
+go vet ./...
+gofmt -w .
 ```
 
-Flags:
+## Estructura
 
-| Flag        | Default | Description                                               |
-| ----------- | ------- | --------------------------------------------------------- |
-| `-host`     | `""`    | Server address (`host:port`). When set, TCP mode is used. |
-| `-user`     | `admin` | Username                                                  |
-| `-password` | `""`    | Password                                                  |
-| `-database` | `""`    | Database to connect to                                    |
+| Ruta | Contenido |
+|---|---|
+| `cmd/server` | Punto de entrada del servidor. |
+| `pkg/server` | API REST: `/signin`, `/signout`, `/system`, `/query`, `/command`, `/uploadXls`, `/uploadCsv`, `/uploadDb`, `/version`, `/routes`. |
+| `internal/jdb` | Servidor, catálogo (bases, esquemas, modelos, usuarios, sesiones) y motor de consultas/comandos. |
+| `internal/store` | Motor de almacenamiento (ver abajo). |
+| `internal/server` | Arma el servidor HTTP y monta las rutas. |
+| `internal/msg` | Mensajes de error en inglés/español según `LANG`. |
 
-#### Interactive session example
+## `internal/store` — motor de almacenamiento
 
-```
-mydb=# CREATE DATABASE shop;
-Database "shop" created.
+Store de un solo nodo que guarda `id → []byte` en archivos de segmento de solo agregado, con un índice en memoria.
 
-mydb=# \c shop
-You are now connected to database "shop".
+- Lecturas en paralelo, sin bloquearse con las escrituras.
+- Escrituras y eliminaciones seguras bajo concurrencia; se aplican de a una, en orden.
+- Cada registro lleva un número de secuencia (LSN) y un CRC; ante una caída se recupera leyendo el log.
+- Guarda binario: codificar a JSON (u otro formato) es tarea de quien lo usa.
 
-shop=# CREATE TABLE IF NOT EXISTS products (
-shop-#   product_id KEY     NOT NULL,
-shop-#   name       TEXT    NOT NULL,
-shop-#   price      NUMERIC DEFAULT 0.0,
-shop-#   active     BOOLEAN DEFAULT TRUE,
-shop-#   PRIMARY KEY (product_id)
-shop-# );
-OK
-
-shop=# INSERT INTO products (_idx, product_id, name, price, active) VALUES
-shop-#   ('p1', 'p1', 'Laptop', 999.99, TRUE),
-shop-#   ('p2', 'p2', 'Mouse',   29.99, TRUE);
-OK
-
-shop=# SELECT * FROM products WHERE active = TRUE ORDER BY price DESC;
-+------------+--------+---------+--------+
-| active     | name   | price   | product_id |
-+------------+--------+---------+--------+
-| true       | Laptop | 999.99  | p1     |
-| true       | Mouse  | 29.99   | p2     |
-+------------+--------+---------+--------+
-(2 rows)
-
-shop=# SET SQL STATE MYSQL;
-SQL dialect set to MYSQL.
-
-shop=# SET SQL STATE JOSEFINA;
-SQL dialect set to JOSEFINA.
-
-shop=# \timing
-Timing is on.
-
-shop=# SELECT * FROM products;
-...
-Time: 0.412 ms
-
-shop=# \q
-Bye.
-```
-
-#### Available meta-commands
-
-| Command     | Description             |
-| ----------- | ----------------------- |
-| `\c <db>`   | Switch database         |
-| `\timing`   | Toggle query timing     |
-| `\i <file>` | Execute SQL from a file |
-| `\help`     | Show all commands       |
-| `\q`        | Quit                    |
-
-#### SET SQL STATE
-
-Changes the active SQL dialect for the session. Josefina executes queries natively; this command controls which dialect the server uses to translate and report generated SQL.
-
-```sql
-SET SQL STATE JOSEFINA;    -- default (PostgreSQL-compatible)
-SET SQL STATE POSTGRESQL;
-SET SQL STATE MYSQL;
-SET SQL STATE ORACLE;
-SET SQL STATE SQLSERVER;
-```
-
-### Client — Local mode (embedded)
-
-Loads the database engine in-process. No server needed; useful for development and scripting.
-
-```bash
-go run ./cmd/client -user admin -password secret -database mydb
-```
-
-When `-host` is omitted the client boots the jdb engine directly from the local data directory (`-data ./data`).
-
----
-
-## Package `internal/catalog`
-
-The `catalog` package is the schema and data layer of Josefina. It provides a typed document model with primary key storage, secondary indexes backed by a B+ tree, and rich query operators.
-
-### Architecture
-
-```
-DB
-└── Schema
-    └── Model
-        ├── FileStore (primary)     — documents keyed by primary key
-        ├── FileStore (per index)   — inverted index: fieldValue → {pk...}  (durable)
-        └── BTree    (per index)    — in-memory B+ tree for fast queries
-```
-
-On startup (`Init`) each secondary BTree is rebuilt from its FileStore — O(distinct values), not O(documents).
-
-On every write (`PutObject`, `RemoveObject`) both the FileStore and the BTree are kept in sync.
-
----
-
-### Types
-
-#### `DB`
-
-Top-level container for schemas.
+### Uso rápido
 
 ```go
-db, err := catalog.NewDb("mydb")
+fs, err := store.Open("./data/collections", "./data/wal", "clientes", store.ReadWrite)
+if err != nil {
+	return err
+}
+defer fs.Close()
+
+ok, err := fs.Insert("c-001", []byte(`{"nombre":"Ana"}`)) // ok=false si ya existía
+ok, err = fs.Update("c-001", []byte(`{"nombre":"Ana María"}`))
+
+data, exists, err := fs.Get("c-001")
+
+err = fs.ForEach(func(id string, data []byte) (bool, error) {
+	fmt.Println(id, string(data))
+	return true, nil // false para detener
+}, true, 0, 100)
+
+ok, err = fs.Delete("c-001")
 ```
 
-#### `Schema`
+### Métodos públicos
 
-Groups models inside a database. Created automatically by `db.NewModel`.
+#### Apertura y ciclo de vida
 
-#### `Model`
+- **`Open(pathData, pathWald, name string, mode Mode) (*FileStore, error)`**
+  Abre el store `name` o lo crea si no existe. Los segmentos quedan en `pathData/segments/<name>/`; el snapshot, los temporales de compactación y la cuarentena de `Recover` quedan en `pathWald/{snapshot,compact,recover}/<name>/`. El nombre pasa por `Normalize`. Con `ReadOnly` el store debe existir y rechaza escrituras; con `ReadWrite` se puede escribir.
 
-A typed document collection. Holds field definitions, indexes, triggers, and the underlying stores.
+- **`Close() error`**
+  Espera a que termine cualquier compactación, fuerza a disco lo escrito y cierra los archivos. Las lecturas que ya estaban en curso terminan antes de que se cierre su archivo. Detiene también `OnStats`.
 
-```go
-model, err := db.NewModel("public", "user", false, 1)
-```
+- **`Empty() error`**
+  Cierra el store y borra sus segmentos. Deja el store vacío.
 
-#### `Field` — `TypeData` constants
+- **`Recover(pathData, pathWald, name string) (et.Json, error)`**
+  Repara el store en disco después de una falla (caída del proceso, corte de energía, compactación interrumpida). Debe ejecutarse **con el store cerrado** y antes de `Open`:
+  - restaura o limpia los directorios de una compactación interrumpida;
+  - borra el snapshot para que el índice se reconstruya completo;
+  - trunca cada segmento en su último registro válido, copiando antes los bytes descartados a `pathWald/recover/<name>/`.
 
-| Constant                    | Description                    |
-| --------------------------- | ------------------------------ |
-| `TpKey`                     | String identifier (UUID, etc.) |
-| `TpText` / `TpMemo`         | Short / long text              |
-| `TpInt` / `TpAutoIncrement` | Integer                        |
-| `TpFloat`                   | Floating point                 |
-| `TpBoolean`                 | Boolean                        |
-| `TpDateTime`                | Timestamp (RFC3339)            |
-| `TpJson`                    | Nested JSON object             |
-| `TpAny`                     | Any value                      |
+  Retorna un reporte con lo que hizo por segmento.
 
----
+  ```go
+  report, err := store.Recover("./data/collections", "./data/wal", "clientes")
+  fs, err := store.Open("./data/collections", "./data/wal", "clientes", store.ReadWrite)
+  ```
 
-### Defining a Model
+#### Escritura
 
-```go
-db, _ := catalog.NewDb("mydb")
-model, _ := db.NewModel("public", "user", false, 1)
+- **`Insert(id string, data []byte) (bool, error)`**
+  Guarda `data` solo si `id` no existe. Retorna `true` si insertó y `false` si el id ya existía.
 
-// Fields
-model.DefineAtrib("id",    catalog.TpKey,  "")
-model.DefineAtrib("name",  catalog.TpText, "")
-model.DefineAtrib("age",   catalog.TpInt,  0)
-model.DefineAtrib("email", catalog.TpText, "")
+- **`Update(id string, data []byte) (bool, error)`**
+  Reemplaza `data` solo si `id` existe **y** el valor cambió. Si el binario es idéntico no escribe nada y retorna `false`.
 
-// Constraints
-model.DefinePrimaryKeys("id")
-model.DefineUnique("email")
-model.DefineRequired("name")
+- **`Delete(id string) (bool, error)`**
+  Elimina `id` solo si existe. Retorna `true` si eliminó.
 
-// Secondary indexes (B+ tree)
-model.DefineIndexes("name", "age", "email")
-
-// Open stores and rebuild in-memory indexes
-model.Init()
-```
-
----
-
-### Writing Documents
+No hay un "upsert" a propósito. Para insertar o actualizar, se combinan:
 
 ```go
-// Insert or update — idx is the primary key
-err := model.PutObject("pk1", et.Json{
-    "id":    "pk1",
-    "name":  "Alice",
-    "age":   int64(30),
-    "email": "alice@example.com",
-})
-
-// Delete
-err = model.RemoveObject("pk1")
-```
-
----
-
-### Reading Documents
-
-#### By primary key
-
-```go
-dest := et.Json{}
-exists, err := model.Get("pk1", &dest)
-```
-
-#### Exact match on secondary index
-
-```go
-pks, ok := model.GetByIndex("name", catalog.KeyString("Alice"))
-// pks = ["pk1", "pk8", ...]
-```
-
----
-
-### Index Queries
-
-All query methods return `[]string` — the list of matching primary keys.
-
-#### Range — `[from, to]` inclusive
-
-```go
-// age between 25 and 35
-pks := model.RangeIndex("age", catalog.KeyInt(25), catalog.KeyInt(35), true)
-
-// Pass IndexKey{} for open bounds
-pks = model.RangeIndex("age", catalog.KeyInt(25), catalog.IndexKey{}, true) // age >= 25
-```
-
-#### Comparison operators
-
-| Method                      | Operator | Example                                         |
-| --------------------------- | -------- | ----------------------------------------------- |
-| `GTIndex(field, key, asc)`  | `>`      | `model.GTIndex("age", KeyInt(28), true)`        |
-| `GTEIndex(field, key, asc)` | `>=`     | `model.GTEIndex("age", KeyInt(25), true)`       |
-| `LTIndex(field, key, asc)`  | `<`      | `model.LTIndex("age", KeyInt(30), true)`        |
-| `LTEIndex(field, key, asc)` | `<=`     | `model.LTEIndex("age", KeyInt(30), true)`       |
-| `NotEqualIndex(field, key)` | `!=`     | `model.NotEqualIndex("name", KeyString("Bob"))` |
-
----
-
-### `IndexKey` — Typed Keys
-
-Keys carry type information so ordering is always correct (numeric for numbers, lexicographic for strings).
-
-| Constructor                | Go type    | Ordering      |
-| -------------------------- | ---------- | ------------- |
-| `KeyString(v string)`      | string     | Lexicographic |
-| `KeyInt(v int64)`          | int64      | Numeric       |
-| `KeyFloat(v float64)`      | float64    | Numeric       |
-| `KeyBool(v bool)`          | bool       | false < true  |
-| `KeyDateTime(v time.Time)` | time.Time  | Chronological |
-| `KeyFromAny(v any)`        | any (JSON) | Auto-detect   |
-
-`KeyFromAny` auto-detects the type from JSON-unmarshalled values (`float64` → `KeyInt` for whole numbers, RFC3339 strings → `KeyDateTime`).
-
----
-
-### Triggers
-
-JavaScript hooks that run before/after insert, update, and delete operations.
-
-```go
-model.AddBeforeInsert("validate", `
-    if (!record.name) throw new Error("name required");
-`)
-
-model.AddAfterInsert("notify", `
-    console.log("inserted", record.id);
-`)
-```
-
-Available hooks: `AddBeforeInsert`, `AddAfterInsert`, `AddBeforeUpdate`, `AddAfterUpdate`, `AddBeforeDelete`, `AddAfterDelete`.
-
----
-
-### Full Example
-
-```go
-package main
-
-import (
-    "github.com/cgalvisleon/et/et"
-    "github.com/josefina/internal/catalog"
-)
-
-func main() {
-    db, _ := catalog.NewDb("shop")
-    model, _ := db.NewModel("public", "product", false, 1)
-
-    model.DefineAtrib("id",       catalog.TpKey,   "")
-    model.DefineAtrib("name",     catalog.TpText,  "")
-    model.DefineAtrib("price",    catalog.TpFloat, 0.0)
-    model.DefineAtrib("category", catalog.TpText,  "")
-    model.DefinePrimaryKeys("id")
-    model.DefineIndexes("name", "price", "category")
-    model.Init()
-
-    // Insert
-    model.PutObject("p1", et.Json{"id":"p1","name":"Laptop","price":999.99,"category":"electronics"})
-    model.PutObject("p2", et.Json{"id":"p2","name":"Mouse","price":29.99,"category":"electronics"})
-    model.PutObject("p3", et.Json{"id":"p3","name":"Desk","price":249.00,"category":"furniture"})
-
-    // price <= 100
-    pks := model.LTEIndex("price", catalog.KeyFloat(100.0), true)
-
-    // category = electronics
-    pks, _ = model.GetByIndex("category", catalog.KeyString("electronics"))
-
-    // price between 50 and 500
-    pks = model.RangeIndex("price", catalog.KeyFloat(50.0), catalog.KeyFloat(500.0), true)
-
-    _ = pks
+ok, err := fs.Update(id, data)
+if err == nil && !ok && !fs.IsExist(id) {
+	ok, err = fs.Insert(id, data)
 }
 ```
+
+#### Lectura
+
+- **`Get(id string) ([]byte, bool, error)`**
+  Retorna los datos de `id` y si existe.
+
+- **`IsExist(id string) bool`**
+  Indica si `id` existe, sin leer el disco.
+
+- **`Count() int`**
+  Número de ids vivos.
+
+- **`Keys(asc bool, offset, limit int) []string`**
+  Ids ordenados (ascendente o descendente) desde `offset`, hasta `limit` (`limit <= 0` sin límite). No lee los registros.
+
+- **`ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error`**
+  Recorre los registros en orden de id con `offset` y `limit`. Lee del disco en paralelo con hasta `runtime.NumCPU()` goroutines, pero llama a `fn` **de a uno y en orden**, desde la goroutine que llamó, así que `fn` no necesita locks. Si `fn` retorna `false` se detiene; si retorna un error, `ForEach` lo retorna. El conjunto de registros se fija al inicio y no se sostiene ningún lock, así que `fn` puede usar el store (por ejemplo, llamar a `Get` o `Update`).
+
+#### Mantenimiento
+
+- **`Compact() error`**
+  Reescribe solo los registros vivos en segmentos nuevos y libera el espacio de los eliminados o sobrescritos. Se ejecuta sola cuando los tombstones superan el 10% de los ids (o `MIN_THRESHOLD_COMPACT`); llamarla a mano es opcional. No bloquea las lecturas y solo bloquea las escrituras al inicio y al final.
+
+#### Monitoreo
+
+- **`Stats() et.Json`**
+  Tamaño y actividad del store: `count` (ids vivos), `size` (bytes en disco), `wal` (último LSN), `tomb_stones` (registros obsoletos) y las operaciones en ejecución `reading`, `inserting`, `updating`, `deleting`. Las escrituras que esperan su turno cuentan como en ejecución.
+
+- **`OnStats(fn func(stats et.Json))`**
+  Ancla `fn` para recibir `Stats` cada vez que cambian las operaciones en ejecución. Se llama desde una goroutine de fondo y agrupa cambios seguidos en el último estado, así que no frena las operaciones.
+
+  ```go
+  fs.OnStats(func(st et.Json) {
+  	log.Println("lecturas:", st.Int("reading"), "escrituras:", st.Int("inserting")+st.Int("updating"))
+  })
+  ```
+
+- **`ToJson() et.Json`, `ToString() string`**
+  Configuración y estado del store (nombre, rutas, tamaño máximo de segmento, WAL, tombstones, tamaño).
+
+- **`IsDebug() *FileStore`**
+  Activa los logs de depuración. Retorna el mismo store para encadenar.
+
+#### Replicación (base multinodo)
+
+- **`Sync(fn func(change Change))`**
+  Ancla `fn` para recibir cada `Insert`, `Update` y `Delete` aplicado, como `Change{Op, ID, Data, LSN}` con `Op` = `OpInsert`, `OpUpdate` u `OpDelete` (`Data` es `nil` en `OpDelete`). Los cambios llegan en orden exacto de LSN, sin huecos; es el lado que **envía** en una configuración multinodo. Las escrituras que no cambian nada no se emiten. Reglas para `fn`:
+  - debe ser rápida: se ejecuta mientras las demás escrituras esperan;
+  - no debe escribir en el mismo store (se bloquearía);
+  - debe copiar `Data` si lo guarda para después.
+
+  ```go
+  // Nodo A replica cada cambio en el nodo B.
+  a.Sync(func(c store.Change) {
+  	status := store.Active
+  	if c.Op == store.OpDelete {
+  		status = store.Deleted
+  	}
+  	b.ApplyWalEntry(store.WalEntry{LSN: c.LSN, ID: c.ID, Data: c.Data, Status: status})
+  })
+  ```
+
+- **`ApplyWalEntry(entry WalEntry) error`**
+  Aplica un cambio recibido de otro nodo conservando su LSN. Es el lado que **recibe**. `WalEntry` tiene `LSN`, `ID`, `Data` y `Status` (`Active` o `Deleted`). También se emite a las funciones ancladas con `Sync`.
+
+- **`WalSince(since uint64) ([]WalEntry, error)`**
+  Retorna, en orden de escritura, las entradas del log con LSN mayor que `since`, para que un nodo se ponga al día. La compactación descarta los registros eliminados y sobrescritos, así que un nodo que quedó atrás de una compactación necesita una copia completa en lugar de `WalSince`.
+
+#### Utilidades y tipos
+
+- **`Normalize(input string) string`**
+  Limpia un nombre para usarlo como nombre de archivo: quita espacios de los extremos, cambia espacios por `_`, elimina todo lo que no sea letra, número, `_` o `.`, y quita los números iniciales.
+
+- **`Mode`**: `ReadOnly` o `ReadWrite` (modo de `Open`).
+- **`Active`, `Deleted`**: estado de un registro en `WalEntry`.
+- **`Op`, `Change`**: tipo de operación y cambio entregado por `Sync`.
+
+### Configuración
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `RELSEG_SIZE` | `128` | Tamaño máximo de cada segmento, en MB. |
+| `SYNC_ON_WRITE` | `true` | Fuerza a disco (fsync) cada escritura. Más seguro; con `false` es más rápido pero se pueden perder las últimas escrituras ante un corte de energía. |
+| `MIN_THRESHOLD_COMPACT` | `1000` | Mínimo de tombstones para compactar automáticamente. |
+
+### Consideraciones
+
+- `Open` no ejecuta `Recover` por sí solo: después de un apagado inesperado, ejecuta `Recover` antes de `Open`.
+- Las escrituras se aplican de a una; con `SYNC_ON_WRITE=true` su velocidad depende de la latencia del disco.
+- El CRC de cada registro protege los datos, no el encabezado ni el id.
