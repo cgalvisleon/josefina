@@ -6,8 +6,7 @@ import (
 )
 
 /**
-* counter: Numeric value guarded by its own lock. All reads and writes go
-* through its methods so callers never touch the mutex directly.
+* counter: Valor numérico protegido por su propio lock; se usa solo a través de sus métodos.
 **/
 type counter[T ~int | ~int64 | ~uint64] struct {
 	value T
@@ -15,7 +14,7 @@ type counter[T ~int | ~int64 | ~uint64] struct {
 }
 
 /**
-* inc: Increments the counter by one
+* inc: Suma uno y retorna el nuevo valor.
 * @return T
 **/
 func (s *counter[T]) inc() T {
@@ -26,7 +25,7 @@ func (s *counter[T]) inc() T {
 }
 
 /**
-* dec: Decrements the counter by one
+* dec: Resta uno y retorna el nuevo valor.
 * @return T
 **/
 func (s *counter[T]) dec() T {
@@ -37,7 +36,7 @@ func (s *counter[T]) dec() T {
 }
 
 /**
-* add: Increments the counter by n
+* add: Suma n y retorna el nuevo valor.
 * @param n T
 * @return T
 **/
@@ -49,7 +48,7 @@ func (s *counter[T]) add(n T) T {
 }
 
 /**
-* count: Returns the current value
+* count: Retorna el valor actual.
 * @return T
 **/
 func (s *counter[T]) count() T {
@@ -59,7 +58,7 @@ func (s *counter[T]) count() T {
 }
 
 /**
-* set: Replaces the current value
+* set: Reemplaza el valor.
 * @param value T
 **/
 func (s *counter[T]) set(value T) {
@@ -69,7 +68,7 @@ func (s *counter[T]) set(value T) {
 }
 
 /**
-* setMax: Replaces the current value only if value is greater
+* setMax: Reemplaza el valor solo si el nuevo es mayor.
 * @param value T
 * @return T
 **/
@@ -83,7 +82,7 @@ func (s *counter[T]) setMax(value T) T {
 }
 
 /**
-* MarshalJSON: Serializes the counter as its plain value
+* MarshalJSON: Serializa el contador como su valor.
 * @return []byte, error
 **/
 func (s *counter[T]) MarshalJSON() ([]byte, error) {

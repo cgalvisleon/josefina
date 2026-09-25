@@ -31,7 +31,7 @@ const (
 )
 
 /**
-* normalize
+* Normalize: Limpia un nombre para usarlo como nombre de archivo.
 * @param input string
 * @return string
 **/
@@ -52,7 +52,7 @@ func Normalize(input string) string {
 }
 
 /**
-* newRecordHeaderAt: Encodes a WAL record header at the given LSN.
+* newRecordHeaderAt: Codifica el encabezado de un registro con el LSN dado.
 * @param lsn uint64, id string, data []byte, status byte
 * @return recordHeader, []byte, error
 **/
@@ -97,10 +97,6 @@ const (
 	ReadWrite
 )
 
-type SetIndexFn func(fls *FileStore, idx string, ref *RecordRef)
-type Putfn func(fls *FileStore, idx string, old, new []byte)
-type Deletefn func(fls *FileStore, idx string, old []byte)
-
 type FileStore struct {
 	ID                  string                `json:"id"`
 	Name                string                `json:"name"`
@@ -114,10 +110,10 @@ type FileStore struct {
 	Size                counter[int64]        `json:"size"`
 	MinThresholdCompact int                   `json:"min_threshold_compact"`
 	writeMu             sync.Mutex            `json:"-"` // serializa log + índice: append, rotación, compaction, close
-	indexMu             sync.RWMutex          `json:"-"` // protege index, keys, segments y active
+	indexMu             sync.RWMutex          `json:"-"` // protege index, segments y active
 	segments            []*segment            `json:"-"` // segmentos de datos
 	active              *segment              `json:"-"` // segmento activo para escritura
-	index               map[string]*RecordRef `json:"-"` // índice en memoria
+	index               map[string]*recordRef `json:"-"` // índice en memoria
 	mode                Mode                  `json:"-"` // modo de operación
 	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
@@ -126,7 +122,7 @@ type FileStore struct {
 }
 
 /**
-* ToJson
+* ToJson: Retorna el estado del store como JSON.
 * @return et.Json
 **/
 func (s *FileStore) ToJson() et.Json {
@@ -146,15 +142,15 @@ func (s *FileStore) ToJson() et.Json {
 }
 
 /**
-* ToString
+* ToString: Retorna el estado del store como texto.
 * @return string
- */
+**/
 func (s *FileStore) ToString() string {
 	return s.ToJson().ToString()
 }
 
 /**
-* IsDebug
+* IsDebug: Activa los logs de depuración.
 * @return *FileStore
 **/
 func (s *FileStore) IsDebug() *FileStore {
@@ -163,7 +159,7 @@ func (s *FileStore) IsDebug() *FileStore {
 }
 
 /**
-* Count
+* Count: Retorna el número de claves vivas.
 * @return int
 **/
 func (s *FileStore) Count() int {
@@ -171,7 +167,7 @@ func (s *FileStore) Count() int {
 }
 
 /**
-* loadSegments
+* loadSegments: Abre los archivos de segmento existentes.
 * @return error
 **/
 func (s *FileStore) loadSegments() error {
@@ -211,7 +207,7 @@ func (s *FileStore) loadSegments() error {
 		s.segments = append(s.segments, seg)
 		s.Size.add(size)
 		if s.isDebug {
-			logs.Log(packageName, "load:segments:", s.Path, ":", seg.ToString())
+			logs.Log(packageName, "load:segments:", s.Path, ":", seg.toString())
 		}
 	}
 
@@ -227,12 +223,12 @@ func (s *FileStore) loadSegments() error {
 }
 
 /**
-* newSegment
+* newSegment: Sella el segmento activo y crea uno nuevo (requiere writeMu).
 * @return error
 **/
 func (s *FileStore) newSegment() error {
 	if s.active != nil {
-		if err := s.active.Seal(); err != nil {
+		if err := s.active.seal(); err != nil {
 			return err
 		}
 	}
@@ -245,36 +241,33 @@ func (s *FileStore) newSegment() error {
 		return err
 	}
 
-	// segments/active are read under indexMu by Get/Read/ForEach, so the swap
-	// must take it even though the caller already holds writeMu.
+	// Get/Read/ForEach leen segments bajo indexMu: el cambio lo toma aunque ya se tenga writeMu.
 	seg := newSegment(fd, 0, name)
 	s.indexMu.Lock()
 	s.segments = append(s.segments, seg)
 	s.active = seg
 	s.indexMu.Unlock()
 	if s.isDebug {
-		logs.Log(packageName, "new:segment:", s.Path, ":", seg.ToString())
+		logs.Log(packageName, "new:segment:", s.Path, ":", seg.toString())
 	}
 
 	return nil
 }
 
 /**
-* appendRecordLocked: Appends a record to the active segment, rotating it when full.
-* Caller must hold writeMu for the whole write + index update so both happen as one step.
-* lsn == 0 assigns the next local LSN; lsn > 0 keeps the caller's LSN (replication path)
-* and advances the local counter if needed.
+* appendRecordLocked: Agrega un registro al segmento activo, rotándolo si está lleno (requiere writeMu).
+* lsn 0 asigna el siguiente LSN local; lsn > 0 conserva el LSN recibido (replicación).
 * @param lsn uint64, id string, data []byte, status byte
-* @return *RecordRef, error
+* @return *recordRef, error
 **/
-func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
+func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, status byte) (*recordRef, error) {
 	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	if s.active.size+recordSize > s.MaxSegment {
 		if err := s.newSegment(); err != nil {
 			return nil, err
 		}
 
-		if err := s.CreateSnapshot(); err != nil {
+		if err := s.createSnapshot(); err != nil {
 			return nil, err
 		}
 	}
@@ -285,14 +278,14 @@ func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, statu
 		s.WAL.setMax(lsn)
 	}
 
-	ref, err := s.active.WriteRecord(lsn, id, data, status)
+	ref, err := s.active.writeRecord(lsn, id, data, status)
 	if err != nil {
 		return nil, err
 	}
 	ref.segment = len(s.segments) - 1
 	s.Size.add(recordSize)
 	if s.SyncOnWrite {
-		if err := s.active.Sync(); err != nil {
+		if err := s.active.flush(); err != nil {
 			return nil, err
 		}
 	}
@@ -301,8 +294,8 @@ func (s *FileStore) appendRecordLocked(lsn uint64, id string, data []byte, statu
 }
 
 /**
-* compactIfNeeded: Starts a background compaction once tombstones exceed 10% of
-* the index (or MinThresholdCompact, whichever is greater).
+* compactIfNeeded: Lanza una compactación en segundo plano si los tombstones superan el 10% del
+* índice (o MinThresholdCompact).
 **/
 func (s *FileStore) compactIfNeeded() {
 	threshold := max(int(float64(s.countIndex())*0.1), s.MinThresholdCompact)
@@ -323,11 +316,11 @@ func (s *FileStore) compactIfNeeded() {
 }
 
 /**
-* getIndex: Returns the reference stored for id
+* getIndex: Retorna la referencia de id.
 * @param id string
-* @return *RecordRef, bool
+* @return *recordRef, bool
 **/
-func (s *FileStore) getIndex(id string) (*RecordRef, bool) {
+func (s *FileStore) getIndex(id string) (*recordRef, bool) {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 	ref, exists := s.index[id]
@@ -335,7 +328,7 @@ func (s *FileStore) getIndex(id string) (*RecordRef, bool) {
 }
 
 /**
-* countIndex: Returns the number of live keys
+* countIndex: Retorna el número de claves del índice.
 * @return int
 **/
 func (s *FileStore) countIndex() int {
@@ -345,32 +338,32 @@ func (s *FileStore) countIndex() int {
 }
 
 /**
-* setIndex: Stores ref for id
-* @param id string, ref *RecordRef
+* setIndex: Guarda la referencia de id; retorna true si ya existía.
+* @param id string, ref *recordRef
 * @return bool (true if id already existed)
 **/
-func (s *FileStore) setIndex(id string, ref *RecordRef) bool {
+func (s *FileStore) setIndex(id string, ref *recordRef) bool {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 	return s.setIndexLocked(id, ref)
 }
 
 /**
-* setIndexLocked: Same as setIndex but assumes the caller already holds indexMu
-* @param id string, ref *RecordRef
+* setIndexLocked: Igual que setIndex, pero requiere indexMu tomado.
+* @param id string, ref *recordRef
 * @return bool (true if id already existed)
 **/
-func (s *FileStore) setIndexLocked(id string, ref *RecordRef) bool {
+func (s *FileStore) setIndexLocked(id string, ref *recordRef) bool {
 	_, exists := s.index[id]
 	s.index[id] = ref
 	if s.isDebug {
-		logs.Debug("put:", s.Path, ":lsn:", s.WAL.count(), ":ID:", id, ":ref:", ref.ToString())
+		logs.Debug("put:", s.Path, ":lsn:", s.WAL.count(), ":ID:", id, ":ref:", ref.toString())
 	}
 	return exists
 }
 
 /**
-* deleteIndex: Removes id from the index
+* deleteIndex: Quita id del índice; retorna true si existía.
 * @param id string
 * @return bool (true if id existed)
 **/
@@ -381,7 +374,7 @@ func (s *FileStore) deleteIndex(id string) bool {
 }
 
 /**
-* deleteIndexLocked: Same as deleteIndex but assumes the caller already holds indexMu
+* deleteIndexLocked: Igual que deleteIndex, pero requiere indexMu tomado.
 * @param id string
 * @return bool (true if id existed)
 **/
@@ -394,18 +387,18 @@ func (s *FileStore) deleteIndexLocked(id string) bool {
 }
 
 /**
-* rebuildIndex: Replays a segment into the index. Caller must hold indexMu.
+* rebuildIndex: Aplica un segmento al índice (requiere indexMu).
 * @param segIndex int
 * @return error
 **/
 func (s *FileStore) rebuildIndex(segIndex int) error {
 	if s.index == nil {
-		s.index = make(map[string]*RecordRef)
+		s.index = make(map[string]*recordRef)
 	}
 
 	return s.segments[segIndex].scan(0, func(offset int64, h recordHeader, data []byte) error {
 		if h.Status == Active {
-			s.setIndexLocked(h.ID, &RecordRef{segment: segIndex, offset: offset, length: h.DataLen})
+			s.setIndexLocked(h.ID, &recordRef{segment: segIndex, offset: offset, length: h.DataLen})
 		} else if h.Status == Deleted {
 			s.deleteIndexLocked(h.ID)
 		}
@@ -417,7 +410,7 @@ func (s *FileStore) rebuildIndex(segIndex int) error {
 }
 
 /**
-* buildIndex
+* buildIndex: Aplica el segmento activo sobre el índice cargado del snapshot.
 * @return error
 **/
 func (s *FileStore) buildIndex() error {
@@ -429,8 +422,8 @@ func (s *FileStore) buildIndex() error {
 }
 
 /**
-* sortedKeysLocked: Returns the ids of the index sorted asc/desc, windowed by
-* offset and limit (limit <= 0 means no limit). Caller must hold indexMu.
+* sortedKeysLocked: Retorna las claves ordenadas asc/desc con offset y limit (limit <= 0 sin límite);
+* requiere indexMu.
 * @param asc bool, offset int, limit int
 * @return []string
 **/
@@ -454,13 +447,11 @@ func (s *FileStore) sortedKeysLocked(asc bool, offset, limit int) []string {
 }
 
 /**
-* pinLocked: Returns the segment ref points at, registered as being read so a
-* concurrent Compact()/Close() retires it without closing the file underneath.
-* Caller must hold indexMu (read) and must call release() on the result.
-* @param ref *RecordRef
+* pinLocked: Retorna el segmento de ref marcado como en lectura; requiere indexMu y llamar release().
+* @param ref *recordRef
 * @return *segment, error
 **/
-func (s *FileStore) pinLocked(ref *RecordRef) (*segment, error) {
+func (s *FileStore) pinLocked(ref *recordRef) (*segment, error) {
 	if ref == nil || ref.segment < 0 || ref.segment >= len(s.segments) {
 		return nil, errors.New(msg.MSG_CORRUPTED_RECORD)
 	}
@@ -471,14 +462,14 @@ func (s *FileStore) pinLocked(ref *RecordRef) (*segment, error) {
 }
 
 /**
-* RebuildIndexes
+* rebuildIndexes: Reconstruye el índice recorriendo todos los segmentos.
 * @return error
 **/
 func (s *FileStore) rebuildIndexes() error {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
-	s.index = make(map[string]*RecordRef)
+	s.index = make(map[string]*recordRef)
 	for i := range s.segments {
 		if err := s.rebuildIndex(i); err != nil {
 			return err
@@ -489,13 +480,13 @@ func (s *FileStore) rebuildIndexes() error {
 }
 
 /**
-* Close
+* Close: Espera la compactación, hace fsync y retira todos los segmentos.
 * @return error
 **/
 func (s *FileStore) Close() error {
 	s.compactWg.Wait()
 
-	// compactMu also waits for a Compact() started by Prune.
+	// compactMu también espera una Compact() lanzada por Prune.
 	s.compactMu.Lock()
 	defer s.compactMu.Unlock()
 
@@ -505,11 +496,10 @@ func (s *FileStore) Close() error {
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
-	// Flush every segment and retire it: files nobody is reading close now, the
-	// rest close when their last in-flight reader (Get/ForEach) releases them.
+	// fsync y retiro de cada segmento: se cierra ahora o cuando termine su último lector.
 	var closeErr error
 	for _, seg := range s.segments {
-		if err := seg.Seal(); err != nil && closeErr == nil {
+		if err := seg.seal(); err != nil && closeErr == nil {
 			closeErr = err
 		}
 		seg.retire()
@@ -519,7 +509,7 @@ func (s *FileStore) Close() error {
 }
 
 /**
-* Empty
+* Empty: Cierra el store y borra sus datos.
 * @return error
 **/
 func (s *FileStore) Empty() error {
@@ -529,7 +519,7 @@ func (s *FileStore) Empty() error {
 	}
 
 	s.indexMu.Lock()
-	s.index = make(map[string]*RecordRef)
+	s.index = make(map[string]*recordRef)
 	s.indexMu.Unlock()
 	s.WAL.set(0)
 	s.TombStones.set(0)
@@ -540,10 +530,10 @@ func (s *FileStore) Empty() error {
 }
 
 /**
-* Sync
-* @param id string, ref *RecordRef, ownerId string
+* syncRef: Apunta id a una referencia de otro store (no escribe en el log).
+* @param id string, ref *recordRef, ownerId string
 **/
-func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
+func (s *FileStore) syncRef(id string, ref *recordRef, ownerId string) {
 	if s.ID == ownerId {
 		return
 	}
@@ -551,7 +541,7 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 }
 
 /**
-* checkWrite: Validates that the store accepts writes and that id is usable
+* checkWrite: Valida que el store acepte escrituras y que id no esté vacío.
 * @param id string
 * @return error
 **/
@@ -568,9 +558,7 @@ func (s *FileStore) checkWrite(id string) error {
 }
 
 /**
-* put: Appends data for id to the log and points the index at it. Caller must
-* hold writeMu, so the caller's existence check, the log append and the index
-* update happen as one step and apply to the index in the same order as the log.
+* put: Escribe data en el log y actualiza el índice (requiere writeMu); retorna true si id ya existía.
 * @param id string, data []byte
 * @return bool (true if id already existed), error
 **/
@@ -589,7 +577,7 @@ func (s *FileStore) put(id string, data []byte) (bool, error) {
 }
 
 /**
-* Insert: Stores data under id only if id does not exist yet
+* Insert: Guarda data solo si id no existe; retorna true si insertó.
 * @param id string, data []byte
 * @return bool (true if inserted), error
 **/
@@ -614,7 +602,7 @@ func (s *FileStore) Insert(id string, data []byte) (bool, error) {
 }
 
 /**
-* Update: Replaces the data of id only if id exists and data is different
+* Update: Reemplaza data solo si id existe y el valor cambió; retorna true si actualizó.
 * @param id string, data []byte
 * @return bool (true if updated), error
 **/
@@ -652,7 +640,7 @@ func (s *FileStore) Update(id string, data []byte) (bool, error) {
 }
 
 /**
-* Delete: Removes id only if it exists
+* Delete: Elimina id solo si existe; retorna true si eliminó.
 * @param id string
 * @return bool (true if deleted), error
 **/
@@ -661,8 +649,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 		return false, err
 	}
 
-	// The existence check, the tombstone append and the index removal run under
-	// writeMu so no Insert/Update on the same id can slip in between them.
+	// Verificación, tombstone e índice bajo writeMu: nada se cuela entre ellos.
 	s.writeMu.Lock()
 	if _, exists := s.getIndex(id); !exists {
 		s.writeMu.Unlock()
@@ -688,7 +675,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 }
 
 /**
-* IsExist
+* IsExist: Indica si id existe.
 * @param id string
 * @return bool
 **/
@@ -702,13 +689,11 @@ func (s *FileStore) IsExist(id string) bool {
 }
 
 /**
-* readPinned: Reads the record of id at ref without holding indexMu during the
-* disk read; the segment is pinned so Compact() cannot close it meanwhile.
-* An empty id reads the id from disk.
-* @param ref *RecordRef, id string
+* readPinned: Lee el registro de ref sin sostener indexMu durante la lectura; con id vacío lo lee del disco.
+* @param ref *recordRef, id string
 * @return []byte, error
 **/
-func (s *FileStore) readPinned(ref *RecordRef, id string) ([]byte, error) {
+func (s *FileStore) readPinned(ref *recordRef, id string) ([]byte, error) {
 	s.indexMu.RLock()
 	seg, err := s.pinLocked(ref)
 	s.indexMu.RUnlock()
@@ -724,20 +709,20 @@ func (s *FileStore) readPinned(ref *RecordRef, id string) ([]byte, error) {
 }
 
 /**
-* Read: Reads the record at ref
-* @param ref *RecordRef
+* read: Lee el registro de ref.
+* @param ref *recordRef
 * @return []byte, error
 **/
-func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
+func (s *FileStore) read(ref *recordRef) ([]byte, error) {
 	return s.readPinned(ref, "")
 }
 
 /**
-* ReadHeader: Reads the header of the record at ref
-* @param ref *RecordRef
+* readHeader: Lee el encabezado del registro de ref.
+* @param ref *recordRef
 * @return recordHeader, error
 **/
-func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
+func (s *FileStore) readHeader(ref *recordRef) (recordHeader, error) {
 	s.indexMu.RLock()
 	seg, err := s.pinLocked(ref)
 	s.indexMu.RUnlock()
@@ -746,17 +731,16 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 	}
 	defer seg.release()
 
-	return seg.ReadHeader(ref)
+	return seg.readHeader(ref)
 }
 
 /**
-* Get: Returns the data stored under id
+* Get: Retorna los datos de id, si existe.
 * @param id string
 * @return []byte, bool (true if id exists), error
 **/
 func (s *FileStore) Get(id string) ([]byte, bool, error) {
-	// Lookup and pin under one RLock so the ref and its segment belong to the
-	// same layout; the disk read runs after releasing it.
+	// Búsqueda y fijado bajo un mismo RLock; la lectura a disco va después.
 	s.indexMu.RLock()
 	ref, exists := s.index[id]
 	if !exists {
@@ -779,16 +763,16 @@ func (s *FileStore) Get(id string) ([]byte, bool, error) {
 }
 
 /**
-* forEachItem: One record selected by ForEach, with its segment pinned
+* forEachItem: Registro seleccionado por ForEach, con su segmento fijado.
 **/
 type forEachItem struct {
 	id  string
-	ref *RecordRef
+	ref *recordRef
 	seg *segment
 }
 
 /**
-* forEachResult: Result of reading one forEachItem
+* forEachResult: Resultado de leer un forEachItem.
 **/
 type forEachResult struct {
 	data []byte
@@ -796,14 +780,10 @@ type forEachResult struct {
 }
 
 /**
-* ForEach: Calls fn for each record, in key order (asc/desc), windowed by offset
-* and limit (limit <= 0 means no limit). Disk reads run concurrently on up to
-* runtime.NumCPU() goroutines, but fn is always called sequentially, in order,
-* from the calling goroutine, so it needs no locking of its own and returning
-* false stops exactly after the current record.
-* The set of records is fixed when the call starts: no lock is held while
-* reading or while fn runs, so writes are not blocked and fn may call back into
-* this FileStore (a concurrent Compact() defers closing files until the scan ends).
+* ForEach: Llama a fn por cada registro en orden de clave (asc/desc) con offset y limit
+* (limit <= 0 sin límite). Lee en paralelo con hasta NumCPU goroutines, pero llama
+* a fn de a uno y en orden; si fn retorna false se detiene. No sostiene locks,
+* así que fn puede usar el store.
 * @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
@@ -824,7 +804,7 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 			return err
 		}
 		if pinned[seg] {
-			seg.release() // one pin per segment is enough
+			seg.release() // basta un pin por segmento
 		}
 		pinned[seg] = true
 		items[i] = forEachItem{id: id, ref: ref, seg: seg}
@@ -842,10 +822,8 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 	}
 
 	// ---- Lectura concurrente con entrega ordenada ----
-	// Workers read items in parallel; each result goes to slot i%window. The
-	// consumer (this goroutine) takes slots in order 0..n-1 and calls fn. sem
-	// caps dispatched-but-unconsumed items at window, so memory stays bounded
-	// and a slot is never reused before its previous result was consumed.
+	// Los workers leen en paralelo y dejan cada resultado en slots[i%window]; esta
+	// goroutine los toma en orden y llama a fn. sem limita lo pendiente a window.
 	workers := min(runtime.NumCPU(), n)
 	window := workers * 4
 	slots := make([]chan forEachResult, window)
@@ -884,8 +862,7 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 		}
 	})
 
-	// Stop the producer and wait for every goroutine before the deferred
-	// release() of the pinned segments runs (also if fn panics).
+	// Detener el productor y esperar a todos antes de liberar los segmentos (incluso si fn entra en pánico).
 	defer func() {
 		close(done)
 		wg.Wait()
@@ -911,8 +888,7 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 }
 
 /**
-* Keys: Returns the ids sorted asc/desc, windowed by offset and limit, without
-* reading any record. Cheaper than ForEach when only ids are needed.
+* Keys: Retorna las claves ordenadas asc/desc con offset y limit, sin leer los registros.
 * @param asc bool, offset int, limit int
 * @return []string
 **/
@@ -924,10 +900,10 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 }
 
 /**
-* Prune
+* prune: Compacta y reconstruye el índice.
 * @return error
 **/
-func (s *FileStore) Prune() error {
+func (s *FileStore) prune() error {
 	err := s.Compact()
 	if err != nil {
 		return err
@@ -942,8 +918,8 @@ func (s *FileStore) Prune() error {
 }
 
 /**
-* Open
-* @param pathData, pathWald, name string, isDebug bool, mode Mode
+* Open: Abre (o crea) el store y carga su índice.
+* @param pathData, pathWald, name string, mode Mode
 * @return *FileStore, error
 **/
 func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
@@ -962,7 +938,7 @@ func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
-	fs.index = make(map[string]*RecordRef)
+	fs.index = make(map[string]*recordRef)
 	fs.SyncOnWrite = syncOnWrite
 
 	if mode == ReadOnly {
@@ -985,8 +961,7 @@ func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 		return nil, fmt.Errorf("loadSegments: %w", err)
 	}
 
-	// If snapshot loaded: buildIndex covers only the last segment (snapshot has the rest).
-	// If snapshot absent or corrupt: rebuildIndexes scans all segments from scratch.
+	// Con snapshot solo se aplica el último segmento; sin snapshot se recorren todos.
 	snapshotLoaded, snapErr := fs.tryLoadSnapshot()
 	if snapErr != nil && fs.isDebug {
 		logs.Debug("snapshot unavailable, full rebuild:", snapErr)

@@ -12,7 +12,7 @@ type WalEntry struct {
 }
 
 /**
-* ToJson: Returns the WAL entry as a JSON object.
+* ToJson: Retorna la entrada del WAL como JSON.
 * @return et.Json
 **/
 func (e *WalEntry) ToJson() et.Json {
@@ -25,14 +25,12 @@ func (e *WalEntry) ToJson() et.Json {
 }
 
 /**
-* ApplyWalEntry: Writes a WAL entry received from the leader into this store.
-* Bypasses the ReadOnly check — only the replication path may call this.
-* Preserves the original LSN so leader and follower share the same sequence.
+* ApplyWalEntry: Aplica una entrada recibida del líder conservando su LSN (solo replicación).
 * @param entry WalEntry
 * @return error
 **/
 func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
-	// Same as Put/Delete: log append and index update under one writeMu hold.
+	// Igual que Insert/Delete: log e índice en un solo paso bajo writeMu.
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -55,9 +53,7 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 }
 
 /**
-* WalSince: Returns all WAL entries with LSN strictly greater than since,
-* in write order. Followers call this with their last acknowledged LSN
-* to receive only the entries they are missing.
+* WalSince: Retorna, en orden de escritura, las entradas con LSN mayor que since.
 * @param since uint64
 * @return []WalEntry, error
 **/

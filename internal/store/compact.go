@@ -12,8 +12,7 @@ import (
 )
 
 /**
-* compactWriter: Writes records into the fresh segment files of a compaction,
-* rotating to a new file when the current one is full.
+* compactWriter: Escribe los segmentos nuevos de una compactación, rotando cuando se llenan.
 **/
 type compactWriter struct {
 	dir        string
@@ -24,12 +23,12 @@ type compactWriter struct {
 }
 
 /**
-* newSegment: Seals the current file and opens the next one
+* newSegment: Sella el segmento actual y abre el siguiente.
 * @return error
 **/
 func (s *compactWriter) newSegment() error {
 	if s.current != nil {
-		if err := s.current.Seal(); err != nil {
+		if err := s.current.seal(); err != nil {
 			return err
 		}
 	}
@@ -46,11 +45,11 @@ func (s *compactWriter) newSegment() error {
 }
 
 /**
-* write: Appends a record keeping its original LSN
+* write: Agrega un registro conservando su LSN original.
 * @param lsn uint64, id string, data []byte, status byte
-* @return *RecordRef, error
+* @return *recordRef, error
 **/
-func (s *compactWriter) write(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
+func (s *compactWriter) write(lsn uint64, id string, data []byte, status byte) (*recordRef, error) {
 	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	if s.current.size > 0 && s.current.size+recordSize > s.maxSegment {
 		if err := s.newSegment(); err != nil {
@@ -58,7 +57,7 @@ func (s *compactWriter) write(lsn uint64, id string, data []byte, status byte) (
 		}
 	}
 
-	ref, err := s.current.WriteRecord(lsn, id, data, status)
+	ref, err := s.current.writeRecord(lsn, id, data, status)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (s *compactWriter) write(lsn uint64, id string, data []byte, status byte) (
 }
 
 /**
-* size: Returns the total bytes written across all new segments
+* size: Retorna los bytes escritos en todos los segmentos nuevos.
 * @return int64
 **/
 func (s *compactWriter) size() int64 {
@@ -80,24 +79,20 @@ func (s *compactWriter) size() int64 {
 }
 
 /**
-* discard: Closes and deletes the new segment files (compaction aborted)
+* discard: Cierra y borra los segmentos nuevos (compactación abortada).
 **/
 func (s *compactWriter) discard() {
 	for _, seg := range s.segments {
-		seg.Close()
+		seg.close()
 	}
 	os.RemoveAll(s.dir)
 }
 
 /**
-* Compact: Rewrites all live records into fresh segment files, removing tombstones.
-* Runs in three phases so writers are only blocked at the start and at the swap:
-*  1. Under writeMu, take a copy of the index and the log position (cut point).
-*  2. Without locks, copy every live record into new segments in a temp dir.
-*  3. Under writeMu + indexMu, replay whatever was written after the cut point
-*     (Puts are copied, Deletes are written as tombstones), then swap directories.
-* The snapshot file is removed during the swap (its refs point at the old layout)
-* and rebuilt afterwards.
+* Compact: Reescribe solo los registros vivos en segmentos nuevos, en tres fases:
+*  1. Bajo writeMu: copia del índice y punto de corte del log.
+*  2. Sin locks: copia de los registros vivos.
+*  3. Bajo writeMu e indexMu: aplica lo escrito después del corte e intercambia directorios.
 * @return error
 **/
 func (s *FileStore) Compact() error {
@@ -135,14 +130,14 @@ func (s *FileStore) Compact() error {
 		return err
 	}
 
-	newIndex := make(map[string]*RecordRef, len(indexCopy))
+	newIndex := make(map[string]*recordRef, len(indexCopy))
 	for _, id := range keys {
 		ref := indexCopy[id]
 		oldSeg := oldSegs[ref.segment]
 
 		// Leer header real: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
 		fixed := make([]byte, fixedHeaderSize)
-		if _, err := oldSeg.ReadAt(fixed, ref.offset); err != nil {
+		if _, err := oldSeg.readAt(fixed, ref.offset); err != nil {
 			return err
 		}
 
@@ -152,7 +147,7 @@ func (s *FileStore) Compact() error {
 
 		data := make([]byte, ref.length)
 		if ref.length > 0 {
-			if _, err := oldSeg.ReadAt(data, payloadOffset); err != nil {
+			if _, err := oldSeg.readAt(data, payloadOffset); err != nil {
 				return err
 			}
 		}
@@ -168,8 +163,8 @@ func (s *FileStore) Compact() error {
 	}
 
 	// ---- Fase 3: ponerse al día y hacer el swap ----
-	// Readers never hold indexMu while reading from disk: they pin the segment
-	// (acquire/release) and the old segments are retired below, not closed.
+	// Los lectores no usan indexMu mientras leen: fijan el segmento, y los
+	// segmentos viejos se retiran en lugar de cerrarse.
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -181,7 +176,7 @@ func (s *FileStore) Compact() error {
 		}
 	}()
 
-	// Replay everything appended after the cut point, in log order.
+	// Aplicar, en orden, lo escrito después del punto de corte.
 	tombStones := 0
 	for i := cutSeg; i < len(s.segments); i++ {
 		from := int64(0)
@@ -215,9 +210,7 @@ func (s *FileStore) Compact() error {
 		}
 	}
 
-	// Tombstones are dropped, so if the newest record in the log is one, the new
-	// layout would lose the highest LSN and a rebuild would regress the WAL.
-	// Keep that last tombstone (it is a real delete of a key that is not live).
+	// Si el registro más reciente es un tombstone, se conserva para que el WAL no retroceda.
 	if w.maxLSN < s.WAL.count() {
 		h, found, err := s.lastRecordLocked()
 		if err != nil {
@@ -230,18 +223,16 @@ func (s *FileStore) Compact() error {
 		}
 	}
 
-	if err := w.current.Sync(); err != nil {
+	if err := w.current.flush(); err != nil {
 		return err
 	}
 
-	// The snapshot describes the old layout; drop it before the swap so a crash
-	// in between falls back to a full rebuild instead of loading stale refs.
+	// El snapshot describe el layout viejo: se borra antes del intercambio.
 	if err := s.removeSnapshot(); err != nil {
 		return err
 	}
 
-	// oldDir must be a sibling of s.Path, not a child of it — renaming a directory
-	// into its own subtree fails with EINVAL ("invalid argument").
+	// oldDir debe ser hermano de s.Path: renombrar un directorio dentro de sí mismo falla.
 	oldDir := filepath.Join(filepath.Dir(s.Path), s.Name+".segments.old")
 	os.RemoveAll(oldDir)
 
@@ -249,7 +240,7 @@ func (s *FileStore) Compact() error {
 		return err
 	}
 	if err := os.Rename(tmpDir, s.Path); err != nil {
-		// Put the old directory back; the store keeps running on it.
+		// Restaurar el directorio original; el store sigue funcionando con él.
 		if rbErr := os.Rename(oldDir, s.Path); rbErr != nil {
 			return fmt.Errorf("compact: %w (rollback: %v)", err, rbErr)
 		}
@@ -257,8 +248,7 @@ func (s *FileStore) Compact() error {
 	}
 	swapped = true
 
-	// Retire instead of Close: a ForEach/Get that pinned an old segment keeps
-	// reading it; its file closes when the last of those readers releases it.
+	// Retirar en vez de cerrar: los lectores en curso terminan antes de cerrar el archivo.
 	for _, seg := range s.segments {
 		seg.retire()
 	}
@@ -274,13 +264,12 @@ func (s *FileStore) Compact() error {
 	s.indexMu.Unlock()
 	indexLocked = false
 
-	// writeMu is still held, so no write can land between the swap and the new snapshot.
-	return s.CreateSnapshot()
+	// writeMu sigue tomado: ninguna escritura entra entre el intercambio y el nuevo snapshot.
+	return s.createSnapshot()
 }
 
 /**
-* lastRecordLocked: Returns the header of the newest record in the log.
-* Caller must hold writeMu (no append can move the end of the log meanwhile).
+* lastRecordLocked: Retorna el encabezado del registro más reciente del log (requiere writeMu).
 * @return recordHeader, bool, error
 **/
 func (s *FileStore) lastRecordLocked() (recordHeader, bool, error) {

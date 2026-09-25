@@ -13,7 +13,7 @@ const (
 var crcTable = crc32.MakeTable(crc32.Castagnoli)
 
 /**
-* checksum
+* checksum: Calcula el CRC de b.
 * @param b []byte
 * @return uint32
 **/
@@ -22,7 +22,7 @@ func checksum(b []byte) uint32 {
 }
 
 /**
-* putUint32
+* putUint32: Escribe v en b como uint32 big-endian.
 * @param b []byte, v uint32
 * @return void
 **/
@@ -31,7 +31,7 @@ func putUint32(b []byte, v uint32) {
 }
 
 /**
-* putUint16
+* putUint16: Escribe v en b como uint16 big-endian.
 * @param b []byte, v uint16
 * @return void
 **/
@@ -40,7 +40,7 @@ func putUint16(b []byte, v uint16) {
 }
 
 /**
-* getUint32: Reads a big-endian uint32 from b.
+* getUint32: Lee un uint32 big-endian de b.
 * @param b []byte
 * @return uint32
 **/
@@ -49,7 +49,7 @@ func getUint32(b []byte) uint32 {
 }
 
 /**
-* getUint16: Reads a big-endian uint16 from b.
+* getUint16: Lee un uint16 big-endian de b.
 * @param b []byte
 * @return uint16
 **/

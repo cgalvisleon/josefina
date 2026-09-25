@@ -13,7 +13,7 @@ import (
 )
 
 /**
-* snapshotPath: Returns the path of this store's snapshot file
+* snapshotPath: Retorna la ruta del archivo de snapshot.
 * @return string
 **/
 func (s *FileStore) snapshotPath() string {
@@ -21,8 +21,7 @@ func (s *FileStore) snapshotPath() string {
 }
 
 /**
-* removeSnapshot: Deletes the snapshot file so the next Open does a full rebuild.
-* Used when the segment layout changes and the snapshot's refs no longer apply.
+* removeSnapshot: Borra el snapshot para que el próximo Open reconstruya todo el índice.
 * @return error
 **/
 func (s *FileStore) removeSnapshot() error {
@@ -34,12 +33,10 @@ func (s *FileStore) removeSnapshot() error {
 }
 
 /**
-* CreateSnapshot: Persists the current in-memory index to a snapshot file.
-* Only records from segments other than the active one are included.
-* The file is written atomically via a tmp-then-rename pattern.
+* createSnapshot: Guarda en el snapshot el índice de los segmentos cerrados y el WAL.
 * @return error
 **/
-func (s *FileStore) CreateSnapshot() error {
+func (s *FileStore) createSnapshot() error {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
@@ -52,10 +49,9 @@ func (s *FileStore) CreateSnapshot() error {
 	}
 	defer f.Close()
 
-	// ---- Entries ----
-	// Only records outside the active segment are stored; buildIndex() replays the
-	// active one on load. The header count must match the entries actually written,
-	// otherwise tryLoadSnapshot() reads past the end and rejects the file.
+	// ---- Entradas ----
+	// Solo los registros fuera del segmento activo; el contador del encabezado
+	// debe coincidir con las entradas escritas.
 	entries := bytes.NewBuffer(nil)
 	count := uint64(0)
 	currentSegment := len(s.segments) - 1
@@ -75,9 +71,8 @@ func (s *FileStore) CreateSnapshot() error {
 		}
 	}
 
-	// ---- Header ----
-	// Version 2 adds the WAL field right after count; tryLoadSnapshot() branches
-	// on version so snapshots written by older builds (version 1, no WAL) still load.
+	// ---- Encabezado ----
+	// La versión 2 agrega el WAL; la versión 1 (sin WAL) se sigue leyendo.
 	buf := bytes.NewBuffer(nil)
 	buf.WriteString("SNAP")
 	binary.Write(buf, binary.BigEndian, uint16(2))
@@ -99,13 +94,12 @@ func (s *FileStore) CreateSnapshot() error {
 		return err
 	}
 
-	// atomic swap
+	// reemplazo atómico
 	return os.Rename(tmp, path)
 }
 
 /**
-* tryLoadSnapshot: Loads the snapshot index if it exists and passes CRC validation.
-* Returns (true, nil) when loaded, (false, nil) when absent, (false, err) when corrupt.
+* tryLoadSnapshot: Carga el snapshot si existe y es válido; retorna false si no existe o está corrupto.
 * @return bool, error
 **/
 func (s *FileStore) tryLoadSnapshot() (bool, error) {
@@ -118,7 +112,7 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		return false, errors.New(msg.MSG_INVALID_SNAPSHOT)
 	}
 
-	// CRC check
+	// validar CRC
 	payload := data[:len(data)-4]
 	storedCRC := getUint32(data[len(data)-4:])
 	if checksum(payload) != storedCRC {
@@ -127,7 +121,7 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 
 	buf := bytes.NewReader(payload)
 
-	// ---- Header ----
+	// ---- Encabezado ----
 	magic := make([]byte, 4)
 	buf.Read(magic)
 	if string(magic) != "SNAP" {
@@ -147,8 +141,7 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		return false, err
 	}
 
-	// version 1 snapshots predate the WAL field: fall back to 0 and let the
-	// caller's rebuild of the active segment recover whatever LSN it can see.
+	// La versión 1 no trae WAL: queda en 0 y se recupera al reconstruir el segmento activo.
 	var wal uint64
 	if version >= 2 {
 		if err := binary.Read(buf, binary.BigEndian, &wal); err != nil {
@@ -156,11 +149,11 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		}
 	}
 
-	// ---- Entries ----
+	// ---- Entradas ----
 	s.indexMu.Lock()
 	defer s.indexMu.Unlock()
 
-	s.index = make(map[string]*RecordRef, count)
+	s.index = make(map[string]*recordRef, count)
 	for i := uint64(0); i < count; i++ {
 		var idLen uint16
 		binary.Read(buf, binary.BigEndian, &idLen)
@@ -182,12 +175,10 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		}
 
 		id := string(idBytes)
-		s.setIndexLocked(id, &RecordRef{segment: int(segIndex), offset: offset, length: dataLen})
+		s.setIndexLocked(id, &recordRef{segment: int(segIndex), offset: offset, length: dataLen})
 	}
 
-	// buildIndex() replays only the active segment right after this returns, so
-	// restore WAL here or a fresh/near-empty active segment would make the LSN
-	// counter regress below records already folded into this snapshot.
+	// Restaurar el WAL del snapshot para que no retroceda si el segmento activo está casi vacío.
 	s.WAL.setMax(wal)
 
 	return true, nil
