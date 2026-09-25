@@ -87,7 +87,7 @@ func newCommand(model *Model, cmd Cmd, items []et.Json) *Command {
 **/
 func (s *Command) Add(condition *et.Condition) *Command {
 	if len(s.wheres) > 0 && condition.Connector == et.NaC {
-		condition.Connector = et.And
+		condition.Connector = et.AND
 	}
 
 	s.wheres = append(s.wheres, condition)
@@ -109,7 +109,7 @@ func (s *Command) Where(condition *et.Condition) *Command {
 * @return *Query
 **/
 func (s *Command) And(condition *et.Condition) *Command {
-	condition.Connector = et.And
+	condition.Connector = et.AND
 	return s.Add(condition)
 }
 
@@ -119,7 +119,7 @@ func (s *Command) And(condition *et.Condition) *Command {
 * @return *Query
 **/
 func (s *Command) Or(condition *et.Condition) *Command {
-	condition.Connector = et.Or
+	condition.Connector = et.OR
 	return s.Add(condition)
 }
 

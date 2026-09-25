@@ -153,10 +153,7 @@ func (s *Instances) newInstance(id, title, description string, ctx et.Json) (*In
 		return nil, err
 	}
 
-	if id == "" {
-		id = reg.UUID()
-	}
-
+	id = reg.GetUUID(id)
 	result := &Instance{
 		CreatedAt:   now,
 		UpdatedAt:   now,

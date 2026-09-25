@@ -717,10 +717,11 @@ func (s *DB) updateQuery(define et.Json) ([]et.Json, error) {
 	cmd := model.Update(data)
 	wheres := define.ArrayJson("where")
 	for _, where := range wheres {
-		condition := et.ToCondition(where)
-		for _, cond := range condition {
-			cmd.Add(cond)
+		condition, err := et.ToCondition(where)
+		if err != nil {
+			return nil, err
 		}
+		cmd.Add(condition)
 	}
 
 	result, err := cmd.
@@ -756,10 +757,11 @@ func (s *DB) deleteQuery(define et.Json) ([]et.Json, error) {
 	cmd := model.Delete()
 	wheres := define.ArrayJson("where")
 	for _, where := range wheres {
-		condition := et.ToCondition(where)
-		for _, cond := range condition {
-			cmd.Add(cond)
+		condition, err := et.ToCondition(where)
+		if err != nil {
+			return nil, err
 		}
+		cmd.Add(condition)
 	}
 
 	result, err := cmd.
@@ -796,10 +798,11 @@ func (s *DB) upsertQuery(define et.Json) ([]et.Json, error) {
 	cmd := model.Upsert(data)
 	wheres := define.ArrayJson("where")
 	for _, where := range wheres {
-		condition := et.ToCondition(where)
-		for _, cond := range condition {
-			cmd.Add(cond)
+		condition, err := et.ToCondition(where)
+		if err != nil {
+			return nil, err
 		}
+		cmd.Add(condition)
 	}
 
 	result, err := cmd.

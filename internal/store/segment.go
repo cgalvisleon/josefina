@@ -147,6 +147,29 @@ func (s *segment) Sync() error {
 }
 
 /**
+* Seal: Stops the write goroutine, flushes to disk and marks the segment read-only,
+* keeping the file open so records already indexed in it can still be read.
+* @return error
+**/
+func (s *segment) Seal() error {
+	if s.readOnly {
+		return nil
+	}
+
+	close(s.ch)
+	s.wg.Wait()
+	if err := s.WriteError(); err != nil {
+		return err
+	}
+	if err := s.file.Sync(); err != nil {
+		return err
+	}
+
+	s.readOnly = true
+	return nil
+}
+
+/**
 * Close
 * @return error
 **/

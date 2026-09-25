@@ -652,13 +652,14 @@ func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
 		return nil, false, err
 	}
 
+	defer s.indexMu.Unlock()
 	s.indexMu.Lock()
+
 	_, exists := s.index[id]
 	if exists {
 		s.TombStones++
 	}
 	s.putIndex(id, ref)
-	s.indexMu.Unlock()
 
 	if s.isDebug {
 		logs.Debug("put:", s.Path, ":lsn:", s.WAL, ":ID:", id, ":ref:", ref.ToString())

@@ -19,7 +19,7 @@ func New() http.Handler {
 		logs.Panic(err)
 	}
 
-	api := srv.Routes(AppName, server.Version, server)
+	api := srv.Routes(AppName, 1, server)
 	return api
 }
 

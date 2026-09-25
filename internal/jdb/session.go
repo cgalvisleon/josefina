@@ -244,7 +244,7 @@ func (s *Server) newSession(token string, db *DB, tp TpConnection, payload et.Js
 		LastAccess:  now,
 		Duration:    clm.Duration,
 		Token:       token,
-		ID:          clm.SessionID,
+		ID:          clm.UserID,
 		Name:        clm.Name,
 		DB:          db,
 		Type:        tp,

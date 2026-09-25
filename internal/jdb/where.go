@@ -1,6 +1,8 @@
 package jdb
 
 import (
+	"strings"
+
 	"github.com/cgalvisleon/et/envar"
 	"github.com/cgalvisleon/et/et"
 )
@@ -73,10 +75,10 @@ func (s *Where) IsDebug() *Where {
 **/
 func (s *Where) Add(condition *et.Condition) *Where {
 	if len(s.conditions) > 0 && condition.Connector == et.NaC {
-		condition.Connector = et.And
+		condition.Connector = et.AND
 	}
 
-	key := condition.Key()
+	key := strings.ToLower(condition.Field.String())
 	s.conditions[key] = append(s.conditions[key], condition)
 	return s
 }
@@ -87,7 +89,7 @@ func (s *Where) Add(condition *et.Condition) *Where {
 * @return *Where
 **/
 func (s *Where) And(condition *et.Condition) *Where {
-	condition.Connector = et.And
+	condition.Connector = et.AND
 	return s.Add(condition)
 }
 
@@ -97,7 +99,7 @@ func (s *Where) And(condition *et.Condition) *Where {
 * @return *Where
 **/
 func (s *Where) Or(condition *et.Condition) *Where {
-	condition.Connector = et.Or
+	condition.Connector = et.OR
 	return s.Add(condition)
 }
 
@@ -219,7 +221,7 @@ func (s *Query) addWhere(where *Where) *Query {
 **/
 func (s *Query) add(condition *et.Condition) *Query {
 	if len(s.wheres) > 0 && condition.Connector == et.NaC {
-		condition.Connector = et.And
+		condition.Connector = et.AND
 	}
 
 	s.active.Add(condition)
@@ -241,7 +243,7 @@ func (s *Query) Where(condition *et.Condition) *Query {
 * @return *Query
 **/
 func (s *Query) And(condition *et.Condition) *Query {
-	condition.Connector = et.And
+	condition.Connector = et.AND
 	return s.add(condition)
 }
 
@@ -251,7 +253,7 @@ func (s *Query) And(condition *et.Condition) *Query {
 * @return *Query
 **/
 func (s *Query) Or(condition *et.Condition) *Query {
-	condition.Connector = et.Or
+	condition.Connector = et.OR
 	return s.add(condition)
 }
 

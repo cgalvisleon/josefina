@@ -19,7 +19,7 @@ type Router struct {
 
 var api *Router
 
-func Routes(name string, version string, srv *jdb.Server) http.Handler {
+func Routes(name string, version int, srv *jdb.Server) http.Handler {
 	if api != nil {
 		return nil
 	}
@@ -36,7 +36,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 		Server: srv,
 	}
 	api.Public(router.GET, "/version", api.version)
-	api.Authentication(router.GET, "/routes", api.routes)
+	api.Public(router.GET, "/routes", api.routes)
 	// JDB
 	api.Public(router.POST, "/signin", api.signin)
 	api.Public(router.POST, "/signout", api.signout)
@@ -49,7 +49,7 @@ func Routes(name string, version string, srv *jdb.Server) http.Handler {
 
 	api.init()
 
-	logs.Logf(api.Name, "Router version:%s", api.Version)
+	logs.Logf(api.Name, "Router version:%d", api.Version)
 
 	return api.Router
 }

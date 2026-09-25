@@ -437,7 +437,7 @@ func (s *Server) signin(params et.Json) (et.Items, error) {
 
 	device := "apiRest"
 	duration := time.Minute * 60
-	token, err := claim.NewToken(appName, device, user.ID, user.Username, et.Json{
+	token, err := claim.NewAuthenticationToken(appName, device, user.ID, user.Username, et.Json{
 		"database": db.Name,
 		"user_id":  user.ID,
 	}, duration)

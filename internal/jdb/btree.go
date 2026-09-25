@@ -931,7 +931,7 @@ func (bt *BTree) ApplyCondition(condition *et.Condition) []string {
 /**
 * ApplyConditions: Applies a set of conditions to all keys and returns the matching ones,
 * combining each condition's result with the accumulated result according to its Connector
-* (et.And intersects, et.Or unions; the first condition's connector is ignored).
+* (et.AND intersects, et.OR unions; the first condition's connector is ignored).
 * @param conditions []*et.Condition
 * @return []string
 **/
@@ -943,7 +943,7 @@ func (bt *BTree) ApplyConditions(conditions []*et.Condition) []string {
 	result := bt.ApplyCondition(conditions[0])
 	for _, condition := range conditions[1:] {
 		keys := bt.ApplyCondition(condition)
-		if condition.Connector == et.Or {
+		if condition.Connector == et.OR {
 			result = bpUnion(result, keys)
 		} else {
 			result = bpIntersect(result, keys)
