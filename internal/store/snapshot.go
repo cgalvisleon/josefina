@@ -13,18 +13,37 @@ import (
 )
 
 /**
+* snapshotPath: Returns the path of this store's snapshot file
+* @return string
+**/
+func (s *FileStore) snapshotPath() string {
+	return filepath.Join(s.PathSnapshot, fmt.Sprintf("state-%s.snap", s.Name))
+}
+
+/**
+* removeSnapshot: Deletes the snapshot file so the next Open does a full rebuild.
+* Used when the segment layout changes and the snapshot's refs no longer apply.
+* @return error
+**/
+func (s *FileStore) removeSnapshot() error {
+	err := os.Remove(s.snapshotPath())
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+/**
 * CreateSnapshot: Persists the current in-memory index to a snapshot file.
 * Only records from segments other than the active one are included.
 * The file is written atomically via a tmp-then-rename pattern.
 * @return error
 **/
 func (s *FileStore) CreateSnapshot() error {
-	muI := s.getMutex("index")
-	muI.RLock()
-	defer muI.RUnlock()
+	s.indexMu.RLock()
+	defer s.indexMu.RUnlock()
 
-	name := fmt.Sprintf("state-%s.snap", s.Name)
-	path := filepath.Join(s.PathSnapshot, name)
+	path := s.snapshotPath()
 	tmp := path + ".tmp"
 
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
@@ -33,32 +52,38 @@ func (s *FileStore) CreateSnapshot() error {
 	}
 	defer f.Close()
 
-	buf := bytes.NewBuffer(nil)
-
-	// ---- Header ----
-	// Version 2 adds the WAL field right after count; tryLoadSnapshot() branches
-	// on version so snapshots written by older builds (version 1, no WAL) still load.
-	buf.WriteString("SNAP")
-	binary.Write(buf, binary.BigEndian, uint16(2))
-	binary.Write(buf, binary.BigEndian, uint64(len(s.index)))
-	binary.Write(buf, binary.BigEndian, s.WAL)
-
 	// ---- Entries ----
+	// Only records outside the active segment are stored; buildIndex() replays the
+	// active one on load. The header count must match the entries actually written,
+	// otherwise tryLoadSnapshot() reads past the end and rejects the file.
+	entries := bytes.NewBuffer(nil)
+	count := uint64(0)
 	currentSegment := len(s.segments) - 1
 	for id, ref := range s.index {
 		if ref.segment == currentSegment {
 			continue
 		}
 		idBytes := []byte(id)
-		binary.Write(buf, binary.BigEndian, uint16(len(idBytes)))
-		buf.Write(idBytes)
-		binary.Write(buf, binary.BigEndian, uint32(ref.segment))
-		binary.Write(buf, binary.BigEndian, ref.offset)
-		binary.Write(buf, binary.BigEndian, ref.length)
+		binary.Write(entries, binary.BigEndian, uint16(len(idBytes)))
+		entries.Write(idBytes)
+		binary.Write(entries, binary.BigEndian, uint32(ref.segment))
+		binary.Write(entries, binary.BigEndian, ref.offset)
+		binary.Write(entries, binary.BigEndian, ref.length)
+		count++
 		if s.isDebug {
 			logs.Debug("snapshot:", s.Path, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}
+
+	// ---- Header ----
+	// Version 2 adds the WAL field right after count; tryLoadSnapshot() branches
+	// on version so snapshots written by older builds (version 1, no WAL) still load.
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString("SNAP")
+	binary.Write(buf, binary.BigEndian, uint16(2))
+	binary.Write(buf, binary.BigEndian, count)
+	binary.Write(buf, binary.BigEndian, s.WAL.count())
+	buf.Write(entries.Bytes())
 
 	// ---- CRC ----
 	crc := checksum(buf.Bytes())
@@ -84,9 +109,7 @@ func (s *FileStore) CreateSnapshot() error {
 * @return bool, error
 **/
 func (s *FileStore) tryLoadSnapshot() (bool, error) {
-	name := fmt.Sprintf("state-%s.snap", s.Name)
-	path := filepath.Join(s.PathSnapshot, name)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(s.snapshotPath())
 	if err != nil {
 		return false, nil // snapshot opcional
 	}
@@ -134,7 +157,11 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 	}
 
 	// ---- Entries ----
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+
 	s.index = make(map[string]*RecordRef, count)
+	s.keys = make([]string, 0, count)
 	for i := uint64(0); i < count; i++ {
 		var idLen uint16
 		binary.Read(buf, binary.BigEndian, &idLen)
@@ -156,15 +183,13 @@ func (s *FileStore) tryLoadSnapshot() (bool, error) {
 		}
 
 		id := string(idBytes)
-		s.setIndex(id, int(segIndex), offset, dataLen)
+		s.setIndexLocked(id, &RecordRef{segment: int(segIndex), offset: offset, length: dataLen})
 	}
 
 	// buildIndex() replays only the active segment right after this returns, so
 	// restore WAL here or a fresh/near-empty active segment would make the LSN
 	// counter regress below records already folded into this snapshot.
-	if wal > s.WAL {
-		s.WAL = wal
-	}
+	s.WAL.setMax(wal)
 
 	return true, nil
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
@@ -68,8 +69,6 @@ type segment struct {
 	size      int64
 	name      string
 	readOnly  bool
-	ch        chan []byte
-	wg        sync.WaitGroup
 	writeErr  error
 	errMu     sync.Mutex
 	closeOnce sync.Once
@@ -81,23 +80,16 @@ type segment struct {
 * @return *segment
 **/
 func newSegment(file *os.File, size int64, name string) *segment {
-	result := &segment{
+	return &segment{
 		file:     file,
 		size:     size,
 		name:     name,
 		readOnly: false,
-		ch:       make(chan []byte),
-		writeErr: nil,
-		errMu:    sync.Mutex{},
 	}
-
-	result.wg.Add(1)
-	go result.loop()
-	return result
 }
 
 /**
-* newReadOnlySegment creates a segment without a write goroutine.
+* newReadOnlySegment creates a segment that rejects writes.
 * Safe to use when the underlying file is opened O_RDONLY.
 * @param file *os.File, size int64, name string
 * @return *segment
@@ -109,27 +101,6 @@ func newReadOnlySegment(file *os.File, size int64, name string) *segment {
 		name:     name,
 		readOnly: true,
 	}
-}
-
-/**
-* loop
-* @return void
-**/
-func (s *segment) loop() error {
-	defer s.wg.Done()
-	for data := range s.ch {
-		_, err := s.file.Write(data)
-		if err != nil {
-			s.errMu.Lock()
-			s.writeErr = err
-			s.errMu.Unlock()
-			for range s.ch {
-			}
-			return err
-		}
-	}
-
-	return nil
 }
 
 /**
@@ -147,8 +118,8 @@ func (s *segment) Sync() error {
 }
 
 /**
-* Seal: Stops the write goroutine, flushes to disk and marks the segment read-only,
-* keeping the file open so records already indexed in it can still be read.
+* Seal: Flushes to disk and marks the segment read-only, keeping the file open
+* so records already indexed in it can still be read.
 * @return error
 **/
 func (s *segment) Seal() error {
@@ -156,8 +127,6 @@ func (s *segment) Seal() error {
 		return nil
 	}
 
-	close(s.ch)
-	s.wg.Wait()
 	if err := s.WriteError(); err != nil {
 		return err
 	}
@@ -176,14 +145,13 @@ func (s *segment) Seal() error {
 func (s *segment) Close() error {
 	var closeErr error
 	s.closeOnce.Do(func() {
-		if s.readOnly {
-			if s.file != nil {
-				closeErr = s.file.Close()
-			}
+		if s.file == nil {
 			return
 		}
-		close(s.ch)
-		s.wg.Wait()
+		if s.readOnly {
+			closeErr = s.file.Close()
+			return
+		}
 		if err := s.Sync(); err != nil {
 			closeErr = err
 			return
@@ -227,14 +195,32 @@ func (s *segment) ReadAt(b []byte, off int64) (int, error) {
 }
 
 /**
-* Write
+* Write: Writes b to the file synchronously, so a record is on the file (page
+* cache) before its RecordRef is returned and published in the index. The first
+* error is sticky: once a write fails, offsets can no longer be trusted, so every
+* later write returns that same error.
 * @param b []byte
+* @return error
 **/
-func (s *segment) Write(b []byte) {
-	if s.file == nil || s.readOnly {
-		return
+func (s *segment) Write(b []byte) error {
+	if s.file == nil {
+		return errors.New(msg.MSG_FILE_IS_NIL)
 	}
-	s.ch <- b
+	if s.readOnly {
+		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	}
+	if err := s.WriteError(); err != nil {
+		return err
+	}
+
+	if _, err := s.file.Write(b); err != nil {
+		s.errMu.Lock()
+		s.writeErr = err
+		s.errMu.Unlock()
+		return err
+	}
+
+	return nil
 }
 
 /**
@@ -250,7 +236,9 @@ func (s *segment) WriteHeader(lsn uint64, id string, data []byte, status byte) (
 
 	offset := s.size
 
-	s.Write(header)
+	if err := s.Write(header); err != nil {
+		return nil, err
+	}
 	s.size += h.HeaderSize()
 
 	return &RecordRef{
@@ -280,12 +268,13 @@ func (s *segment) WriteRecord(lsn uint64, id string, data []byte, status byte) (
 		return nil, err
 	}
 
+	// Header and payload go out in a single write so a reader never sees a
+	// header without its data.
 	offset := s.size
-	s.Write(header)
-	if len(data) > 0 {
-		s.Write(data)
-	}
-	if err := s.WriteError(); err != nil {
+	record := make([]byte, 0, len(header)+len(data))
+	record = append(record, header...)
+	record = append(record, data...)
+	if err := s.Write(record); err != nil {
 		return nil, err
 	}
 
@@ -376,4 +365,65 @@ func (s *segment) Read(ref *RecordRef) ([]byte, error) {
 	}
 
 	return result, nil
+}
+
+/**
+* scan: Walks the records of the segment starting at offset, calling fn for each
+* one in write order. Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1][Data].
+* Stops quietly at the end of the file or at the first corrupt/partial record (a
+* torn tail write); only an I/O error reading a header is returned. fn returning
+* an error stops the scan and returns it.
+* @param offset int64, fn func(offset int64, h recordHeader, data []byte) error
+* @return error
+**/
+func (s *segment) scan(offset int64, fn func(offset int64, h recordHeader, data []byte) error) error {
+	for {
+		fixed := make([]byte, fixedHeaderSize)
+		n, err := s.ReadAt(fixed, offset)
+		if err != nil {
+			if errors.Is(err, io.EOF) || n < len(fixed) {
+				return nil
+			}
+			return err
+		}
+
+		h := recordHeader{
+			LSN:     binary.BigEndian.Uint64(fixed[0:8]),
+			DataLen: getUint32(fixed[8:12]),
+			CRC:     getUint32(fixed[12:16]),
+			IDLen:   getUint16(fixed[16:18]),
+		}
+		if h.IDLen == 0 || h.IDLen > maxIdLen {
+			return nil // corrupción → parar seguro
+		}
+
+		idBytes := make([]byte, h.IDLen)
+		if _, err := s.ReadAt(idBytes, offset+18); err != nil {
+			return nil
+		}
+		h.ID = string(idBytes)
+
+		statusByte := make([]byte, 1)
+		if _, err := s.ReadAt(statusByte, offset+18+int64(h.IDLen)); err != nil {
+			return nil
+		}
+		h.Status = statusByte[0]
+
+		var data []byte
+		if h.DataLen > 0 {
+			data = make([]byte, h.DataLen)
+			if _, err := s.ReadAt(data, offset+18+int64(h.IDLen)+1); err != nil {
+				return nil
+			}
+			if checksum(data) != h.CRC {
+				return nil // registro corrupto → detener el escaneo
+			}
+		}
+
+		if err := fn(offset, h, data); err != nil {
+			return err
+		}
+
+		offset += h.RecordSize()
+	}
 }

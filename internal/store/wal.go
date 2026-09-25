@@ -1,10 +1,6 @@
 package store
 
 import (
-	"encoding/binary"
-	"errors"
-	"io"
-
 	"github.com/cgalvisleon/et/et"
 )
 
@@ -36,25 +32,24 @@ func (e *WalEntry) ToJson() et.Json {
 * @return error
 **/
 func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
-	ref, err := s.appendRecordAt(entry.LSN, entry.ID, entry.Data, entry.Status)
+	// Same as Put/Delete: log append and index update under one writeMu hold.
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
+	ref, err := s.appendRecordLocked(entry.LSN, entry.ID, entry.Data, entry.Status)
 	if err != nil {
 		return err
 	}
 
-	muI := s.getMutex("index")
-	muI.Lock()
+	var existed bool
 	if entry.Status == Active {
-		if _, exists := s.index[entry.ID]; exists {
-			s.TombStones++
-		}
-		s.index[entry.ID] = ref
+		existed = s.setIndex(entry.ID, ref)
 	} else {
-		if _, exists := s.index[entry.ID]; exists {
-			s.TombStones++
-			s.deleteIndex(entry.ID)
-		}
+		existed = s.deleteIndex(entry.ID)
 	}
-	muI.Unlock()
+	if existed {
+		s.TombStones.inc()
+	}
 
 	return nil
 }
@@ -67,66 +62,25 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 * @return []WalEntry, error
 **/
 func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
-	muI := s.getMutex("index")
-	muI.RLock()
+	s.indexMu.RLock()
 	segs := s.segments
-	muI.RUnlock()
+	s.indexMu.RUnlock()
 
 	var entries []WalEntry
-
 	for _, seg := range segs {
-		offset := int64(0)
-		for {
-			// Layout: [LSN:8][DataLen:4][CRC:4][IDLen:2][ID:IDLen][Status:1]
-			fixed := make([]byte, fixedHeaderSize)
-			n, err := seg.ReadAt(fixed, offset)
-			if err != nil {
-				if errors.Is(err, io.EOF) || n < len(fixed) {
-					break
-				}
-				return nil, err
-			}
-
-			lsn := binary.BigEndian.Uint64(fixed[0:8])
-			dataLen := getUint32(fixed[8:12])
-			crcStored := getUint32(fixed[12:16])
-			idLen := getUint16(fixed[16:18])
-
-			if idLen == 0 || idLen > maxIdLen {
-				break // corrupción → parar seguro
-			}
-
-			idBytes := make([]byte, idLen)
-			if _, err := seg.ReadAt(idBytes, offset+18); err != nil {
-				break
-			}
-
-			statusByte := make([]byte, 1)
-			if _, err := seg.ReadAt(statusByte, offset+18+int64(idLen)); err != nil {
-				break
-			}
-
-			var data []byte
-			if dataLen > 0 {
-				data = make([]byte, dataLen)
-				if _, err := seg.ReadAt(data, offset+18+int64(idLen)+1); err != nil {
-					break
-				}
-				if checksum(data) != crcStored {
-					break // registro corrupto → detener el escaneo
-				}
-			}
-
-			if lsn > since {
+		err := seg.scan(0, func(offset int64, h recordHeader, data []byte) error {
+			if h.LSN > since {
 				entries = append(entries, WalEntry{
-					LSN:    lsn,
-					ID:     string(idBytes),
+					LSN:    h.LSN,
+					ID:     h.ID,
 					Data:   data,
-					Status: statusByte[0],
+					Status: h.Status,
 				})
 			}
-
-			offset += int64(fixedHeaderSize) + int64(idLen) + int64(dataLen)
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
 	}
 
