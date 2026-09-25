@@ -105,6 +105,7 @@ type FileStore struct {
 	Path                string                `json:"path"`
 	PathSnapshot        string                `json:"path_snapshot"`
 	PathCompact         string                `json:"path_compact"`
+	PathRecover         string                `json:"path_recover"` // cuarentena de bytes corruptos (Recover)
 	MaxSegment          int64                 `json:"max_segment"`
 	SyncOnWrite         bool                  `json:"sync_on_write"`
 	Size                counter[int64]        `json:"size"`
@@ -134,6 +135,7 @@ func (s *FileStore) ToJson() et.Json {
 		"path":                  s.Path,
 		"path_snapshot":         s.PathSnapshot,
 		"path_compact":          s.PathCompact,
+		"path_recover":          s.PathRecover,
 		"max_segment":           s.MaxSegment,
 		"sync_on_write":         s.SyncOnWrite,
 		"size":                  s.Size.count(),
@@ -918,28 +920,33 @@ func (s *FileStore) prune() error {
 }
 
 /**
+* newFileStore: Arma un FileStore con sus rutas y configuración, sin tocar el disco.
+* @param pathData, pathWald, name string, mode Mode
+* @return *FileStore
+**/
+func newFileStore(pathData, pathWald, name string, mode Mode) *FileStore {
+	name = Normalize(name)
+	return &FileStore{
+		Name:                name,
+		Path:                filepath.Join(pathData, "segments", name),
+		PathSnapshot:        filepath.Join(pathWald, "snapshot", name),
+		PathCompact:         filepath.Join(pathWald, "compact", name),
+		PathRecover:         filepath.Join(pathWald, "recover", name),
+		MaxSegment:          envar.GetInt64("RELSEG_SIZE", 128) * 1024 * 1024,
+		MinThresholdCompact: envar.GetInt("MIN_THRESHOLD_COMPACT", 1000),
+		SyncOnWrite:         envar.GetBool("SYNC_ON_WRITE", true),
+		index:               make(map[string]*recordRef),
+		mode:                mode,
+	}
+}
+
+/**
 * Open: Abre (o crea) el store y carga su índice.
 * @param pathData, pathWald, name string, mode Mode
 * @return *FileStore, error
 **/
 func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
-	maxSegmentMG := envar.GetInt64("RELSEG_SIZE", 128)
-	maxSegmentMG = maxSegmentMG * 1024 * 1024
-	minThreshold := envar.GetInt("MIN_THRESHOLD_COMPACT", 1000)
-	name = Normalize(name)
-	fs := &FileStore{
-		Name:                name,
-		Path:                filepath.Join(pathData, "segments", name),
-		PathSnapshot:        filepath.Join(pathWald, "snapshot", name),
-		PathCompact:         filepath.Join(pathWald, "compact", name),
-		MaxSegment:          maxSegmentMG,
-		MinThresholdCompact: minThreshold,
-		mode:                mode,
-	}
-
-	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)
-	fs.index = make(map[string]*recordRef)
-	fs.SyncOnWrite = syncOnWrite
+	fs := newFileStore(pathData, pathWald, name, mode)
 
 	if mode == ReadOnly {
 		if _, err := os.Stat(fs.Path); os.IsNotExist(err) {

@@ -89,6 +89,23 @@ func (s *compactWriter) discard() {
 }
 
 /**
+* compactTmpPath: Retorna el directorio temporal donde la compactación escribe los segmentos nuevos.
+* @return string
+**/
+func (s *FileStore) compactTmpPath() string {
+	return filepath.Join(s.PathCompact, fmt.Sprintf("segments-%s.tmp", s.Name))
+}
+
+/**
+* oldSegmentsPath: Retorna el directorio al que la compactación mueve los segmentos viejos.
+* Es hermano de s.Path: renombrar un directorio dentro de sí mismo falla.
+* @return string
+**/
+func (s *FileStore) oldSegmentsPath() string {
+	return filepath.Join(filepath.Dir(s.Path), s.Name+".segments.old")
+}
+
+/**
 * Compact: Reescribe solo los registros vivos en segmentos nuevos, en tres fases:
 *  1. Bajo writeMu: copia del índice y punto de corte del log.
 *  2. Sin locks: copia de los registros vivos.
@@ -112,7 +129,7 @@ func (s *FileStore) Compact() error {
 	keys := slices.Sorted(maps.Keys(indexCopy))
 
 	// ---- Fase 2: copiar registros vivos sin bloquear escrituras ----
-	tmpDir := filepath.Join(s.PathCompact, fmt.Sprintf("segments-%s.tmp", s.Name))
+	tmpDir := s.compactTmpPath()
 	os.RemoveAll(tmpDir)
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return err
@@ -232,8 +249,7 @@ func (s *FileStore) Compact() error {
 		return err
 	}
 
-	// oldDir debe ser hermano de s.Path: renombrar un directorio dentro de sí mismo falla.
-	oldDir := filepath.Join(filepath.Dir(s.Path), s.Name+".segments.old")
+	oldDir := s.oldSegmentsPath()
 	os.RemoveAll(oldDir)
 
 	if err := os.Rename(s.Path, oldDir); err != nil {

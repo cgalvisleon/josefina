@@ -81,10 +81,7 @@ HTTP handler (pkg/server/router.go)
 
 ### Layer breakdown
 
-**`internal/store`** — Low-level storage engine
-- `FileStore`: append-only segmented files (`segment-XXXXXX.dat`) with an in-memory index (`map[string]*RecordRef`)
-- Tombstone deletes; automatic compaction (`compact.go`) past `MIN_THRESHOLD_COMPACT`; snapshots on segment roll-over (`snapshot.go`)
-- `wal.go` (`WalEntry`/`ApplyWalEntry`/`WalSince`) — replication primitive not wired to anything yet
+**`internal/store`** — WAL storage engine (append-only binary key→value store). See the dedicated section below.
 
 **`internal/jdb`** — Server, catalog, and query/command engine (~8k lines, the bulk of the code)
 - Hierarchy: singleton `*Server` (`jdb.go`/`server.go`) → `DB` (`db.go`) → `Schema` (`schema.go`) → `Model` (`model.go`) → `Field`/`Index`/`Detail` (`field.go`, `define.go`). The server's own catalog lives in a `system` `FileStore`; on first boot it creates a default database.
@@ -102,6 +99,49 @@ HTTP handler (pkg/server/router.go)
 
 **`internal/msg`** — `MSG_*` message constants, English/Spanish by `LANG`.
 
+## `internal/store` — storage engine
+
+A **single-node**, concurrency-safe, append-only (WAL-style) store of `id → []byte`. It is meant to be the per-node base for high availability, which will be a replication layer *above* it (likely in `internal/jdb`), not inside it. It stores raw bytes; JSON encoding is the caller's job. Doc comments in this package are in Spanish.
+
+### Public API (this is the whole surface; everything else is private on purpose)
+| Call | Semantics |
+|---|---|
+| `Open(pathData, pathWald, name, mode)` | Opens/creates. Segments in `pathData/segments/<name>/`; `pathWald/{snapshot,compact,recover}/<name>/`. `name` goes through `Normalize`. `ReadOnly`/`ReadWrite`. |
+| `Close()`, `Empty()` | `Close` waits for compaction, fsyncs and retires all segments. `Empty` closes and deletes the data dir. |
+| `Insert(id, data) (bool, error)` | Writes only if `id` is absent. |
+| `Update(id, data) (bool, error)` | Writes only if `id` exists **and** the bytes differ (identical data → no log write, returns `false`). |
+| `Delete(id) (bool, error)` | Writes a tombstone only if `id` exists. |
+| `Get(id) ([]byte, bool, error)`, `IsExist`, `Count`, `Keys(asc, offset, limit)` | Reads. `limit <= 0` = no limit. |
+| `ForEach(fn, asc, offset, limit)` | Disk reads run concurrently on `min(NumCPU, n)` goroutines, but `fn` is called **sequentially, in key order, on the caller's goroutine** — it needs no locking, and returning `false` stops exactly there. The record set is fixed at call start; no lock is held, so `fn` may call back into the store. |
+| `Compact()` | Manual compaction (also automatic when tombstones > max(10% of keys, `MIN_THRESHOLD_COMPACT`)). |
+| `WalSince(lsn)`, `ApplyWalEntry(e)`, `WalEntry` | Replication primitives (log shipping by LSN). Not wired to anything yet. |
+| `Recover(pathData, pathWald, name) (et.Json, error)` | Offline repair; the store must be closed everywhere. Restores/cleans an interrupted compaction, drops the snapshot, and truncates each segment at its last valid record after copying the bad tail to `pathWald/recover/<name>/`. Returns a report. |
+| `ToJson`, `ToString`, `IsDebug`, `Normalize` | Status/debug helpers; `Normalize` is also used by `jdb` for names. |
+
+There is deliberately **no upsert**: callers compose it as `Update`, then `Insert` if the id did not exist (and `Update` again if that `Insert` lost a race).
+
+### On-disk format
+- Record: `[LSN:8][DataLen:4][CRC:4][IDLen:2][ID][Status:1][Data]`, big-endian; `Status` is `Active` or `Deleted` (tombstone, no data). **The CRC covers `Data` only**, not LSN/ID/status.
+- Segments `segment-%06d.dat`, rotated at `RELSEG_SIZE` MB (default 128). A new snapshot is written on every rotation.
+- Snapshot `state-<name>.snap` (version 2): index of all non-active segments plus the WAL counter, CRC-protected. Optional — if missing or corrupt, `Open` rebuilds the index by scanning every segment.
+- Scans stop silently at the first torn/corrupt record (see `segment.scan`), which is also how `Recover` finds the valid end.
+
+### Concurrency invariants (keep these when changing the package)
+- `writeMu` serializes every mutation, and a mutation's existence check + log append + index update happen under **one** hold (`put`, `appendRecordLocked` require it held). Lock order is always `compactMu` → `writeMu` → `indexMu`.
+- `indexMu` (RWMutex) guards `index`, `segments` and `active`.
+- Readers **never hold `indexMu` during disk I/O**: they look up the ref and `acquire()` its segment under `RLock`, release the lock, read, then `release()`. Compaction and `Close` call `retire()` on old segments instead of closing them; the file closes when the last reader releases it. Never close a segment that might still have readers.
+- Segment writes are synchronous (`os.File.Write`), so a ref published in the index is always readable. The first write error is sticky.
+- Shared counters `WAL`, `TombStones` and `Size` are `counter[T]`; use `inc`/`dec`/`add`/`count`/`set`/`setMax`, never the fields. The index goes through `getIndex`/`setIndex`/`deleteIndex`/`countIndex`; `...Locked` variants are for callers already holding `indexMu`.
+- `Compact` runs in 3 phases: (1) under `writeMu`, copy the index and record the cut point (segment + offset); (2) without locks, copy live records to a temp dir; (3) under `writeMu` + `indexMu`, replay everything written after the cut (Puts copied, Deletes written as tombstones), delete the snapshot, swap directories, retire the old segments, rebuild the snapshot. It keeps the newest tombstone so the WAL counter never regresses on rebuild.
+
+### Known limitations (accepted, not bugs to "fix" unasked)
+- `Open` does **not** run `Recover` automatically. After a crash with a torn tail, writes appended behind the garbage are lost on the next restart; after a crash between the two compaction renames, `Open` starts empty. Run `Recover` before `Open` after an unclean shutdown.
+- One writer at a time; with `SYNC_ON_WRITE=true` (default) every write does an fsync, so write throughput is bounded by disk latency (no group commit).
+- Compaction drops tombstones and overwritten records, so a replica behind the cut cannot catch up with `WalSince` (it would miss deletes) — the future HA layer needs log retention or full snapshot transfer.
+
+### Testing the store
+There are no committed tests. For ad-hoc tests: after `Open`, set `fs.MaxSegment` to a few KB to force rotation; use `t.Setenv("SYNC_ON_WRITE", "false")` for speed and `MIN_THRESHOLD_COMPACT` to control auto-compaction; always run with `-race`. Reopen the store at the end and compare against the in-memory state — that is how every change to this package has been verified.
+
 ## Patterns for extending
 
 - **New server-level operation:** add a lowercase `(s *Server) jX(params et.Json) (et.Items, error)` in `internal/jdb/server.go` that validates the token and resolves the session, then a public wrapper `JX(params)` in `jdb.go` that checks `server != nil` and calls `server.Exec(params, server.jX)`. Never call the handler directly — `Server.Exec` pushes onto the request channel consumed by `cores*2+1` workers (or `DB_POOL`).
@@ -110,7 +150,7 @@ HTTP handler (pkg/server/router.go)
 - **New HTTP route:** handler in `pkg/server/router.go` follows the existing shape (bearer token → body → `body.Set("token", ...)` → `jdb.X` → `response.ITEMS` / `response.HTTPError`), registered in `Routes`.
 
 ## Configuration
-- `.env` — read via `et/envar`: server flags above plus `HOST`, `PATH_URL`, `RELSEG_SIZE`, `SYNC_ON_WRITE`, `TIMEZONE`, `MIN_THRESHOLD_COMPACT`, `TTL_TRANSACCION`, `DB_POOL`, `LANG`, and `REDIS_*`/`NATS_*` for `et`'s `cache`/`event`.
+- `.env` — read via `et/envar`: server flags above plus `HOST`, `PATH_URL`, `RELSEG_SIZE` (segment size in MB, default 128), `SYNC_ON_WRITE` (fsync per write, default true), `TIMEZONE`, `MIN_THRESHOLD_COMPACT` (default 1000), `TTL_TRANSACCION`, `DB_POOL`, `LANG`, and `REDIS_*`/`NATS_*` for `et`'s `cache`/`event`.
 - `config.json` — a `nodes` list of cluster peers; not read by any Go code. Together with the unused `wal.go`, this is an intended but unbuilt clustering feature — nodes don't coordinate.
 - Data lives under `DB_PATH_DATA` / `DB_PATH_WAL` / `DB_PATH_SYSTEM` (defaults under `./data/`).
 
