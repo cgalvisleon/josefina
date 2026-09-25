@@ -16,14 +16,15 @@ import (
 * @return error
 **/
 func (s *FileStore) Compact() error {
-	s.indexMu.RLock()
+	muI := s.getMutex("index")
+	muI.RLock()
 	keys := make([]string, 0)
 	indexCopy := make(map[string]*RecordRef, len(s.index))
 	for k, v := range s.index {
 		keys = append(keys, k)
 		indexCopy[k] = v
 	}
-	s.indexMu.RUnlock()
+	muI.RUnlock()
 
 	// Orden determinista
 	sort.Strings(keys)
@@ -107,11 +108,12 @@ func (s *FileStore) Compact() error {
 	// Swap atómico. indexMu.Lock() se toma ANTES de cerrar los segmentos viejos:
 	// Read/Get/ForEach mantienen indexMu.RLock() durante toda la lectura, así que
 	// este Lock() espera a que terminen antes de cerrar sus fds por debajo.
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
+	muW := s.getMutex("write")
+	muW.Lock()
+	defer muW.Unlock()
 
-	s.indexMu.Lock()
-	defer s.indexMu.Unlock()
+	muI.Lock()
+	defer muI.Unlock()
 
 	for _, seg := range s.segments {
 		seg.Close()

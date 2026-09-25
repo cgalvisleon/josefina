@@ -102,27 +102,45 @@ type Putfn func(fls *FileStore, idx string, old, new []byte)
 type Deletefn func(fls *FileStore, idx string, old []byte)
 
 type FileStore struct {
-	ID                  string                `json:"id"`
-	Name                string                `json:"name"`
-	WAL                 uint64                `json:"wal"`
-	TombStones          int                   `json:"tomb_stones"`
-	Path                string                `json:"path"`
-	PathSnapshot        string                `json:"path_snapshot"`
-	PathCompact         string                `json:"path_compact"`
-	MaxSegment          int64                 `json:"max_segment"`
-	SyncOnWrite         bool                  `json:"sync_on_write"`
-	Size                int64                 `json:"size"`
-	MinThresholdCompact int                   `json:"min_threshold_compact"`
-	writeMu             sync.Mutex            `json:"-"` // SOLO WAL append
-	indexMu             sync.RWMutex          `json:"-"` // índice en memoria
-	segments            []*segment            `json:"-"` // segmentos de datos
-	active              *segment              `json:"-"` // segmento activo para escritura
-	index               map[string]*RecordRef `json:"-"` // índice en memoria
-	keys                []string              `json:"-"` // claves en memoria
-	mode                Mode                  `json:"-"` // modo de operación
-	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
-	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
-	isDebug             bool                  `json:"-"`
+	ID                  string                   `json:"id"`
+	Name                string                   `json:"name"`
+	WAL                 uint64                   `json:"wal"`
+	TombStones          int                      `json:"tomb_stones"`
+	Path                string                   `json:"path"`
+	PathSnapshot        string                   `json:"path_snapshot"`
+	PathCompact         string                   `json:"path_compact"`
+	MaxSegment          int64                    `json:"max_segment"`
+	SyncOnWrite         bool                     `json:"sync_on_write"`
+	Size                int64                    `json:"size"`
+	MinThresholdCompact int                      `json:"min_threshold_compact"`
+	mu                  map[string]*sync.RWMutex `json:"-"` // SOLO WAL append
+	segments            []*segment               `json:"-"` // segmentos de datos
+	active              *segment                 `json:"-"` // segmento activo para escritura
+	index               map[string]*RecordRef    `json:"-"` // índice en memoria
+	keys                []string                 `json:"-"` // claves en memoria
+	mode                Mode                     `json:"-"` // modo de operación
+	compacting          int32                    `json:"-"` // 0 = idle, 1 = running
+	compactWg           sync.WaitGroup           `json:"-"` // espera que termine la goroutine de compaction
+	isDebug             bool                     `json:"-"`
+}
+
+/**
+* getMutex
+* @param name string
+* @return *sync.Mutex
+**/
+func (s *FileStore) getMutex(name string) *sync.RWMutex {
+	if s.mu == nil {
+		s.mu = make(map[string]*sync.RWMutex)
+	}
+
+	result, exists := s.mu[name]
+	if exists {
+		return result
+	}
+
+	s.mu[name] = &sync.RWMutex{}
+	return s.mu[name]
 }
 
 /**
@@ -179,9 +197,11 @@ func (s *FileStore) IsDebug() *FileStore {
 * @return int
 **/
 func (s *FileStore) Count() int {
-	s.indexMu.RLock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
+
 	n := len(s.index)
-	s.indexMu.RUnlock()
 	return n
 }
 
@@ -246,6 +266,12 @@ func (s *FileStore) loadSegments() error {
 * @return error
 **/
 func (s *FileStore) newSegment() error {
+	if s.active != nil {
+		if err := s.active.Seal(); err != nil {
+			return err
+		}
+	}
+
 	name := fmt.Sprintf("segment-%06d.dat", len(s.segments)+1)
 	path := filepath.Join(s.Path, name)
 
@@ -256,12 +282,6 @@ func (s *FileStore) newSegment() error {
 
 	seg := newSegment(fd, 0, name)
 	s.segments = append(s.segments, seg)
-	if s.active != nil {
-		err := s.active.Close()
-		if err != nil {
-			return err
-		}
-	}
 	s.active = seg
 	if s.isDebug {
 		logs.Log(packageName, "new:segment:", s.Path, ":", seg.ToString())
@@ -278,8 +298,9 @@ func (s *FileStore) newSegment() error {
 * @return *RecordRef, error
 **/
 func (s *FileStore) appendRecordAt(lsn uint64, id string, data []byte, status byte) (*RecordRef, error) {
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
+	muW := s.getMutex("write")
+	muW.Lock()
+	defer muW.Unlock()
 
 	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	currentSize := s.active.size
@@ -318,8 +339,9 @@ func (s *FileStore) appendRecordAt(lsn uint64, id string, data []byte, status by
 * @return *RecordRef, error
 **/
 func (s *FileStore) appendRecord(id string, data []byte, status byte) (*RecordRef, error) {
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
+	muW := s.getMutex("write")
+	muW.Lock()
+	defer muW.Unlock()
 
 	recordSize := int64(fixedHeaderSize) + int64(len(id)) + int64(len(data))
 	currentSize := s.active.size
@@ -500,8 +522,9 @@ func (s *FileStore) buildIndex() error {
 * @return map[string]*RecordRef, []string, []*segment
 **/
 func (s *FileStore) getRecords(asc bool, offset, limit int) (map[string]*RecordRef, []string, []*segment) {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	return s.getRecordsLocked(asc, offset, limit)
 }
@@ -562,8 +585,9 @@ func (s *FileStore) getRecordsLocked(asc bool, offset, limit int) (map[string]*R
 * @return error
 **/
 func (s *FileStore) rebuildIndexes() error {
-	s.indexMu.Lock()
-	defer s.indexMu.Unlock()
+	muI := s.getMutex("index")
+	muI.Lock()
+	defer muI.Unlock()
 
 	s.index = make(map[string]*RecordRef)
 	s.keys = make([]string, 0)
@@ -583,14 +607,24 @@ func (s *FileStore) rebuildIndexes() error {
 func (s *FileStore) Close() error {
 	s.compactWg.Wait()
 
-	s.indexMu.RLock()
-	active := s.active
-	s.indexMu.RUnlock()
+	muW := s.getMutex("write")
+	muW.Lock()
+	defer muW.Unlock()
 
-	if active == nil {
-		return nil
+	muI := s.getMutex("index")
+	muI.Lock()
+	defer muI.Unlock()
+
+	// Close every segment, not just the active one: sealed segments keep their
+	// file open for reads, and segments loaded read-write run a writer goroutine.
+	var closeErr error
+	for _, seg := range s.segments {
+		if err := seg.Close(); err != nil && closeErr == nil {
+			closeErr = err
+		}
 	}
-	return active.Close()
+
+	return closeErr
 }
 
 /**
@@ -619,9 +653,10 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 	if s.ID == ownerId {
 		return
 	}
-	s.indexMu.Lock()
+	muI := s.getMutex("index")
+	muI.Lock()
+	defer muI.Unlock()
 	s.putIndex(id, ref)
-	s.indexMu.Unlock()
 }
 
 /**
@@ -652,8 +687,9 @@ func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
 		return nil, false, err
 	}
 
-	defer s.indexMu.Unlock()
-	s.indexMu.Lock()
+	muI := s.getMutex("index")
+	muI.Lock()
+	defer muI.Unlock()
 
 	_, exists := s.index[id]
 	if exists {
@@ -692,9 +728,10 @@ func (s *FileStore) Delete(id string) (bool, error) {
 		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
-	s.indexMu.RLock()
+	muI := s.getMutex("index")
+	muI.RLock()
 	_, exists := s.index[id]
-	s.indexMu.RUnlock()
+	muI.RUnlock()
 
 	if !exists {
 		return false, nil
@@ -704,10 +741,10 @@ func (s *FileStore) Delete(id string) (bool, error) {
 		return false, err
 	}
 
-	s.indexMu.Lock()
+	muI.Lock()
 	s.TombStones++
 	s.deleteIndex(id)
-	s.indexMu.Unlock()
+	muI.Unlock()
 
 	if s.isDebug {
 		i := len(s.index)
@@ -727,9 +764,10 @@ func (s *FileStore) IsExist(id string) bool {
 		return false
 	}
 
-	s.indexMu.RLock()
+	muI := s.getMutex("index")
+	muI.RLock()
 	_, existed := s.index[id]
-	s.indexMu.RUnlock()
+	muI.RUnlock()
 
 	return existed
 }
@@ -752,8 +790,9 @@ func (s *FileStore) readSegment(ref *RecordRef) ([]byte, error) {
 * @return bool, error
 **/
 func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	result, err := s.readSegment(ref)
 	if err != nil {
@@ -768,8 +807,9 @@ func (s *FileStore) Read(ref *RecordRef) ([]byte, error) {
 * @return recordHeader, error
 **/
 func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	seg := s.segments[ref.segment]
 	return seg.ReadHeader(ref)
@@ -781,8 +821,9 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 * @return bool, error
 **/
 func (s *FileStore) Get(id string) (bool, []byte, error) {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	ref, existed := s.index[id]
 	if !existed {
@@ -830,8 +871,9 @@ func (s *FileStore) GetObject(id string) (bool, et.Json, error) {
 * @return error
 **/
 func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	index, keys, segs := s.getRecordsLocked(asc, offset, limit)
 
@@ -1013,6 +1055,7 @@ func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 		MaxSegment:          maxSegmentMG,
 		MinThresholdCompact: minThreshold,
 		mode:                mode,
+		mu:                  make(map[string]*sync.RWMutex),
 	}
 
 	syncOnWrite := envar.GetBool("SYNC_ON_WRITE", true)

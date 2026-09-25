@@ -19,8 +19,9 @@ import (
 * @return error
 **/
 func (s *FileStore) CreateSnapshot() error {
-	s.indexMu.RLock()
-	defer s.indexMu.RUnlock()
+	muI := s.getMutex("index")
+	muI.RLock()
+	defer muI.RUnlock()
 
 	name := fmt.Sprintf("state-%s.snap", s.Name)
 	path := filepath.Join(s.PathSnapshot, name)

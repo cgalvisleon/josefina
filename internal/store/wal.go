@@ -41,7 +41,8 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 		return err
 	}
 
-	s.indexMu.Lock()
+	muI := s.getMutex("index")
+	muI.Lock()
 	if entry.Status == Active {
 		if _, exists := s.index[entry.ID]; exists {
 			s.TombStones++
@@ -53,7 +54,7 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 			s.deleteIndex(entry.ID)
 		}
 	}
-	s.indexMu.Unlock()
+	muI.Unlock()
 
 	return nil
 }
@@ -66,9 +67,10 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 * @return []WalEntry, error
 **/
 func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
-	s.indexMu.RLock()
+	muI := s.getMutex("index")
+	muI.RLock()
 	segs := s.segments
-	s.indexMu.RUnlock()
+	muI.RUnlock()
 
 	var entries []WalEntry
 
