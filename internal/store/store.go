@@ -1,9 +1,9 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -578,60 +578,118 @@ func (s *FileStore) Sync(id string, ref *RecordRef, ownerId string) {
 }
 
 /**
-* Put
-* @param id string, value any
-* @return bool, error
+* checkWrite: Validates that the store accepts writes and that id is usable
+* @param id string
+* @return error
 **/
-func (s *FileStore) Put(id string, value any) ([]byte, bool, error) {
+func (s *FileStore) checkWrite(id string) error {
 	if s.mode == ReadOnly {
-		return nil, false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+		return errors.New(msg.MSG_STORE_IS_READ_ONLY)
 	}
 
 	if id == "" {
-		return nil, false, errors.New(msg.MSG_ID_IS_REQUIRED)
+		return errors.New(msg.MSG_ID_IS_REQUIRED)
 	}
 
-	bt, ok := value.([]byte)
-	if !ok {
-		var err error
-		bt, err = json.Marshal(value)
-		if err != nil {
-			return nil, false, err
-		}
-	}
+	return nil
+}
 
-	// writeMu covers both the log append and the index update, so concurrent
-	// writers on the same id apply to the index in the same order as the log.
-	s.writeMu.Lock()
-	ref, err := s.appendRecordLocked(0, id, bt, Active)
+/**
+* put: Appends data for id to the log and points the index at it. Caller must
+* hold writeMu, so the caller's existence check, the log append and the index
+* update happen as one step and apply to the index in the same order as the log.
+* @param id string, data []byte
+* @return bool (true if id already existed), error
+**/
+func (s *FileStore) put(id string, data []byte) (bool, error) {
+	ref, err := s.appendRecordLocked(0, id, data, Active)
 	if err != nil {
-		s.writeMu.Unlock()
-		return nil, false, err
+		return false, err
 	}
 
 	exists := s.setIndex(id, ref)
 	if exists {
 		s.TombStones.inc()
 	}
-	s.writeMu.Unlock()
 
-	s.compactIfNeeded()
-
-	return bt, exists, nil
+	return exists, nil
 }
 
 /**
-* Delete
+* Insert: Stores data under id only if id does not exist yet
+* @param id string, data []byte
+* @return bool (true if inserted), error
+**/
+func (s *FileStore) Insert(id string, data []byte) (bool, error) {
+	if err := s.checkWrite(id); err != nil {
+		return false, err
+	}
+
+	s.writeMu.Lock()
+	if _, exists := s.getIndex(id); exists {
+		s.writeMu.Unlock()
+		return false, nil
+	}
+
+	_, err := s.put(id, data)
+	s.writeMu.Unlock()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+/**
+* Update: Replaces the data of id only if id exists and data is different
+* @param id string, data []byte
+* @return bool (true if updated), error
+**/
+func (s *FileStore) Update(id string, data []byte) (bool, error) {
+	if err := s.checkWrite(id); err != nil {
+		return false, err
+	}
+
+	s.writeMu.Lock()
+	ref, exists := s.getIndex(id)
+	if !exists {
+		s.writeMu.Unlock()
+		return false, nil
+	}
+
+	old, err := s.Read(ref)
+	if err != nil {
+		s.writeMu.Unlock()
+		return false, err
+	}
+	if bytes.Equal(old, data) {
+		s.writeMu.Unlock()
+		return false, nil
+	}
+
+	_, err = s.put(id, data)
+	s.writeMu.Unlock()
+	if err != nil {
+		return false, err
+	}
+
+	s.compactIfNeeded()
+
+	return true, nil
+}
+
+/**
+* Delete: Removes id only if it exists
 * @param id string
-* @return bool, error
+* @return bool (true if deleted), error
 **/
 func (s *FileStore) Delete(id string) (bool, error) {
-	if s.mode == ReadOnly {
-		return false, errors.New(msg.MSG_STORE_IS_READ_ONLY)
+	if err := s.checkWrite(id); err != nil {
+		return false, err
 	}
 
 	// The existence check, the tombstone append and the index removal run under
-	// writeMu so no Put on the same id can slip in between them.
+	// writeMu so no Insert/Update on the same id can slip in between them.
 	s.writeMu.Lock()
 	if _, exists := s.getIndex(id); !exists {
 		s.writeMu.Unlock()
@@ -712,25 +770,25 @@ func (s *FileStore) ReadHeader(ref *RecordRef) (recordHeader, error) {
 }
 
 /**
-* Get
+* Get: Returns the data stored under id
 * @param id string
-* @return bool, error
+* @return []byte, bool (true if id exists), error
 **/
-func (s *FileStore) Get(id string) (bool, []byte, error) {
+func (s *FileStore) Get(id string) ([]byte, bool, error) {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
-	ref, existed := s.index[id]
-	if !existed {
-		return false, nil, nil
+	ref, exists := s.index[id]
+	if !exists {
+		return nil, false, nil
 	}
 
 	result, err := s.readSegment(ref)
 	if err != nil {
-		return false, nil, err
+		return nil, false, err
 	}
 
-	return true, result, nil
+	return result, true, nil
 }
 
 /**
