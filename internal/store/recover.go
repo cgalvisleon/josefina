@@ -14,7 +14,7 @@ import (
 )
 
 /**
-* Recover: Repara en disco un store después de una falla (caída del proceso, corte
+* recover: Repara en disco un store después de una falla (caída del proceso, corte
 * de energía, compactación interrumpida) y retorna un reporte de lo que hizo.
 * El store debe estar cerrado, también en otros procesos. Pasos:
 *  1. Compactación interrumpida: restaura o limpia los directorios de segmentos y
@@ -27,7 +27,7 @@ import (
 * @param pathData, pathWald, name string
 * @return et.Json, error
 **/
-func Recover(pathData, pathWald, name string) (et.Json, error) {
+func recover(pathData, pathWald, name string) (et.Json, error) {
 	s := newFileStore(pathData, pathWald, name, ReadWrite)
 	report := et.Json{
 		"name":                 s.Name,

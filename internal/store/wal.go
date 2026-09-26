@@ -12,10 +12,10 @@ type WalEntry struct {
 }
 
 /**
-* ToJson: Retorna la entrada del WAL como JSON.
+* toJson: Retorna la entrada del WAL como JSON.
 * @return et.Json
 **/
-func (e *WalEntry) ToJson() et.Json {
+func (e *WalEntry) toJson() et.Json {
 	return et.Json{
 		"lsn":    e.LSN,
 		"id":     e.ID,
@@ -25,11 +25,11 @@ func (e *WalEntry) ToJson() et.Json {
 }
 
 /**
-* ApplyWalEntry: Aplica una entrada recibida del líder conservando su LSN (solo replicación).
+* applyWalEntry: Aplica una entrada recibida del líder conservando su LSN (solo replicación).
 * @param entry WalEntry
 * @return error
 **/
-func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
+func (s *FileStore) applyWalEntry(entry WalEntry) error {
 	// Igual que Insert/Delete: log e índice en un solo paso bajo writeMu.
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
@@ -63,11 +63,11 @@ func (s *FileStore) ApplyWalEntry(entry WalEntry) error {
 }
 
 /**
-* WalSince: Retorna, en orden de escritura, las entradas con LSN mayor que since.
+* walSince: Retorna, en orden de escritura, las entradas con LSN mayor que since.
 * @param since uint64
 * @return []WalEntry, error
 **/
-func (s *FileStore) WalSince(since uint64) ([]WalEntry, error) {
+func (s *FileStore) walSince(since uint64) ([]WalEntry, error) {
 	s.indexMu.RLock()
 	segs := s.segments
 	s.indexMu.RUnlock()

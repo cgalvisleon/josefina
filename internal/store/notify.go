@@ -26,10 +26,10 @@ type Change struct {
 }
 
 /**
-* ToJson: Retorna el cambio como JSON.
+* toJson: Retorna el cambio como JSON.
 * @return et.Json
 **/
-func (s *Change) ToJson() et.Json {
+func (s *Change) toJson() et.Json {
 	return et.Json{
 		"op":   s.Op,
 		"id":   s.ID,
@@ -39,14 +39,14 @@ func (s *Change) ToJson() et.Json {
 }
 
 /**
-* Sync: Ancla fn para recibir cada Insert, Update y Delete aplicado, incluidos los
+* sync: Ancla fn para recibir cada Insert, Update y Delete aplicado, incluidos los
 * que llegan por ApplyWalEntry. fn se llama bajo writeMu, justo después de escribir
 * el log y el índice, así que los cambios llegan exactamente en orden de LSN.
 * fn debe ser rápida, no debe escribir en este store (se bloquearía) y debe copiar
 * Data si la guarda, porque el slice es del llamador.
 * @param fn func(change Change)
 **/
-func (s *FileStore) Sync(fn func(change Change)) {
+func (s *FileStore) sync(fn func(change Change)) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	s.syncFns = append(s.syncFns, fn)
@@ -63,11 +63,11 @@ func (s *FileStore) emitLocked(change Change) {
 }
 
 /**
-* Stats: Retorna el tamaño del store y cuántas operaciones están en ejecución.
+* stats: Retorna el tamaño del store y cuántas operaciones están en ejecución.
 * Las escrituras en espera de su turno también cuentan como en ejecución.
 * @return et.Json
 **/
-func (s *FileStore) Stats() et.Json {
+func (s *FileStore) stats() et.Json {
 	return et.Json{
 		"count":       s.countIndex(),
 		"size":        s.Size.count(),
@@ -81,12 +81,12 @@ func (s *FileStore) Stats() et.Json {
 }
 
 /**
-* OnStats: Ancla fn para recibir Stats cada vez que cambian las operaciones en
+* onStats: Ancla fn para recibir Stats cada vez que cambian las operaciones en
 * ejecución. fn se llama desde una sola goroutine de fondo; si hay varios cambios
 * seguidos se entregan agrupados en el último estado, sin frenar las operaciones.
 * @param fn func(stats et.Json)
 **/
-func (s *FileStore) OnStats(fn func(stats et.Json)) {
+func (s *FileStore) onStats(fn func(stats et.Json)) {
 	s.statsMu.Lock()
 	s.statsFns = append(s.statsFns, fn)
 	s.statsMu.Unlock()
@@ -106,7 +106,7 @@ func (s *FileStore) statsLoop() {
 		case <-s.statsDone:
 			return
 		case <-s.statsCh:
-			stats := s.Stats()
+			stats := s.stats()
 			s.statsMu.Lock()
 			fns := slices.Clone(s.statsFns)
 			s.statsMu.Unlock()

@@ -31,11 +31,11 @@ const (
 )
 
 /**
-* Normalize: Limpia un nombre para usarlo como nombre de archivo.
+* normalize: Limpia un nombre para usarlo como nombre de archivo.
 * @param input string
 * @return string
 **/
-func Normalize(input string) string {
+func normalize(input string) string {
 	// 1. Quitar espacios al inicio y final
 	s := strings.TrimSpace(input)
 
@@ -119,7 +119,7 @@ type FileStore struct {
 	compacting          int32                 `json:"-"` // 0 = idle, 1 = running
 	compactWg           sync.WaitGroup        `json:"-"` // espera que termine la goroutine de compaction
 	compactMu           sync.Mutex            `json:"-"` // una sola compaction a la vez (automática o Prune)
-	isDebug             bool                  `json:"-"`
+	debug               bool                  `json:"-"`
 	reading             counter[int]          `json:"-"` // Get/ForEach en ejecución
 	inserting           counter[int]          `json:"-"` // Insert en ejecución (incluye los que esperan writeMu)
 	updating            counter[int]          `json:"-"` // Update en ejecución (incluye los que esperan writeMu)
@@ -134,10 +134,10 @@ type FileStore struct {
 }
 
 /**
-* ToJson: Retorna el estado del store como JSON.
+* toJson: Retorna el estado del store como JSON.
 * @return et.Json
 **/
-func (s *FileStore) ToJson() et.Json {
+func (s *FileStore) toJson() et.Json {
 	return et.Json{
 		"id":                    s.ID,
 		"name":                  s.Name,
@@ -155,27 +155,27 @@ func (s *FileStore) ToJson() et.Json {
 }
 
 /**
-* ToString: Retorna el estado del store como texto.
+* toString: Retorna el estado del store como texto.
 * @return string
 **/
-func (s *FileStore) ToString() string {
-	return s.ToJson().ToString()
+func (s *FileStore) toString() string {
+	return s.toJson().ToString()
 }
 
 /**
-* IsDebug: Activa los logs de depuración.
+* isDebug: Activa los logs de depuración.
 * @return *FileStore
 **/
-func (s *FileStore) IsDebug() *FileStore {
-	s.isDebug = true
+func (s *FileStore) isDebug() *FileStore {
+	s.debug = true
 	return s
 }
 
 /**
-* Count: Retorna el número de claves vivas.
+* count: Retorna el número de claves vivas.
 * @return int
 **/
-func (s *FileStore) Count() int {
+func (s *FileStore) count() int {
 	return s.countIndex()
 }
 
@@ -219,7 +219,7 @@ func (s *FileStore) loadSegments() error {
 		}
 		s.segments = append(s.segments, seg)
 		s.Size.add(size)
-		if s.isDebug {
+		if s.debug {
 			logs.Log(packageName, "load:segments:", s.Path, ":", seg.toString())
 		}
 	}
@@ -260,7 +260,7 @@ func (s *FileStore) newSegment() error {
 	s.segments = append(s.segments, seg)
 	s.active = seg
 	s.indexMu.Unlock()
-	if s.isDebug {
+	if s.debug {
 		logs.Log(packageName, "new:segment:", s.Path, ":", seg.toString())
 	}
 
@@ -321,7 +321,7 @@ func (s *FileStore) compactIfNeeded() {
 		go func() {
 			defer s.compactWg.Done()
 			defer atomic.StoreInt32(&s.compacting, 0)
-			if err := s.Compact(); err != nil && s.isDebug {
+			if err := s.compact(); err != nil && s.debug {
 				logs.Debug("compact error:", err)
 			}
 		}()
@@ -369,7 +369,7 @@ func (s *FileStore) setIndex(id string, ref *recordRef) bool {
 func (s *FileStore) setIndexLocked(id string, ref *recordRef) bool {
 	_, exists := s.index[id]
 	s.index[id] = ref
-	if s.isDebug {
+	if s.debug {
 		logs.Debug("put:", s.Path, ":lsn:", s.WAL.count(), ":ID:", id, ":ref:", ref.toString())
 	}
 	return exists
@@ -493,10 +493,10 @@ func (s *FileStore) rebuildIndexes() error {
 }
 
 /**
-* Close: Espera la compactación, hace fsync y retira todos los segmentos.
+* close: Espera la compactación, hace fsync y retira todos los segmentos.
 * @return error
 **/
-func (s *FileStore) Close() error {
+func (s *FileStore) close() error {
 	s.stopStats()
 	s.compactWg.Wait()
 
@@ -523,11 +523,11 @@ func (s *FileStore) Close() error {
 }
 
 /**
-* Empty: Cierra el store y borra sus datos.
+* empty: Cierra el store y borra sus datos.
 * @return error
 **/
-func (s *FileStore) Empty() error {
-	err := s.Close()
+func (s *FileStore) empty() error {
+	err := s.close()
 	if err != nil {
 		return err
 	}
@@ -591,11 +591,11 @@ func (s *FileStore) put(id string, data []byte) (bool, uint64, error) {
 }
 
 /**
-* Insert: Guarda data solo si id no existe; retorna true si insertó.
+* insert: Guarda data solo si id no existe; retorna true si insertó.
 * @param id string, data []byte
 * @return bool (true if inserted), error
 **/
-func (s *FileStore) Insert(id string, data []byte) (bool, error) {
+func (s *FileStore) insert(id string, data []byte) (bool, error) {
 	if err := s.checkWrite(id); err != nil {
 		return false, err
 	}
@@ -619,11 +619,11 @@ func (s *FileStore) Insert(id string, data []byte) (bool, error) {
 }
 
 /**
-* Update: Reemplaza data solo si id existe y el valor cambió; retorna true si actualizó.
+* update: Reemplaza data solo si id existe y el valor cambió; retorna true si actualizó.
 * @param id string, data []byte
 * @return bool (true if updated), error
 **/
-func (s *FileStore) Update(id string, data []byte) (bool, error) {
+func (s *FileStore) update(id string, data []byte) (bool, error) {
 	if err := s.checkWrite(id); err != nil {
 		return false, err
 	}
@@ -657,11 +657,11 @@ func (s *FileStore) Update(id string, data []byte) (bool, error) {
 }
 
 /**
-* Delete: Elimina id solo si existe; retorna true si eliminó.
+* delete: Elimina id solo si existe; retorna true si eliminó.
 * @param id string
 * @return bool (true if deleted), error
 **/
-func (s *FileStore) Delete(id string) (bool, error) {
+func (s *FileStore) delete(id string) (bool, error) {
 	if err := s.checkWrite(id); err != nil {
 		return false, err
 	}
@@ -683,7 +683,7 @@ func (s *FileStore) Delete(id string) (bool, error) {
 	s.deleteIndex(id)
 	s.TombStones.inc()
 
-	if s.isDebug {
+	if s.debug {
 		logs.Debug("deleted:", s.Path, ":total:", s.countIndex(), ":ID:", id)
 	}
 
@@ -694,11 +694,11 @@ func (s *FileStore) Delete(id string) (bool, error) {
 }
 
 /**
-* IsExist: Indica si id existe.
+* isExist: Indica si id existe.
 * @param id string
 * @return bool
 **/
-func (s *FileStore) IsExist(id string) bool {
+func (s *FileStore) isExist(id string) bool {
 	if id == "" {
 		return false
 	}
@@ -754,11 +754,11 @@ func (s *FileStore) readHeader(ref *recordRef) (recordHeader, error) {
 }
 
 /**
-* Get: Retorna los datos de id, si existe.
+* get: Retorna los datos de id, si existe.
 * @param id string
 * @return []byte, bool (true if id exists), error
 **/
-func (s *FileStore) Get(id string) ([]byte, bool, error) {
+func (s *FileStore) get(id string) ([]byte, bool, error) {
 	defer s.track(&s.reading)()
 
 	// Búsqueda y fijado bajo un mismo RLock; la lectura a disco va después.
@@ -801,14 +801,14 @@ type forEachResult struct {
 }
 
 /**
-* ForEach: Llama a fn por cada registro en orden de clave (asc/desc) con offset y limit
+* forEach: Llama a fn por cada registro en orden de clave (asc/desc) con offset y limit
 * (limit <= 0 sin límite). Lee en paralelo con hasta NumCPU goroutines, pero llama
 * a fn de a uno y en orden; si fn retorna false se detiene. No sostiene locks,
 * así que fn puede usar el store.
 * @param fn func(id string, data []byte) (bool, error), asc bool, offset, limit int
 * @return error
 **/
-func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
+func (s *FileStore) forEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error {
 	defer s.track(&s.reading)()
 
 	// ---- Selección: claves y segmentos fijados bajo un solo RLock ----
@@ -911,11 +911,11 @@ func (s *FileStore) ForEach(fn func(id string, data []byte) (bool, error), asc b
 }
 
 /**
-* Keys: Retorna las claves ordenadas asc/desc con offset y limit, sin leer los registros.
+* keys: Retorna las claves ordenadas asc/desc con offset y limit, sin leer los registros.
 * @param asc bool, offset int, limit int
 * @return []string
 **/
-func (s *FileStore) Keys(asc bool, offset, limit int) []string {
+func (s *FileStore) keys(asc bool, offset, limit int) []string {
 	s.indexMu.RLock()
 	defer s.indexMu.RUnlock()
 
@@ -927,7 +927,7 @@ func (s *FileStore) Keys(asc bool, offset, limit int) []string {
 * @return error
 **/
 func (s *FileStore) prune() error {
-	err := s.Compact()
+	err := s.compact()
 	if err != nil {
 		return err
 	}
@@ -946,7 +946,7 @@ func (s *FileStore) prune() error {
 * @return *FileStore
 **/
 func newFileStore(pathData, pathWald, name string, mode Mode) *FileStore {
-	name = Normalize(name)
+	name = normalize(name)
 	return &FileStore{
 		Name:                name,
 		Path:                filepath.Join(pathData, "segments", name),
@@ -964,11 +964,11 @@ func newFileStore(pathData, pathWald, name string, mode Mode) *FileStore {
 }
 
 /**
-* Open: Abre (o crea) el store y carga su índice.
+* open: Abre (o crea) el store y carga su índice.
 * @param pathData, pathWald, name string, mode Mode
 * @return *FileStore, error
 **/
-func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
+func open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 	fs := newFileStore(pathData, pathWald, name, mode)
 
 	if mode == ReadOnly {
@@ -993,7 +993,7 @@ func Open(pathData, pathWald, name string, mode Mode) (*FileStore, error) {
 
 	// Con snapshot solo se aplica el último segmento; sin snapshot se recorren todos.
 	snapshotLoaded, snapErr := fs.tryLoadSnapshot()
-	if snapErr != nil && fs.isDebug {
+	if snapErr != nil && fs.debug {
 		logs.Debug("snapshot unavailable, full rebuild:", snapErr)
 	}
 	if snapshotLoaded {

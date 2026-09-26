@@ -66,7 +66,7 @@ func (s *FileStore) createSnapshot() error {
 		binary.Write(entries, binary.BigEndian, ref.offset)
 		binary.Write(entries, binary.BigEndian, ref.length)
 		count++
-		if s.isDebug {
+		if s.debug {
 			logs.Debug("snapshot:", s.Path, ":ID:", id, "seg:", ref.segment, ":offset:", ref.offset, ":len:", ref.length)
 		}
 	}

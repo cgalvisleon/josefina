@@ -106,13 +106,13 @@ func (s *FileStore) oldSegmentsPath() string {
 }
 
 /**
-* Compact: Reescribe solo los registros vivos en segmentos nuevos, en tres fases:
+* compact: Reescribe solo los registros vivos en segmentos nuevos, en tres fases:
 *  1. Bajo writeMu: copia del índice y punto de corte del log.
 *  2. Sin locks: copia de los registros vivos.
 *  3. Bajo writeMu e indexMu: aplica lo escrito después del corte e intercambia directorios.
 * @return error
 **/
-func (s *FileStore) Compact() error {
+func (s *FileStore) compact() error {
 	s.compactMu.Lock()
 	defer s.compactMu.Unlock()
 
@@ -174,7 +174,7 @@ func (s *FileStore) Compact() error {
 			return err
 		}
 		newIndex[id] = newRef
-		if s.isDebug {
+		if s.debug {
 			logs.Debug("compacted:", s.Path, ":ID:", id, ":segment:", newRef.segment, ":offset:", newRef.offset, ":size:", newRef.length)
 		}
 	}
