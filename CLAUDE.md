@@ -104,6 +104,8 @@ HTTP handler (pkg/server/router.go)
 A **single-node**, concurrency-safe, append-only (WAL-style) store of `id → []byte`. It is meant to be the per-node base for high availability, which will be a replication layer *above* it (likely in `internal/jdb`), not inside it. It stores raw bytes; JSON encoding is the caller's job. Doc comments in this package are in Spanish.
 
 ### Public API (this is the whole surface; everything else is private on purpose)
+Every public function/method lives in `catalog.go` as a thin wrapper, grouped by section (Apertura y ciclo de vida, Escritura, Lectura, Mantenimiento, Monitoreo, Replicación, Utilidades). The real implementation is a private function/method with the same name lowercased (`open`, `recover`, `normalize`, `insert`, `close`, `forEach`, `walSince`, ...) in its own file (`store.go`, `compact.go`, `notify.go`, `wal.go`, `recover.go`). Code inside the package calls the private names. To add a public operation: implement it privately, then add the wrapper to `catalog.go` in its section. The debug flag field is `debug` (the name `isDebug` belongs to the method). Note that the private `recover` shadows Go's builtin inside this package — a `recover()` for panics there would need renaming it first.
+
 | Call | Semantics |
 |---|---|
 | `Open(pathData, pathWald, name, mode)` | Opens/creates. Segments in `pathData/segments/<name>/`; `pathWald/{snapshot,compact,recover}/<name>/`. `name` goes through `Normalize`. `ReadOnly`/`ReadWrite`. |
@@ -135,7 +137,7 @@ There is deliberately **no upsert**: callers compose it as `Update`, then `Inser
 - Readers **never hold `indexMu` during disk I/O**: they look up the ref and `acquire()` its segment under `RLock`, release the lock, read, then `release()`. Compaction and `Close` call `retire()` on old segments instead of closing them; the file closes when the last reader releases it. Never close a segment that might still have readers.
 - Segment writes are synchronous (`os.File.Write`), so a ref published in the index is always readable. The first write error is sticky.
 - Shared counters `WAL`, `TombStones` and `Size` are `counter[T]`; use `inc`/`dec`/`add`/`count`/`set`/`setMax`, never the fields. The index goes through `getIndex`/`setIndex`/`deleteIndex`/`countIndex`; `...Locked` variants are for callers already holding `indexMu`.
-- In-flight counters use `defer s.track(&s.<counter>)()` at the top of each public operation; `Insert`/`Update`/`Delete` release `writeMu` with `defer`, so a panicking `Sync` hook cannot leave the lock held.
+- In-flight counters use `defer s.track(&s.<counter>)()` at the top of each operation's private implementation; `insert`/`update`/`delete` release `writeMu` with `defer`, so a panicking `Sync` hook cannot leave the lock held.
 - `Compact` runs in 3 phases: (1) under `writeMu`, copy the index and record the cut point (segment + offset); (2) without locks, copy live records to a temp dir; (3) under `writeMu` + `indexMu`, replay everything written after the cut (Puts copied, Deletes written as tombstones), delete the snapshot, swap directories, retire the old segments, rebuild the snapshot. It keeps the newest tombstone so the WAL counter never regresses on rebuild.
 
 ### Known limitations (accepted, not bugs to "fix" unasked)

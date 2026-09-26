@@ -1,49 +1,4 @@
-# Josefina
-
-Motor de base de datos documental escrito en Go (módulo `github.com/josefina`). Se usa únicamente a través de una API **HTTP + JSON**: las consultas y comandos son documentos JSON que se traducen a un constructor fluido de consultas en Go. Debajo, cada colección se guarda en `internal/store`, un store tipo WAL (log de solo agregado) de un nodo, concurrente, que es la base sobre la que se construirá la configuración multinodo.
-
-## Requisitos
-
-- Go 1.25.0 (`goenv local 1.25.0`).
-- El repo forma parte del `go.work` del workspace `cgalvisleon/`, así que los cambios locales en `github.com/cgalvisleon/et` se usan sin publicar una versión.
-
-## Ejecución
-
-```bash
-gofmt -w . && go run ./cmd/server -port 1377 -rpct 4377 -name josefina
-```
-
-| Flag | Variable de entorno | Por defecto | Uso |
-|---|---|---|---|
-| `-port` | `PORT` | `1370` | Puerto HTTP |
-| `-rpct` | `RPC_PORT` | `4370` | Puerto RPC |
-| `-name` | `DB_NAME` | `josefina` | Nombre del servicio |
-| `-path_data` | `DB_PATH_DATA` | `./data/collections` | Datos (segmentos) |
-| `-path_wald` | `DB_PATH_WALD` | `./data/wal` | Snapshot, compactación y recuperación (ver nota) |
-| `-path_system` | `DB_PATH_SYSTEM` | `./data/system` | Catálogo del servidor |
-
-> Nota: `internal/jdb` lee la ruta del WAL desde `DB_PATH_WAL`, no `DB_PATH_WALD`; mientras no se unifique, configúrala en el `.env` como `DB_PATH_WAL`.
-
-Otros comandos:
-
-```bash
-go build ./cmd/server   # binario del servidor
-go vet ./...
-gofmt -w .
-```
-
-## Estructura
-
-| Ruta | Contenido |
-|---|---|
-| `cmd/server` | Punto de entrada del servidor. |
-| `pkg/server` | API REST: `/signin`, `/signout`, `/system`, `/query`, `/command`, `/uploadXls`, `/uploadCsv`, `/uploadDb`, `/version`, `/routes`. |
-| `internal/jdb` | Servidor, catálogo (bases, esquemas, modelos, usuarios, sesiones) y motor de consultas/comandos. |
-| `internal/store` | Motor de almacenamiento (ver abajo). |
-| `internal/server` | Arma el servidor HTTP y monta las rutas. |
-| `internal/msg` | Mensajes de error en inglés/español según `LANG`. |
-
-## `internal/store` — motor de almacenamiento
+# `internal/store`
 
 Store de un solo nodo que guarda `id → []byte` en archivos de segmento de solo agregado, con un índice en memoria.
 
@@ -52,7 +7,7 @@ Store de un solo nodo que guarda `id → []byte` en archivos de segmento de solo
 - Cada registro lleva un número de secuencia (LSN) y un CRC; ante una caída se recupera leyendo el log.
 - Guarda binario: codificar a JSON (u otro formato) es tarea de quien lo usa.
 
-### Uso rápido
+## Uso rápido
 
 ```go
 fs, err := store.Open("./data/collections", "./data/wal", "clientes", store.ReadWrite)
@@ -74,11 +29,11 @@ err = fs.ForEach(func(id string, data []byte) (bool, error) {
 ok, err = fs.Delete("c-001")
 ```
 
-### Métodos públicos
+## Métodos públicos
 
-Todos están en `internal/store/catalog.go`, agrupados en las mismas secciones de abajo. Cada uno solo llama a su implementación privada, que tiene el mismo nombre en minúscula (`Open` → `open`, `Insert` → `insert`, `ForEach` → `forEach`, ...) y vive en el archivo que corresponde (`store.go`, `compact.go`, `notify.go`, `wal.go`, `recover.go`). Dentro del paquete se usan las versiones privadas. Para agregar una operación pública: implementarla en privado y agregar su envoltorio en `catalog.go`, en su sección.
+Todos están en `catalog.go`, agrupados en las mismas secciones de abajo. Cada uno solo llama a su implementación privada, que tiene el mismo nombre en minúscula (`Open` → `open`, `Insert` → `insert`, `ForEach` → `forEach`, ...) y vive en el archivo que corresponde (`store.go`, `compact.go`, `notify.go`, `wal.go`, `recover.go`). Dentro del paquete se usan las versiones privadas. Para agregar una operación pública: implementarla en privado y agregar su envoltorio en `catalog.go`, en su sección.
 
-#### Apertura y ciclo de vida
+### Apertura y ciclo de vida
 
 - **`Open(pathData, pathWald, name string, mode Mode) (*FileStore, error)`**
   Abre el store `name` o lo crea si no existe. Los segmentos quedan en `pathData/segments/<name>/`; el snapshot, los temporales de compactación y la cuarentena de `Recover` quedan en `pathWald/{snapshot,compact,recover}/<name>/`. El nombre pasa por `Normalize`. Con `ReadOnly` el store debe existir y rechaza escrituras; con `ReadWrite` se puede escribir.
@@ -102,7 +57,7 @@ Todos están en `internal/store/catalog.go`, agrupados en las mismas secciones d
   fs, err := store.Open("./data/collections", "./data/wal", "clientes", store.ReadWrite)
   ```
 
-#### Escritura
+### Escritura
 
 - **`Insert(id string, data []byte) (bool, error)`**
   Guarda `data` solo si `id` no existe. Retorna `true` si insertó y `false` si el id ya existía.
@@ -122,7 +77,7 @@ if err == nil && !ok && !fs.IsExist(id) {
 }
 ```
 
-#### Lectura
+### Lectura
 
 - **`Get(id string) ([]byte, bool, error)`**
   Retorna los datos de `id` y si existe.
@@ -139,12 +94,12 @@ if err == nil && !ok && !fs.IsExist(id) {
 - **`ForEach(fn func(id string, data []byte) (bool, error), asc bool, offset, limit int) error`**
   Recorre los registros en orden de id con `offset` y `limit`. Lee del disco en paralelo con hasta `runtime.NumCPU()` goroutines, pero llama a `fn` **de a uno y en orden**, desde la goroutine que llamó, así que `fn` no necesita locks. Si `fn` retorna `false` se detiene; si retorna un error, `ForEach` lo retorna. El conjunto de registros se fija al inicio y no se sostiene ningún lock, así que `fn` puede usar el store (por ejemplo, llamar a `Get` o `Update`).
 
-#### Mantenimiento
+### Mantenimiento
 
 - **`Compact() error`**
   Reescribe solo los registros vivos en segmentos nuevos y libera el espacio de los eliminados o sobrescritos. Se ejecuta sola cuando los tombstones superan el 10% de los ids (o `MIN_THRESHOLD_COMPACT`); llamarla a mano es opcional. No bloquea las lecturas y solo bloquea las escrituras al inicio y al final.
 
-#### Monitoreo
+### Monitoreo
 
 - **`Stats() et.Json`**
   Tamaño y actividad del store: `count` (ids vivos), `size` (bytes en disco), `wal` (último LSN), `tomb_stones` (registros obsoletos) y las operaciones en ejecución `reading`, `inserting`, `updating`, `deleting`. Las escrituras que esperan su turno cuentan como en ejecución.
@@ -164,7 +119,7 @@ if err == nil && !ok && !fs.IsExist(id) {
 - **`IsDebug() *FileStore`**
   Activa los logs de depuración. Retorna el mismo store para encadenar.
 
-#### Replicación (base multinodo)
+### Replicación (base multinodo)
 
 - **`Sync(fn func(change Change))`**
   Ancla `fn` para recibir cada `Insert`, `Update` y `Delete` aplicado, como `Change{Op, ID, Data, LSN}` con `Op` = `OpInsert`, `OpUpdate` u `OpDelete` (`Data` es `nil` en `OpDelete`). Los cambios llegan en orden exacto de LSN, sin huecos; es el lado que **envía** en una configuración multinodo. Las escrituras que no cambian nada no se emiten. Reglas para `fn`:
@@ -189,7 +144,7 @@ if err == nil && !ok && !fs.IsExist(id) {
 - **`WalSince(since uint64) ([]WalEntry, error)`**
   Retorna, en orden de escritura, las entradas del log con LSN mayor que `since`, para que un nodo se ponga al día. La compactación descarta los registros eliminados y sobrescritos, así que un nodo que quedó atrás de una compactación necesita una copia completa en lugar de `WalSince`.
 
-#### Utilidades y tipos
+### Utilidades y tipos
 
 - **`Normalize(input string) string`**
   Limpia un nombre para usarlo como nombre de archivo: quita espacios de los extremos, cambia espacios por `_`, elimina todo lo que no sea letra, número, `_` o `.`, y quita los números iniciales.
@@ -198,7 +153,16 @@ if err == nil && !ok && !fs.IsExist(id) {
 - **`Active`, `Deleted`**: estado de un registro en `WalEntry`.
 - **`Op`, `Change`**: tipo de operación y cambio entregado por `Sync`.
 
-### Configuración
+## Cómo funciona
+
+- **Registro en disco:** `[LSN:8][DataLen:4][CRC:4][IDLen:2][ID][Status:1][Data]` (big-endian). `Status` es `Active` o `Deleted` (tombstone, sin datos). El CRC cubre solo `Data`.
+- **Segmentos:** `segment-%06d.dat`, rotan al llegar a `RELSEG_SIZE` MB. En cada rotación se escribe un snapshot nuevo.
+- **Snapshot:** `state-<name>.snap` guarda el índice de los segmentos cerrados y el contador del WAL, protegido con CRC. Es opcional: si falta o está dañado, `Open` reconstruye el índice leyendo todos los segmentos.
+- **Escrituras:** se aplican de a una. La verificación de existencia, la escritura en el log y la actualización del índice ocurren bajo el mismo lock, así que nunca se mezclan dos escrituras.
+- **Lecturas:** no sostienen el lock del índice mientras leen el disco, así que no esperan a las escrituras. Un segmento que se retira (por compactación o `Close`) solo se cierra cuando termina su último lector.
+- **Compactación:** en tres fases. Copia el índice y marca un punto de corte; copia los registros vivos sin bloquear nada; y al final, con las escrituras detenidas un momento, aplica lo escrito después del corte e intercambia los directorios.
+
+## Configuración
 
 | Variable | Por defecto | Uso |
 |---|---|---|
@@ -206,7 +170,7 @@ if err == nil && !ok && !fs.IsExist(id) {
 | `SYNC_ON_WRITE` | `true` | Fuerza a disco (fsync) cada escritura. Más seguro; con `false` es más rápido pero se pueden perder las últimas escrituras ante un corte de energía. |
 | `MIN_THRESHOLD_COMPACT` | `1000` | Mínimo de tombstones para compactar automáticamente. |
 
-### Consideraciones
+## Consideraciones
 
 - `Open` no ejecuta `Recover` por sí solo: después de un apagado inesperado, ejecuta `Recover` antes de `Open`.
 - Las escrituras se aplican de a una; con `SYNC_ON_WRITE=true` su velocidad depende de la latencia del disco.

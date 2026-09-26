@@ -119,6 +119,18 @@ var (
 	MSG_INVALID_TYPE_DATA          = "invalid type data (%s)"
 	MSG_BTREE_ALREADY_EXISTS       = "btree already exists"
 	MSG_SERIE_NOT_FOUND            = "serie not found"
+	MSG_TCP_NOT_CONNECTED          = "tcp: not connected"
+	MSG_TCP_ALREADY_CONNECTED      = "tcp: already connected"
+	MSG_TCP_CLOSED                 = "tcp: connection closed"
+	MSG_TCP_TIMEOUT                = "tcp: request timeout"
+	MSG_TCP_NO_HANDLER             = "tcp: no request handler"
+	MSG_TCP_INVALID_FRAME          = "tcp: invalid frame"
+	MSG_TCP_INVALID_TIMEOUT        = "tcp: timeout must be greater than zero"
+	MSG_TCP_HANDLER_PANIC          = "tcp: handler panic: %v"
+	MSG_TCP_ALREADY_LISTENING      = "tcp: server already listening"
+	MSG_TCP_STREAM_CLOSED          = "tcp: stream closed"
+	MSG_TCP_STREAM_CANCELED        = "tcp: stream canceled by the reader"
+	MSG_TCP_NOT_REQUEST_STREAM     = "tcp: not a request stream"
 )
 
 func init() {
@@ -222,5 +234,17 @@ func init() {
 		MSG_INVALID_TYPE_DATA = "tipo de data inválido (%s)"
 		MSG_BTREE_ALREADY_EXISTS = "btree ya existe"
 		MSG_SERIE_NOT_FOUND = "serie no encontrada"
+		MSG_TCP_NOT_CONNECTED = "tcp: no conectado"
+		MSG_TCP_ALREADY_CONNECTED = "tcp: ya está conectado"
+		MSG_TCP_CLOSED = "tcp: conexión cerrada"
+		MSG_TCP_TIMEOUT = "tcp: tiempo de espera agotado"
+		MSG_TCP_NO_HANDLER = "tcp: no hay función para atender la solicitud"
+		MSG_TCP_INVALID_FRAME = "tcp: trama inválida"
+		MSG_TCP_INVALID_TIMEOUT = "tcp: el timeout debe ser mayor que cero"
+		MSG_TCP_HANDLER_PANIC = "tcp: panic en la función: %v"
+		MSG_TCP_ALREADY_LISTENING = "tcp: el servidor ya está escuchando"
+		MSG_TCP_STREAM_CLOSED = "tcp: stream cerrado"
+		MSG_TCP_STREAM_CANCELED = "tcp: el lector canceló el stream"
+		MSG_TCP_NOT_REQUEST_STREAM = "tcp: no es un RequestStream"
 	}
 }
